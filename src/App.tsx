@@ -8,7 +8,6 @@ import { ActiveRoleProvider } from "@/hooks/useActiveRole";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Public pages
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 
@@ -56,8 +55,7 @@ const App = () => (
           <BrowserRouter>
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 

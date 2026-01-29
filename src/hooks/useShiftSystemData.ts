@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 
 export interface ReservationSummary {
   total: number;
@@ -61,12 +61,6 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
       // Determine shift time range
       const shiftStartHour = shiftType === "AM" ? 6 : 14;
       const shiftEndHour = shiftType === "AM" ? 14 : 21;
-      
-      const shiftStart = new Date(targetDate);
-      shiftStart.setHours(shiftStartHour, 0, 0, 0);
-      
-      const shiftEnd = new Date(targetDate);
-      shiftEnd.setHours(shiftEndHour, 0, 0, 0);
 
       // Fetch activity logs (check-ins) for today
       const { data: activityLogs, error: activityError } = await supabase
@@ -91,15 +85,15 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
         console.error("Error fetching class schedule:", classError);
       }
 
-      // Fetch daily schedules (staff) for today
-      const { data: staffSchedule, error: staffError } = await supabase
-        .from("daily_schedules")
+      // Fetch staff shifts from staff_shifts table (Sling data)
+      const { data: staffShifts, error: staffShiftsError } = await supabase
+        .from("staff_shifts")
         .select("*")
-        .eq("schedule_date", dateStr)
+        .eq("shift_date", dateStr)
         .order("shift_start", { ascending: true });
 
-      if (staffError) {
-        console.error("Error fetching staff schedule:", staffError);
+      if (staffShiftsError) {
+        console.error("Error fetching staff shifts:", staffShiftsError);
       }
 
       // Fetch member check-ins for today
@@ -133,25 +127,22 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
       const totalReservations = classes.reduce((sum, cls) => sum + cls.signups, 0);
       const totalCheckedIn = classSchedule?.reduce((sum, cls) => sum + (cls.checkins || 0), 0) || 0;
 
-      // Filter staff for current shift
-      const shiftStaff = staffSchedule?.filter(staff => {
-        const staffStart = parseInt(staff.shift_start.split(":")[0]);
-        const staffEnd = parseInt(staff.shift_end.split(":")[0]);
-        
-        // Check if staff shift overlaps with current shift
+      // Filter staff shifts for current shift type using Sling data
+      const shiftStaff = (staffShifts || []).filter(shift => {
+        const shiftHour = new Date(shift.shift_start).getHours();
         if (shiftType === "AM") {
-          return staffStart < 14;
+          return shiftHour < 14;
         } else {
-          return staffEnd > 14 || staffStart >= 14;
+          return shiftHour >= 14 || new Date(shift.shift_end).getHours() > 14;
         }
-      }) || [];
+      });
 
-      // Build staff summary
-      const onShiftStaff = shiftStaff.map(staff => ({
-        name: staff.staff_name || "Unknown",
-        position: staff.position || "Staff",
-        shiftStart: staff.shift_start,
-        shiftEnd: staff.shift_end,
+      // Build staff summary from Sling data
+      const onShiftStaff = shiftStaff.map(shift => ({
+        name: shift.user_name || "Unknown",
+        position: shift.position || "Staff",
+        shiftStart: shift.shift_start,
+        shiftEnd: shift.shift_end,
       }));
 
       // Build recent check-ins from member_checkins
@@ -232,10 +223,10 @@ export function formatSystemDataForReport(data: ShiftSystemData | undefined) {
       capturedAt: data.lastUpdated,
     },
     sling_shift_data: {
-      // Placeholder structure for Sling data
+      // Real Sling staff data
       staff: data.staff.onShift,
       totalStaff: data.staff.totalStaff,
-      status: "pending_integration",
+      status: data.staff.totalStaff > 0 ? "synced" : "pending_sync",
       capturedAt: data.lastUpdated,
     },
   };

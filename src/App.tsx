@@ -35,6 +35,7 @@ import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
 import PublicPlanPage from "./pages/PublicPlanPage";
 import FacilityManagementPage from "./pages/dashboards/FacilityManagementPage";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
+import SlingUserManagement from "./pages/admin/SlingUserManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -228,6 +229,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <AnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sling User Management for Admins */}
+            <Route
+              path="/dashboard/sling-users"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <SlingUserManagement />
                 </ProtectedRoute>
               }
             />

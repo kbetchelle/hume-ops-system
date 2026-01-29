@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function FloaterDashboard() {
+  const navigate = useNavigate();
+  
   const stats = [
     { title: "Assignments Today", value: "4", change: "2 completed" },
     { title: "Departments", value: "3", change: "Covered this week" },
@@ -31,7 +34,17 @@ export default function FloaterDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-3">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/my-checklists")}
+          >
+            <CardHeader>
+              <CardTitle>My Checklists</CardTitle>
+              <CardDescription>View and complete today's tasks</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>All Schedules</CardTitle>

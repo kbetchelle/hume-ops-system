@@ -25,6 +25,8 @@ import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
 import SpaDashboard from "./pages/dashboards/SpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
 import MembersPage from "./pages/dashboards/MembersPage";
+import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
+import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,6 +127,26 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
                   <MembersPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Checklists management for managers */}
+            <Route
+              path="/dashboard/checklists"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <ChecklistsManagementPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* My checklists for staff roles */}
+            <Route
+              path="/dashboard/my-checklists"
+              element={
+                <ProtectedRoute requiredRoles={["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <MyChecklistsPage />
                 </ProtectedRoute>
               }
             />

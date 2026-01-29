@@ -34,7 +34,7 @@ export default function ManagerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/members")}
@@ -42,6 +42,16 @@ export default function ManagerDashboard() {
             <CardHeader>
               <CardTitle>Members</CardTitle>
               <CardDescription>View and manage all gym members</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/checklists")}
+          >
+            <CardHeader>
+              <CardTitle>Checklists</CardTitle>
+              <CardDescription>Create and manage daily checklists for staff</CardDescription>
             </CardHeader>
           </Card>
 

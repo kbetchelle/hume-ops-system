@@ -36,6 +36,7 @@ import PublicPlanPage from "./pages/PublicPlanPage";
 import FacilityManagementPage from "./pages/dashboards/FacilityManagementPage";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 import SlingUserManagement from "./pages/admin/SlingUserManagement";
+import SyncManagementPage from "./pages/admin/SyncManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -239,6 +240,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <SlingUserManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sync Management for Admins */}
+            <Route
+              path="/dashboard/sync-management"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <SyncManagementPage />
                 </ProtectedRoute>
               }
             />

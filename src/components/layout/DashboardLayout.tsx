@@ -15,6 +15,7 @@ import {
 import { LogOut, User, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES } from "@/types/roles";
+import humeLogo from "@/assets/hume-logo.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -57,7 +58,16 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background">
         <div className="container flex h-16 items-center justify-between px-8">
-          <h1 className="text-[10px] uppercase tracking-widest font-normal">{title}</h1>
+          <div className="flex items-center gap-6">
+            <img 
+              src={humeLogo} 
+              alt="Hume" 
+              className="h-5 w-auto cursor-pointer hover:opacity-70 transition-opacity"
+              onClick={() => navigate("/dashboard")}
+            />
+            <div className="h-4 w-px bg-border" />
+            <h1 className="text-[10px] uppercase tracking-widest font-normal">{title}</h1>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

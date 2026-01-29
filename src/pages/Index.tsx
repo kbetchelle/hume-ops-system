@@ -1,5 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import humeLogo from "@/assets/hume-logo.png";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export default function Index() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background">
         <div className="container flex h-16 items-center justify-between px-8">
-          <span className="text-[10px] uppercase tracking-widest">Essentials</span>
+          <img src={humeLogo} alt="Hume" className="h-5 w-auto" />
           <nav className="flex items-center gap-8">
             <Link 
               to="/login" 
@@ -110,9 +111,7 @@ export default function Index() {
       {/* Footer */}
       <footer className="py-8 px-8 border-t border-border">
         <div className="container flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            © 2026 Essentials
-          </span>
+          <img src={humeLogo} alt="Hume" className="h-4 w-auto opacity-50" />
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Built with precision
           </span>

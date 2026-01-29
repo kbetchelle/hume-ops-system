@@ -17,6 +17,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deactivated: boolean
           email: string
           full_name: string | null
           id: string
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deactivated?: boolean
           email: string
           full_name?: string | null
           id?: string
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deactivated?: boolean
           email?: string
           full_name?: string | null
           id?: string
@@ -91,6 +94,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_all_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          deactivated: boolean
+          email: string
+          full_name: string
+          onboarding_completed: boolean
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
+      admin_toggle_user_deactivation: {
+        Args: { _deactivated: boolean; _target_user_id: string }
+        Returns: undefined
+      }
+      admin_update_user_roles: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _target_user_id: string
+        }
+        Returns: undefined
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]

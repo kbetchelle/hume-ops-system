@@ -34,6 +34,7 @@ import ReportsPage from "./pages/dashboards/ReportsPage";
 import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
 import PublicPlanPage from "./pages/PublicPlanPage";
 import FacilityManagementPage from "./pages/dashboards/FacilityManagementPage";
+import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -217,6 +218,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <FacilityManagementPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Analytics Dashboard for Managers */}
+            <Route
+              path="/dashboard/analytics"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <AnalyticsDashboard />
                 </ProtectedRoute>
               }
             />

@@ -62,6 +62,10 @@ export interface ShiftReportData {
   management_notes: string;
   future_shift_notes: FutureShiftNote[];
   status: "draft" | "submitted" | "reviewed";
+  // System data fields
+  arketa_reservations?: unknown;
+  toast_sales?: unknown;
+  sling_shift_data?: unknown;
 }
 
 export function useShiftReport(date: string, shiftType: "AM" | "PM") {
@@ -121,6 +125,10 @@ export function useSaveShiftReport() {
         future_shift_notes: report.future_shift_notes as unknown as Json,
         status: report.status,
         submitted_at: report.status === "submitted" ? new Date().toISOString() : null,
+        // System data fields
+        arketa_reservations: report.arketa_reservations as unknown as Json,
+        toast_sales: report.toast_sales as unknown as Json,
+        sling_shift_data: report.sling_shift_data as unknown as Json,
       };
 
       if (report.id) {

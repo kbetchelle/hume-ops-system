@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
+const MAX_PAGES = 100; // Safety limit to prevent infinite loops
 
 interface ArketaClass {
   id: string;
@@ -25,6 +26,15 @@ interface ArketaClass {
   room_id?: string;
   instructor_name?: string;
   instructor?: { first_name?: string; last_name?: string };
+}
+
+interface PaginatedResponse {
+  data?: ArketaClass[];
+  classes?: ArketaClass[];
+  pagination?: {
+    nextCursor?: string;
+    hasMore?: boolean;
+  };
 }
 
 interface SyncRequest {
@@ -62,34 +72,72 @@ Deno.serve(async (req) => {
 
     console.log(`[Arketa Classes] Syncing classes from ${startDate} to ${endDate}`);
 
-    // Fetch classes from Arketa API with retry
-    const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-    
-    const { response, attempts } = await fetchWithRetry(url, {
-      method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch all classes with cursor-based pagination
+    let allClasses: ArketaClass[] = [];
+    let nextCursor: string | undefined = undefined;
+    let hasMore = true;
+    let pageCount = 0;
+    let totalAttempts = 0;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
+    while (hasMore && pageCount < MAX_PAGES) {
+      pageCount++;
+      
+      const url = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes`);
+      url.searchParams.set('limit', String(limit));
+      url.searchParams.set('start_date', startDate);
+      url.searchParams.set('end_date', endDate);
+      if (nextCursor) {
+        url.searchParams.set('cursor', nextCursor);
+      }
+
+      console.log(`[Arketa Classes] Fetching page ${pageCount}...`);
+
+      const { response, attempts } = await fetchWithRetry(url.toString(), {
+        method: 'GET',
+        headers: {
+          'x-api-key': ARKETA_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      });
+      totalAttempts += attempts;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
+      }
+
+      const responseData: PaginatedResponse | ArketaClass[] = await response.json();
+      
+      // Handle both array response and paginated response formats
+      let pageClasses: ArketaClass[];
+      if (Array.isArray(responseData)) {
+        pageClasses = responseData;
+        hasMore = false; // Array response means no pagination
+      } else {
+        pageClasses = responseData.data || responseData.classes || [];
+        nextCursor = responseData.pagination?.nextCursor;
+        hasMore = responseData.pagination?.hasMore ?? false;
+      }
+
+      allClasses = [...allClasses, ...pageClasses];
+      console.log(`[Arketa Classes] Fetched page ${pageCount}, total records: ${allClasses.length}`);
+
+      // If we got fewer than limit, we're done
+      if (pageClasses.length < limit) {
+        hasMore = false;
+      }
     }
 
-    console.log(`[Arketa Classes] API request succeeded after ${attempts} attempt(s)`);
+    if (pageCount >= MAX_PAGES) {
+      console.warn(`[Arketa Classes] Reached max page limit (${MAX_PAGES}), some records may be missing`);
+    }
 
-    const responseData = await response.json();
-    const classes: ArketaClass[] = Array.isArray(responseData) 
-      ? responseData 
-      : (responseData.classes || responseData.data || []);
-    console.log(`[Arketa Classes] Fetched ${classes.length} classes`);
+    console.log(`[Arketa Classes] Total fetched: ${allClasses.length} classes in ${pageCount} page(s), ${totalAttempts} API attempt(s)`);
 
     const syncedClasses = [];
     let failedCount = 0;
 
-    for (const cls of classes) {
+    for (const cls of allClasses) {
       const name = cls.name || cls.class_name || 'Unknown Class';
       const instructorName = cls.instructor_name || 
         (cls.instructor ? `${cls.instructor.first_name || ''} ${cls.instructor.last_name || ''}`.trim() : null);
@@ -158,7 +206,7 @@ Deno.serve(async (req) => {
         api_name: 'arketa_classes',
         last_sync_at: new Date().toISOString(),
         last_sync_success: true,
-        last_records_processed: classes.length,
+        last_records_processed: allClasses.length,
         last_records_inserted: syncedClasses.length,
       }, { onConflict: 'api_name' });
 
@@ -166,11 +214,12 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         classes: syncedClasses,
-        totalFetched: classes.length,
+        totalFetched: allClasses.length,
         syncedCount: syncedClasses.length,
         failedCount,
         dateRange: { startDate, endDate },
-        apiAttempts: attempts,
+        pagesProcessed: pageCount,
+        apiAttempts: totalAttempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

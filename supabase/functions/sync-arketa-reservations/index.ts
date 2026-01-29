@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
+const MAX_PAGES = 100; // Safety limit to prevent infinite loops
 
 interface ArketaReservation {
   id: string;
@@ -21,11 +22,99 @@ interface ArketaReservation {
   start_time?: string;
 }
 
+interface PaginatedResponse {
+  data?: ArketaReservation[];
+  reservations?: ArketaReservation[];
+  pagination?: {
+    nextCursor?: string;
+    hasMore?: boolean;
+  };
+}
+
 interface SyncRequest {
   start_date?: string;
   end_date?: string;
   class_id?: string;
   limit?: number;
+}
+
+// Fetch reservations with cursor-based pagination
+async function fetchAllReservations(
+  baseUrl: string,
+  apiKey: string,
+  partnerId: string,
+  startDate: string,
+  endDate: string,
+  limit: number,
+  classId?: string
+): Promise<{ reservations: ArketaReservation[]; totalAttempts: number; pagesProcessed: number }> {
+  let allReservations: ArketaReservation[] = [];
+  let nextCursor: string | undefined = undefined;
+  let hasMore = true;
+  let pageCount = 0;
+  let totalAttempts = 0;
+
+  while (hasMore && pageCount < MAX_PAGES) {
+    pageCount++;
+
+    let url: URL;
+    if (classId) {
+      // Fetch reservations for specific class
+      url = new URL(`${baseUrl}/${partnerId}/classes/${classId}/reservations`);
+    } else {
+      // Fetch all reservations for date range
+      url = new URL(`${baseUrl}/${partnerId}/reservations`);
+      url.searchParams.set('start_date', startDate);
+      url.searchParams.set('end_date', endDate);
+    }
+    url.searchParams.set('limit', String(limit));
+    if (nextCursor) {
+      url.searchParams.set('cursor', nextCursor);
+    }
+
+    console.log(`[Arketa Reservations] Fetching page ${pageCount}...`);
+
+    const { response, attempts } = await fetchWithRetry(url.toString(), {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+    totalAttempts += attempts;
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
+    }
+
+    const responseData: PaginatedResponse | ArketaReservation[] = await response.json();
+
+    // Handle both array response and paginated response formats
+    let pageReservations: ArketaReservation[];
+    if (Array.isArray(responseData)) {
+      pageReservations = responseData;
+      hasMore = false; // Array response means no pagination
+    } else {
+      pageReservations = responseData.data || responseData.reservations || [];
+      nextCursor = responseData.pagination?.nextCursor;
+      hasMore = responseData.pagination?.hasMore ?? false;
+    }
+
+    allReservations = [...allReservations, ...pageReservations];
+    console.log(`[Arketa Reservations] Fetched page ${pageCount}, total records: ${allReservations.length}`);
+
+    // If we got fewer than limit, we're done
+    if (pageReservations.length < limit) {
+      hasMore = false;
+    }
+  }
+
+  if (pageCount >= MAX_PAGES) {
+    console.warn(`[Arketa Reservations] Reached max page limit (${MAX_PAGES}), some records may be missing`);
+  }
+
+  return { reservations: allReservations, totalAttempts, pagesProcessed: pageCount };
 }
 
 Deno.serve(async (req) => {
@@ -57,51 +146,18 @@ Deno.serve(async (req) => {
 
     console.log(`[Arketa Reservations] Syncing reservations from ${startDate} to ${endDate}`);
 
-    let reservations: ArketaReservation[] = [];
-    let totalAttempts = 0;
+    // Fetch all reservations with pagination
+    const { reservations, totalAttempts, pagesProcessed } = await fetchAllReservations(
+      ARKETA_PROD_URL,
+      ARKETA_API_KEY,
+      ARKETA_PARTNER_ID,
+      startDate,
+      endDate,
+      limit,
+      body.class_id
+    );
 
-    if (body.class_id) {
-      // Fetch reservations for specific class
-      const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes/${body.class_id}/reservations?limit=${limit}`;
-      
-      try {
-        const { response, attempts } = await fetchWithRetry(url, {
-          method: 'GET',
-          headers: {
-            'x-api-key': ARKETA_API_KEY,
-            'Content-Type': 'application/json',
-          },
-        });
-        totalAttempts = attempts;
-
-        if (response.ok) {
-          reservations = await response.json();
-        }
-      } catch (error) {
-        console.error(`[Arketa Reservations] Failed to fetch class reservations:`, error);
-      }
-    } else {
-      // Fetch all reservations for date range
-      const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-      
-      const { response, attempts } = await fetchWithRetry(url, {
-        method: 'GET',
-        headers: {
-          'x-api-key': ARKETA_API_KEY,
-          'Content-Type': 'application/json',
-        },
-      });
-      totalAttempts = attempts;
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
-      }
-
-      reservations = await response.json();
-    }
-
-    console.log(`[Arketa Reservations] Fetched ${reservations.length} reservations after ${totalAttempts} attempt(s)`);
+    console.log(`[Arketa Reservations] Total fetched: ${reservations.length} reservations in ${pagesProcessed} page(s), ${totalAttempts} API attempt(s)`);
 
     const syncedReservations = [];
     let failedCount = 0;
@@ -190,6 +246,7 @@ Deno.serve(async (req) => {
           noShows: noShowCount,
         },
         dateRange: { startDate, endDate },
+        pagesProcessed,
         apiAttempts: totalAttempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

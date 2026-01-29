@@ -111,6 +111,54 @@ export type Database = {
         }
         Relationships: []
       }
+      assets: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          current_value: number
+          depreciation_rate: number
+          id: string
+          location: string
+          name: string
+          notes: string | null
+          purchase_date: string
+          purchase_price: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          current_value: number
+          depreciation_rate?: number
+          id?: string
+          location: string
+          name: string
+          notes?: string | null
+          purchase_date: string
+          purchase_price: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          current_value?: number
+          depreciation_rate?: number
+          id?: string
+          location?: string
+          name?: string
+          notes?: string | null
+          purchase_date?: string
+          purchase_price?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checklist_completions: {
         Row: {
           checklist_item_id: string
@@ -375,6 +423,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          asset_id: string | null
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          expense_date: string
+          id: string
+          location: string
+          receipt_url: string | null
+        }
+        Insert: {
+          amount: number
+          asset_id?: string | null
+          category: string
+          created_at?: string
+          created_by: string
+          description: string
+          expense_date?: string
+          id?: string
+          location: string
+          receipt_url?: string | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          location?: string
+          receipt_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_communications: {
         Row: {

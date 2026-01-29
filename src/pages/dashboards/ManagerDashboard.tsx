@@ -34,7 +34,7 @@ export default function ManagerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/members")}
@@ -55,6 +55,16 @@ export default function ManagerDashboard() {
             </CardHeader>
           </Card>
 
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/facility")}
+          >
+            <CardHeader>
+              <CardTitle>Facility</CardTitle>
+              <CardDescription>Manage assets, expenses, and maintenance</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>Schedule Overview</CardTitle>
@@ -62,7 +72,10 @@ export default function ManagerDashboard() {
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/reports")}
+          >
             <CardHeader>
               <CardTitle>Reports</CardTitle>
               <CardDescription>View performance and analytics reports</CardDescription>

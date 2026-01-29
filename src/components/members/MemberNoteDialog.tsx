@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
-import { Member, useMemberNotes, useAddMemberNote } from "@/hooks/useMembers";
+import { Member, useMemberNotes, useAddMemberNote } from "@/hooks/useClients";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 

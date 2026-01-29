@@ -138,12 +138,12 @@ async function getValidToken(supabase: any): Promise<string> {
 }
 
 // deno-lint-ignore no-explicit-any
-async function upsertMemberWithRetry(
+async function upsertClientWithRetry(
   supabase: any,
   client: PartnerClient,
   maxAttempts: number = RETRY_MAX_ATTEMPTS
 ): Promise<{ success: boolean; error?: string; attempts: number }> {
-  const memberData = {
+  const clientData = {
     external_id: client.id,
     email: client.email,
     first_name: client.firstName || null,
@@ -162,8 +162,8 @@ async function upsertMemberWithRetry(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const { error: upsertError } = await supabase
-      .from("members")
-      .upsert(memberData, { 
+      .from("arketa_clients")
+      .upsert(clientData, { 
         onConflict: "external_id",
         ignoreDuplicates: false 
       });
@@ -226,11 +226,11 @@ Deno.serve(async (req) => {
 
     // Get a valid token (will refresh if needed)
     const accessToken = await getValidToken(supabase);
-    console.log("Obtained valid access token for Arketa API");
+    console.log("[sync-arketa-clients] Obtained valid access token for Arketa API");
 
     // Create sync log entry
     const { data: syncLog, error: syncLogError } = await supabase
-      .from("member_sync_log")
+      .from("client_sync_log")
       .insert({ 
         status: "running",
         retry_attempts: 0,
@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (syncLogError) {
-      console.error("Failed to create sync log:", syncLogError);
+      console.error("[sync-arketa-clients] Failed to create sync log:", syncLogError);
     } else {
       syncLogId = syncLog.id;
     }
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
         url.searchParams.set("cursor", nextCursor);
       }
 
-      console.log("Fetching clients from:", url.toString());
+      console.log("[sync-arketa-clients] Fetching clients from:", url.toString());
 
       const { response, attempts } = await fetchWithRetry(url.toString(), {
         method: "GET",
@@ -289,21 +289,21 @@ Deno.serve(async (req) => {
       hasMore = result.pagination?.hasMore ?? false;
     }
 
-    console.log(`Fetched ${allClients.length} clients from Partner API`);
+    console.log(`[sync-arketa-clients] Fetched ${allClients.length} clients from Partner API`);
 
-    // Upsert members into database with retry logic
+    // Upsert clients into database with retry logic
     let syncedCount = 0;
     const failedRecordIds: string[] = [];
     const errors: Array<{ id: string; error: string }> = [];
 
     for (const client of allClients) {
-      const result = await upsertMemberWithRetry(supabase, client);
+      const result = await upsertClientWithRetry(supabase, client);
       totalRetryAttempts += result.attempts - 1;
       
       if (result.success) {
         syncedCount++;
       } else {
-        console.error(`Failed to upsert member ${client.id}:`, result.error);
+        console.error(`[sync-arketa-clients] Failed to upsert client ${client.id}:`, result.error);
         failedRecordIds.push(client.id);
         errors.push({ id: client.id, error: result.error || "Unknown error" });
       }
@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
     // Update sync log with detailed results
     if (syncLogId) {
       await supabase
-        .from("member_sync_log")
+        .from("client_sync_log")
         .update({
           status: finalStatus,
           completed_at: new Date().toISOString(),
@@ -357,13 +357,13 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Sync error:", error);
+    console.error("[sync-arketa-clients] Sync error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     // Update sync log to failed status
     if (syncLogId && supabase) {
       await supabase
-        .from("member_sync_log")
+        .from("client_sync_log")
         .update({
           status: "failed",
           completed_at: new Date().toISOString(),

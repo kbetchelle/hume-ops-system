@@ -4,7 +4,7 @@ import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';
 
 interface BackfillRequest {
   api_source: 'arketa' | 'sling';
-  data_type: 'classes' | 'reservations' | 'payments' | 'shifts' | 'users' | 'members';
+  data_type: 'classes' | 'reservations' | 'payments' | 'shifts' | 'users' | 'clients';
   start_date: string;
   end_date: string;
   job_id?: string;
@@ -203,6 +203,60 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
   return recordCount;
 }
 
+// Sync Arketa clients for a single date (fetches all clients, not date-filtered)
+async function syncArketaClients(supabase: any, _date: string): Promise<number> {
+  const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
+  const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
+  const ARKETA_DEV_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0';
+
+  const url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'x-api-key': ARKETA_API_KEY!,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Arketa API error: ${response.status}`);
+  }
+
+  const responseData = await response.json();
+  const clients = Array.isArray(responseData) 
+    ? responseData 
+    : (responseData.clients || responseData.data || []);
+
+  let recordCount = 0;
+  for (const client of clients) {
+    const fullName = [client.firstName, client.lastName]
+      .filter(Boolean)
+      .join(' ') || null;
+
+    const { error } = await supabase
+      .from('arketa_clients')
+      .upsert({
+        external_id: String(client.id),
+        email: client.email || '',
+        first_name: client.firstName || null,
+        last_name: client.lastName || null,
+        full_name: fullName,
+        phone: client.phone || null,
+        join_date: client.createdAt ? new Date(client.createdAt).toISOString() : null,
+        external_trainer_id: client.trainer?.id || null,
+        avatar_url: client.avatar || null,
+        membership_tier: 'basic',
+        raw_data: client,
+        last_synced_at: new Date().toISOString(),
+      }, { onConflict: 'external_id' });
+
+    if (!error) recordCount++;
+  }
+
+  return recordCount;
+}
+
 // Sync Sling shifts for a single date
 async function syncSlingShifts(supabase: any, date: string): Promise<number> {
   const SLING_AUTH_TOKEN = Deno.env.get('SLING_AUTH_TOKEN');
@@ -382,6 +436,9 @@ Deno.serve(async (req) => {
         break;
       case 'arketa_payments':
         syncFunction = syncArketaPayments;
+        break;
+      case 'arketa_clients':
+        syncFunction = syncArketaClients;
         break;
       case 'sling_shifts':
         syncFunction = syncSlingShifts;

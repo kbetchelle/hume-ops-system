@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Sparkles, FileText } from "lucide-react";
-import { Member } from "@/hooks/useMembers";
+import { Member } from "@/hooks/useClients";
 import { useEmailTemplates, useAddCommunication } from "@/hooks/useMemberCommunications";
 import { useAuth } from "@/hooks/useAuth";
 import {

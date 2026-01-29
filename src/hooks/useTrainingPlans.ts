@@ -60,7 +60,7 @@ export function useTrainingPlans(memberId?: string) {
         .from("training_plans")
         .select(`
           *,
-          members (id, full_name, email),
+          arketa_clients (id, full_name, email),
           training_plan_content (*)
         `)
         .order("created_at", { ascending: false });
@@ -71,7 +71,11 @@ export function useTrainingPlans(memberId?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as TrainingPlan[];
+      // Map arketa_clients to members for backward compatibility
+      return (data || []).map(item => ({
+        ...item,
+        members: item.arketa_clients
+      })) as unknown as TrainingPlan[];
     },
   });
 

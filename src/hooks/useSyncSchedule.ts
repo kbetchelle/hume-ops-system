@@ -172,7 +172,7 @@ export function useRunAllSyncs() {
 // Helper to format sync type display name
 export function formatSyncType(syncType: string): string {
   const names: Record<string, string> = {
-    arketa_members: "Arketa Members",
+    arketa_clients: "Arketa Clients",
     arketa_classes: "Arketa Classes",
     arketa_reservations: "Arketa Reservations",
     arketa_payments: "Arketa Payments",

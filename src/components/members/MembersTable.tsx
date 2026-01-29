@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Search, Plus, RefreshCw, Loader2, MoreVertical, UserPlus, UserMinus, User } from "lucide-react";
-import { Member, useMembers, useSyncMembers } from "@/hooks/useMembers";
+import { Member, useClients, useSyncClients } from "@/hooks/useClients";
 import { useTrainerAssignments, TrainerAssignment } from "@/hooks/useTrainerAssignments";
 import { MemberNoteDialog } from "./MemberNoteDialog";
 import { TrainerAssignmentDialog } from "@/components/trainers/TrainerAssignmentDialog";
@@ -68,12 +68,12 @@ export function MembersTable({
     memberName: string;
   } | null>(null);
 
-  const { data: members = [], isLoading, error } = useMembers({
+  const { data: members = [], isLoading, error } = useClients({
     search: search.length >= 2 ? search : undefined,
     membershipTier: tierFilter,
   });
 
-  const syncMutation = useSyncMembers();
+  const syncMutation = useSyncClients();
   
   const {
     assignments,

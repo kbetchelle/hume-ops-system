@@ -41,7 +41,7 @@ export function useAnalytics(dateRange: DateRange, viewType: "all" | "trainer" |
     queryKey: ["analytics-members"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("members")
+        .from("arketa_clients")
         .select("id, join_date, membership_tier, created_at");
       if (error) throw error;
       return data;

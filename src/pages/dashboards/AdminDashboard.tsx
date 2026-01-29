@@ -1,16 +1,52 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { UserManagementTable } from "@/components/admin/UserManagementTable";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuthContext();
   const { data: users, isLoading, error } = useAdminUsers();
 
   return (
     <DashboardLayout title="Admin Dashboard">
       <div className="space-y-12">
+        {/* Quick Access Cards */}
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/members")}
+          >
+            <CardHeader>
+              <CardTitle>Members</CardTitle>
+              <CardDescription>View and manage all gym members</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/checklists")}
+          >
+            <CardHeader>
+              <CardTitle>Checklists</CardTitle>
+              <CardDescription>Create and manage daily checklists for staff</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/manager")}
+          >
+            <CardHeader>
+              <CardTitle>Manager View</CardTitle>
+              <CardDescription>Access manager dashboard and tools</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
         {/* Header */}
         <div className="space-y-2">
           <h2 className="text-sm uppercase tracking-[0.15em] font-normal">User Management</h2>

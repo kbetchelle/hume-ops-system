@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import loginBg from "@/assets/login-bg.webp";
+import humeLogo from "@/assets/hume-logo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -49,14 +51,18 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-8">
-      <Card className="w-full max-w-md border-0">
-        <CardHeader className="space-y-4 text-center pb-8">
-          <CardTitle className="text-sm">Sign In</CardTitle>
-          <CardDescription className="text-xs tracking-wide">
-            Enter your credentials to continue
-          </CardDescription>
-        </CardHeader>
+    <div 
+      className="min-h-screen flex items-center justify-center px-8 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${loginBg})` }}
+    >
+      <Card className="w-full max-w-md border-0 bg-background/80 backdrop-blur-sm">
+        <div className="flex justify-center pt-8 pb-4">
+          <img 
+            src={humeLogo} 
+            alt="Hume" 
+            className="h-16 w-auto object-contain"
+          />
+        </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
@@ -95,7 +101,7 @@ export default function Login() {
                 )}
               />
             </CardContent>
-            <CardFooter className="flex flex-col space-y-6 pt-8">
+            <CardFooter className="pb-8">
               <Button 
                 type="submit" 
                 className="w-full" 
@@ -110,15 +116,6 @@ export default function Login() {
                   "Sign In"
                 )}
               </Button>
-              <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest">
-                No account?{" "}
-                <Link 
-                  to="/signup" 
-                  className="text-foreground hover:opacity-70 transition-opacity duration-300"
-                >
-                  Create one
-                </Link>
-              </p>
             </CardFooter>
           </form>
         </Form>

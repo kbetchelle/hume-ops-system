@@ -1,32 +1,20 @@
-import axios from "axios";
+/**
+ * Generic API service
+ * For specific API clients, see ./api-clients.ts
+ */
 
-// Base axios instance for external API calls
-export const api = axios.create({
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+// Re-export configured API clients
+export {
+  arketaClient,
+  getSlingClient,
+  toastClient,
+  apiClients,
+  setApiToken,
+  clearApiToken,
+  clearAllApiTokens,
+} from "./api-clients";
 
-// Request interceptor for adding auth tokens
-api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle common errors
-    if (error.response?.status === 401) {
-      // Handle unauthorized
-    }
-    return Promise.reject(error);
-  }
-);
+// Re-export configuration utilities
+export { apiConfig, validateConfig, isApiConfigured } from "@/lib/api-config";
+export { apiLogger } from "@/lib/api-logger";
+export { tokenManager } from "@/lib/token-manager";

@@ -27,6 +27,7 @@ import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
 import MembersPage from "./pages/dashboards/MembersPage";
 import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
+import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -147,6 +148,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
                   <MyChecklistsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Communications - accessible to all authenticated users */}
+            <Route
+              path="/dashboard/communications"
+              element={
+                <ProtectedRoute>
+                  <CommunicationsPage />
                 </ProtectedRoute>
               }
             />

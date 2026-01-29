@@ -38,6 +38,16 @@ export default function AdminDashboard() {
 
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/communications")}
+          >
+            <CardHeader>
+              <CardTitle>Communications</CardTitle>
+              <CardDescription>Announcements and document library</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/manager")}
           >
             <CardHeader>

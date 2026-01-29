@@ -1,68 +1,49 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Calendar, FileText, TrendingUp, Clock } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ManagerDashboard() {
   const stats = [
-    { title: "Team Members", value: "24", icon: Users, change: "+2" },
-    { title: "Tasks Completed", value: "89%", icon: TrendingUp, change: "+12%" },
-    { title: "Meetings Today", value: "5", icon: Calendar, change: "" },
-    { title: "Reports Due", value: "3", icon: FileText, change: "This week" },
+    { title: "Team Members", value: "24", change: "+2" },
+    { title: "Tasks Completed", value: "89%", change: "+12%" },
+    { title: "Meetings Today", value: "5", change: "" },
+    { title: "Reports Due", value: "3", change: "This week" },
   ];
 
   return (
-    <DashboardLayout 
-      title="Manager Dashboard" 
-      icon={<BarChart3 className="h-5 w-5 text-primary" />}
-    >
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Welcome, Manager</h2>
-          <p className="text-muted-foreground">
+    <DashboardLayout title="Manager Dashboard">
+      <div className="space-y-16">
+        <div className="space-y-2">
+          <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Welcome, Manager</h2>
+          <p className="text-xs text-muted-foreground tracking-wide">
             Here's your team overview and key metrics.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.change}</p>
-              </CardContent>
-            </Card>
+            <div key={stat.title} className="space-y-2 border-l border-border pl-6">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                {stat.title}
+              </p>
+              <p className="text-2xl font-normal">{stat.value}</p>
+              <p className="text-[10px] tracking-wide text-muted-foreground">{stat.change}</p>
+            </div>
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+        <div className="grid gap-8 md:grid-cols-2">
+          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Schedule Overview</CardTitle>
-              </div>
+              <CardTitle>Schedule Overview</CardTitle>
               <CardDescription>Manage staff schedules and shifts</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">View and manage team schedules</p>
-            </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Reports</CardTitle>
-              </div>
+              <CardTitle>Reports</CardTitle>
               <CardDescription>View performance and analytics reports</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Access detailed team reports</p>
-            </CardContent>
           </Card>
         </div>
       </div>

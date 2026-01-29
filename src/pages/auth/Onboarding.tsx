@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, UserCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Step = "profile" | "roles";
@@ -66,9 +66,8 @@ export default function Onboarding() {
     setIsSubmitting(true);
     try {
       await assignRoles.mutateAsync({ userId: user.id, roles: selectedRoles });
-      toast.success("Welcome! Your account is set up.");
+      toast.success("Setup complete");
       
-      // Navigate to the appropriate dashboard based on primary role
       const primaryRole = selectedRoles[0];
       navigate(getRoleDashboardPath(primaryRole));
     } catch (error) {
@@ -79,44 +78,41 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4 py-8">
-      <Card className="w-full max-w-2xl shadow-xl border-border/50">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <UserCheck className="w-6 h-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-background px-8 py-16">
+      <Card className="w-full max-w-2xl border-0">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <CardTitle className="text-sm">Complete Your Profile</CardTitle>
+          <CardDescription className="text-xs tracking-wide">
             {step === "profile" 
-              ? "Tell us a bit about yourself" 
-              : "Select your role(s) in the organization"}
+              ? "Tell us about yourself" 
+              : "Select your role(s)"}
           </CardDescription>
           
           {/* Step indicator */}
-          <div className="flex items-center justify-center gap-2 pt-4">
+          <div className="flex items-center justify-center gap-4 pt-6">
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+              "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
               step === "profile" 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-primary/20 text-primary"
+                ? "border-foreground bg-foreground text-background" 
+                : "border-foreground bg-transparent text-foreground"
             )}>
               1
             </div>
-            <div className="w-12 h-0.5 bg-muted" />
+            <div className="w-12 h-px bg-border" />
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+              "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
               step === "roles" 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-muted text-muted-foreground"
+                ? "border-foreground bg-foreground text-background" 
+                : "border-border bg-transparent text-muted-foreground"
             )}>
               2
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
           {step === "profile" ? (
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-sm mx-auto">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
@@ -124,24 +120,23 @@ export default function Onboarding() {
                   placeholder="Enter your full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="text-lg"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground tracking-wide uppercase">
                 This name will be displayed across the platform
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ROLES.map((role) => (
                 <div
                   key={role.value}
                   onClick={() => toggleRole(role.value)}
                   className={cn(
-                    "relative flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50",
+                    "relative flex items-start gap-4 p-6 border cursor-pointer transition-all duration-300 hover:opacity-70",
                     selectedRoles.includes(role.value)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:bg-muted/50"
+                      ? "border-foreground bg-secondary"
+                      : "border-border hover:border-foreground"
                   )}
                 >
                   <Checkbox
@@ -151,10 +146,10 @@ export default function Onboarding() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{role.icon}</span>
-                      <span className="font-medium">{role.label}</span>
+                      <span className="text-base">{role.icon}</span>
+                      <span className="text-[10px] uppercase tracking-widest font-normal">{role.label}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-[10px] text-muted-foreground tracking-wide mt-2">
                       {role.description}
                     </p>
                   </div>
@@ -164,13 +159,12 @@ export default function Onboarding() {
           )}
         </CardContent>
         
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between pt-8">
           {step === "roles" && (
             <Button
               variant="outline"
               onClick={() => setStep("profile")}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
           )}
@@ -183,14 +177,11 @@ export default function Onboarding() {
             >
               {updateProfile.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Saving
                 </>
               ) : (
-                <>
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+                "Continue"
               )}
             </Button>
           ) : (
@@ -201,14 +192,11 @@ export default function Onboarding() {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting up...
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Setting up
                 </>
               ) : (
-                <>
-                  Complete Setup
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+                "Complete Setup"
               )}
             </Button>
           )}

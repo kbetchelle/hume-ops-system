@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -51,21 +50,23 @@ export default function Login() {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-8 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${loginBg})` }}
-    >
-      <Card className="w-full max-w-md border-0 bg-background/80 backdrop-blur-sm">
-        <div className="flex justify-center pt-8 pb-4">
-          <img 
-            src={humeLogo} 
-            alt="Hume" 
-            className="h-16 w-auto object-contain"
-          />
-        </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
+    <div className="min-h-screen flex">
+      {/* Left side - Login form */}
+      <div 
+        className="w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12"
+        style={{ backgroundColor: "hsl(30, 25%, 85%)" }}
+      >
+        <div className="w-full max-w-sm space-y-8">
+          <div className="flex justify-center">
+            <img 
+              src={humeLogo} 
+              alt="Hume" 
+              className="h-20 w-auto object-contain"
+            />
+          </div>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -76,6 +77,7 @@ export default function Login() {
                       <Input 
                         type="email" 
                         placeholder="your@email.com" 
+                        className="bg-transparent"
                         {...field} 
                       />
                     </FormControl>
@@ -93,6 +95,7 @@ export default function Login() {
                       <Input 
                         type="password" 
                         placeholder="••••••••" 
+                        className="bg-transparent"
                         {...field} 
                       />
                     </FormControl>
@@ -100,8 +103,7 @@ export default function Login() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter className="pb-8">
+              
               <Button 
                 type="submit" 
                 className="w-full" 
@@ -116,10 +118,27 @@ export default function Login() {
                   "Sign In"
                 )}
               </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+            </form>
+          </Form>
+          
+          <p className="text-[10px] text-center uppercase tracking-widest" style={{ color: "hsl(30, 15%, 35%)" }}>
+            No account?{" "}
+            <Link 
+              to="/signup" 
+              className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300"
+              style={{ color: "hsl(30, 15%, 25%)" }}
+            >
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
+      
+      {/* Right side - Image */}
+      <div 
+        className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${loginBg})` }}
+      />
     </div>
   );
 }

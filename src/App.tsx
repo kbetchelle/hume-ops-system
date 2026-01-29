@@ -28,6 +28,7 @@ import MembersPage from "./pages/dashboards/MembersPage";
 import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
+import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -158,6 +159,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommunicationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Member Communications Hub for Concierges */}
+            <Route
+              path="/dashboard/member-communications"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "trainer"]}>
+                  <MemberCommunicationsHub />
                 </ProtectedRoute>
               }
             />

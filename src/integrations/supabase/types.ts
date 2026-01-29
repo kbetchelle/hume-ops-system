@@ -218,6 +218,80 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string
+          id: string
+          subject: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          subject: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          subject?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      member_communications: {
+        Row: {
+          communication_type: string
+          content: string
+          created_at: string
+          id: string
+          member_id: string
+          metadata: Json | null
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          communication_type: string
+          content: string
+          created_at?: string
+          id?: string
+          member_id: string
+          metadata?: Json | null
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          communication_type?: string
+          content?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          metadata?: Json | null
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_communications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_notes: {
         Row: {
           content: string

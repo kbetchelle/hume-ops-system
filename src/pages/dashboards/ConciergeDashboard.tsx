@@ -45,6 +45,16 @@ export default function ConciergeDashboard() {
             </CardHeader>
           </Card>
 
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/member-communications")}
+          >
+            <CardHeader>
+              <CardTitle>Member Communications</CardTitle>
+              <CardDescription>View member history and send emails</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>Manage Bookings</CardTitle>
@@ -56,13 +66,6 @@ export default function ConciergeDashboard() {
             <CardHeader>
               <CardTitle>Guest Requests</CardTitle>
               <CardDescription>Handle incoming guest requests</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
-            <CardHeader>
-              <CardTitle>Local Services</CardTitle>
-              <CardDescription>Access local services and recommendations</CardDescription>
             </CardHeader>
           </Card>
         </div>

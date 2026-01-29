@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      member_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          member_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          member_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_notes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_sync_log: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          records_synced: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      members: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          external_id: string
+          external_trainer_id: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          join_date: string | null
+          last_name: string | null
+          last_synced_at: string | null
+          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          phone: string | null
+          raw_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          external_id: string
+          external_trainer_id?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          membership_tier?:
+            | Database["public"]["Enums"]["membership_tier"]
+            | null
+          phone?: string | null
+          raw_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          external_id?: string
+          external_trainer_id?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          membership_tier?:
+            | Database["public"]["Enums"]["membership_tier"]
+            | null
+          phone?: string | null
+          raw_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -68,6 +188,44 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_assignments: {
+        Row: {
+          assigned_by: string
+          assignment_type: string
+          created_at: string
+          id: string
+          member_id: string
+          notes: string | null
+          trainer_user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          assignment_type?: string
+          created_at?: string
+          id?: string
+          member_id: string
+          notes?: string | null
+          trainer_user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          assignment_type?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          notes?: string | null
+          trainer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_assignments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -117,6 +275,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_trainer_member_ids: {
+        Args: { _trainer_id: string }
+        Returns: string[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -129,6 +291,8 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_trainer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
@@ -139,6 +303,7 @@ export type Database = {
         | "female_spa_attendant"
         | "male_spa_attendant"
         | "floater"
+      membership_tier: "basic" | "standard" | "premium" | "vip"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -275,6 +440,7 @@ export const Constants = {
         "male_spa_attendant",
         "floater",
       ],
+      membership_tier: ["basic", "standard", "premium", "vip"],
     },
   },
 } as const

@@ -1,7 +1,6 @@
-import { Search, LogOut, Moon, Sun, Clock } from "lucide-react";
+import { Search, LogOut, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 import humeLogo from "@/assets/hume-logo.png";
@@ -10,9 +9,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 
 export function ConciergeHeader() {
-  const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const { currentShift, isManualOverride, toggleShift, resetToAuto, shiftStartTime, shiftEndTime } =
     useCurrentShift();
@@ -30,6 +29,9 @@ export function ConciergeHeader() {
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
+        {/* Role Switcher for managers */}
+        <RoleSwitcher />
+
         {/* Shift Badge Button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -64,20 +66,6 @@ export function ConciergeHeader() {
         {/* Search */}
         <Button variant="ghost" size="icon" className="rounded-none">
           <Search className="h-4 w-4" />
-        </Button>
-
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-none"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
         </Button>
 
         {/* Logout */}

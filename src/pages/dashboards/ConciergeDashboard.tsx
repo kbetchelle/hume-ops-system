@@ -7,6 +7,10 @@ import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
+import { ConciergeShiftReport } from "@/components/concierge/ConciergeShiftReport";
+import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
+import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
+import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -46,9 +50,9 @@ export default function ConciergeDashboard() {
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Shift Report
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Shift report form coming soon...
-            </p>
+            <div className="max-w-3xl">
+              <ConciergeShiftReport />
+            </div>
           </div>
         );
       case "messages":
@@ -57,9 +61,9 @@ export default function ConciergeDashboard() {
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Messages
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Member communications hub coming soon...
-            </p>
+            <div className="max-w-3xl">
+              <StaffMessagesInbox />
+            </div>
           </div>
         );
       case "announcements":
@@ -68,9 +72,20 @@ export default function ConciergeDashboard() {
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Announcements
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Announcements feed coming soon...
-            </p>
+            <div className="max-w-3xl">
+              <AnnouncementsBoard />
+            </div>
+          </div>
+        );
+      case "policies-qa":
+        return (
+          <div className="p-6 md:p-8">
+            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
+              Policies & Q&A
+            </h2>
+            <div className="max-w-3xl">
+              <PoliciesAndQA />
+            </div>
           </div>
         );
       case "templates":
@@ -125,17 +140,6 @@ export default function ConciergeDashboard() {
             </h2>
             <p className="text-xs text-muted-foreground">
               Document library coming soon...
-            </p>
-          </div>
-        );
-      case "policies-qa":
-        return (
-          <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Policies & Q&A
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Policies and FAQ coming soon...
             </p>
           </div>
         );

@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
+import { NotificationBell } from "@/components/concierge/NotificationBell";
 
 export function ConciergeHeader() {
   const { signOut } = useAuth();
@@ -31,6 +32,9 @@ export function ConciergeHeader() {
       <div className="flex items-center gap-2">
         {/* Role Switcher for managers */}
         <RoleSwitcher />
+
+        {/* Notification Bell */}
+        <NotificationBell />
 
         {/* Shift Badge Button */}
         <Tooltip>

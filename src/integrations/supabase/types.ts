@@ -729,6 +729,42 @@ export type Database = {
         }
         Relationships: []
       }
+      club_policies: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_updated_by: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_updated_by?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_updated_by?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       daily_report_history: {
         Row: {
           arketa_payments: Json | null
@@ -1337,6 +1373,7 @@ export type Database = {
           handoff_notes: string | null
           id: string
           incidents: string | null
+          is_draft: boolean | null
           member_feedback: string | null
           report_date: string
           shift_type: string
@@ -1353,6 +1390,7 @@ export type Database = {
           handoff_notes?: string | null
           id?: string
           incidents?: string | null
+          is_draft?: boolean | null
           member_feedback?: string | null
           report_date: string
           shift_type: string
@@ -1369,6 +1407,7 @@ export type Database = {
           handoff_notes?: string | null
           id?: string
           incidents?: string | null
+          is_draft?: boolean | null
           member_feedback?: string | null
           report_date?: string
           shift_type?: string
@@ -1648,6 +1687,108 @@ export type Database = {
           subject?: string | null
         }
         Relationships: []
+      }
+      staff_notifications: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      staff_qa: {
+        Row: {
+          answer: string | null
+          answer_type: string | null
+          answered_by_id: string | null
+          answered_by_name: string | null
+          asked_by_id: string | null
+          asked_by_name: string
+          context: string | null
+          created_at: string | null
+          id: string
+          is_public: boolean | null
+          is_resolved: boolean | null
+          linked_policy_id: string | null
+          parent_id: string | null
+          question: string
+          updated_at: string | null
+        }
+        Insert: {
+          answer?: string | null
+          answer_type?: string | null
+          answered_by_id?: string | null
+          answered_by_name?: string | null
+          asked_by_id?: string | null
+          asked_by_name: string
+          context?: string | null
+          created_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          is_resolved?: boolean | null
+          linked_policy_id?: string | null
+          parent_id?: string | null
+          question: string
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string | null
+          answer_type?: string | null
+          answered_by_id?: string | null
+          answered_by_name?: string | null
+          asked_by_id?: string | null
+          asked_by_name?: string
+          context?: string | null
+          created_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          is_resolved?: boolean | null
+          linked_policy_id?: string | null
+          parent_id?: string | null
+          question?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_qa_linked_policy_id_fkey"
+            columns: ["linked_policy_id"]
+            isOneToOne: false
+            referencedRelation: "club_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_qa_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "staff_qa"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_alerts: {
         Row: {

@@ -33,7 +33,7 @@ export function useActivityLogs(filters?: {
     queryFn: async () => {
       let query = supabase
         .from("activity_logs")
-        .select("*, members(full_name, email)")
+        .select("*, arketa_clients(full_name, email)")
         .order("activity_date", { ascending: false });
 
       if (filters?.startDate) {
@@ -63,13 +63,13 @@ export function useMemberActivitySummary(filters?: {
   return useQuery({
     queryKey: ["memberActivitySummary", filters],
     queryFn: async () => {
-      // Get all members
-      const { data: members, error: membersError } = await supabase
-        .from("members")
+      // Get all clients
+      const { data: clients, error: clientsError } = await supabase
+        .from("arketa_clients")
         .select("id, full_name, email, membership_tier, join_date")
         .order("full_name");
 
-      if (membersError) throw membersError;
+      if (clientsError) throw clientsError;
 
       // Get activity counts
       let activityQuery = supabase
@@ -116,22 +116,22 @@ export function useMemberActivitySummary(filters?: {
       });
 
       // Combine data
-      const summaries: MemberActivitySummary[] = (members || []).map((member) => {
-        const activity = activityMap.get(member.id) || {
+      const summaries: MemberActivitySummary[] = (clients || []).map((client) => {
+        const activity = activityMap.get(client.id) || {
           visits: 0,
           classes: 0,
           lastVisit: null,
         };
 
         return {
-          member_id: member.id,
-          member_name: member.full_name || "Unknown",
-          member_email: member.email,
-          membership_tier: member.membership_tier,
+          member_id: client.id,
+          member_name: client.full_name || "Unknown",
+          member_email: client.email,
+          membership_tier: client.membership_tier,
           total_visits: activity.visits,
           total_classes: activity.classes,
           last_visit: activity.lastVisit,
-          join_date: member.join_date,
+          join_date: client.join_date,
         };
       });
 
@@ -145,7 +145,7 @@ export function useNewSignups(filters?: { startDate?: string; endDate?: string }
     queryKey: ["newSignups", filters],
     queryFn: async () => {
       let query = supabase
-        .from("members")
+        .from("arketa_clients")
         .select("*")
         .order("join_date", { ascending: false });
 
@@ -170,12 +170,12 @@ export function useMemberRetention(filters?: {
   return useQuery({
     queryKey: ["memberRetention", filters],
     queryFn: async () => {
-      // Get all members
-      const { data: members, error: membersError } = await supabase
-        .from("members")
+      // Get all clients
+      const { data: clients, error: clientsError } = await supabase
+        .from("arketa_clients")
         .select("id, full_name, email, membership_tier, join_date");
 
-      if (membersError) throw membersError;
+      if (clientsError) throw clientsError;
 
       // Get activity in date range
       let query = supabase.from("activity_logs").select("member_id");
@@ -194,8 +194,8 @@ export function useMemberRetention(filters?: {
         (activities || []).map((a) => a.member_id)
       );
 
-      const totalMembers = (members || []).length;
-      const activeMembers = (members || []).filter((m) =>
+      const totalMembers = (clients || []).length;
+      const activeMembers = (clients || []).filter((m) =>
         activeMemberIds.has(m.id)
       ).length;
       const inactiveMembers = totalMembers - activeMembers;
@@ -207,10 +207,10 @@ export function useMemberRetention(filters?: {
         activeMembers,
         inactiveMembers,
         retentionRate: retentionRate.toFixed(1),
-        activeMembersList: (members || []).filter((m) =>
+        activeMembersList: (clients || []).filter((m) =>
           activeMemberIds.has(m.id)
         ),
-        inactiveMembersList: (members || []).filter(
+        inactiveMembersList: (clients || []).filter(
           (m) => !activeMemberIds.has(m.id)
         ),
       };

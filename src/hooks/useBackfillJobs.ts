@@ -212,6 +212,7 @@ export function useBackfillJobs() {
 // Data type options by API source
 export const DATA_TYPES_BY_SOURCE = {
   arketa: [
+    { value: "clients", label: "Clients" },
     { value: "classes", label: "Classes" },
     { value: "reservations", label: "Reservations" },
     { value: "payments", label: "Payments" },

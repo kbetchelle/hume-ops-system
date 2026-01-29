@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export interface Member {
+// Client interface for Arketa clients (API terminology)
+export interface Client {
   id: string;
   external_id: string;
   email: string;
@@ -19,6 +20,9 @@ export interface Member {
   last_synced_at: string | null;
 }
 
+// Alias for backward compatibility (UI uses "Member" terminology)
+export type Member = Client;
+
 export interface MemberNote {
   id: string;
   member_id: string;
@@ -28,7 +32,7 @@ export interface MemberNote {
   updated_at: string;
 }
 
-export function useMembers(filters?: {
+export function useClients(filters?: {
   search?: string;
   membershipTier?: string;
 }) {
@@ -36,7 +40,7 @@ export function useMembers(filters?: {
     queryKey: ["members", filters],
     queryFn: async () => {
       let query = supabase
-        .from("members")
+        .from("arketa_clients")
         .select("*")
         .order("full_name", { ascending: true });
 
@@ -56,10 +60,13 @@ export function useMembers(filters?: {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as Member[];
+      return data as Client[];
     },
   });
 }
+
+// Alias for backward compatibility
+export const useMembers = useClients;
 
 export function useMemberNotes(memberId: string) {
   return useQuery({
@@ -123,13 +130,13 @@ export function useAddMemberNote() {
   });
 }
 
-export function useSyncMembers() {
+export function useSyncClients() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("sync-members");
+      const { data, error } = await supabase.functions.invoke("sync-arketa-clients");
 
       if (error) throw error;
       return data;
@@ -152,12 +159,15 @@ export function useSyncMembers() {
   });
 }
 
-export function useSyncLogs() {
+// Alias for backward compatibility
+export const useSyncMembers = useSyncClients;
+
+export function useClientSyncLogs() {
   return useQuery({
     queryKey: ["syncLogs"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("member_sync_log")
+        .from("client_sync_log")
         .select("*")
         .order("started_at", { ascending: false })
         .limit(10);

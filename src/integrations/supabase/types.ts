@@ -47,7 +47,7 @@ export type Database = {
             foreignKeyName: "activity_logs_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "arketa_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -366,6 +366,64 @@ export type Database = {
           staged_at?: string | null
           start_time?: string
           sync_batch_id?: string
+        }
+        Relationships: []
+      }
+      arketa_clients: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          external_id: string
+          external_trainer_id: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          join_date: string | null
+          last_name: string | null
+          last_synced_at: string | null
+          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          phone: string | null
+          raw_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          external_id: string
+          external_trainer_id?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          membership_tier?:
+            | Database["public"]["Enums"]["membership_tier"]
+            | null
+          phone?: string | null
+          raw_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          external_id?: string
+          external_trainer_id?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          membership_tier?:
+            | Database["public"]["Enums"]["membership_tier"]
+            | null
+          phone?: string | null
+          raw_data?: Json | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1004,6 +1062,45 @@ export type Database = {
         }
         Relationships: []
       }
+      client_sync_log: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          failed_record_ids: string[] | null
+          failure_count: number | null
+          id: string
+          records_synced: number | null
+          retry_attempts: number | null
+          started_at: string
+          status: string
+          success_count: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          failed_record_ids?: string[] | null
+          failure_count?: number | null
+          id?: string
+          records_synced?: number | null
+          retry_attempts?: number | null
+          started_at?: string
+          status?: string
+          success_count?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          failed_record_ids?: string[] | null
+          failure_count?: number | null
+          id?: string
+          records_synced?: number | null
+          retry_attempts?: number | null
+          started_at?: string
+          status?: string
+          success_count?: number | null
+        }
+        Relationships: []
+      }
       club_policies: {
         Row: {
           category: string | null
@@ -1489,7 +1586,7 @@ export type Database = {
             foreignKeyName: "member_communications_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "arketa_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1524,107 +1621,10 @@ export type Database = {
             foreignKeyName: "member_notes_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "arketa_clients"
             referencedColumns: ["id"]
           },
         ]
-      }
-      member_sync_log: {
-        Row: {
-          completed_at: string | null
-          error_message: string | null
-          failed_record_ids: string[] | null
-          failure_count: number | null
-          id: string
-          records_synced: number | null
-          retry_attempts: number | null
-          started_at: string
-          status: string
-          success_count: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Relationships: []
-      }
-      members: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string
-          external_id: string
-          external_trainer_id: string | null
-          first_name: string | null
-          full_name: string | null
-          id: string
-          join_date: string | null
-          last_name: string | null
-          last_synced_at: string | null
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
-          phone: string | null
-          raw_data: Json | null
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email: string
-          external_id: string
-          external_trainer_id?: string | null
-          first_name?: string | null
-          full_name?: string | null
-          id?: string
-          join_date?: string | null
-          last_name?: string | null
-          last_synced_at?: string | null
-          membership_tier?:
-            | Database["public"]["Enums"]["membership_tier"]
-            | null
-          phone?: string | null
-          raw_data?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string
-          external_id?: string
-          external_trainer_id?: string | null
-          first_name?: string | null
-          full_name?: string | null
-          id?: string
-          join_date?: string | null
-          last_name?: string | null
-          last_synced_at?: string | null
-          membership_tier?:
-            | Database["public"]["Enums"]["membership_tier"]
-            | null
-          phone?: string | null
-          raw_data?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -2551,7 +2551,7 @@ export type Database = {
             foreignKeyName: "trainer_assignments_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "arketa_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -2642,7 +2642,7 @@ export type Database = {
             foreignKeyName: "training_plans_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "members"
+            referencedRelation: "arketa_clients"
             referencedColumns: ["id"]
           },
         ]

@@ -10,6 +10,13 @@ export interface TrainerAssignment {
   assigned_by: string;
   notes: string | null;
   created_at: string;
+  arketa_clients?: {
+    id: string;
+    full_name: string | null;
+    email: string;
+    membership_tier: string | null;
+  };
+  // Alias for backward compatibility
   members?: {
     id: string;
     full_name: string | null;
@@ -37,7 +44,7 @@ export function useTrainerAssignments(trainerId?: string) {
         .from("trainer_assignments")
         .select(`
           *,
-          members (id, full_name, email, membership_tier)
+          arketa_clients (id, full_name, email, membership_tier)
         `)
         .order("created_at", { ascending: false });
 
@@ -47,7 +54,11 @@ export function useTrainerAssignments(trainerId?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as TrainerAssignment[];
+      // Map arketa_clients to members for backward compatibility
+      return (data || []).map(item => ({
+        ...item,
+        members: item.arketa_clients
+      })) as TrainerAssignment[];
     },
   });
 

@@ -26,7 +26,7 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import { useMembers, Member } from "@/hooks/useMembers";
+import { useClients, Member } from "@/hooks/useClients";
 import {
   useMemberTimeline,
   useEmailTemplates,
@@ -78,7 +78,7 @@ export default function MemberCommunicationsHub() {
   const [callNotes, setCallNotes] = useState("");
 
   const { user } = useAuth();
-  const { data: members = [], isLoading: membersLoading } = useMembers({ search });
+  const { data: members = [], isLoading: membersLoading } = useClients({ search });
   const { data: timeline = [], isLoading: timelineLoading } = useMemberTimeline(
     selectedMember?.id || ""
   );

@@ -150,7 +150,7 @@ async function runSync(
 ): Promise<SyncResult> {
   // Map sync types to edge functions
   const syncFunctionMap: Record<string, string> = {
-    'arketa_members': 'sync-members',
+    'arketa_clients': 'sync-arketa-clients',
     'arketa_classes': 'sync-arketa-classes',
     'arketa_reservations': 'sync-arketa-reservations',
     'arketa_payments': 'sync-arketa-payments',

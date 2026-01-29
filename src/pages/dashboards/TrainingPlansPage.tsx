@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, ArrowLeft } from "lucide-react";
 import { useTrainingPlans, TrainingPlan } from "@/hooks/useTrainingPlans";
-import { useMembers } from "@/hooks/useMembers";
+import { useClients } from "@/hooks/useClients";
 import { TrainingPlanCard } from "@/components/training/TrainingPlanCard";
 import { TrainingPlanEditor } from "@/components/training/TrainingPlanEditor";
 import { CreatePlanDialog } from "@/components/training/CreatePlanDialog";
@@ -38,7 +38,7 @@ export default function TrainingPlansPage() {
     isUpdating,
   } = useTrainingPlans();
 
-  const { data: members = [] } = useMembers();
+  const { data: members = [] } = useClients();
 
   // Filter plans
   const filteredPlans = plans.filter((plan) => {

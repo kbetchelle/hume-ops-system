@@ -1,6 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
+// Timeout constants
+const SYNC_TIMEOUT_MS = 240000; // 4 minutes per sync
+const RUNNER_TIMEOUT_MS = 300000; // 5 minutes total for all syncs
+
 interface SyncSchedule {
   id: string;
   sync_type: string;
@@ -13,6 +17,25 @@ interface SyncResult {
   success: boolean;
   syncedCount?: number;
   error?: string;
+  timedOut?: boolean;
+}
+
+/**
+ * Wrap a promise with a timeout
+ * Rejects with a timeout error if the promise doesn't resolve in time
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(
+      () => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+  return Promise.race([promise, timeout]);
 }
 
 Deno.serve(async (req) => {
@@ -20,6 +43,7 @@ Deno.serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   const corsHeaders = getCorsHeaders(req);
+  const runnerStartTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -65,8 +89,27 @@ Deno.serve(async (req) => {
     console.log(`[Scheduled Sync Runner] Found ${dueSyncs.length} syncs to run`);
 
     const results: Array<{ syncType: string; result: SyncResult }> = [];
+    const skippedSyncs: string[] = [];
 
     for (const sync of dueSyncs as SyncSchedule[]) {
+      // Check if we've exceeded overall runner timeout
+      const elapsedTime = Date.now() - runnerStartTime;
+      if (elapsedTime >= RUNNER_TIMEOUT_MS) {
+        console.warn(
+          `[Scheduled Sync Runner] Overall timeout reached (${RUNNER_TIMEOUT_MS}ms), ` +
+          `stopping after ${results.length} syncs`
+        );
+        
+        // Record remaining syncs as skipped
+        const currentIndex = dueSyncs.indexOf(sync);
+        for (let i = currentIndex; i < dueSyncs.length; i++) {
+          skippedSyncs.push((dueSyncs[i] as SyncSchedule).sync_type);
+        }
+        
+        console.log(`[Scheduled Sync Runner] Skipped syncs: ${skippedSyncs.join(', ')}`);
+        break;
+      }
+
       console.log(`[Scheduled Sync Runner] Running sync: ${sync.sync_type}`);
 
       // Update status to running
@@ -81,11 +124,23 @@ Deno.serve(async (req) => {
       let result: SyncResult;
 
       try {
-        result = await runSync(supabase, sync.sync_type, supabaseUrl, supabaseKey);
+        // Wrap sync execution with timeout
+        result = await withTimeout(
+          runSync(supabase, sync.sync_type, supabaseUrl, supabaseKey),
+          SYNC_TIMEOUT_MS,
+          `${sync.sync_type} sync`
+        );
       } catch (error) {
+        const isTimeout = error instanceof Error && error.message.includes('timed out');
+        
+        if (isTimeout) {
+          console.error(`[Scheduled Sync Runner] ${sync.sync_type} timed out after ${SYNC_TIMEOUT_MS}ms`);
+        }
+        
         result = {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',
+          timedOut: isTimeout,
         };
       }
 
@@ -94,14 +149,21 @@ Deno.serve(async (req) => {
       nextRunAt.setMinutes(nextRunAt.getMinutes() + sync.interval_minutes);
 
       // Update sync schedule with result
+      // Count timeouts toward failure count
       const newFailureCount = result.success ? 0 : sync.failure_count + 1;
+      
+      // Determine status - use 'timeout' for timeout errors
+      let lastStatus = 'success';
+      if (!result.success) {
+        lastStatus = result.timedOut ? 'timeout' : 'failed';
+      }
       
       await supabase
         .from('sync_schedule')
         .update({
           last_run_at: new Date().toISOString(),
           next_run_at: nextRunAt.toISOString(),
-          last_status: result.success ? 'success' : 'failed',
+          last_status: lastStatus,
           last_error: result.error || null,
           records_synced: result.syncedCount || 0,
           failure_count: newFailureCount,
@@ -111,14 +173,27 @@ Deno.serve(async (req) => {
 
       // Create admin alert if failure count reaches threshold
       if (newFailureCount >= 3) {
-        await createAdminAlert(supabase, sync.sync_type, result.error || 'Unknown error');
+        await createAdminAlert(
+          supabase, 
+          sync.sync_type, 
+          result.error || 'Unknown error',
+          result.timedOut
+        );
       }
 
       results.push({ syncType: sync.sync_type, result });
     }
 
     const successCount = results.filter(r => r.result.success).length;
-    const failedCount = results.filter(r => !r.result.success).length;
+    const failedCount = results.filter(r => !r.result.success && !r.result.timedOut).length;
+    const timeoutCount = results.filter(r => r.result.timedOut).length;
+    const totalElapsed = Date.now() - runnerStartTime;
+
+    console.log(
+      `[Scheduled Sync Runner] Completed in ${totalElapsed}ms: ` +
+      `${successCount} success, ${failedCount} failed, ${timeoutCount} timeout, ` +
+      `${skippedSyncs.length} skipped`
+    );
 
     return new Response(
       JSON.stringify({
@@ -126,6 +201,9 @@ Deno.serve(async (req) => {
         syncsRun: results.length,
         successCount,
         failedCount,
+        timeoutCount,
+        skippedSyncs,
+        totalElapsedMs: totalElapsed,
         results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -213,8 +291,13 @@ async function createAdminAlert(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   syncType: string,
-  errorMessage: string
+  errorMessage: string,
+  wasTimeout = false
 ) {
+  const alertTitle = wasTimeout 
+    ? `Sync Timeout: ${syncType}`
+    : `Sync Failed: ${syncType}`;
+
   // Check if a recent alert for this sync already exists (within 24 hours)
   const oneDayAgo = new Date();
   oneDayAgo.setDate(oneDayAgo.getDate() - 1);
@@ -222,7 +305,7 @@ async function createAdminAlert(
   const { data: existingAlerts } = await supabase
     .from('announcements')
     .select('id')
-    .eq('title', `Sync Failed: ${syncType}`)
+    .eq('title', alertTitle)
     .gte('created_at', oneDayAgo.toISOString())
     .limit(1);
 
@@ -244,14 +327,18 @@ async function createAdminAlert(
     return;
   }
 
+  const alertContent = wasTimeout
+    ? `The ${syncType} sync has timed out 3 or more times (>${SYNC_TIMEOUT_MS / 1000}s). This may indicate API performance issues or large data sets. Please investigate.`
+    : `The ${syncType} sync has failed 3 or more times. Last error: ${errorMessage}. Please check the sync configuration and external API status.`;
+
   await supabase
     .from('announcements')
     .insert({
-      title: `Sync Failed: ${syncType}`,
-      content: `The ${syncType} sync has failed 3 or more times. Last error: ${errorMessage}. Please check the sync configuration and external API status.`,
+      title: alertTitle,
+      content: alertContent,
       created_by: adminUser.user_id,
       target_roles: ['admin', 'manager'],
     });
 
-  console.log(`[Scheduled Sync Runner] Created admin alert for ${syncType} failures`);
+  console.log(`[Scheduled Sync Runner] Created admin alert for ${syncType} ${wasTimeout ? 'timeouts' : 'failures'}`);
 }

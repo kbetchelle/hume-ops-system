@@ -1,186 +1,329 @@
 
-# API Management Infrastructure
+# Phase 2: Concierge Dashboard Components Implementation Plan
 
 ## Overview
-This plan implements a comprehensive database-driven API management system for tracking integrations with Arketa, Sling, Toast, and Calendly. The system includes endpoint configuration, sync status tracking, comprehensive logging, system alerts, and staging tables for raw API data before promotion to production tables.
 
-## Database Schema
+This plan implements 8 components from the Phase 2 reference file, splitting them into individual files and integrating them into the existing Concierge Dashboard. The database tables needed (`shift_reports`, `staff_announcements`, `staff_announcement_reads`, `staff_messages`, `staff_message_reads`) already exist. We need to add 2 new tables (`club_policies`, `staff_qa`, `staff_notifications`).
 
-### 1. API Management Tables (4 tables)
+---
 
-**api_endpoints**
-- Database-driven URL configuration for all external APIs
-- Supports dynamic endpoint path templating (e.g., `/{partner_id}/classes`)
-- Includes rate limiting and date range constraints per endpoint
-- Pre-populated with all known endpoints for Arketa, Sling, Toast, and Calendly
+## Phase 1: Database Schema Updates
 
-**api_sync_status**
-- Tracks last sync time, success state, and error messages per API
-- Configurable sync frequency per integration
-- Enable/disable toggle for each API
+### New Tables Required
 
-**api_logs**
-- Comprehensive request/response logging
-- Tracks duration, records processed/inserted, response status
-- Supports triggered_by field: 'manual', 'cron', 'webhook'
+1. **club_policies** - For policy documents
+   - `id`, `title`, `content`, `category`, `sort_order`, `is_active`, `last_updated_by`, `created_at`, `updated_at`
 
-**system_alerts**
-- Alert types: 'api_failure', 'sync_stale', 'rate_limit'
-- Severity levels: 'info', 'warning', 'critical'
-- Resolution tracking with optional auto-resolve on successful sync
+2. **staff_qa** - For Q&A with policy linking
+   - `id`, `question`, `context`, `answer`, `answer_type`, `linked_policy_id`, `asked_by_id`, `asked_by_name`, `answered_by_id`, `answered_by_name`, `is_resolved`, `is_public`, `parent_id`, `created_at`, `updated_at`
 
-### 2. Staging Tables (6 tables)
+3. **staff_notifications** - For notification bell
+   - `id`, `user_id`, `type`, `title`, `body`, `data`, `is_read`, `created_at`
 
-**sling_staging** / **sling_shifts_staging**
-- Raw staff user data and shift schedules from GetSling
-- Batch ID tracking for data lineage
+### Schema Modifications
 
-**toast_staging**
-- Daily sales aggregates from Toast POS
-- Preserves raw_data JSONB for debugging
+Update `shift_reports` table to add:
+- `is_draft` (boolean) - Track draft vs submitted status
 
-**arketa_classes_staging** / **arketa_reservations_staging** / **arketa_clients_staging**
-- Class schedules, reservations, and client data from Arketa
-- Status tracking for reservations (reserved, checked_in, cancelled, no_show)
+---
 
-**calendly_events_staging**
-- Tour booking events
-- Invitee contact info and event status
+## Phase 2: Component File Structure
 
-### 3. Target/Production Tables (6 tables)
+Create the following files in `src/components/concierge/`:
 
-**sling_users** / **daily_schedules**
-- Promoted Sling data with optional staff linkage
+```text
+src/components/concierge/
+├── ConciergeShiftReport.tsx      # Shift report form with auto-save
+├── AnnouncementsBoard.tsx        # Staff view of announcements  
+├── AnnouncementsManager.tsx      # Management CRUD for announcements
+├── StaffMessagesInbox.tsx        # Internal staff messaging
+├── PoliciesAndQA.tsx             # Combined policies & Q&A view
+├── QAManager.tsx                 # Management Q&A answering
+└── NotificationBell.tsx          # Header notification dropdown
+```
 
-**daily_reports**
-- Aggregated daily metrics from all sources
-- Combined Arketa check-ins, class attendance, sales
-- Toast cafe sales
+Create hook file:
+```text
+src/hooks/useShiftReports.ts      # Hook for report data fetching
+```
 
-**member_checkins** / **class_schedule**
-- Promoted Arketa reservation and class data
+---
 
-**scheduled_tours**
-- Promoted Calendly events with staff assignment
+## Phase 3: Component Implementation Details
 
-## Security (RLS Policies)
+### 1. ConciergeShiftReport (`ConciergeShiftReport.tsx`)
+**Purpose**: Shift report form with auto-save and draft/submit workflow
 
-| Table | Admin/Manager | Other Roles |
-|-------|--------------|-------------|
-| api_endpoints | Full CRUD | Read-only |
-| api_sync_status | Full CRUD | Read-only |
-| api_logs | Full access | No access |
-| system_alerts | Full CRUD | No access |
-| All staging tables | Full access | No access |
-| daily_reports | Full access | Concierge: Read |
-| member_checkins | Full access | Trainer: Assigned only |
-| class_schedule | Full access | Concierge: Read |
-| scheduled_tours | Full access | Concierge: Read |
-| sling_users | Full access | No access |
-| daily_schedules | Full access | Concierge: Read |
+**Features**:
+- Fetches existing report for today's date and current shift
+- 9 form fields: weather, summary, tour notes, member feedback, facility issues, incidents, cafe notes, handoff notes, other notes
+- Auto-save draft every 30 seconds when dirty
+- Manual "Save Draft" and "Submit Report" buttons
+- Shows "Submitted" badge and disables form after submission
+- Uses `upsertInto` with conflict on `report_date,shift_type`
 
-## Implementation Steps
+**Key UI Elements**:
+- Card with header showing shift type and date badge
+- Status indicators: "Unsaved changes", "Saved [time]", "Submitted"
+- Progress skeleton during loading
 
-### Phase 1: Database Migration
-1. Create all 16 new tables with proper constraints
-2. Apply RLS policies for each table
-3. Create indexes for performance (api_name, sync_batch_id, dates)
-4. Insert default API endpoint configurations
-5. Initialize api_sync_status for each API
+### 2. useShiftReports Hook (`useShiftReports.ts`)
+**Purpose**: Data fetching hook for shift reports
 
-### Phase 2: Edge Functions (4 functions)
-1. **sync-sling** - Fetch users and shifts, stage data, promote to target tables
-2. **sync-arketa-classes** - Fetch classes and reservations, update class_schedule and member_checkins
-3. **sync-toast** - Fetch daily orders, aggregate sales metrics
-4. **sync-calendly** - Fetch scheduled events, populate scheduled_tours
+**Exports**:
+- `useShiftReports(options)` - Fetch list with date range and limit
+- `useShiftReport(date, shiftType)` - Fetch single report
 
-Each function will:
-- Read endpoint config from api_endpoints table
-- Create api_logs entry with timing
-- Update api_sync_status on completion
-- Create system_alerts on failure
-- Use batch IDs for data versioning in staging tables
+### 3. AnnouncementsBoard (`AnnouncementsBoard.tsx`)
+**Purpose**: Staff view of announcements with tabs and read tracking
 
-### Phase 3: Frontend Components
+**Features**:
+- Two tabs: "Alerts" and "Weekly Update"
+- IntersectionObserver auto-marks announcements as read after 1.5s
+- Priority styling: urgent (red border), high (amber), normal (default)
+- Weekly update navigation with previous/next week buttons
+- Unread badges with animation
+- Fetches from `staff_announcements` and `staff_announcement_reads`
 
-**API Status Dashboard** (`/dashboard/api-status`)
-- Card for each API showing sync status, last sync time, health indicator
-- Manual sync trigger buttons
-- Error message display
+**Key UI Elements**:
+- Tabbed card with badge counts
+- Alert items with priority badges
+- Weekly update viewer with week navigation
 
-**System Alerts Panel**
-- Real-time alert list with severity badges
-- Resolve/acknowledge actions
-- Filter by API and severity
+### 4. AnnouncementsManager (`AnnouncementsManager.tsx`)
+**Purpose**: Management CRUD for announcements
 
-**API Logs Viewer**
-- Paginated log table with search
-- Duration and record count columns
-- Expandable rows for response details
+**Features**:
+- Create/Edit dialog for alerts and weekly updates
+- Toggle active/inactive status
+- Delete announcements
+- Filter by type: All, Alerts, Weekly Updates
+- Target departments multi-select (Concierge, Trainers, Spa, Cafe, Management)
+- Priority selection (normal, high, urgent)
+- Expiration options (1 day to never)
 
-### Phase 4: Hooks and Services
+**Key UI Elements**:
+- List view with edit/delete/toggle actions
+- Modal dialog for create/edit form
+- Department checkboxes
 
-**useApiSyncStatus** - Fetch and manage sync status
-**useApiLogs** - Query logs with pagination
-**useSystemAlerts** - CRUD for alerts with real-time updates
-**useApiEndpoints** - Manage endpoint configurations
+### 5. StaffMessagesInbox (`StaffMessagesInbox.tsx`)
+**Purpose**: Internal staff messaging system
+
+**Features**:
+- Inbox and Sent tabs
+- Message detail dialog with reply option
+- Compose dialog with recipient selector
+- Read tracking with `staff_message_reads`
+- Unread count badge
+- Staff list fetched from `profiles` table (adapting from reference)
+
+**Key UI Elements**:
+- Two-tab inbox/sent layout
+- Message list with avatars
+- Compose and reply dialogs
+
+### 6. PoliciesAndQA (`PoliciesAndQA.tsx`)
+**Purpose**: Staff view of policies and Q&A system
+
+**Features**:
+- Policies tab: Accordion by category with search
+- Q&A tab: Submit questions, view pending/resolved
+- Policy-linked answers show policy link
+- Direct answers shown inline
+- Filter Q&A by status: all, resolved, pending
+- "My pending questions" section
+
+**Key UI Elements**:
+- Search input
+- Category-grouped accordion for policies
+- Question submission form
+- Q&A list with status badges
+
+### 7. QAManager (`QAManager.tsx`)
+**Purpose**: Management view for answering staff Q&A
+
+**Features**:
+- List of pending and resolved questions
+- Answer dialog with two modes:
+  - Direct answer (text)
+  - Link to existing policy
+  - Create new policy and link
+- Notifications sent to question asker on answer
+- Search and status filter
+
+**Key UI Elements**:
+- Pending count badge
+- Answer mode radio buttons
+- Policy selector or policy creation form
+- Notification preview
+
+### 8. NotificationBell (`NotificationBell.tsx`)
+**Purpose**: Header notification dropdown
+
+**Features**:
+- Bell icon with unread count badge
+- Dropdown with notification list (max 10 shown)
+- "Mark all read" button
+- Click to mark individual as read
+- Auto-refetch every 30 seconds
+- Different icons by notification type
+
+**Key UI Elements**:
+- Dropdown menu from header
+- Notification items with type icons
+- Unread indicator dot
+
+---
+
+## Phase 4: Dashboard Integration
+
+### Update ConciergeDashboard.tsx
+
+Map views to components:
+- `report` → `<ConciergeShiftReport />`
+- `announcements` → `<AnnouncementsBoard />`
+- `messages` → `<StaffMessagesInbox />`
+- `policies-qa` → `<PoliciesAndQA />`
+
+### Update ConciergeHeader.tsx
+
+Add `<NotificationBell />` to header actions, between RoleSwitcher and shift badge.
+
+### Management Views
+
+Create routes/integration for management-only components:
+- `AnnouncementsManager` - Accessible from Manager dashboard
+- `QAManager` - Accessible from Manager dashboard
+
+---
+
+## Phase 5: Type Definitions
+
+Add TypeScript interfaces in each component or create shared types file:
+
+```typescript
+interface ShiftReportFormData {
+  weather: string;
+  summary: string;
+  tour_notes: string;
+  member_feedback: string;
+  facility_issues: string;
+  incidents: string;
+  handoff_notes: string;
+  cafe_notes: string;
+  other_notes: string;
+}
+
+interface Announcement { /* ... */ }
+interface Message { /* ... */ }
+interface Policy { /* ... */ }
+interface QAEntry { /* ... */ }
+interface Notification { /* ... */ }
+```
+
+---
 
 ## Technical Details
 
-### Edge Function Pattern
-```text
-+------------------+     +------------------+     +------------------+
-|   api_endpoints  | --> |  Edge Function   | --> |  staging_table   |
-|  (get config)    |     |  (fetch & log)   |     |  (raw data)      |
-+------------------+     +------------------+     +------------------+
-                                |                         |
-                                v                         v
-                         +------------------+     +------------------+
-                         |   api_logs       |     |  target_table    |
-                         |  (log request)   |     |  (promoted data) |
-                         +------------------+     +------------------+
-                                |
-                                v
-                         +------------------+
-                         | api_sync_status  |
-                         |  (update state)  |
-                         +------------------+
+### Database Migration SQL
+
+```sql
+-- Club policies table
+CREATE TABLE IF NOT EXISTS club_policies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  content text NOT NULL,
+  category text,
+  sort_order int DEFAULT 0,
+  is_active boolean DEFAULT true,
+  last_updated_by text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Staff Q&A with policy linking
+CREATE TABLE IF NOT EXISTS staff_qa (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question text NOT NULL,
+  context text,
+  answer text,
+  answer_type text CHECK (answer_type IN ('policy_link', 'direct_answer')),
+  linked_policy_id uuid REFERENCES club_policies(id),
+  asked_by_id uuid REFERENCES auth.users(id),
+  asked_by_name text NOT NULL,
+  answered_by_id uuid REFERENCES auth.users(id),
+  answered_by_name text,
+  is_resolved boolean DEFAULT false,
+  is_public boolean DEFAULT true,
+  parent_id uuid REFERENCES staff_qa(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Staff notifications
+CREATE TABLE IF NOT EXISTS staff_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) NOT NULL,
+  type text NOT NULL,
+  title text NOT NULL,
+  body text,
+  data jsonb,
+  is_read boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Index for fast notification lookup
+CREATE INDEX IF NOT EXISTS idx_staff_notifications_user_unread
+  ON staff_notifications(user_id, is_read)
+  WHERE is_read = false;
+
+-- Add is_draft to shift_reports if not exists
+ALTER TABLE shift_reports 
+  ADD COLUMN IF NOT EXISTS is_draft boolean DEFAULT true;
 ```
 
-### Batch ID Strategy
-Each sync run generates a UUID batch ID. Staging tables store this ID to:
-- Track which records came from which sync
-- Enable rollback if needed
-- Support data quality auditing
+### RLS Policies
 
-### New Secrets Required
-- SLING_API_KEY
-- TOAST_API_KEY
-- TOAST_LOCATION_GUID (for Toast API)
-- CALENDLY_API_KEY
+All new tables will need RLS policies:
+- `club_policies`: Read for all authenticated, write for managers/admins
+- `staff_qa`: Read own questions + public, submit for all, answer for managers
+- `staff_notifications`: Users can only see their own
 
-## File Changes Summary
+### Data API Permissions
 
-**New Files:**
-- `supabase/migrations/[timestamp]_api_management.sql` - All 16 tables
-- `supabase/functions/sync-sling/index.ts`
-- `supabase/functions/sync-arketa-classes/index.ts`
-- `supabase/functions/sync-toast/index.ts`
-- `supabase/functions/sync-calendly/index.ts`
-- `src/hooks/useApiSyncStatus.ts`
-- `src/hooks/useApiLogs.ts`
-- `src/hooks/useSystemAlerts.ts`
-- `src/pages/dashboards/ApiStatusPage.tsx`
-- `src/components/api/ApiStatusCard.tsx`
-- `src/components/api/SystemAlertsPanel.tsx`
-- `src/components/api/ApiLogsTable.tsx`
+Add to edge function TABLE_PERMISSIONS:
+```typescript
+'club_policies': { management: ['select', 'insert', 'update', 'delete'], staff: ['select'] },
+'staff_qa': { management: ['select', 'insert', 'update', 'delete'], staff: ['select', 'insert'] },
+'staff_notifications': { management: ['select', 'insert', 'update'], staff: ['select', 'update'] },
+```
 
-**Modified Files:**
-- `src/App.tsx` - Add API status route
-- `src/pages/dashboards/ManagerDashboard.tsx` - Add API status card
-- `src/components/layout/DashboardLayout.tsx` - Add nav item for managers
+---
 
-## Notes
-- The existing `sync-members` edge function and `member_sync_log` table will continue to work alongside the new system
-- The new `api_logs` table provides more comprehensive logging than `member_sync_log`
-- Consider migrating `sync-members` to use the new logging pattern in a future update
+## Implementation Order
+
+1. **Database**: Create migration for new tables and RLS policies
+2. **Types & Hooks**: Create `useShiftReports.ts` hook
+3. **Core Components** (in order):
+   - NotificationBell (standalone, header integration)
+   - ConciergeShiftReport (shift report view)
+   - AnnouncementsBoard (announcements view)
+   - StaffMessagesInbox (messages view)
+   - PoliciesAndQA (policies-qa view)
+4. **Management Components**:
+   - AnnouncementsManager
+   - QAManager
+5. **Integration**: Update ConciergeDashboard and ConciergeHeader
+
+---
+
+## Design System Compliance
+
+All components will follow the existing "Fear of God" inspired design:
+- `rounded-none` for all borders
+- `text-xs uppercase tracking-wider` for headers
+- `hover:bg-muted/50` for interactive elements
+- `bg-primary/5` for active/selected states
+- Icon sizes: h-4 w-4 (headers), h-3 w-3 (inline)
+- Sharp, minimal aesthetic with subtle borders

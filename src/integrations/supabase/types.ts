@@ -1252,26 +1252,38 @@ export type Database = {
         Row: {
           completed_at: string | null
           error_message: string | null
+          failed_record_ids: string[] | null
+          failure_count: number | null
           id: string
           records_synced: number | null
+          retry_attempts: number | null
           started_at: string
           status: string
+          success_count: number | null
         }
         Insert: {
           completed_at?: string | null
           error_message?: string | null
+          failed_record_ids?: string[] | null
+          failure_count?: number | null
           id?: string
           records_synced?: number | null
+          retry_attempts?: number | null
           started_at?: string
           status?: string
+          success_count?: number | null
         }
         Update: {
           completed_at?: string | null
           error_message?: string | null
+          failed_record_ids?: string[] | null
+          failure_count?: number | null
           id?: string
           records_synced?: number | null
+          retry_attempts?: number | null
           started_at?: string
           status?: string
+          success_count?: number | null
         }
         Relationships: []
       }

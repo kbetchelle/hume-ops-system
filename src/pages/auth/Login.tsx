@@ -47,7 +47,7 @@ export default function Login() {
     }
   };
   return (
-    <div className="min-h-screen flex items-center justify-center bg-primary px-8 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-background px-8 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex justify-center">
           <img src={humeLogo} alt="Hume" className="h-20 w-auto object-contain" />

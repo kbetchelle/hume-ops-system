@@ -53,6 +53,8 @@ import {
   SystemIssue,
   FutureShiftNote,
 } from "@/hooks/useShiftReports";
+import { useShiftSystemData, formatSystemDataForReport } from "@/hooks/useShiftSystemData";
+import { SystemDataSummary } from "@/components/reports/SystemDataSummary";
 import { cn } from "@/lib/utils";
 
 export default function ShiftReportPage() {
@@ -82,6 +84,7 @@ export default function ShiftReportPage() {
     shiftType
   );
   const { data: reportHistory } = useShiftReportHistory();
+  const { data: systemData, isLoading: systemDataLoading } = useShiftSystemData(dateStr, shiftType);
   const saveReport = useSaveShiftReport();
 
   // Load existing report data
@@ -113,6 +116,9 @@ export default function ShiftReportPage() {
   const handleSave = async (submit = false) => {
     if (!user) return;
 
+    // Format system data for saving
+    const formattedSystemData = formatSystemDataForReport(systemData);
+
     await saveReport.mutateAsync({
       id: existingReport?.id,
       report_date: dateStr,
@@ -130,6 +136,10 @@ export default function ShiftReportPage() {
       management_notes: managementNotes,
       future_shift_notes: futureShiftNotes,
       status: submit ? "submitted" : "draft",
+      // Include system data from APIs
+      arketa_reservations: formattedSystemData.arketa_reservations,
+      toast_sales: formattedSystemData.toast_sales,
+      sling_shift_data: formattedSystemData.sling_shift_data,
     });
   };
 
@@ -282,6 +292,15 @@ export default function ShiftReportPage() {
                 </p>
               </div>
             )}
+
+            {/* System Data Summary - Read-only cards */}
+            <SystemDataSummary 
+              data={systemData} 
+              isLoading={systemDataLoading} 
+              shiftType={shiftType} 
+            />
+
+            <Separator />
 
             {/* MEMBERS Section */}
             <Card>

@@ -34,7 +34,7 @@ export default function TrainerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/members")}
@@ -45,10 +45,23 @@ export default function TrainerDashboard() {
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/training-plans")}
+          >
             <CardHeader>
-              <CardTitle>Training Schedule</CardTitle>
-              <CardDescription>View and manage your training sessions</CardDescription>
+              <CardTitle>Training Plans</CardTitle>
+              <CardDescription>Create workout and nutrition plans for clients</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/member-communications")}
+          >
+            <CardHeader>
+              <CardTitle>Communications</CardTitle>
+              <CardDescription>Email and message your clients</CardDescription>
             </CardHeader>
           </Card>
 

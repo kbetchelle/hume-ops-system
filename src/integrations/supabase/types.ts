@@ -629,6 +629,97 @@ export type Database = {
           },
         ]
       }
+      training_plan_content: {
+        Row: {
+          content: string
+          content_type: string
+          created_at: string
+          id: string
+          section_title: string
+          sort_order: number
+          training_plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          section_title: string
+          sort_order?: number
+          training_plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          section_title?: string
+          sort_order?: number
+          training_plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_content_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          is_template: boolean
+          member_id: string | null
+          plan_type: string
+          share_slug: string | null
+          title: string
+          trainer_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          is_template?: boolean
+          member_id?: string | null
+          plan_type?: string
+          share_slug?: string | null
+          title: string
+          trainer_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          is_template?: boolean
+          member_id?: string | null
+          plan_type?: string
+          share_slug?: string | null
+          title?: string
+          trainer_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

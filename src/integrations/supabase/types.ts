@@ -152,6 +152,7 @@ export type Database = {
           is_active: boolean | null
           max_date_range_days: number | null
           rate_limit_per_min: number | null
+          updated_at: string | null
         }
         Insert: {
           api_name: string
@@ -163,6 +164,7 @@ export type Database = {
           is_active?: boolean | null
           max_date_range_days?: number | null
           rate_limit_per_min?: number | null
+          updated_at?: string | null
         }
         Update: {
           api_name?: string
@@ -174,6 +176,7 @@ export type Database = {
           is_active?: boolean | null
           max_date_range_days?: number | null
           rate_limit_per_min?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2297,6 +2300,51 @@ export type Database = {
           synced_at?: string
           user_email?: string | null
           user_name?: string | null
+        }
+        Relationships: []
+      }
+      sync_schedule: {
+        Row: {
+          created_at: string | null
+          failure_count: number | null
+          id: string
+          interval_minutes: number
+          is_enabled: boolean
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          next_run_at: string | null
+          records_synced: number | null
+          sync_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          interval_minutes?: number
+          is_enabled?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          next_run_at?: string | null
+          records_synced?: number | null
+          sync_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          interval_minutes?: number
+          is_enabled?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          next_run_at?: string | null
+          records_synced?: number | null
+          sync_type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

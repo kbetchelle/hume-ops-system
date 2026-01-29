@@ -75,6 +75,16 @@ export default function AdminDashboard() {
               <CardDescription>Access manager dashboard and tools</CardDescription>
             </CardHeader>
           </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/sync-management")}
+          >
+            <CardHeader>
+              <CardTitle>Sync Management</CardTitle>
+              <CardDescription>Manage automated API syncs</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         {/* Header */}

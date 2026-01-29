@@ -1,5 +1,7 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
+import { WhosWorkingView } from "./WhosWorkingView";
+import { ShiftEventsMiniCalendar } from "./ShiftEventsMiniCalendar";
 import type { ConciergeView } from "./ConciergeSidebar";
 
 interface ConciergeHomeViewProps {
@@ -32,21 +34,6 @@ export function ConciergeHomeView({ onNavigate }: ConciergeHomeViewProps) {
       title: "Announcements",
       description: "View announcements and documents",
     },
-    {
-      id: "whos-working" as const,
-      title: "Who's Working",
-      description: "See today's staff schedule",
-    },
-    {
-      id: "templates" as const,
-      title: "Response Templates",
-      description: "Quick email and message templates",
-    },
-    {
-      id: "knowledge-base" as const,
-      title: "Knowledge Base",
-      description: "Policies, procedures, and FAQs",
-    },
   ];
 
   return (
@@ -76,28 +63,37 @@ export function ConciergeHomeView({ onNavigate }: ConciergeHomeViewProps) {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="space-y-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Quick Actions
-        </h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {quickActions.map((action) => (
-            <Card
-              key={action.id}
-              className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border rounded-none"
-              onClick={() => onNavigate(action.id)}
-            >
-              <CardHeader className="p-4">
-                <CardTitle className="text-sm font-normal tracking-wide">
-                  {action.title}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {action.description}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
+      {/* Main Content Grid: Quick Actions + Sidebar Widgets */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Quick Actions - 2 columns on large screens */}
+        <div className="lg:col-span-2 space-y-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            Quick Actions
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            {quickActions.map((action) => (
+              <Card
+                key={action.id}
+                className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border rounded-none"
+                onClick={() => onNavigate(action.id)}
+              >
+                <CardHeader className="p-4">
+                  <CardTitle className="text-sm font-normal tracking-wide">
+                    {action.title}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {action.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Sidebar Widgets - 1 column on large screens */}
+        <div className="space-y-6">
+          <ShiftEventsMiniCalendar />
+          <WhosWorkingView />
         </div>
       </div>
     </div>

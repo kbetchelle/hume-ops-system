@@ -627,6 +627,68 @@ export type Database = {
         }
         Relationships: []
       }
+      backfill_jobs: {
+        Row: {
+          api_source: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          data_type: string
+          days_processed: number
+          end_date: string
+          errors: Json | null
+          id: string
+          processing_date: string | null
+          records_processed: number
+          start_date: string
+          started_at: string | null
+          status: string
+          total_days: number
+        }
+        Insert: {
+          api_source: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_type: string
+          days_processed?: number
+          end_date: string
+          errors?: Json | null
+          id?: string
+          processing_date?: string | null
+          records_processed?: number
+          start_date: string
+          started_at?: string | null
+          status?: string
+          total_days?: number
+        }
+        Update: {
+          api_source?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_type?: string
+          days_processed?: number
+          end_date?: string
+          errors?: Json | null
+          id?: string
+          processing_date?: string | null
+          records_processed?: number
+          start_date?: string
+          started_at?: string | null
+          status?: string
+          total_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backfill_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       calendly_events_staging: {
         Row: {
           calendly_event_id: string

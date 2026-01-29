@@ -29,6 +29,8 @@ import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPag
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
 import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
+import ShiftReportPage from "./pages/dashboards/ShiftReportPage";
+import ReportsPage from "./pages/dashboards/ReportsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -169,6 +171,26 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "trainer"]}>
                   <MemberCommunicationsHub />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Shift Report for Concierges */}
+            <Route
+              path="/dashboard/shift-report"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge"]}>
+                  <ShiftReportPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Reports & Analytics */}
+            <Route
+              path="/dashboard/reports"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <ReportsPage />
                 </ProtectedRoute>
               }
             />

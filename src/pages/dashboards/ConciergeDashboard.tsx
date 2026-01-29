@@ -34,7 +34,17 @@ export default function ConciergeDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/shift-report")}
+          >
+            <CardHeader>
+              <CardTitle>Shift Report</CardTitle>
+              <CardDescription>Complete your AM/PM shift report</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/my-checklists")}
@@ -52,6 +62,16 @@ export default function ConciergeDashboard() {
             <CardHeader>
               <CardTitle>Member Communications</CardTitle>
               <CardDescription>View member history and send emails</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/communications")}
+          >
+            <CardHeader>
+              <CardTitle>Announcements</CardTitle>
+              <CardDescription>View announcements and documents</CardDescription>
             </CardHeader>
           </Card>
 

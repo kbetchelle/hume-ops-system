@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -38,7 +38,7 @@ export default function Login() {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Welcome back!");
+        toast.success("Welcome back");
         navigate("/dashboard");
       }
     } catch (error) {
@@ -49,20 +49,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4">
-      <Card className="w-full max-w-md shadow-xl border-border/50">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <LogIn className="w-6 h-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
-            Enter your credentials to access your account
+    <div className="min-h-screen flex items-center justify-center bg-background px-8">
+      <Card className="w-full max-w-md border-0">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <CardTitle className="text-sm">Sign In</CardTitle>
+          <CardDescription className="text-xs tracking-wide">
+            Enter your credentials to continue
           </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -72,11 +69,11 @@ export default function Login() {
                     <FormControl>
                       <Input 
                         type="email" 
-                        placeholder="you@example.com" 
+                        placeholder="your@email.com" 
                         {...field} 
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px] tracking-wide" />
                   </FormItem>
                 )}
               />
@@ -93,12 +90,12 @@ export default function Login() {
                         {...field} 
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px] tracking-wide" />
                   </FormItem>
                 )}
               />
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-6 pt-8">
               <Button 
                 type="submit" 
                 className="w-full" 
@@ -106,18 +103,18 @@ export default function Login() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Signing in
                   </>
                 ) : (
                   "Sign In"
                 )}
               </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Don't have an account?{" "}
+              <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest">
+                No account?{" "}
                 <Link 
                   to="/signup" 
-                  className="text-primary hover:underline font-medium"
+                  className="text-foreground hover:opacity-70 transition-opacity duration-300"
                 >
                   Create one
                 </Link>

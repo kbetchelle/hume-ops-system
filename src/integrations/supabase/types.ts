@@ -571,6 +571,51 @@ export type Database = {
         }
         Relationships: []
       }
+      class_schedule: {
+        Row: {
+          arketa_class_id: string
+          capacity: number | null
+          checkins: number | null
+          class_date: string
+          class_name: string
+          end_time: string | null
+          id: string
+          instructor_name: string | null
+          last_synced_at: string | null
+          location: string | null
+          signups: number | null
+          start_time: string
+        }
+        Insert: {
+          arketa_class_id: string
+          capacity?: number | null
+          checkins?: number | null
+          class_date: string
+          class_name: string
+          end_time?: string | null
+          id?: string
+          instructor_name?: string | null
+          last_synced_at?: string | null
+          location?: string | null
+          signups?: number | null
+          start_time: string
+        }
+        Update: {
+          arketa_class_id?: string
+          capacity?: number | null
+          checkins?: number | null
+          class_date?: string
+          class_name?: string
+          end_time?: string | null
+          id?: string
+          instructor_name?: string | null
+          last_synced_at?: string | null
+          location?: string | null
+          signups?: number | null
+          start_time?: string
+        }
+        Relationships: []
+      }
       daily_report_history: {
         Row: {
           arketa_payments: Json | null
@@ -655,6 +700,96 @@ export type Database = {
           total_visits?: number | null
           tour_notes?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_reports: {
+        Row: {
+          cafe_gross_sales: number | null
+          cafe_net_sales: number | null
+          cafe_order_count: number | null
+          created_at: string | null
+          gross_sales_arketa: number | null
+          id: string
+          last_synced_at: string | null
+          raw_data: Json | null
+          report_date: string
+          total_class_checkins: number | null
+          total_gym_checkins: number | null
+          total_reservations: number | null
+          total_sales: number | null
+        }
+        Insert: {
+          cafe_gross_sales?: number | null
+          cafe_net_sales?: number | null
+          cafe_order_count?: number | null
+          created_at?: string | null
+          gross_sales_arketa?: number | null
+          id?: string
+          last_synced_at?: string | null
+          raw_data?: Json | null
+          report_date: string
+          total_class_checkins?: number | null
+          total_gym_checkins?: number | null
+          total_reservations?: number | null
+          total_sales?: number | null
+        }
+        Update: {
+          cafe_gross_sales?: number | null
+          cafe_net_sales?: number | null
+          cafe_order_count?: number | null
+          created_at?: string | null
+          gross_sales_arketa?: number | null
+          id?: string
+          last_synced_at?: string | null
+          raw_data?: Json | null
+          report_date?: string
+          total_class_checkins?: number | null
+          total_gym_checkins?: number | null
+          total_reservations?: number | null
+          total_sales?: number | null
+        }
+        Relationships: []
+      }
+      daily_schedules: {
+        Row: {
+          id: string
+          is_currently_working: boolean | null
+          last_synced_at: string | null
+          location: string | null
+          position: string | null
+          schedule_date: string
+          shift_end: string
+          shift_start: string
+          sling_user_id: number
+          staff_id: string | null
+          staff_name: string | null
+        }
+        Insert: {
+          id?: string
+          is_currently_working?: boolean | null
+          last_synced_at?: string | null
+          location?: string | null
+          position?: string | null
+          schedule_date: string
+          shift_end: string
+          shift_start: string
+          sling_user_id: number
+          staff_id?: string | null
+          staff_name?: string | null
+        }
+        Update: {
+          id?: string
+          is_currently_working?: boolean | null
+          last_synced_at?: string | null
+          location?: string | null
+          position?: string | null
+          schedule_date?: string
+          shift_end?: string
+          shift_start?: string
+          sling_user_id?: number
+          staff_id?: string | null
+          staff_name?: string | null
         }
         Relationships: []
       }
@@ -779,6 +914,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      member_checkins: {
+        Row: {
+          arketa_client_id: string | null
+          checkin_date: string
+          checkin_time: string
+          checkin_type: string | null
+          class_name: string | null
+          created_at: string | null
+          id: string
+          member_email: string | null
+          member_name: string | null
+        }
+        Insert: {
+          arketa_client_id?: string | null
+          checkin_date: string
+          checkin_time: string
+          checkin_type?: string | null
+          class_name?: string | null
+          created_at?: string | null
+          id?: string
+          member_email?: string | null
+          member_name?: string | null
+        }
+        Update: {
+          arketa_client_id?: string | null
+          checkin_date?: string
+          checkin_time?: string
+          checkin_type?: string | null
+          class_name?: string | null
+          created_at?: string | null
+          id?: string
+          member_email?: string | null
+          member_name?: string | null
+        }
+        Relationships: []
       }
       member_communications: {
         Row: {
@@ -995,6 +1166,57 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_tours: {
+        Row: {
+          assigned_to: string | null
+          calendly_event_id: string
+          created_at: string | null
+          end_time: string | null
+          event_type: string | null
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          last_synced_at: string | null
+          notes: string | null
+          start_time: string
+          status: string | null
+          tour_date: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          calendly_event_id: string
+          created_at?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          last_synced_at?: string | null
+          notes?: string | null
+          start_time: string
+          status?: string | null
+          tour_date: string
+        }
+        Update: {
+          assigned_to?: string | null
+          calendly_event_id?: string
+          created_at?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          last_synced_at?: string | null
+          notes?: string | null
+          start_time?: string
+          status?: string | null
+          tour_date?: string
+        }
+        Relationships: []
+      }
       sling_shifts_staging: {
         Row: {
           id: string
@@ -1082,6 +1304,48 @@ export type Database = {
           sling_user_id?: number
           staged_at?: string | null
           sync_batch_id?: string
+        }
+        Relationships: []
+      }
+      sling_users: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          last_synced_at: string | null
+          linked_staff_id: string | null
+          positions: string[] | null
+          sling_created_at: string | null
+          sling_user_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          linked_staff_id?: string | null
+          positions?: string[] | null
+          sling_created_at?: string | null
+          sling_user_id: number
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          last_synced_at?: string | null
+          linked_staff_id?: string | null
+          positions?: string[] | null
+          sling_created_at?: string | null
+          sling_user_id?: number
         }
         Relationships: []
       }

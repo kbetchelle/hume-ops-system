@@ -111,6 +111,135 @@ export type Database = {
         }
         Relationships: []
       }
+      api_endpoints: {
+        Row: {
+          api_name: string
+          base_url: string
+          created_at: string | null
+          endpoint_path: string
+          endpoint_type: string
+          id: string
+          is_active: boolean | null
+          max_date_range_days: number | null
+          rate_limit_per_min: number | null
+        }
+        Insert: {
+          api_name: string
+          base_url: string
+          created_at?: string | null
+          endpoint_path: string
+          endpoint_type: string
+          id?: string
+          is_active?: boolean | null
+          max_date_range_days?: number | null
+          rate_limit_per_min?: number | null
+        }
+        Update: {
+          api_name?: string
+          base_url?: string
+          created_at?: string | null
+          endpoint_path?: string
+          endpoint_type?: string
+          id?: string
+          is_active?: boolean | null
+          max_date_range_days?: number | null
+          rate_limit_per_min?: number | null
+        }
+        Relationships: []
+      }
+      api_logs: {
+        Row: {
+          api_name: string
+          created_at: string | null
+          duration_ms: number | null
+          endpoint: string
+          error_message: string | null
+          id: string
+          raw_response: string | null
+          records_inserted: number | null
+          records_processed: number | null
+          request_method: string | null
+          response_body: Json | null
+          response_status: number | null
+          sync_success: boolean
+          triggered_by: string | null
+        }
+        Insert: {
+          api_name: string
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          raw_response?: string | null
+          records_inserted?: number | null
+          records_processed?: number | null
+          request_method?: string | null
+          response_body?: Json | null
+          response_status?: number | null
+          sync_success: boolean
+          triggered_by?: string | null
+        }
+        Update: {
+          api_name?: string
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          raw_response?: string | null
+          records_inserted?: number | null
+          records_processed?: number | null
+          request_method?: string | null
+          response_body?: Json | null
+          response_status?: number | null
+          sync_success?: boolean
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      api_sync_status: {
+        Row: {
+          api_name: string
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          last_error_message: string | null
+          last_records_inserted: number | null
+          last_records_processed: number | null
+          last_sync_at: string | null
+          last_sync_success: boolean | null
+          sync_frequency_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_name: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_error_message?: string | null
+          last_records_inserted?: number | null
+          last_records_processed?: number | null
+          last_sync_at?: string | null
+          last_sync_success?: boolean | null
+          sync_frequency_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_name?: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_error_message?: string | null
+          last_records_inserted?: number | null
+          last_records_processed?: number | null
+          last_sync_at?: string | null
+          last_sync_success?: boolean | null
+          sync_frequency_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           category: string
@@ -683,6 +812,48 @@ export type Database = {
           id?: string
           permission?: string
           role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      system_alerts: {
+        Row: {
+          alert_type: string
+          api_name: string | null
+          auto_resolve_on_sync: boolean | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          is_resolved: boolean | null
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+        }
+        Insert: {
+          alert_type: string
+          api_name?: string | null
+          auto_resolve_on_sync?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          is_resolved?: boolean | null
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+        }
+        Update: {
+          alert_type?: string
+          api_name?: string | null
+          auto_resolve_on_sync?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          is_resolved?: boolean | null
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
         }
         Relationships: []
       }

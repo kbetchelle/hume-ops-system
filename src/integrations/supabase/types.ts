@@ -1064,6 +1064,48 @@ export type Database = {
           },
         ]
       }
+      lost_and_found: {
+        Row: {
+          claimed_by: string | null
+          claimed_date: string | null
+          created_at: string | null
+          date_found: string | null
+          description: string
+          found_by_id: string | null
+          found_by_name: string | null
+          id: string
+          location_found: string | null
+          notes: string | null
+          status: string | null
+        }
+        Insert: {
+          claimed_by?: string | null
+          claimed_date?: string | null
+          created_at?: string | null
+          date_found?: string | null
+          description: string
+          found_by_id?: string | null
+          found_by_name?: string | null
+          id?: string
+          location_found?: string | null
+          notes?: string | null
+          status?: string | null
+        }
+        Update: {
+          claimed_by?: string | null
+          claimed_date?: string | null
+          created_at?: string | null
+          date_found?: string | null
+          description?: string
+          found_by_id?: string | null
+          found_by_name?: string | null
+          id?: string
+          location_found?: string | null
+          notes?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       member_checkins: {
         Row: {
           arketa_client_id: string | null
@@ -1291,6 +1333,69 @@ export type Database = {
           onboarding_completed?: boolean | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      quick_links: {
+        Row: {
+          category: string
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string
+          url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      response_templates: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title?: string
         }
         Relationships: []
       }
@@ -1623,6 +1728,51 @@ export type Database = {
           target_departments?: string[] | null
           title?: string
           week_start_date?: string | null
+        }
+        Relationships: []
+      }
+      staff_documents: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_active: boolean | null
+          target_roles: string[] | null
+          title: string
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          target_roles?: string[] | null
+          title: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          target_roles?: string[] | null
+          title?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: []
       }

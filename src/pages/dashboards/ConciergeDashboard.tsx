@@ -11,6 +11,10 @@ import { ConciergeShiftReport } from "@/components/concierge/ConciergeShiftRepor
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
+import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplatesWithAI";
+import { QuickLinks } from "@/components/concierge/QuickLinks";
+import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
+import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -94,9 +98,9 @@ export default function ConciergeDashboard() {
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Response Templates
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Email templates coming soon...
-            </p>
+            <div className="max-w-3xl">
+              <ResponseTemplatesWithAI />
+            </div>
           </div>
         );
       case "quick-links":
@@ -105,9 +109,42 @@ export default function ConciergeDashboard() {
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Quick Links
             </h2>
+            <div className="max-w-2xl">
+              <QuickLinks />
+            </div>
+          </div>
+        );
+      case "knowledge-base":
+        return (
+          <div className="p-6 md:p-8">
+            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
+              Knowledge Base
+            </h2>
             <p className="text-xs text-muted-foreground">
-              Quick links coming soon...
+              Knowledge base coming soon...
             </p>
+          </div>
+        );
+      case "lost-found":
+        return (
+          <div className="p-6 md:p-8">
+            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
+              Lost & Found
+            </h2>
+            <div className="max-w-3xl">
+              <LostAndFoundTab />
+            </div>
+          </div>
+        );
+      case "documents":
+        return (
+          <div className="p-6 md:p-8">
+            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
+              Documents
+            </h2>
+            <div className="max-w-3xl">
+              <StaffDocumentsView />
+            </div>
           </div>
         );
       case "knowledge-base":

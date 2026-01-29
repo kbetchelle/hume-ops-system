@@ -45,6 +45,11 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'club_policies': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'staff_qa': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   'staff_notifications': { management: ['select', 'insert', 'update'], concierge: ['select', 'update'], staff: ['select', 'update'] },
+  // Phase 3 tables
+  'response_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'quick_links': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
+  'staff_documents': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
 };
 
 function normalizeRole(role: string | undefined): string {

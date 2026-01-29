@@ -1,4 +1,4 @@
-import { Search, LogOut, Moon, Sun } from "lucide-react";
+import { Search, LogOut, Moon, Sun, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
@@ -30,35 +30,34 @@ export function ConciergeHeader() {
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
-        {/* Shift Badge */}
+        {/* Shift Badge Button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={toggleShift}
               onDoubleClick={resetToAuto}
-              className="focus:outline-none"
+              className="gap-2 rounded-none text-[10px] uppercase tracking-widest"
             >
-              <Badge
-                variant="outline"
-                className={`
-                  rounded-none text-[10px] uppercase tracking-widest px-3 py-1
-                  cursor-pointer select-none
-                  ${isManualOverride ? "border-primary text-primary" : ""}
-                `}
-              >
-                {currentShift} Shift
-              </Badge>
-            </button>
+              <Clock className="h-4 w-4" />
+              {currentShift} Shift
+              {isManualOverride && (
+                <Badge variant="secondary" className="rounded-none text-[9px] ml-1">
+                  Manual
+                </Badge>
+              )}
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="rounded-none">
             <p className="text-xs">
               {shiftStartTime} - {shiftEndTime}
-              {isManualOverride && (
-                <span className="block text-muted-foreground">
-                  Manual override • Double-click to reset
-                </span>
-              )}
             </p>
+            {isManualOverride && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Double-click to reset to auto
+              </p>
+            )}
           </TooltipContent>
         </Tooltip>
 

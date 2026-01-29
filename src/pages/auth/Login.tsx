@@ -47,12 +47,19 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen flex">
+  return <div className="min-h-screen flex relative">
+      {/* Mobile background image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat lg:hidden"
+        style={{ backgroundImage: `url(${loginBg})` }}
+      />
+      
       {/* Left side - Login form */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12" style={{
-      backgroundColor: "hsl(30, 25%, 85%)"
-    }}>
-        <div className="w-full max-w-sm space-y-8">
+      <div className="relative w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12 lg:bg-[hsl(30,25%,85%)]">
+        {/* Mobile overlay for readability */}
+        <div className="absolute inset-0 bg-black/40 lg:hidden" />
+        
+        <div className="relative w-full max-w-sm space-y-8">
           <div className="flex justify-center">
             <img src={humeLogo} alt="Hume" className="h-20 w-auto object-contain" />
           </div>
@@ -62,18 +69,18 @@ export default function Login() {
               <FormField control={form.control} name="email" render={({
               field
             }) => <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-white lg:text-foreground">Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="your@email.com" className="bg-transparent" {...field} />
+                      <Input type="email" placeholder="your@email.com" className="bg-white/90 lg:bg-transparent" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px] tracking-wide" />
                   </FormItem>} />
               <FormField control={form.control} name="password" render={({
               field
             }) => <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-white lg:text-foreground">Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" className="bg-transparent" {...field} />
+                      <Input type="password" placeholder="••••••••" className="bg-white/90 lg:bg-transparent" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px] tracking-wide" />
                   </FormItem>} />
@@ -87,20 +94,16 @@ export default function Login() {
             </form>
           </Form>
           
-          <p className="text-[10px] text-center uppercase tracking-widest" style={{
-          color: "hsl(30, 15%, 35%)"
-        }}>
+          <p className="text-[10px] text-center uppercase tracking-widest text-white/80 lg:text-[hsl(30,15%,35%)]">
             No account?{" "}
-            <Link to="/signup" className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300" style={{
-            color: "hsl(30, 15%, 25%)"
-          }}>
+            <Link to="/signup" className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300 text-white lg:text-[hsl(30,15%,25%)]">
               Create one
             </Link>
           </p>
         </div>
       </div>
       
-      {/* Right side - Image */}
+      {/* Right side - Image (desktop only) */}
       <div className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-no-repeat" style={{
       backgroundImage: `url(${loginBg})`
     }} />

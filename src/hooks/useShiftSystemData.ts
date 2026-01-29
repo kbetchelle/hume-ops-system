@@ -2,17 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
+export interface ClassBreakdown {
+  className: string;
+  time: string;
+  instructor: string | null;
+  signups: number;
+  capacity: number;
+  checkedIn: number;
+  noShows: number;
+  waitlist: number;
+}
+
 export interface ReservationSummary {
   total: number;
   checkedIn: number;
   pending: number;
   cancelled: number;
-  classes: Array<{
-    className: string;
-    time: string;
-    signups: number;
-    capacity: number;
-  }>;
+  noShows: number;
+  classes: ClassBreakdown[];
 }
 
 export interface SalesSummary {
@@ -57,32 +64,60 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
     queryFn: async (): Promise<ShiftSystemData> => {
       const targetDate = new Date(date);
       const dateStr = format(targetDate, "yyyy-MM-dd");
+      const startOfDay = `${dateStr}T00:00:00`;
+      const endOfDay = `${dateStr}T23:59:59`;
       
       // Determine shift time range
       const shiftStartHour = shiftType === "AM" ? 6 : 14;
       const shiftEndHour = shiftType === "AM" ? 14 : 21;
 
-      // Fetch activity logs (check-ins) for today
-      const { data: activityLogs, error: activityError } = await supabase
-        .from("activity_logs")
+      // Fetch Arketa classes for today
+      const { data: arketaClasses, error: arketaClassError } = await supabase
+        .from("arketa_classes")
         .select("*")
-        .eq("activity_date", dateStr)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (activityError) {
-        console.error("Error fetching activity logs:", activityError);
-      }
-
-      // Fetch class schedule for today
-      const { data: classSchedule, error: classError } = await supabase
-        .from("class_schedule")
-        .select("*")
-        .eq("class_date", dateStr)
+        .gte("start_time", startOfDay)
+        .lte("start_time", endOfDay)
+        .eq("is_cancelled", false)
         .order("start_time", { ascending: true });
 
-      if (classError) {
-        console.error("Error fetching class schedule:", classError);
+      if (arketaClassError) {
+        console.error("Error fetching arketa classes:", arketaClassError);
+      }
+
+      // Get class IDs to fetch reservations
+      const classIds = arketaClasses?.map(c => c.external_id) || [];
+
+      // Fetch Arketa reservations for today's classes
+      let arketaReservations: Array<{
+        class_id: string;
+        checked_in: boolean;
+        status: string | null;
+        client_name: string | null;
+        checked_in_at: string | null;
+      }> = [];
+      
+      if (classIds.length > 0) {
+        const { data: reservations, error: resError } = await supabase
+          .from("arketa_reservations")
+          .select("*")
+          .in("class_id", classIds);
+
+        if (resError) {
+          console.error("Error fetching arketa reservations:", resError);
+        } else {
+          arketaReservations = reservations || [];
+        }
+      }
+
+      // Fetch Arketa payments for today
+      const { data: arketaPayments, error: paymentError } = await supabase
+        .from("arketa_payments")
+        .select("*")
+        .gte("payment_date", startOfDay)
+        .lte("payment_date", endOfDay);
+
+      if (paymentError) {
+        console.error("Error fetching arketa payments:", paymentError);
       }
 
       // Fetch staff shifts from staff_shifts table (Sling data)
@@ -108,26 +143,37 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
         console.error("Error fetching member check-ins:", checkinError);
       }
 
-      // Process activity logs for check-in summary
-      const checkInLogs = activityLogs?.filter(log => 
-        log.activity_type === "checkin" || log.activity_type === "class_checkin"
-      ) || [];
+      // Build class-by-class breakdown from Arketa data
+      const classBreakdown: ClassBreakdown[] = (arketaClasses || []).map(cls => {
+        const classReservations = arketaReservations.filter(r => r.class_id === cls.external_id);
+        const checkedIn = classReservations.filter(r => r.checked_in).length;
+        const noShows = classReservations.filter(r => r.status === 'no_show').length;
+        
+        return {
+          className: cls.name,
+          time: cls.start_time,
+          instructor: cls.instructor_name,
+          signups: cls.booked_count || classReservations.length,
+          capacity: cls.capacity || 0,
+          checkedIn,
+          noShows,
+          waitlist: cls.waitlist_count || 0,
+        };
+      });
 
-      const gymCheckIns = checkInLogs.filter(log => log.activity_type === "checkin").length;
-      const classCheckIns = checkInLogs.filter(log => log.activity_type === "class_checkin").length;
+      // Calculate totals from Arketa data
+      const totalReservations = arketaReservations.length;
+      const totalCheckedIn = arketaReservations.filter(r => r.checked_in).length;
+      const totalNoShows = arketaReservations.filter(r => r.status === 'no_show').length;
+      const totalCancelled = arketaReservations.filter(r => r.status === 'cancelled').length;
 
-      // Process class schedule for reservations
-      const classes = classSchedule?.map(cls => ({
-        className: cls.class_name,
-        time: cls.start_time,
-        signups: cls.signups || 0,
-        capacity: cls.capacity || 0,
-      })) || [];
+      // Calculate sales from Arketa payments
+      const totalRevenue = (arketaPayments || []).reduce(
+        (sum, p) => sum + (Number(p.amount) || 0), 
+        0
+      );
 
-      const totalReservations = classes.reduce((sum, cls) => sum + cls.signups, 0);
-      const totalCheckedIn = classSchedule?.reduce((sum, cls) => sum + (cls.checkins || 0), 0) || 0;
-
-      // Filter staff shifts for current shift type using Sling data
+      // Filter staff shifts for current shift type
       const shiftStaff = (staffShifts || []).filter(shift => {
         const shiftHour = new Date(shift.shift_start).getHours();
         if (shiftType === "AM") {
@@ -145,37 +191,53 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
         shiftEnd: shift.shift_end,
       }));
 
-      // Build recent check-ins from member_checkins
-      const recentCheckIns = memberCheckins?.slice(0, 10).map(checkin => ({
-        memberName: checkin.member_name || "Unknown Member",
-        time: checkin.checkin_time,
-        type: checkin.checkin_type || "gym",
-      })) || [];
+      // Build recent check-ins from reservations and member_checkins
+      const recentCheckIns = arketaReservations
+        .filter(r => r.checked_in && r.checked_in_at)
+        .sort((a, b) => new Date(b.checked_in_at!).getTime() - new Date(a.checked_in_at!).getTime())
+        .slice(0, 10)
+        .map(r => ({
+          memberName: r.client_name || "Unknown Member",
+          time: r.checked_in_at!,
+          type: "class",
+        }));
+
+      // Add gym check-ins from member_checkins
+      const gymCheckIns = (memberCheckins || [])
+        .filter(c => c.checkin_type !== "class")
+        .slice(0, 5)
+        .map(c => ({
+          memberName: c.member_name || "Unknown Member",
+          time: c.checkin_time,
+          type: "gym",
+        }));
 
       return {
         reservations: {
           total: totalReservations,
           checkedIn: totalCheckedIn,
-          pending: totalReservations - totalCheckedIn,
-          cancelled: 0, // Would need cancellation tracking
-          classes,
+          pending: totalReservations - totalCheckedIn - totalNoShows - totalCancelled,
+          cancelled: totalCancelled,
+          noShows: totalNoShows,
+          classes: classBreakdown,
         },
         sales: {
-          // Placeholder until Toast integration is complete
-          totalRevenue: 0,
-          orderCount: 0,
-          averageOrder: 0,
-          topItems: [],
+          totalRevenue,
+          orderCount: (arketaPayments || []).length,
+          averageOrder: (arketaPayments || []).length > 0 
+            ? totalRevenue / (arketaPayments || []).length 
+            : 0,
+          topItems: [], // Would need item-level data
         },
         staff: {
           onShift: onShiftStaff,
           totalStaff: onShiftStaff.length,
         },
         checkIns: {
-          total: gymCheckIns + classCheckIns + (memberCheckins?.length || 0),
-          gym: gymCheckIns + (memberCheckins?.filter(c => c.checkin_type !== "class").length || 0),
-          class: classCheckIns + (memberCheckins?.filter(c => c.checkin_type === "class").length || 0),
-          recentCheckIns,
+          total: totalCheckedIn + (memberCheckins?.length || 0),
+          gym: memberCheckins?.filter(c => c.checkin_type !== "class").length || 0,
+          class: totalCheckedIn,
+          recentCheckIns: [...recentCheckIns, ...gymCheckIns].slice(0, 10),
         },
         lastUpdated: new Date().toISOString(),
       };
@@ -202,6 +264,7 @@ export function formatSystemDataForReport(data: ShiftSystemData | undefined) {
         checkedIn: data.reservations.checkedIn,
         pending: data.reservations.pending,
         cancelled: data.reservations.cancelled,
+        noShows: data.reservations.noShows,
       },
       classes: data.reservations.classes,
       checkIns: {
@@ -219,7 +282,7 @@ export function formatSystemDataForReport(data: ShiftSystemData | undefined) {
         averageOrder: data.sales.averageOrder,
       },
       topItems: data.sales.topItems,
-      status: "pending_integration",
+      status: data.sales.orderCount > 0 ? "synced" : "pending_integration",
       capturedAt: data.lastUpdated,
     },
     sling_shift_data: {

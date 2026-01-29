@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
@@ -50,79 +51,111 @@ Deno.serve(async (req) => {
 
     console.log(`[Arketa Payments] Syncing payments from ${startDate} to ${endDate}`);
 
-    // Try purchases endpoint first, then payments
     let payments: ArketaPayment[] = [];
+    let totalAttempts = 0;
     
-    // Try purchases endpoint
+    // Try purchases endpoint first with retry
     const purchasesUrl = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-    const purchasesResponse = await fetch(purchasesUrl, {
-      method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY,
-        'Content-Type': 'application/json',
-      },
-    });
+    
+    try {
+      const { response: purchasesResponse, attempts } = await fetchWithRetry(purchasesUrl, {
+        method: 'GET',
+        headers: {
+          'x-api-key': ARKETA_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      });
+      totalAttempts += attempts;
 
-    if (purchasesResponse.ok) {
-      const purchasesData = await purchasesResponse.json();
-      payments = Array.isArray(purchasesData) ? purchasesData : [];
+      if (purchasesResponse.ok) {
+        const purchasesData = await purchasesResponse.json();
+        payments = Array.isArray(purchasesData) ? purchasesData : [];
+        console.log(`[Arketa Payments] Fetched ${payments.length} purchases after ${attempts} attempt(s)`);
+      }
+    } catch (error) {
+      console.error('[Arketa Payments] Purchases endpoint failed:', error);
     }
 
     // Also try payments endpoint and merge
     const paymentsUrl = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/payments?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-    const paymentsResponse = await fetch(paymentsUrl, {
-      method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY,
-        'Content-Type': 'application/json',
-      },
-    });
+    
+    try {
+      const { response: paymentsResponse, attempts } = await fetchWithRetry(paymentsUrl, {
+        method: 'GET',
+        headers: {
+          'x-api-key': ARKETA_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      });
+      totalAttempts += attempts;
 
-    if (paymentsResponse.ok) {
-      const paymentsData = await paymentsResponse.json();
-      if (Array.isArray(paymentsData)) {
-        payments = [...payments, ...paymentsData];
+      if (paymentsResponse.ok) {
+        const paymentsData = await paymentsResponse.json();
+        if (Array.isArray(paymentsData)) {
+          console.log(`[Arketa Payments] Fetched ${paymentsData.length} additional payments after ${attempts} attempt(s)`);
+          payments = [...payments, ...paymentsData];
+        }
       }
+    } catch (error) {
+      console.error('[Arketa Payments] Payments endpoint failed:', error);
     }
 
-    console.log(`[Arketa Payments] Fetched ${payments.length} payments`);
+    console.log(`[Arketa Payments] Total fetched: ${payments.length} payments`);
 
     const syncedPayments = [];
     let totalRevenue = 0;
+    let failedCount = 0;
 
     for (const payment of payments) {
       const amount = payment.amount ?? payment.total ?? 0;
       const paymentDate = payment.created_at || payment.date || new Date().toISOString();
 
-      const { error } = await supabase
-        .from('arketa_payments')
-        .upsert({
-          external_id: String(payment.id),
-          client_id: payment.client_id ? String(payment.client_id) : null,
+      try {
+        const { result } = await withRetry(
+          async () => {
+            const { error } = await supabase
+              .from('arketa_payments')
+              .upsert({
+                external_id: String(payment.id),
+                client_id: payment.client_id ? String(payment.client_id) : null,
+                amount,
+                payment_type: payment.type || 'purchase',
+                status: payment.status || 'completed',
+                payment_date: paymentDate,
+                notes: payment.notes || null,
+                raw_data: payment,
+                synced_at: new Date().toISOString(),
+              }, {
+                onConflict: 'external_id',
+              });
+
+            if (error && !isRetryableSupabaseError(error)) {
+              throw error;
+            }
+            return { error };
+          },
+          { maxAttempts: 2 },
+          `upsert payment ${payment.id}`
+        );
+
+        if (result.error) {
+          console.error(`[Arketa Payments] Failed to upsert payment ${payment.id}:`, result.error);
+          failedCount++;
+          continue;
+        }
+
+        totalRevenue += amount;
+        syncedPayments.push({
+          id: payment.id,
           amount,
-          payment_type: payment.type || 'purchase',
-          status: payment.status || 'completed',
-          payment_date: paymentDate,
-          notes: payment.notes || null,
-          raw_data: payment,
-          synced_at: new Date().toISOString(),
-        }, {
-          onConflict: 'external_id',
+          type: payment.type,
+          status: payment.status,
+          date: paymentDate,
         });
-
-      if (error) {
-        console.error(`[Arketa Payments] Failed to upsert payment ${payment.id}:`, error);
-        continue;
+      } catch (error) {
+        console.error(`[Arketa Payments] Error upserting payment ${payment.id}:`, error);
+        failedCount++;
       }
-
-      totalRevenue += amount;
-      syncedPayments.push({
-        id: payment.id,
-        amount,
-        type: payment.type,
-        status: payment.status,
-        date: paymentDate,
-      });
     }
 
     // Update sync status
@@ -142,8 +175,10 @@ Deno.serve(async (req) => {
         payments: syncedPayments,
         totalFetched: payments.length,
         syncedCount: syncedPayments.length,
+        failedCount,
         totalRevenue,
         dateRange: { startDate, endDate },
+        apiAttempts: totalAttempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

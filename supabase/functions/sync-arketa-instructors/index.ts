@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 // Use Dev base URL for staff endpoint as specified
 const ARKETA_DEV_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0';
@@ -38,10 +39,10 @@ Deno.serve(async (req) => {
 
     console.log('[Arketa Instructors] Syncing instructors...');
 
-    // Fetch staff from Arketa API (using Dev URL as specified)
+    // Fetch staff from Arketa API (using Dev URL as specified) with retry
     const url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/staff`;
     
-    const response = await fetch(url, {
+    const { response, attempts } = await fetchWithRetry(url, {
       method: 'GET',
       headers: {
         'x-api-key': ARKETA_API_KEY,
@@ -54,10 +55,13 @@ Deno.serve(async (req) => {
       throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
     }
 
+    console.log(`[Arketa Instructors] API request succeeded after ${attempts} attempt(s)`);
+
     const instructors: ArketaInstructor[] = await response.json();
     console.log(`[Arketa Instructors] Fetched ${instructors.length} instructors`);
 
     const syncedInstructors = [];
+    let failedCount = 0;
 
     for (const instructor of instructors) {
       let firstName = instructor.first_name || '';
@@ -72,32 +76,49 @@ Deno.serve(async (req) => {
 
       const isActive = instructor.is_active ?? (instructor.status === 'active');
 
-      const { error } = await supabase
-        .from('arketa_instructors')
-        .upsert({
-          external_id: String(instructor.id),
-          first_name: firstName,
-          last_name: lastName,
-          email: instructor.email || null,
-          phone: instructor.phone || null,
-          is_active: isActive,
-          raw_data: instructor,
-          synced_at: new Date().toISOString(),
-        }, {
-          onConflict: 'external_id',
+      try {
+        const { result } = await withRetry(
+          async () => {
+            const { error } = await supabase
+              .from('arketa_instructors')
+              .upsert({
+                external_id: String(instructor.id),
+                first_name: firstName,
+                last_name: lastName,
+                email: instructor.email || null,
+                phone: instructor.phone || null,
+                is_active: isActive,
+                raw_data: instructor,
+                synced_at: new Date().toISOString(),
+              }, {
+                onConflict: 'external_id',
+              });
+
+            if (error && !isRetryableSupabaseError(error)) {
+              throw error;
+            }
+            return { error };
+          },
+          { maxAttempts: 2 },
+          `upsert instructor ${instructor.id}`
+        );
+
+        if (result.error) {
+          console.error(`[Arketa Instructors] Failed to upsert instructor ${instructor.id}:`, result.error);
+          failedCount++;
+          continue;
+        }
+
+        syncedInstructors.push({
+          id: instructor.id,
+          name: `${firstName} ${lastName}`.trim(),
+          email: instructor.email,
+          isActive,
         });
-
-      if (error) {
-        console.error(`[Arketa Instructors] Failed to upsert instructor ${instructor.id}:`, error);
-        continue;
+      } catch (error) {
+        console.error(`[Arketa Instructors] Error upserting instructor ${instructor.id}:`, error);
+        failedCount++;
       }
-
-      syncedInstructors.push({
-        id: instructor.id,
-        name: `${firstName} ${lastName}`.trim(),
-        email: instructor.email,
-        isActive,
-      });
     }
 
     // Update sync status
@@ -117,6 +138,8 @@ Deno.serve(async (req) => {
         instructors: syncedInstructors,
         totalFetched: instructors.length,
         syncedCount: syncedInstructors.length,
+        failedCount,
+        apiAttempts: attempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

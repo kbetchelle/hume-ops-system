@@ -49,10 +49,9 @@ export default function Login() {
   };
   return <div className="min-h-screen flex relative">
       {/* Mobile background image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat lg:hidden"
-        style={{ backgroundImage: `url(${loginBg})` }}
-      />
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat lg:hidden" style={{
+      backgroundImage: `url(${loginBg})`
+    }} />
       
       {/* Left side - Login form */}
       <div className="relative w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12 lg:bg-[hsl(30,25%,85%)]">

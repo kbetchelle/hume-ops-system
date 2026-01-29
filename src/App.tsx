@@ -33,6 +33,7 @@ import ShiftReportPage from "./pages/dashboards/ShiftReportPage";
 import ReportsPage from "./pages/dashboards/ReportsPage";
 import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
 import PublicPlanPage from "./pages/PublicPlanPage";
+import FacilityManagementPage from "./pages/dashboards/FacilityManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -209,6 +210,16 @@ const App = () => (
 
             {/* Public Plan View (no auth required) */}
             <Route path="/plan/:shareSlug" element={<PublicPlanPage />} />
+
+            {/* Facility Management for Managers */}
+            <Route
+              path="/dashboard/facility"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <FacilityManagementPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

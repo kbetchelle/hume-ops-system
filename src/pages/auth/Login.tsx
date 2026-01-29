@@ -11,31 +11,30 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import loginBg from "@/assets/login-bg.webp";
 import humeLogo from "@/assets/hume-logo.png";
-
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters")
 });
-
 type LoginFormData = z.infer<typeof loginSchema>;
-
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn } = useAuthContext();
+  const {
+    signIn
+  } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
-
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
-      password: "",
-    },
+      password: ""
+    }
   });
-
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await signIn(data.email, data.password);
+      const {
+        error
+      } = await signIn(data.email, data.password);
       if (error) {
         toast.error(error.message);
       } else {
@@ -48,86 +47,53 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex">
+  return <div className="min-h-screen flex">
       {/* Left side - Login form */}
-      <div 
-        className="w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12"
-        style={{ backgroundColor: "hsl(30, 25%, 85%)" }}
-      >
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-8 py-12" style={{
+      backgroundColor: "hsl(30, 25%, 85%)"
+    }}>
         <div className="w-full max-w-sm space-y-8">
           <div className="flex justify-center">
-            <img 
-              src={humeLogo} 
-              alt="Hume" 
-              className="h-20 w-auto object-contain"
-            />
+            <img src={humeLogo} alt="Hume" className="h-20 w-auto object-contain" />
           </div>
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
+              <FormField control={form.control} name="email" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="email" 
-                        placeholder="your@email.com" 
-                        className="bg-transparent"
-                        {...field} 
-                      />
+                      <Input type="email" placeholder="your@email.com" className="bg-transparent" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px] tracking-wide" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
+                  </FormItem>} />
+              <FormField control={form.control} name="password" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="••••••••" 
-                        className="bg-transparent"
-                        {...field} 
-                      />
+                      <Input type="password" placeholder="••••••••" className="bg-transparent" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px] tracking-wide" />
-                  </FormItem>
-                )}
-              />
+                  </FormItem>} />
               
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <>
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                     Signing in
-                  </>
-                ) : (
-                  "Sign In"
-                )}
+                  </> : "Sign In"}
               </Button>
             </form>
           </Form>
           
-          <p className="text-[10px] text-center uppercase tracking-widest" style={{ color: "hsl(30, 15%, 35%)" }}>
+          <p className="text-[10px] text-center uppercase tracking-widest" style={{
+          color: "hsl(30, 15%, 35%)"
+        }}>
             No account?{" "}
-            <Link 
-              to="/signup" 
-              className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300"
-              style={{ color: "hsl(30, 15%, 25%)" }}
-            >
+            <Link to="/signup" className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300" style={{
+            color: "hsl(30, 15%, 25%)"
+          }}>
               Create one
             </Link>
           </p>
@@ -135,10 +101,8 @@ export default function Login() {
       </div>
       
       {/* Right side - Image */}
-      <div 
-        className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${loginBg})` }}
-      />
-    </div>
-  );
+      <div className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-no-repeat" style={{
+      backgroundImage: `url(${loginBg})`
+    }} />
+    </div>;
 }

@@ -270,6 +270,60 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_classes: {
+        Row: {
+          booked_count: number | null
+          capacity: number | null
+          created_at: string | null
+          duration_minutes: number | null
+          external_id: string
+          id: string
+          instructor_name: string | null
+          is_cancelled: boolean | null
+          name: string
+          raw_data: Json | null
+          room_name: string | null
+          start_time: string
+          status: string | null
+          synced_at: string | null
+          waitlist_count: number | null
+        }
+        Insert: {
+          booked_count?: number | null
+          capacity?: number | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          external_id: string
+          id?: string
+          instructor_name?: string | null
+          is_cancelled?: boolean | null
+          name: string
+          raw_data?: Json | null
+          room_name?: string | null
+          start_time: string
+          status?: string | null
+          synced_at?: string | null
+          waitlist_count?: number | null
+        }
+        Update: {
+          booked_count?: number | null
+          capacity?: number | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          external_id?: string
+          id?: string
+          instructor_name?: string | null
+          is_cancelled?: boolean | null
+          name?: string
+          raw_data?: Json | null
+          room_name?: string | null
+          start_time?: string
+          status?: string | null
+          synced_at?: string | null
+          waitlist_count?: number | null
+        }
+        Relationships: []
+      }
       arketa_classes_staging: {
         Row: {
           arketa_class_id: string
@@ -354,6 +408,132 @@ export type Database = {
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id?: string
+        }
+        Relationships: []
+      }
+      arketa_instructors: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          external_id: string
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          phone: string | null
+          raw_data: Json | null
+          synced_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          external_id: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          synced_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          external_id?: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      arketa_payments: {
+        Row: {
+          amount: number | null
+          client_id: string | null
+          created_at: string | null
+          external_id: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_type: string | null
+          raw_data: Json | null
+          status: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          external_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_type?: string | null
+          raw_data?: Json | null
+          status?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          external_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_type?: string | null
+          raw_data?: Json | null
+          status?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      arketa_reservations: {
+        Row: {
+          checked_in: boolean | null
+          checked_in_at: string | null
+          class_id: string
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          external_id: string
+          id: string
+          raw_data: Json | null
+          status: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          class_id: string
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          external_id: string
+          id?: string
+          raw_data?: Json | null
+          status?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          class_id?: string
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          external_id?: string
+          id?: string
+          raw_data?: Json | null
+          status?: string | null
+          synced_at?: string | null
         }
         Relationships: []
       }

@@ -24,6 +24,7 @@ import ConciergeDashboard from "./pages/dashboards/ConciergeDashboard";
 import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
 import SpaDashboard from "./pages/dashboards/SpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
+import MembersPage from "./pages/dashboards/MembersPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,6 +115,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "floater"]}>
                   <FloaterDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Members page for managers and trainers */}
+            <Route
+              path="/dashboard/members"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <MembersPage />
                 </ProtectedRoute>
               }
             />

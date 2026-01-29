@@ -4,8 +4,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ConciergeSidebar, type ConciergeView } from "@/components/concierge/ConciergeSidebar";
 import { ConciergeBottomNav } from "@/components/concierge/ConciergeBottomNav";
 import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
-import { ConciergeHomeView } from "@/components/concierge/ConciergeHomeView";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
+import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
+import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -17,7 +18,17 @@ export default function ConciergeDashboard() {
   const renderContent = () => {
     switch (activeView) {
       case "home":
-        return <ConciergeHomeView onNavigate={setActiveView} />;
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+            <div className="space-y-4">
+              <ShiftEventsMiniCalendar />
+              <EmbeddedChecklist />
+            </div>
+            <div>
+              <WhosWorkingView />
+            </div>
+          </div>
+        );
       case "whos-working":
         return (
           <div className="p-6 md:p-8">
@@ -59,17 +70,6 @@ export default function ConciergeDashboard() {
             </h2>
             <p className="text-xs text-muted-foreground">
               Announcements feed coming soon...
-            </p>
-          </div>
-        );
-      case "whos-working":
-        return (
-          <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Who's Working
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Staff schedule view coming soon...
             </p>
           </div>
         );
@@ -140,7 +140,17 @@ export default function ConciergeDashboard() {
           </div>
         );
       default:
-        return <ConciergeHomeView onNavigate={setActiveView} />;
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+            <div className="space-y-4">
+              <ShiftEventsMiniCalendar />
+              <EmbeddedChecklist />
+            </div>
+            <div>
+              <WhosWorkingView />
+            </div>
+          </div>
+        );
     }
   };
 

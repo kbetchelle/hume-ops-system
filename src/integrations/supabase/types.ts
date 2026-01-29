@@ -538,6 +538,119 @@ export type Database = {
           },
         ]
       }
+      checklist_template_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_id: string | null
+          completion_date: string
+          deleted_at: string | null
+          id: string
+          item_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date: string
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date?: string
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_template_completions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_template_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          item_text: string
+          sort_order: number | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_text: string
+          sort_order?: number | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_text?: string
+          sort_order?: number | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          role: string
+          shift_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          role: string
+          shift_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          role?: string
+          shift_type?: string
+        }
+        Relationships: []
+      }
       checklists: {
         Row: {
           created_at: string
@@ -1217,6 +1330,57 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_reports: {
+        Row: {
+          facility_issues: string | null
+          form_data: Json | null
+          handoff_notes: string | null
+          id: string
+          incidents: string | null
+          member_feedback: string | null
+          report_date: string
+          shift_type: string
+          submitted_at: string | null
+          submitted_by: string | null
+          submitted_by_id: string | null
+          summary: string | null
+          tour_notes: string | null
+          weather: string | null
+        }
+        Insert: {
+          facility_issues?: string | null
+          form_data?: Json | null
+          handoff_notes?: string | null
+          id?: string
+          incidents?: string | null
+          member_feedback?: string | null
+          report_date: string
+          shift_type: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          submitted_by_id?: string | null
+          summary?: string | null
+          tour_notes?: string | null
+          weather?: string | null
+        }
+        Update: {
+          facility_issues?: string | null
+          form_data?: Json | null
+          handoff_notes?: string | null
+          id?: string
+          incidents?: string | null
+          member_feedback?: string | null
+          report_date?: string
+          shift_type?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          submitted_by_id?: string | null
+          summary?: string | null
+          tour_notes?: string | null
+          weather?: string | null
+        }
+        Relationships: []
+      }
       sling_shifts_staging: {
         Row: {
           id: string
@@ -1346,6 +1510,142 @@ export type Database = {
           positions?: string[] | null
           sling_created_at?: string | null
           sling_user_id?: number
+        }
+        Relationships: []
+      }
+      staff_announcement_reads: {
+        Row: {
+          announcement_id: string | null
+          id: string
+          read_at: string | null
+          staff_id: string | null
+        }
+        Insert: {
+          announcement_id?: string | null
+          id?: string
+          read_at?: string | null
+          staff_id?: string | null
+        }
+        Update: {
+          announcement_id?: string | null
+          id?: string
+          read_at?: string | null
+          staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "staff_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_announcements: {
+        Row: {
+          announcement_type: string | null
+          content: string
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          photo_url: string | null
+          priority: string | null
+          target_departments: string[] | null
+          title: string
+          week_start_date: string | null
+        }
+        Insert: {
+          announcement_type?: string | null
+          content: string
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          photo_url?: string | null
+          priority?: string | null
+          target_departments?: string[] | null
+          title: string
+          week_start_date?: string | null
+        }
+        Update: {
+          announcement_type?: string | null
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          photo_url?: string | null
+          priority?: string | null
+          target_departments?: string[] | null
+          title?: string
+          week_start_date?: string | null
+        }
+        Relationships: []
+      }
+      staff_message_reads: {
+        Row: {
+          id: string
+          message_id: string | null
+          read_at: string | null
+          staff_id: string | null
+        }
+        Insert: {
+          id?: string
+          message_id?: string | null
+          read_at?: string | null
+          staff_id?: string | null
+        }
+        Update: {
+          id?: string
+          message_id?: string | null
+          read_at?: string | null
+          staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_sent: boolean | null
+          recipient_ids: string[] | null
+          sender_id: string | null
+          sender_name: string | null
+          subject: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_sent?: boolean | null
+          recipient_ids?: string[] | null
+          sender_id?: string | null
+          sender_name?: string | null
+          subject?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_sent?: boolean | null
+          recipient_ids?: string[] | null
+          sender_id?: string | null
+          sender_name?: string | null
+          subject?: string | null
         }
         Relationships: []
       }

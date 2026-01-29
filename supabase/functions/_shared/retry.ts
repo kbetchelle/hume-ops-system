@@ -279,3 +279,97 @@ export function isRetryableSupabaseError(error: { message?: string; code?: strin
     message.includes('connection terminated')
   );
 }
+
+/**
+ * Rate limiter configuration
+ */
+export interface RateLimiterConfig {
+  requestsPerWindow: number;
+  windowMs: number;
+}
+
+const DEFAULT_RATE_LIMIT_CONFIG: RateLimiterConfig = {
+  requestsPerWindow: 100,
+  windowMs: 60000, // 1 minute
+};
+
+/**
+ * Request-scoped rate limiter to prevent API throttling
+ * Create a new instance per request to avoid race conditions
+ */
+export class RateLimiter {
+  private requestCount = 0;
+  private windowStart: number;
+  private readonly config: RateLimiterConfig;
+
+  constructor(config: Partial<RateLimiterConfig> = {}) {
+    this.config = { ...DEFAULT_RATE_LIMIT_CONFIG, ...config };
+    this.windowStart = Date.now();
+  }
+
+  /**
+   * Acquire permission to make a request
+   * Waits if rate limit would be exceeded
+   * Returns the wait time in ms (0 if no wait was needed)
+   */
+  async acquire(): Promise<number> {
+    const now = Date.now();
+    const elapsed = now - this.windowStart;
+
+    // Reset window if expired
+    if (elapsed >= this.config.windowMs) {
+      this.requestCount = 0;
+      this.windowStart = now;
+    }
+
+    // Check if we're at the limit
+    if (this.requestCount >= this.config.requestsPerWindow) {
+      const waitTime = this.config.windowMs - elapsed;
+      if (waitTime > 0) {
+        console.log(
+          `[rate-limit] Rate limit reached (${this.requestCount}/${this.config.requestsPerWindow}), ` +
+          `waiting ${waitTime}ms for window reset`
+        );
+        await delay(waitTime);
+        this.requestCount = 0;
+        this.windowStart = Date.now();
+        return waitTime;
+      }
+    }
+
+    this.requestCount++;
+    return 0;
+  }
+
+  /**
+   * Get current rate limit status
+   */
+  getStatus(): { count: number; remaining: number; windowMs: number; resetIn: number } {
+    const elapsed = Date.now() - this.windowStart;
+    return {
+      count: this.requestCount,
+      remaining: Math.max(0, this.config.requestsPerWindow - this.requestCount),
+      windowMs: this.config.windowMs,
+      resetIn: Math.max(0, this.config.windowMs - elapsed),
+    };
+  }
+}
+
+/**
+ * Fetch with rate limiting and automatic retry
+ * Combines rate limiting with exponential backoff retry logic
+ */
+export async function rateLimitedFetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  rateLimiter: RateLimiter,
+  retryConfig: Partial<RetryConfig> = {}
+): Promise<FetchRetryResult & { rateLimitWaitMs: number }> {
+  // Acquire rate limit slot before making request
+  const rateLimitWaitMs = await rateLimiter.acquire();
+  
+  // Use standard retry logic
+  const result = await fetchWithRetry(url, options, retryConfig);
+  
+  return { ...result, rateLimitWaitMs };
+}

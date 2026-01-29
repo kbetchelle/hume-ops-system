@@ -8,6 +8,8 @@ const RUNNER_TIMEOUT_MS = 300000; // 5 minutes total for all syncs
 interface SyncSchedule {
   id: string;
   sync_type: string;
+  display_name: string;
+  function_name: string;
   interval_minutes: number;
   is_enabled: boolean;
   failure_count: number;
@@ -226,21 +228,19 @@ async function runSync(
   supabaseUrl: string,
   serviceRoleKey: string
 ): Promise<SyncResult> {
-  // Map sync types to edge functions
-  const syncFunctionMap: Record<string, string> = {
-    'arketa_clients': 'sync-arketa-clients',
-    'arketa_classes': 'sync-arketa-classes',
-    'arketa_reservations': 'sync-arketa-reservations',
-    'arketa_payments': 'sync-arketa-payments',
-    'arketa_instructors': 'sync-arketa-instructors',
-    'sling_users': 'sling-api',
-    'sling_shifts': 'sling-api',
-  };
+  // Look up function name from sync_schedule table
+  const { data: syncConfig, error: lookupError } = await supabase
+    .from('sync_schedule')
+    .select('function_name')
+    .eq('sync_type', syncType)
+    .single();
 
-  const functionName = syncFunctionMap[syncType];
-  if (!functionName) {
+  if (lookupError || !syncConfig?.function_name) {
+    console.error(`[runSync] Failed to find function_name for ${syncType}:`, lookupError);
     return { success: false, error: `Unknown sync type: ${syncType}` };
   }
+
+  const functionName = syncConfig.function_name;
 
   // Prepare request body based on sync type
   let requestBody = {};

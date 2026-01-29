@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 export interface SyncSchedule {
   id: string;
   sync_type: string;
+  display_name: string;
+  function_name: string;
   interval_minutes: number;
   last_run_at: string | null;
   next_run_at: string | null;
@@ -170,7 +172,11 @@ export function useRunAllSyncs() {
 }
 
 // Helper to format sync type display name
-export function formatSyncType(syncType: string): string {
+// Now uses display_name from database, with fallback
+export function formatSyncType(syncType: string, displayName?: string): string {
+  if (displayName) return displayName;
+  
+  // Fallback for older code paths
   const names: Record<string, string> = {
     arketa_clients: "Arketa Clients",
     arketa_classes: "Arketa Classes",

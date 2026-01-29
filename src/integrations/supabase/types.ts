@@ -118,7 +118,9 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          last_refreshed_at: string | null
           refresh_token: string | null
+          token_type: string | null
           updated_at: string
         }
         Insert: {
@@ -127,7 +129,9 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          last_refreshed_at?: string | null
           refresh_token?: string | null
+          token_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -136,7 +140,9 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          last_refreshed_at?: string | null
           refresh_token?: string | null
+          token_type?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2368,7 +2374,9 @@ export type Database = {
       sync_schedule: {
         Row: {
           created_at: string | null
+          display_name: string
           failure_count: number | null
+          function_name: string
           id: string
           interval_minutes: number
           is_enabled: boolean
@@ -2382,7 +2390,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          display_name: string
           failure_count?: number | null
+          function_name: string
           id?: string
           interval_minutes?: number
           is_enabled?: boolean
@@ -2396,7 +2406,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          display_name?: string
           failure_count?: number | null
+          function_name?: string
           id?: string
           interval_minutes?: number
           is_enabled?: boolean

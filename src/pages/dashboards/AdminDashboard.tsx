@@ -1,69 +1,47 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { useAuthContext } from "@/features/auth/AuthProvider";
+import { UserManagementTable } from "@/components/admin/UserManagementTable";
+import { Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const stats = [
-    { title: "Total Users", value: "156", change: "+12%" },
-    { title: "Active Sessions", value: "42", change: "+5%" },
-    { title: "Pending Requests", value: "8", change: "-2%" },
-    { title: "System Health", value: "99.9%", change: "Stable" },
-  ];
+  const { user } = useAuthContext();
+  const { data: users, isLoading, error } = useAdminUsers();
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      <div className="space-y-16">
-        {/* Welcome Section */}
+      <div className="space-y-12">
+        {/* Header */}
         <div className="space-y-2">
-          <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Welcome, Admin</h2>
+          <h2 className="text-sm uppercase tracking-[0.15em] font-normal">User Management</h2>
           <p className="text-xs text-muted-foreground tracking-wide">
-            Here's an overview of your system.
+            Manage users, roles, and access permissions.
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.title} className="space-y-2 border-l border-border pl-6">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                {stat.title}
-              </p>
-              <p className="text-2xl font-normal">{stat.value}</p>
-              <p className="text-[10px] tracking-wide text-muted-foreground">
-                {stat.change} from last month
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
-            <CardHeader>
-              <CardTitle>Manage Users</CardTitle>
-              <CardDescription>
-                Add, edit, or remove user accounts and their roles
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
-            <CardHeader>
-              <CardTitle>Role Permissions</CardTitle>
-              <CardDescription>
-                Configure permissions for each role in the system
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
-            <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>
-                Configure global settings and preferences
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+        {/* Content */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="text-[10px] uppercase tracking-widest text-destructive">
+              Failed to load users
+            </p>
+            <p className="text-xs text-muted-foreground tracking-wide mt-2">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+          </div>
+        ) : users && users.length > 0 ? (
+          <UserManagementTable users={users} currentUserId={user?.id} />
+        ) : (
+          <div className="text-center py-16 border border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              No users found
+            </p>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

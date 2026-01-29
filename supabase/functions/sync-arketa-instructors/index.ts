@@ -1,9 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
-
-// Use Dev base URL for staff endpoint as specified
-const ARKETA_DEV_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0';
+import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 
 interface ArketaInstructor {
   id: string;
@@ -23,6 +22,10 @@ Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
     const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
 
@@ -33,21 +36,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const logger = createSyncLogger('arketa_instructors');
+    const startTime = Date.now();
 
-    console.log('[Arketa Instructors] Syncing instructors...');
+    logger.info('Syncing instructors...');
+
+    // Try to get token via refresh flow, fall back to API key
+    // Note: Staff endpoint uses Dev URL
+    let headers: Record<string, string>;
+    try {
+      const token = await getArketaToken(supabaseUrl, supabaseKey);
+      headers = getArketaHeaders(token);
+      logger.info('Using OAuth token for authentication');
+    } catch (tokenError) {
+      logger.warn('Token refresh failed, using API key', { error: tokenError instanceof Error ? tokenError.message : String(tokenError) });
+      headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
+    }
 
     // Fetch staff from Arketa API (using Dev URL as specified) with retry
-    const url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/staff`;
+    const url = `${ARKETA_URLS.dev}/${ARKETA_PARTNER_ID}/staff`;
     
     const { response, attempts } = await fetchWithRetry(url, {
       method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -55,10 +66,10 @@ Deno.serve(async (req) => {
       throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
     }
 
-    console.log(`[Arketa Instructors] API request succeeded after ${attempts} attempt(s)`);
+    logger.info(`API request succeeded after ${attempts} attempt(s)`);
 
     const instructors: ArketaInstructor[] = await response.json();
-    console.log(`[Arketa Instructors] Fetched ${instructors.length} instructors`);
+    logger.info(`Fetched ${instructors.length} instructors`);
 
     const syncedInstructors = [];
     let failedCount = 0;
@@ -104,7 +115,7 @@ Deno.serve(async (req) => {
         );
 
         if (result.error) {
-          console.error(`[Arketa Instructors] Failed to upsert instructor ${instructor.id}:`, result.error);
+          logger.error(`Failed to upsert instructor ${instructor.id}`, result.error);
           failedCount++;
           continue;
         }
@@ -116,10 +127,23 @@ Deno.serve(async (req) => {
           isActive,
         });
       } catch (error) {
-        console.error(`[Arketa Instructors] Error upserting instructor ${instructor.id}:`, error);
+        logger.error(`Error upserting instructor ${instructor.id}`, error);
         failedCount++;
       }
     }
+
+    // Log sync metrics
+    const durationMs = Date.now() - startTime;
+    await logSyncMetrics(supabase, {
+      syncType: 'arketa_instructors',
+      startedAt: new Date(startTime).toISOString(),
+      completedAt: new Date().toISOString(),
+      durationMs,
+      recordsFetched: instructors.length,
+      recordsSynced: syncedInstructors.length,
+      recordsFailed: failedCount,
+      retryCount: attempts - 1,
+    });
 
     // Update sync status
     await supabase
@@ -145,7 +169,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Arketa Instructors] Error:', error);
+    const logger = createSyncLogger('arketa_instructors');
+    logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

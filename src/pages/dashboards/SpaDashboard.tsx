@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SpaDashboard() {
+  const navigate = useNavigate();
+  
   const stats = [
     { title: "Appointments Today", value: "8", change: "4 remaining" },
     { title: "Clients Served", value: "124", change: "This month" },
@@ -31,7 +34,17 @@ export default function SpaDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/my-checklists")}
+          >
+            <CardHeader>
+              <CardTitle>My Checklists</CardTitle>
+              <CardDescription>View and complete today's tasks</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>Today's Schedule</CardTitle>

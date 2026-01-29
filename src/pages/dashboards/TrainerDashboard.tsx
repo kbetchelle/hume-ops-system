@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function TrainerDashboard() {
+  const navigate = useNavigate();
+  
   const stats = [
     { title: "Sessions Today", value: "6", change: "3 completed" },
     { title: "Active Clients", value: "18", change: "+2 this week" },
@@ -31,7 +34,17 @@ export default function TrainerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-3">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/members")}
+          >
+            <CardHeader>
+              <CardTitle>My Clients</CardTitle>
+              <CardDescription>View your assigned clients and add notes</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>Training Schedule</CardTitle>

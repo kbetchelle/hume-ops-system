@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ManagerDashboard() {
+  const navigate = useNavigate();
+  
   const stats = [
     { title: "Team Members", value: "24", change: "+2" },
     { title: "Tasks Completed", value: "89%", change: "+12%" },
@@ -31,7 +34,17 @@ export default function ManagerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-3">
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/members")}
+          >
+            <CardHeader>
+              <CardTitle>Members</CardTitle>
+              <CardDescription>View and manage all gym members</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border">
             <CardHeader>
               <CardTitle>Schedule Overview</CardTitle>

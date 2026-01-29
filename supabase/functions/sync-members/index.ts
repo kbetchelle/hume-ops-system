@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 interface PartnerClient {
   id: string;
@@ -28,20 +23,44 @@ interface PaginatedResponse {
   };
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+// deno-lint-ignore no-explicit-any
+async function getValidToken(supabase: any): Promise<string> {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  
+  // Call the refresh-arketa-token function to get a valid token
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/refresh-arketa-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to get valid token: ${errorText}`);
   }
 
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || "Failed to get valid token");
+  }
+
+  return result.access_token;
+}
+
+Deno.serve(async (req) => {
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
+
   try {
-    const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY");
     const ARKETA_PARTNER_ID = Deno.env.get("ARKETA_PARTNER_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!ARKETA_API_KEY) {
-      throw new Error("ARKETA_API_KEY is not configured");
-    }
     if (!ARKETA_PARTNER_ID) {
       throw new Error("ARKETA_PARTNER_ID is not configured");
     }
@@ -50,6 +69,10 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get a valid token (will refresh if needed)
+    const accessToken = await getValidToken(supabase);
+    console.log("Obtained valid access token for Arketa API");
 
     // Create sync log entry
     const { data: syncLog, error: syncLogError } = await supabase
@@ -80,7 +103,7 @@ Deno.serve(async (req) => {
       const response = await fetch(url.toString(), {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${ARKETA_API_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
       });

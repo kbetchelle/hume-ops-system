@@ -111,6 +111,36 @@ export type Database = {
         }
         Relationships: []
       }
+      api_credentials: {
+        Row: {
+          access_token: string
+          api_name: string
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          api_name: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          api_name?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       api_endpoints: {
         Row: {
           api_name: string

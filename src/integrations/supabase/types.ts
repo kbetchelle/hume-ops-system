@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string
+          details: Json | null
+          id: string
+          member_id: string | null
+          source: string | null
+        }
+        Insert: {
+          activity_date?: string
+          activity_type: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          member_id?: string | null
+          source?: string | null
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          member_id?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_reads: {
         Row: {
           announcement_id: string
@@ -172,6 +210,93 @@ export type Database = {
           is_active?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_report_history: {
+        Row: {
+          arketa_payments: Json | null
+          arketa_reservations: Json | null
+          busiest_areas: string | null
+          celebratory_events: Json | null
+          created_at: string
+          facility_issues: Json | null
+          future_shift_notes: Json | null
+          id: string
+          management_notes: string | null
+          member_feedback: Json | null
+          membership_requests: Json | null
+          report_date: string
+          scheduled_tours: Json | null
+          shift_type: string
+          sling_shift_data: Json | null
+          staff_name: string | null
+          staff_user_id: string
+          status: string | null
+          submitted_at: string | null
+          system_issues: Json | null
+          toast_sales: Json | null
+          total_class_attendance: number | null
+          total_revenue: number | null
+          total_visits: number | null
+          tour_notes: Json | null
+          updated_at: string
+        }
+        Insert: {
+          arketa_payments?: Json | null
+          arketa_reservations?: Json | null
+          busiest_areas?: string | null
+          celebratory_events?: Json | null
+          created_at?: string
+          facility_issues?: Json | null
+          future_shift_notes?: Json | null
+          id?: string
+          management_notes?: string | null
+          member_feedback?: Json | null
+          membership_requests?: Json | null
+          report_date: string
+          scheduled_tours?: Json | null
+          shift_type: string
+          sling_shift_data?: Json | null
+          staff_name?: string | null
+          staff_user_id: string
+          status?: string | null
+          submitted_at?: string | null
+          system_issues?: Json | null
+          toast_sales?: Json | null
+          total_class_attendance?: number | null
+          total_revenue?: number | null
+          total_visits?: number | null
+          tour_notes?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          arketa_payments?: Json | null
+          arketa_reservations?: Json | null
+          busiest_areas?: string | null
+          celebratory_events?: Json | null
+          created_at?: string
+          facility_issues?: Json | null
+          future_shift_notes?: Json | null
+          id?: string
+          management_notes?: string | null
+          member_feedback?: Json | null
+          membership_requests?: Json | null
+          report_date?: string
+          scheduled_tours?: Json | null
+          shift_type?: string
+          sling_shift_data?: Json | null
+          staff_name?: string | null
+          staff_user_id?: string
+          status?: string | null
+          submitted_at?: string | null
+          system_issues?: Json | null
+          toast_sales?: Json | null
+          total_class_attendance?: number | null
+          total_revenue?: number | null
+          total_visits?: number | null
+          tour_notes?: Json | null
           updated_at?: string
         }
         Relationships: []

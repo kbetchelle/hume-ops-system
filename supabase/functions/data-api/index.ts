@@ -36,6 +36,15 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'email_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], trainer: ['select'] },
   'assets': { management: ['select', 'insert', 'update', 'delete'] },
   'expenses': { management: ['select', 'insert', 'update', 'delete'] },
+  // Phase 2 tables
+  'staff_announcements': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'staff_announcement_reads': { management: ['select', 'insert'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'staff_messages': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'staff_message_reads': { management: ['select', 'insert'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'shift_reports': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
+  'club_policies': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'staff_qa': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'staff_notifications': { management: ['select', 'insert', 'update'], concierge: ['select', 'update'], staff: ['select', 'update'] },
 };
 
 function normalizeRole(role: string | undefined): string {

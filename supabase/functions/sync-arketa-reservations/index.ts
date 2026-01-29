@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
@@ -57,31 +58,40 @@ Deno.serve(async (req) => {
     console.log(`[Arketa Reservations] Syncing reservations from ${startDate} to ${endDate}`);
 
     let reservations: ArketaReservation[] = [];
+    let totalAttempts = 0;
 
     if (body.class_id) {
       // Fetch reservations for specific class
       const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes/${body.class_id}/reservations?limit=${limit}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'x-api-key': ARKETA_API_KEY,
-          'Content-Type': 'application/json',
-        },
-      });
+      
+      try {
+        const { response, attempts } = await fetchWithRetry(url, {
+          method: 'GET',
+          headers: {
+            'x-api-key': ARKETA_API_KEY,
+            'Content-Type': 'application/json',
+          },
+        });
+        totalAttempts = attempts;
 
-      if (response.ok) {
-        reservations = await response.json();
+        if (response.ok) {
+          reservations = await response.json();
+        }
+      } catch (error) {
+        console.error(`[Arketa Reservations] Failed to fetch class reservations:`, error);
       }
     } else {
       // Fetch all reservations for date range
       const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-      const response = await fetch(url, {
+      
+      const { response, attempts } = await fetchWithRetry(url, {
         method: 'GET',
         headers: {
           'x-api-key': ARKETA_API_KEY,
           'Content-Type': 'application/json',
         },
       });
+      totalAttempts = attempts;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -91,9 +101,10 @@ Deno.serve(async (req) => {
       reservations = await response.json();
     }
 
-    console.log(`[Arketa Reservations] Fetched ${reservations.length} reservations`);
+    console.log(`[Arketa Reservations] Fetched ${reservations.length} reservations after ${totalAttempts} attempt(s)`);
 
     const syncedReservations = [];
+    let failedCount = 0;
 
     for (const res of reservations) {
       const clientName = res.client 
@@ -103,35 +114,52 @@ Deno.serve(async (req) => {
       const clientId = res.client_id || res.client?.id || null;
       const checkedInAt = res.checkedInAt || res.checked_in_at || null;
 
-      const { error } = await supabase
-        .from('arketa_reservations')
-        .upsert({
-          external_id: String(res.id),
-          class_id: String(res.class_id || ''),
-          client_id: clientId ? String(clientId) : null,
-          client_name: clientName,
-          client_email: clientEmail,
-          status: res.status || 'booked',
-          checked_in: res.checked_in || false,
-          checked_in_at: checkedInAt,
-          raw_data: res,
-          synced_at: new Date().toISOString(),
-        }, {
-          onConflict: 'external_id',
+      try {
+        const { result } = await withRetry(
+          async () => {
+            const { error } = await supabase
+              .from('arketa_reservations')
+              .upsert({
+                external_id: String(res.id),
+                class_id: String(res.class_id || ''),
+                client_id: clientId ? String(clientId) : null,
+                client_name: clientName,
+                client_email: clientEmail,
+                status: res.status || 'booked',
+                checked_in: res.checked_in || false,
+                checked_in_at: checkedInAt,
+                raw_data: res,
+                synced_at: new Date().toISOString(),
+              }, {
+                onConflict: 'external_id',
+              });
+            
+            if (error && !isRetryableSupabaseError(error)) {
+              throw error;
+            }
+            return { error };
+          },
+          { maxAttempts: 2 },
+          `upsert reservation ${res.id}`
+        );
+
+        if (result.error) {
+          console.error(`[Arketa Reservations] Failed to upsert reservation ${res.id}:`, result.error);
+          failedCount++;
+          continue;
+        }
+
+        syncedReservations.push({
+          id: res.id,
+          classId: res.class_id,
+          clientName,
+          status: res.status,
+          checkedIn: res.checked_in,
         });
-
-      if (error) {
-        console.error(`[Arketa Reservations] Failed to upsert reservation ${res.id}:`, error);
-        continue;
+      } catch (error) {
+        console.error(`[Arketa Reservations] Error upserting reservation ${res.id}:`, error);
+        failedCount++;
       }
-
-      syncedReservations.push({
-        id: res.id,
-        classId: res.class_id,
-        clientName,
-        status: res.status,
-        checkedIn: res.checked_in,
-      });
     }
 
     // Update sync status
@@ -155,12 +183,14 @@ Deno.serve(async (req) => {
         reservations: syncedReservations,
         totalFetched: reservations.length,
         syncedCount: syncedReservations.length,
+        failedCount,
         summary: {
           total: syncedReservations.length,
           checkedIn: checkedInCount,
           noShows: noShowCount,
         },
         dateRange: { startDate, endDate },
+        apiAttempts: totalAttempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

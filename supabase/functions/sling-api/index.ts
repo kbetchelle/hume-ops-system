@@ -1,7 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const SLING_BASE_URL = 'https://api.getsling.com/v1';
+
+// Sling retry config - fewer attempts for faster auth failure detection
+const SLING_RETRY_CONFIG = {
+  maxAttempts: 2,
+  baseDelayMs: 500,
+  maxDelayMs: 5000,
+  timeoutMs: 15000,
+};
 
 interface SlingUser {
   id: number;
@@ -31,18 +40,25 @@ interface ActionRequest {
   shiftType?: 'AM' | 'PM';
 }
 
-// Helper to make authenticated requests to Sling API
+// Helper to make authenticated requests to Sling API with retry
 async function slingFetch(endpoint: string, authToken: string, orgId: string): Promise<Response> {
   const url = `${SLING_BASE_URL}${endpoint}`;
   console.log(`[Sling API] Fetching: ${url}`);
   
-  return await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': authToken,
-      'Content-Type': 'application/json',
+  const { response, attempts } = await fetchWithRetry(
+    url,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': authToken,
+        'Content-Type': 'application/json',
+      },
     },
-  });
+    SLING_RETRY_CONFIG
+  );
+  
+  console.log(`[Sling API] Request completed after ${attempts} attempt(s)`);
+  return response;
 }
 
 // Get all users from Sling
@@ -50,7 +66,8 @@ async function getUsers(authToken: string, orgId: string): Promise<SlingUser[]> 
   const response = await slingFetch(`/${orgId}/users`, authToken, orgId);
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   return await response.json();
@@ -62,30 +79,21 @@ async function getRoster(authToken: string, orgId: string, startDate: string, en
   const response = await slingFetch(endpoint, authToken, orgId);
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch roster: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch roster: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   return await response.json();
 }
 
 // Get groups (positions/roles)
+// deno-lint-ignore no-explicit-any
 async function getGroups(authToken: string, orgId: string): Promise<any[]> {
   const response = await slingFetch(`/${orgId}/groups`, authToken, orgId);
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText}`);
-  }
-  
-  return await response.json();
-}
-
-// Get who's working on a specific date
-async function getWorkingOnDate(authToken: string, orgId: string, date: string): Promise<any> {
-  const endpoint = `/${orgId}/calendar/working?date=${date}`;
-  const response = await slingFetch(endpoint, authToken, orgId);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch working: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   return await response.json();
@@ -235,11 +243,12 @@ Deno.serve(async (req) => {
       case 'sync-users': {
         console.log('[Sling API] Starting user sync...');
         
-        // Fetch users from Sling API
+        // Fetch users from Sling API with retry
         const users = await getUsers(SLING_AUTH_TOKEN, SLING_ORG_ID);
         console.log(`[Sling API] Fetched ${users.length} users from Sling`);
 
         let matchedCount = 0;
+        let failedCount = 0;
         const syncedUsers = [];
 
         for (const user of users) {
@@ -248,55 +257,70 @@ Deno.serve(async (req) => {
           const fullName = formatUserName(user);
           const email = user.email || null;
 
-          // Upsert to sling_users table
-          const { data: upserted, error } = await supabase
-            .from('sling_users')
-            .upsert({
-              sling_user_id: user.id,
-              first_name: firstName,
-              last_name: lastName,
-              email: email,
-              is_active: user.active !== false,
-              position_id: user.position?.id || null,
-              position_name: user.position?.name || null,
-              positions: user.position?.name ? [user.position.name] : [],
-              raw_data: user,
-              last_synced_at: new Date().toISOString(),
-            }, {
-              onConflict: 'sling_user_id',
-            })
-            .select()
-            .single();
+          try {
+            const { result } = await withRetry(
+              async () => {
+                const { data: upserted, error } = await supabase
+                  .from('sling_users')
+                  .upsert({
+                    sling_user_id: user.id,
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: email,
+                    is_active: user.active !== false,
+                    position_id: user.position?.id || null,
+                    position_name: user.position?.name || null,
+                    positions: user.position?.name ? [user.position.name] : [],
+                    raw_data: user,
+                    last_synced_at: new Date().toISOString(),
+                  }, {
+                    onConflict: 'sling_user_id',
+                  })
+                  .select()
+                  .single();
 
-          if (error) {
-            console.error(`[Sling API] Failed to upsert user ${user.id}:`, error);
-            continue;
-          }
+                if (error && !isRetryableSupabaseError(error)) {
+                  throw error;
+                }
+                return { data: upserted, error };
+              },
+              { maxAttempts: 2 },
+              `upsert user ${user.id}`
+            );
 
-          // Try to match with profiles by email
-          if (email) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id, user_id')
-              .eq('email', email)
-              .maybeSingle();
-
-            if (profile) {
-              matchedCount++;
-              // Update linked_staff_id
-              await supabase
-                .from('sling_users')
-                .update({ linked_staff_id: profile.user_id })
-                .eq('sling_user_id', user.id);
+            if (result.error) {
+              console.error(`[Sling API] Failed to upsert user ${user.id}:`, result.error);
+              failedCount++;
+              continue;
             }
-          }
 
-          syncedUsers.push({
-            slingUserId: user.id,
-            name: fullName,
-            email: email,
-            isActive: user.active !== false,
-          });
+            // Try to match with profiles by email
+            if (email) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, user_id')
+                .eq('email', email)
+                .maybeSingle();
+
+              if (profile) {
+                matchedCount++;
+                await supabase
+                  .from('sling_users')
+                  .update({ linked_staff_id: profile.user_id })
+                  .eq('sling_user_id', user.id);
+              }
+            }
+
+            syncedUsers.push({
+              slingUserId: user.id,
+              name: fullName,
+              email: email,
+              isActive: user.active !== false,
+            });
+          } catch (error) {
+            console.error(`[Sling API] Error upserting user ${user.id}:`, error);
+            failedCount++;
+          }
         }
 
         // Update sync status
@@ -315,6 +339,7 @@ Deno.serve(async (req) => {
             success: true,
             users: syncedUsers,
             matchedCount,
+            failedCount,
             totalSlingUsers: users.length,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -327,11 +352,12 @@ Deno.serve(async (req) => {
 
         console.log(`[Sling API] Syncing shifts for ${startDate} to ${endDate}...`);
         
-        // Fetch roster from Sling API
+        // Fetch roster from Sling API with retry
         const roster = await getRoster(SLING_AUTH_TOKEN, SLING_ORG_ID, startDate, endDate);
         console.log(`[Sling API] Fetched ${roster.length} shifts from Sling`);
 
         const syncedShifts = [];
+        let failedCount = 0;
 
         for (const shift of roster) {
           if (!shift.dtstart || !shift.dtend) continue;
@@ -339,41 +365,57 @@ Deno.serve(async (req) => {
           const shiftDate = new Date(shift.dtstart).toISOString().split('T')[0];
           const userName = shift.user?.name || 'Unknown';
 
-          // Upsert to staff_shifts table
-          const { data: upserted, error } = await supabase
-            .from('staff_shifts')
-            .upsert({
-              sling_shift_id: shift.id,
-              sling_user_id: shift.user?.id || 0,
-              external_id: String(shift.id),
-              user_name: userName,
-              user_email: shift.user?.email || null,
-              position: shift.position?.name || null,
-              location: shift.location?.name || null,
-              shift_start: shift.dtstart,
-              shift_end: shift.dtend,
-              shift_date: shiftDate,
-              status: shift.status || 'scheduled',
-              raw_data: shift,
-              synced_at: new Date().toISOString(),
-            }, {
-              onConflict: 'sling_shift_id',
-            })
-            .select();
+          try {
+            const { result } = await withRetry(
+              async () => {
+                const { data: upserted, error } = await supabase
+                  .from('staff_shifts')
+                  .upsert({
+                    sling_shift_id: shift.id,
+                    sling_user_id: shift.user?.id || 0,
+                    external_id: String(shift.id),
+                    user_name: userName,
+                    user_email: shift.user?.email || null,
+                    position: shift.position?.name || null,
+                    location: shift.location?.name || null,
+                    shift_start: shift.dtstart,
+                    shift_end: shift.dtend,
+                    shift_date: shiftDate,
+                    status: shift.status || 'scheduled',
+                    raw_data: shift,
+                    synced_at: new Date().toISOString(),
+                  }, {
+                    onConflict: 'sling_shift_id',
+                  })
+                  .select();
 
-          if (error) {
-            console.error(`[Sling API] Failed to upsert shift ${shift.id}:`, error);
-            continue;
+                if (error && !isRetryableSupabaseError(error)) {
+                  throw error;
+                }
+                return { data: upserted, error };
+              },
+              { maxAttempts: 2 },
+              `upsert shift ${shift.id}`
+            );
+
+            if (result.error) {
+              console.error(`[Sling API] Failed to upsert shift ${shift.id}:`, result.error);
+              failedCount++;
+              continue;
+            }
+
+            syncedShifts.push({
+              shiftId: shift.id,
+              userId: shift.user?.id,
+              userName,
+              position: shift.position?.name,
+              shiftStart: shift.dtstart,
+              shiftEnd: shift.dtend,
+            });
+          } catch (error) {
+            console.error(`[Sling API] Error upserting shift ${shift.id}:`, error);
+            failedCount++;
           }
-
-          syncedShifts.push({
-            shiftId: shift.id,
-            userId: shift.user?.id,
-            userName,
-            position: shift.position?.name,
-            shiftStart: shift.dtstart,
-            shiftEnd: shift.dtend,
-          });
         }
 
         return new Response(
@@ -382,6 +424,7 @@ Deno.serve(async (req) => {
             shifts: syncedShifts,
             totalShifts: roster.length,
             syncedCount: syncedShifts.length,
+            failedCount,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

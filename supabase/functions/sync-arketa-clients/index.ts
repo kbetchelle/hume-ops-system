@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from "../_shared/retry.ts";
 
 interface PartnerClient {
   id: string;
@@ -31,81 +32,6 @@ interface SyncResult {
   failedRecordIds: string[];
   errors: Array<{ id: string; error: string }>;
   retryAttempts: number;
-}
-
-// Rate limiting configuration
-const RATE_LIMIT_MAX_REQUESTS = 100;
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RETRY_MAX_ATTEMPTS = 3;
-const RETRY_BASE_DELAY_MS = 1000;
-
-// Rate limiter state
-let requestCount = 0;
-let windowStart = Date.now();
-
-async function rateLimitedFetch(url: string, options: RequestInit): Promise<Response> {
-  const now = Date.now();
-  
-  // Reset window if expired
-  if (now - windowStart >= RATE_LIMIT_WINDOW_MS) {
-    requestCount = 0;
-    windowStart = now;
-  }
-  
-  // Wait if we've hit the rate limit
-  if (requestCount >= RATE_LIMIT_MAX_REQUESTS) {
-    const waitTime = RATE_LIMIT_WINDOW_MS - (now - windowStart);
-    console.log(`Rate limit reached, waiting ${waitTime}ms`);
-    await delay(waitTime);
-    requestCount = 0;
-    windowStart = Date.now();
-  }
-  
-  requestCount++;
-  return fetch(url, options);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  maxAttempts: number = RETRY_MAX_ATTEMPTS
-): Promise<{ response: Response; attempts: number }> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await rateLimitedFetch(url, options);
-      
-      // Retry on 429 (rate limit) or 5xx errors
-      if (response.status === 429 || response.status >= 500) {
-        const errorText = await response.text();
-        lastError = new Error(`HTTP ${response.status}: ${errorText}`);
-        
-        if (attempt < maxAttempts) {
-          const backoffDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-          console.log(`Attempt ${attempt} failed with ${response.status}, retrying in ${backoffDelay}ms`);
-          await delay(backoffDelay);
-          continue;
-        }
-      }
-      
-      return { response, attempts: attempt };
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      if (attempt < maxAttempts) {
-        const backoffDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-        console.log(`Attempt ${attempt} failed with error, retrying in ${backoffDelay}ms:`, lastError.message);
-        await delay(backoffDelay);
-      }
-    }
-  }
-  
-  throw lastError || new Error("All retry attempts failed");
 }
 
 // deno-lint-ignore no-explicit-any
@@ -140,8 +66,7 @@ async function getValidToken(supabase: any): Promise<string> {
 // deno-lint-ignore no-explicit-any
 async function upsertClientWithRetry(
   supabase: any,
-  client: PartnerClient,
-  maxAttempts: number = RETRY_MAX_ATTEMPTS
+  client: PartnerClient
 ): Promise<{ success: boolean; error?: string; attempts: number }> {
   const clientData = {
     external_id: client.id,
@@ -160,39 +85,33 @@ async function upsertClientWithRetry(
     last_synced_at: new Date().toISOString(),
   };
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const { error: upsertError } = await supabase
-      .from("arketa_clients")
-      .upsert(clientData, { 
-        onConflict: "external_id",
-        ignoreDuplicates: false 
-      });
+  try {
+    const { result, attempts } = await withRetry(
+      async () => {
+        const { error: upsertError } = await supabase
+          .from("arketa_clients")
+          .upsert(clientData, { 
+            onConflict: "external_id",
+            ignoreDuplicates: false 
+          });
 
-    if (!upsertError) {
-      return { success: true, attempts: attempt };
+        if (upsertError && !isRetryableSupabaseError(upsertError)) {
+          throw upsertError;
+        }
+        return { error: upsertError };
+      },
+      { maxAttempts: 3 },
+      `upsert client ${client.id}`
+    );
+
+    if (result.error) {
+      return { success: false, error: result.error.message || "Unknown error", attempts };
     }
-
-    // Retry on transient errors (connection issues, timeouts)
-    const isTransientError = 
-      upsertError.message?.includes("timeout") ||
-      upsertError.message?.includes("connection") ||
-      upsertError.code === "PGRST504";
-
-    if (isTransientError && attempt < maxAttempts) {
-      const backoffDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-      console.log(`Upsert attempt ${attempt} failed, retrying in ${backoffDelay}ms:`, upsertError.message);
-      await delay(backoffDelay);
-      continue;
-    }
-
-    return { 
-      success: false, 
-      error: upsertError.message || "Unknown error",
-      attempts: attempt 
-    };
+    return { success: true, attempts };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: errorMessage, attempts: 3 };
   }
-
-  return { success: false, error: "All retry attempts failed", attempts: maxAttempts };
 }
 
 Deno.serve(async (req) => {
@@ -200,10 +119,6 @@ Deno.serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   const corsHeaders = getCorsHeaders(req);
-  
-  // Reset rate limiter for each request
-  requestCount = 0;
-  windowStart = Date.now();
 
   // deno-lint-ignore no-explicit-any
   let supabase: any;

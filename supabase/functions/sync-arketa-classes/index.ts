@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 
 const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
@@ -61,10 +62,10 @@ Deno.serve(async (req) => {
 
     console.log(`[Arketa Classes] Syncing classes from ${startDate} to ${endDate}`);
 
-    // Fetch classes from Arketa API
+    // Fetch classes from Arketa API with retry
     const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
     
-    const response = await fetch(url, {
+    const { response, attempts } = await fetchWithRetry(url, {
       method: 'GET',
       headers: {
         'x-api-key': ARKETA_API_KEY,
@@ -77,6 +78,8 @@ Deno.serve(async (req) => {
       throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
     }
 
+    console.log(`[Arketa Classes] API request succeeded after ${attempts} attempt(s)`);
+
     const responseData = await response.json();
     const classes: ArketaClass[] = Array.isArray(responseData) 
       ? responseData 
@@ -84,6 +87,7 @@ Deno.serve(async (req) => {
     console.log(`[Arketa Classes] Fetched ${classes.length} classes`);
 
     const syncedClasses = [];
+    let failedCount = 0;
 
     for (const cls of classes) {
       const name = cls.name || cls.class_name || 'Unknown Class';
@@ -95,39 +99,56 @@ Deno.serve(async (req) => {
       const capacity = cls.capacity ?? cls.max_capacity ?? null;
       const bookedCount = cls.total_booked ?? cls.booked_count ?? 0;
 
-      const { error } = await supabase
-        .from('arketa_classes')
-        .upsert({
-          external_id: String(cls.id),
+      try {
+        const { result } = await withRetry(
+          async () => {
+            const { error } = await supabase
+              .from('arketa_classes')
+              .upsert({
+                external_id: String(cls.id),
+                name,
+                start_time: cls.start_time,
+                duration_minutes: duration,
+                capacity,
+                booked_count: bookedCount,
+                waitlist_count: cls.waitlist_count || 0,
+                status: cls.status || 'scheduled',
+                is_cancelled: isCancelled,
+                room_name: roomName,
+                instructor_name: instructorName,
+                raw_data: cls,
+                synced_at: new Date().toISOString(),
+              }, {
+                onConflict: 'external_id',
+              });
+            
+            if (error && !isRetryableSupabaseError(error)) {
+              throw error;
+            }
+            return { error };
+          },
+          { maxAttempts: 2 },
+          `upsert class ${cls.id}`
+        );
+
+        if (result.error) {
+          console.error(`[Arketa Classes] Failed to upsert class ${cls.id}:`, result.error);
+          failedCount++;
+          continue;
+        }
+
+        syncedClasses.push({
+          id: cls.id,
           name,
-          start_time: cls.start_time,
-          duration_minutes: duration,
+          startTime: cls.start_time,
+          instructor: instructorName,
+          booked: bookedCount,
           capacity,
-          booked_count: bookedCount,
-          waitlist_count: cls.waitlist_count || 0,
-          status: cls.status || 'scheduled',
-          is_cancelled: isCancelled,
-          room_name: roomName,
-          instructor_name: instructorName,
-          raw_data: cls,
-          synced_at: new Date().toISOString(),
-        }, {
-          onConflict: 'external_id',
         });
-
-      if (error) {
-        console.error(`[Arketa Classes] Failed to upsert class ${cls.id}:`, error);
-        continue;
+      } catch (error) {
+        console.error(`[Arketa Classes] Error upserting class ${cls.id}:`, error);
+        failedCount++;
       }
-
-      syncedClasses.push({
-        id: cls.id,
-        name,
-        startTime: cls.start_time,
-        instructor: instructorName,
-        booked: bookedCount,
-        capacity,
-      });
     }
 
     // Update sync status
@@ -147,7 +168,9 @@ Deno.serve(async (req) => {
         classes: syncedClasses,
         totalFetched: classes.length,
         syncedCount: syncedClasses.length,
+        failedCount,
         dateRange: { startDate, endDate },
+        apiAttempts: attempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

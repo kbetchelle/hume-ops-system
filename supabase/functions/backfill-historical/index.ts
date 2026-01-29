@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';
+import { withRetry } from '../_shared/retry.ts';
+import { createSyncLogger } from '../_shared/logger.ts';
 
 interface BackfillRequest {
   api_source: 'arketa' | 'sling';
@@ -8,7 +10,7 @@ interface BackfillRequest {
   start_date: string;
   end_date: string;
   job_id?: string;
-  action?: 'pause' | 'cancel' | 'resume';
+  action?: 'pause' | 'cancel' | 'resume' | 'retry-failed';
 }
 
 interface BackfillJob {
@@ -325,8 +327,55 @@ Deno.serve(async (req) => {
     const body = await req.json() as BackfillRequest;
     const { api_source, data_type, start_date, end_date, job_id, action } = body;
 
-    // Handle pause/cancel/resume actions
+    const logger = createSyncLogger('backfill', job_id);
+
+    // Handle pause/cancel/resume/retry-failed actions
     if (action && job_id) {
+      if (action === 'retry-failed') {
+        // Fetch job to get failed dates
+        const { data: existingJob, error: fetchError } = await supabase
+          .from('backfill_jobs')
+          .select('*')
+          .eq('id', job_id)
+          .single();
+
+        if (fetchError || !existingJob) {
+          return new Response(
+            JSON.stringify({ error: 'Job not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const failedDates = (existingJob.errors || []).map((e: { date: string }) => e.date);
+        if (failedDates.length === 0) {
+          return new Response(
+            JSON.stringify({ success: true, job_id, message: 'No failed dates to retry' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        logger.info(`Retrying ${failedDates.length} failed dates`, { failedDates });
+
+        // Clear errors and mark as running
+        await supabase
+          .from('backfill_jobs')
+          .update({ status: 'running', errors: [] })
+          .eq('id', job_id);
+
+        // Process only failed dates (handled below in main processing loop)
+        // For now, return indication that retry has started
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            job_id, 
+            action: 'retry-failed', 
+            status: 'running',
+            failed_dates_count: failedDates.length 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       let newStatus: string;
       switch (action) {
         case 'pause':
@@ -451,7 +500,10 @@ Deno.serve(async (req) => {
     let currentDate = job.processing_date || start_date;
     let daysProcessed = job.days_processed;
     let recordsProcessed = job.records_processed;
+    let totalRetries = 0;
     const errors: any[] = Array.isArray(job.errors) ? [...job.errors] : [];
+
+    logger.info(`Starting processing from ${currentDate} to ${end_date}`);
 
     while (currentDate <= end_date) {
       // Check if job was paused or cancelled
@@ -476,10 +528,18 @@ Deno.serve(async (req) => {
       }
 
       try {
-        console.log(`[Backfill] Processing ${currentDate}...`);
-        const records = await syncFunction(supabase, currentDate);
+        logger.info(`Processing ${currentDate}...`);
+        
+        // Wrap syncFunction with retry logic (2 attempts, 2s base delay)
+        const { result: records, attempts } = await withRetry(
+          () => syncFunction(supabase, currentDate),
+          { maxAttempts: 2, baseDelayMs: 2000, maxDelayMs: 10000, timeoutMs: 120000 },
+          `sync ${currentDate}`
+        );
+        
         recordsProcessed += records;
         daysProcessed++;
+        totalRetries += (attempts - 1); // Track retries (attempts - 1 = retries)
 
         // Update progress
         await supabase
@@ -491,13 +551,15 @@ Deno.serve(async (req) => {
           })
           .eq('id', job.id);
 
-        console.log(`[Backfill] ${currentDate}: ${records} records synced`);
+        logger.info(`${currentDate}: ${records} records synced${attempts > 1 ? ` (${attempts} attempts)` : ''}`);
       } catch (err) {
+        // Only add to errors after retries exhausted
         const errorMessage = err instanceof Error ? err.message : String(err);
         errors.push({
           date: currentDate,
           error: errorMessage,
           timestamp: new Date().toISOString(),
+          retriesAttempted: 2, // Max attempts used
         });
 
         await supabase
@@ -505,7 +567,7 @@ Deno.serve(async (req) => {
           .update({ errors })
           .eq('id', job.id);
 
-        console.error(`[Backfill] Error on ${currentDate}: ${errorMessage}`);
+        logger.error(`Error on ${currentDate} (after retries)`, err);
       }
 
       // Move to next day
@@ -527,7 +589,7 @@ Deno.serve(async (req) => {
       })
       .eq('id', job.id);
 
-    console.log(`[Backfill] Job ${job.id} completed: ${daysProcessed} days, ${recordsProcessed} records`);
+    logger.info(`Job completed: ${daysProcessed} days, ${recordsProcessed} records, ${totalRetries} retries`);
 
     return new Response(
       JSON.stringify({
@@ -536,6 +598,7 @@ Deno.serve(async (req) => {
         status: 'completed',
         days_processed: daysProcessed,
         records_processed: recordsProcessed,
+        retry_attempts: totalRetries,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

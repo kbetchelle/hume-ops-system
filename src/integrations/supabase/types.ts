@@ -2371,6 +2371,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_metrics: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          records_failed: number | null
+          records_fetched: number | null
+          records_synced: number | null
+          retry_count: number | null
+          started_at: string
+          sync_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          records_failed?: number | null
+          records_fetched?: number | null
+          records_synced?: number | null
+          retry_count?: number | null
+          started_at: string
+          sync_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          records_failed?: number | null
+          records_fetched?: number | null
+          records_synced?: number | null
+          retry_count?: number | null
+          started_at?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
       sync_schedule: {
         Row: {
           created_at: string | null

@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
+import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 
-const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 const MAX_PAGES = 100; // Safety limit to prevent infinite loops
 
 interface ArketaClass {
@@ -50,6 +51,10 @@ Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
     const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
 
@@ -60,9 +65,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const logger = createSyncLogger('arketa_classes');
+    const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
     const today = new Date().toISOString().split('T')[0];
@@ -70,7 +74,18 @@ Deno.serve(async (req) => {
     const endDate = body.end_date || today;
     const limit = body.limit || 500;
 
-    console.log(`[Arketa Classes] Syncing classes from ${startDate} to ${endDate}`);
+    logger.info(`Syncing classes from ${startDate} to ${endDate}`);
+
+    // Try to get token via refresh flow, fall back to API key
+    let headers: Record<string, string>;
+    try {
+      const token = await getArketaToken(supabaseUrl, supabaseKey);
+      headers = getArketaHeaders(token);
+      logger.info('Using OAuth token for authentication');
+    } catch (tokenError) {
+      logger.warn('Token refresh failed, using API key', { error: tokenError instanceof Error ? tokenError.message : String(tokenError) });
+      headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
+    }
 
     // Fetch all classes with cursor-based pagination
     let allClasses: ArketaClass[] = [];
@@ -82,7 +97,7 @@ Deno.serve(async (req) => {
     while (hasMore && pageCount < MAX_PAGES) {
       pageCount++;
       
-      const url = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes`);
+      const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
       url.searchParams.set('limit', String(limit));
       url.searchParams.set('start_date', startDate);
       url.searchParams.set('end_date', endDate);
@@ -90,14 +105,11 @@ Deno.serve(async (req) => {
         url.searchParams.set('cursor', nextCursor);
       }
 
-      console.log(`[Arketa Classes] Fetching page ${pageCount}...`);
+      logger.info(`Fetching page ${pageCount}...`);
 
       const { response, attempts } = await fetchWithRetry(url.toString(), {
         method: 'GET',
-        headers: {
-          'x-api-key': ARKETA_API_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
       totalAttempts += attempts;
 
@@ -120,7 +132,7 @@ Deno.serve(async (req) => {
       }
 
       allClasses = [...allClasses, ...pageClasses];
-      console.log(`[Arketa Classes] Fetched page ${pageCount}, total records: ${allClasses.length}`);
+      logger.info(`Fetched page ${pageCount}`, { totalRecords: allClasses.length });
 
       // If we got fewer than limit, we're done
       if (pageClasses.length < limit) {
@@ -129,10 +141,10 @@ Deno.serve(async (req) => {
     }
 
     if (pageCount >= MAX_PAGES) {
-      console.warn(`[Arketa Classes] Reached max page limit (${MAX_PAGES}), some records may be missing`);
+      logger.warn(`Reached max page limit (${MAX_PAGES}), some records may be missing`);
     }
 
-    console.log(`[Arketa Classes] Total fetched: ${allClasses.length} classes in ${pageCount} page(s), ${totalAttempts} API attempt(s)`);
+    logger.info(`Total fetched: ${allClasses.length} classes in ${pageCount} page(s), ${totalAttempts} API attempt(s)`);
 
     const syncedClasses = [];
     let failedCount = 0;
@@ -180,7 +192,7 @@ Deno.serve(async (req) => {
         );
 
         if (result.error) {
-          console.error(`[Arketa Classes] Failed to upsert class ${cls.id}:`, result.error);
+          logger.error(`Failed to upsert class ${cls.id}`, result.error);
           failedCount++;
           continue;
         }
@@ -194,10 +206,23 @@ Deno.serve(async (req) => {
           capacity,
         });
       } catch (error) {
-        console.error(`[Arketa Classes] Error upserting class ${cls.id}:`, error);
+        logger.error(`Error upserting class ${cls.id}`, error);
         failedCount++;
       }
     }
+
+    // Log sync metrics
+    const durationMs = Date.now() - startTime;
+    await logSyncMetrics(supabase, {
+      syncType: 'arketa_classes',
+      startedAt: new Date(startTime).toISOString(),
+      completedAt: new Date().toISOString(),
+      durationMs,
+      recordsFetched: allClasses.length,
+      recordsSynced: syncedClasses.length,
+      recordsFailed: failedCount,
+      retryCount: totalAttempts - pageCount, // Retries = attempts - pages
+    });
 
     // Update sync status
     await supabase
@@ -225,7 +250,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Arketa Classes] Error:', error);
+    const logger = createSyncLogger('arketa_classes');
+    logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
-
-const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
+import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 
 interface ArketaPayment {
   id: string;
@@ -29,6 +29,10 @@ Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
     const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
 
@@ -39,9 +43,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const logger = createSyncLogger('arketa_payments');
+    const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
     const today = new Date().toISOString().split('T')[0];
@@ -49,58 +52,63 @@ Deno.serve(async (req) => {
     const endDate = body.end_date || today;
     const limit = body.limit || 500;
 
-    console.log(`[Arketa Payments] Syncing payments from ${startDate} to ${endDate}`);
+    logger.info(`Syncing payments from ${startDate} to ${endDate}`);
+
+    // Try to get token via refresh flow, fall back to API key
+    let headers: Record<string, string>;
+    try {
+      const token = await getArketaToken(supabaseUrl, supabaseKey);
+      headers = getArketaHeaders(token);
+      logger.info('Using OAuth token for authentication');
+    } catch (tokenError) {
+      logger.warn('Token refresh failed, using API key', { error: tokenError instanceof Error ? tokenError.message : String(tokenError) });
+      headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
+    }
 
     let payments: ArketaPayment[] = [];
     let totalAttempts = 0;
     
     // Try purchases endpoint first with retry
-    const purchasesUrl = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
+    const purchasesUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: purchasesResponse, attempts } = await fetchWithRetry(purchasesUrl, {
         method: 'GET',
-        headers: {
-          'x-api-key': ARKETA_API_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
       totalAttempts += attempts;
 
       if (purchasesResponse.ok) {
         const purchasesData = await purchasesResponse.json();
         payments = Array.isArray(purchasesData) ? purchasesData : [];
-        console.log(`[Arketa Payments] Fetched ${payments.length} purchases after ${attempts} attempt(s)`);
+        logger.info(`Fetched ${payments.length} purchases after ${attempts} attempt(s)`);
       }
     } catch (error) {
-      console.error('[Arketa Payments] Purchases endpoint failed:', error);
+      logger.error('Purchases endpoint failed', error);
     }
 
     // Also try payments endpoint and merge
-    const paymentsUrl = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/payments?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
+    const paymentsUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/payments?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: paymentsResponse, attempts } = await fetchWithRetry(paymentsUrl, {
         method: 'GET',
-        headers: {
-          'x-api-key': ARKETA_API_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
       totalAttempts += attempts;
 
       if (paymentsResponse.ok) {
         const paymentsData = await paymentsResponse.json();
         if (Array.isArray(paymentsData)) {
-          console.log(`[Arketa Payments] Fetched ${paymentsData.length} additional payments after ${attempts} attempt(s)`);
+          logger.info(`Fetched ${paymentsData.length} additional payments after ${attempts} attempt(s)`);
           payments = [...payments, ...paymentsData];
         }
       }
     } catch (error) {
-      console.error('[Arketa Payments] Payments endpoint failed:', error);
+      logger.error('Payments endpoint failed', error);
     }
 
-    console.log(`[Arketa Payments] Total fetched: ${payments.length} payments`);
+    logger.info(`Total fetched: ${payments.length} payments`);
 
     const syncedPayments = [];
     let totalRevenue = 0;
@@ -139,7 +147,7 @@ Deno.serve(async (req) => {
         );
 
         if (result.error) {
-          console.error(`[Arketa Payments] Failed to upsert payment ${payment.id}:`, result.error);
+          logger.error(`Failed to upsert payment ${payment.id}`, result.error);
           failedCount++;
           continue;
         }
@@ -153,10 +161,23 @@ Deno.serve(async (req) => {
           date: paymentDate,
         });
       } catch (error) {
-        console.error(`[Arketa Payments] Error upserting payment ${payment.id}:`, error);
+        logger.error(`Error upserting payment ${payment.id}`, error);
         failedCount++;
       }
     }
+
+    // Log sync metrics
+    const durationMs = Date.now() - startTime;
+    await logSyncMetrics(supabase, {
+      syncType: 'arketa_payments',
+      startedAt: new Date(startTime).toISOString(),
+      completedAt: new Date().toISOString(),
+      durationMs,
+      recordsFetched: payments.length,
+      recordsSynced: syncedPayments.length,
+      recordsFailed: failedCount,
+      retryCount: Math.max(0, totalAttempts - 2), // Approx retries
+    });
 
     // Update sync status
     await supabase
@@ -184,7 +205,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Arketa Payments] Error:', error);
+    const logger = createSyncLogger('arketa_payments');
+    logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

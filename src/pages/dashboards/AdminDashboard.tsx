@@ -15,7 +15,7 @@ export default function AdminDashboard() {
     <DashboardLayout title="Admin Dashboard">
       <div className="space-y-12">
         {/* Quick Access Cards */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/members")}
@@ -43,6 +43,16 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle>Communications</CardTitle>
               <CardDescription>Announcements and document library</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/analytics")}
+          >
+            <CardHeader>
+              <CardTitle>Analytics</CardTitle>
+              <CardDescription>Member growth and trainer metrics</CardDescription>
             </CardHeader>
           </Card>
 

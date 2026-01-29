@@ -930,42 +930,6 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_sales: {
-        Row: {
-          business_date: string
-          created_at: string
-          id: string
-          payment_breakdown: Json | null
-          raw_data: Json | null
-          synced_at: string
-          top_items: Json | null
-          total_sales: number | null
-          total_transactions: number | null
-        }
-        Insert: {
-          business_date: string
-          created_at?: string
-          id?: string
-          payment_breakdown?: Json | null
-          raw_data?: Json | null
-          synced_at?: string
-          top_items?: Json | null
-          total_sales?: number | null
-          total_transactions?: number | null
-        }
-        Update: {
-          business_date?: string
-          created_at?: string
-          id?: string
-          payment_breakdown?: Json | null
-          raw_data?: Json | null
-          synced_at?: string
-          top_items?: Json | null
-          total_sales?: number | null
-          total_transactions?: number | null
-        }
-        Relationships: []
-      }
       daily_schedules: {
         Row: {
           id: string
@@ -1693,45 +1657,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sling_sync_log: {
-        Row: {
-          completed_at: string | null
-          error_message: string | null
-          failed_record_ids: string[] | null
-          failure_count: number | null
-          id: string
-          records_synced: number | null
-          retry_attempts: number | null
-          started_at: string
-          status: string
-          success_count: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Relationships: []
-      }
       sling_users: {
         Row: {
           created_at: string | null
@@ -2057,54 +1982,6 @@ export type Database = {
           },
         ]
       }
-      staff_shifts: {
-        Row: {
-          created_at: string
-          external_id: string
-          id: string
-          location: string | null
-          position: string | null
-          raw_data: Json | null
-          shift_date: string
-          shift_end: string
-          shift_start: string
-          status: string | null
-          synced_at: string
-          user_email: string | null
-          user_name: string | null
-        }
-        Insert: {
-          created_at?: string
-          external_id: string
-          id?: string
-          location?: string | null
-          position?: string | null
-          raw_data?: Json | null
-          shift_date: string
-          shift_end: string
-          shift_start: string
-          status?: string | null
-          synced_at?: string
-          user_email?: string | null
-          user_name?: string | null
-        }
-        Update: {
-          created_at?: string
-          external_id?: string
-          id?: string
-          location?: string | null
-          position?: string | null
-          raw_data?: Json | null
-          shift_date?: string
-          shift_end?: string
-          shift_start?: string
-          status?: string | null
-          synced_at?: string
-          user_email?: string | null
-          user_name?: string | null
-        }
-        Relationships: []
-      }
       system_alerts: {
         Row: {
           alert_type: string
@@ -2177,39 +2054,6 @@ export type Database = {
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id?: string
-        }
-        Relationships: []
-      }
-      toast_sync_log: {
-        Row: {
-          completed_at: string | null
-          error_message: string | null
-          failure_count: number | null
-          id: string
-          records_synced: number | null
-          started_at: string
-          status: string
-          success_count: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_message?: string | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_message?: string | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
         }
         Relationships: []
       }

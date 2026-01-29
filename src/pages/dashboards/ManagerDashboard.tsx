@@ -1,9 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DailySalesSummary } from "@/components/sales/DailySalesSummary";
-import { SalesHistoryChart } from "@/components/sales/SalesHistoryChart";
-import { StaffScheduleView } from "@/components/concierge/StaffScheduleView";
+
 export default function ManagerDashboard() {
   const navigate = useNavigate();
   
@@ -34,16 +32,6 @@ export default function ManagerDashboard() {
               <p className="text-[10px] tracking-wide text-muted-foreground">{stat.change}</p>
             </div>
           ))}
-        </div>
-
-        {/* Sales and Staff Overview */}
-        <div className="grid gap-8 lg:grid-cols-2">
-          <DailySalesSummary />
-          <SalesHistoryChart />
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-2">
-          <StaffScheduleView />
         </div>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">

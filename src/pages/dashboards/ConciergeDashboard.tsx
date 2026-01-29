@@ -15,8 +15,6 @@ import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplate
 import { QuickLinks } from "@/components/concierge/QuickLinks";
 import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
 import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
-import { StaffScheduleView } from "@/components/concierge/StaffScheduleView";
-import { DailySalesSummary } from "@/components/sales/DailySalesSummary";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -29,16 +27,12 @@ export default function ConciergeDashboard() {
     switch (activeView) {
       case "home":
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DailySalesSummary compact />
-                <StaffScheduleView compact />
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+            <div className="space-y-4">
               <ShiftEventsMiniCalendar />
               <EmbeddedChecklist />
             </div>
-            <div className="space-y-4">
+            <div>
               <WhosWorkingView />
             </div>
           </div>

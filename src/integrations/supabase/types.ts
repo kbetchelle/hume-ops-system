@@ -240,6 +240,132 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_classes_staging: {
+        Row: {
+          arketa_class_id: string
+          capacity: number | null
+          class_name: string
+          end_time: string | null
+          id: string
+          instructor_name: string | null
+          location: string | null
+          signups: number | null
+          staged_at: string | null
+          start_time: string
+          sync_batch_id: string
+        }
+        Insert: {
+          arketa_class_id: string
+          capacity?: number | null
+          class_name: string
+          end_time?: string | null
+          id?: string
+          instructor_name?: string | null
+          location?: string | null
+          signups?: number | null
+          staged_at?: string | null
+          start_time: string
+          sync_batch_id: string
+        }
+        Update: {
+          arketa_class_id?: string
+          capacity?: number | null
+          class_name?: string
+          end_time?: string | null
+          id?: string
+          instructor_name?: string | null
+          location?: string | null
+          signups?: number | null
+          staged_at?: string | null
+          start_time?: string
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
+      arketa_clients_staging: {
+        Row: {
+          arketa_client_id: string
+          email: string | null
+          first_name: string | null
+          id: string
+          join_date: string | null
+          last_name: string | null
+          membership_status: string | null
+          membership_type: string | null
+          phone: string | null
+          raw_data: Json | null
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          arketa_client_id: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          membership_status?: string | null
+          membership_type?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          arketa_client_id?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          membership_status?: string | null
+          membership_type?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
+      arketa_reservations_staging: {
+        Row: {
+          arketa_class_id: string
+          checked_in_at: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          id: string
+          reservation_id: string
+          staged_at: string | null
+          status: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          arketa_class_id: string
+          checked_in_at?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          id?: string
+          reservation_id: string
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          arketa_class_id?: string
+          checked_in_at?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          id?: string
+          reservation_id?: string
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           category: string
@@ -285,6 +411,60 @@ export type Database = {
           purchase_price?: number
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      calendly_events_staging: {
+        Row: {
+          calendly_event_id: string
+          end_time: string | null
+          event_name: string | null
+          event_type: string | null
+          id: string
+          invitee_email: string | null
+          invitee_name: string | null
+          invitee_phone: string | null
+          location: string | null
+          notes: string | null
+          raw_data: Json | null
+          staged_at: string | null
+          start_time: string
+          status: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          calendly_event_id: string
+          end_time?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          invitee_email?: string | null
+          invitee_name?: string | null
+          invitee_phone?: string | null
+          location?: string | null
+          notes?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          start_time: string
+          status?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          calendly_event_id?: string
+          end_time?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          invitee_email?: string | null
+          invitee_name?: string | null
+          invitee_phone?: string | null
+          location?: string | null
+          notes?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          start_time?: string
+          status?: string | null
+          sync_batch_id?: string
         }
         Relationships: []
       }
@@ -815,6 +995,96 @@ export type Database = {
         }
         Relationships: []
       }
+      sling_shifts_staging: {
+        Row: {
+          id: string
+          location_id: number | null
+          location_name: string | null
+          position_id: number | null
+          position_name: string | null
+          shift_date: string
+          shift_end: string
+          shift_id: number
+          shift_start: string
+          sling_user_id: number
+          staged_at: string | null
+          status: string | null
+          sync_batch_id: string
+          user_name: string | null
+        }
+        Insert: {
+          id?: string
+          location_id?: number | null
+          location_name?: string | null
+          position_id?: number | null
+          position_name?: string | null
+          shift_date: string
+          shift_end: string
+          shift_id: number
+          shift_start: string
+          sling_user_id: number
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id: string
+          user_name?: string | null
+        }
+        Update: {
+          id?: string
+          location_id?: number | null
+          location_name?: string | null
+          position_id?: number | null
+          position_name?: string | null
+          shift_date?: string
+          shift_end?: string
+          shift_id?: number
+          shift_start?: string
+          sling_user_id?: number
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      sling_staging: {
+        Row: {
+          email: string | null
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          positions: string[] | null
+          sling_created_at: string | null
+          sling_user_id: number
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          positions?: string[] | null
+          sling_created_at?: string | null
+          sling_user_id: number
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          positions?: string[] | null
+          sling_created_at?: string | null
+          sling_user_id?: number
+          staged_at?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
       system_alerts: {
         Row: {
           alert_type: string
@@ -854,6 +1124,39 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string | null
+        }
+        Relationships: []
+      }
+      toast_staging: {
+        Row: {
+          business_date: string
+          gross_sales: number | null
+          id: string
+          net_sales: number | null
+          order_count: number | null
+          raw_data: Json | null
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          business_date: string
+          gross_sales?: number | null
+          id?: string
+          net_sales?: number | null
+          order_count?: number | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          business_date?: string
+          gross_sales?: number | null
+          id?: string
+          net_sales?: number | null
+          order_count?: number | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id?: string
         }
         Relationships: []
       }

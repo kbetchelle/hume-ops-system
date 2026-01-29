@@ -31,6 +31,8 @@ import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
 import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
 import ShiftReportPage from "./pages/dashboards/ShiftReportPage";
 import ReportsPage from "./pages/dashboards/ReportsPage";
+import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
+import PublicPlanPage from "./pages/PublicPlanPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -194,6 +196,19 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            {/* Training Plans for Trainers */}
+            <Route
+              path="/dashboard/training-plans"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <TrainingPlansPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Public Plan View (no auth required) */}
+            <Route path="/plan/:shareSlug" element={<PublicPlanPage />} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

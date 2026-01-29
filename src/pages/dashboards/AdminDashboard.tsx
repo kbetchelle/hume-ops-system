@@ -85,6 +85,16 @@ export default function AdminDashboard() {
               <CardDescription>Manage automated API syncs</CardDescription>
             </CardHeader>
           </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/backfill")}
+          >
+            <CardHeader>
+              <CardTitle>Backfill Manager</CardTitle>
+              <CardDescription>Import historical data from APIs</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         {/* Header */}

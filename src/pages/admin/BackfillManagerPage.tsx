@@ -456,13 +456,24 @@ export default function BackfillManagerPage() {
 
   const dataTypes = DATA_TYPES_BY_SOURCE[apiSource];
 
+  // Check if data type requires date filtering
+  const requiresDateFiltering = !["clients", "instructors"].includes(dataType);
+
   const handleCreateJob = () => {
-    if (!dataType || !startDate || !endDate) return;
+    if (!dataType) return;
+    
+    // For data types that don't use date filtering, use today as default dates
+    const today = new Date().toISOString().split('T')[0];
+    const effectiveStartDate = requiresDateFiltering ? startDate : today;
+    const effectiveEndDate = requiresDateFiltering ? endDate : today;
+    
+    if (requiresDateFiltering && (!startDate || !endDate)) return;
+    
     createJob.mutate({
       api_source: apiSource,
       data_type: dataType,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: effectiveStartDate,
+      end_date: effectiveEndDate,
     });
     // Reset form
     setDataType("");
@@ -522,28 +533,32 @@ export default function BackfillManagerPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
+              {requiresDateFiltering && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label>End Date</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex items-end">
                 <Button 
                   onClick={handleCreateJob}
-                  disabled={!dataType || !startDate || !endDate || createJob.isPending}
+                  disabled={!dataType || (requiresDateFiltering && (!startDate || !endDate)) || createJob.isPending}
                   className="w-full md:min-w-[160px]"
                 >
                   {createJob.isPending ? (
@@ -556,11 +571,11 @@ export default function BackfillManagerPage() {
               </div>
             </div>
 
-            {dataType && startDate && endDate && (
+            {dataType && (requiresDateFiltering ? (startDate && endDate) : true) && (
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 <span>
-                  {dataType === "clients" || dataType === "instructors"
+                  {!requiresDateFiltering
                     ? "Will sync all records (cursor-based pagination, 400 records per batch)"
                     : `Estimated ~${typeof estimatedRecords() === 'number' ? estimatedRecords()?.toLocaleString() : estimatedRecords()} records`
                   }

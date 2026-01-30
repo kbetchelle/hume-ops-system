@@ -151,15 +151,36 @@ serve(async (req) => {
       throw new Error("job_id is required");
     }
 
-    // Fetch the job
+    // Fetch the job with a status check to prevent race conditions
     const { data: job, error: jobError } = await supabase
       .from('backfill_jobs')
       .select('*')
       .eq('id', job_id)
       .single();
 
-    if (jobError || !job) {
-      throw new Error(`Job not found: ${job_id}`);
+    if (jobError) {
+      // Handle specific error cases gracefully
+      if (jobError.code === 'PGRST116') {
+        // Row not found - job was deleted or doesn't exist
+        logger.warn(`Job not found (may have been deleted): ${job_id}`);
+        return jsonResponse({ success: false, error: 'Job not found or deleted', code: 'JOB_NOT_FOUND' }, corsHeaders, 404);
+      }
+      throw new Error(`Database error: ${jobError.message}`);
+    }
+
+    if (!job) {
+      logger.warn(`Job not found: ${job_id}`);
+      return jsonResponse({ success: false, error: 'Job not found', code: 'JOB_NOT_FOUND' }, corsHeaders, 404);
+    }
+
+    // Check if job is already completed/cancelled/failed - don't process
+    if (['completed', 'cancelled', 'failed'].includes(job.status)) {
+      logger.info(`Job ${job_id} already in terminal state: ${job.status}`);
+      return jsonResponse({ 
+        success: true, 
+        message: `Job already ${job.status}`,
+        status: job.status 
+      }, corsHeaders);
     }
 
     // Handle actions
@@ -173,6 +194,32 @@ serve(async (req) => {
       return jsonResponse({ success: true, message: 'Job cancelled' }, corsHeaders);
     }
 
+    // CONCURRENCY GUARD: Use an atomic update to claim this batch
+    // This prevents multiple edge function invocations from processing the same batch
+    const processingToken = crypto.randomUUID();
+    const { data: claimedJob, error: claimError } = await supabase
+      .from('backfill_jobs')
+      .update({ 
+        sync_phase: 'processing',
+        // Use a timestamp check to prevent stale claims
+        retry_scheduled_at: null 
+      })
+      .eq('id', job_id)
+      .in('status', ['pending', 'running', 'paused'])
+      // Only claim if not already being processed (sync_phase not 'processing' or older than 30s)
+      .or(`sync_phase.neq.processing,last_batch_synced_at.lt.${new Date(Date.now() - 30000).toISOString()}`)
+      .select()
+      .single();
+
+    if (claimError || !claimedJob) {
+      logger.info(`Job ${job_id} is already being processed by another invocation`);
+      return jsonResponse({ 
+        success: true, 
+        message: 'Job is being processed by another invocation',
+        code: 'ALREADY_PROCESSING'
+      }, corsHeaders);
+    }
+
     // Get configuration for this job type
     const configKey = `${job.api_source}-${job.data_type}`;
     const config = BACKFILL_CONFIGS[configKey];
@@ -182,10 +229,10 @@ serve(async (req) => {
     }
 
     // Update job to running if not already
-    if (job.status !== 'running') {
+    if (claimedJob.status !== 'running') {
       await updateJobStatus(supabase, job_id, 'running', { 
         sync_phase: 'starting',
-        started_at: job.started_at || new Date().toISOString()
+        started_at: claimedJob.started_at || new Date().toISOString()
       });
     }
 
@@ -195,7 +242,7 @@ serve(async (req) => {
     // Execute the complete sync cycle
     const result = await executeSyncCycle(
       supabase,
-      job as BackfillJob,
+      claimedJob as BackfillJob,
       config,
       batchId,
       logger
@@ -203,11 +250,11 @@ serve(async (req) => {
 
     // Update job with results
     const updateData: Record<string, unknown> = {
-      records_processed: (job.records_processed || 0) + result.recordsUpserted,
+      records_processed: (claimedJob.records_processed || 0) + result.recordsUpserted,
       batch_cursor: result.nextCursor,
       sync_phase: result.phase,
       last_batch_synced_at: new Date().toISOString(),
-      total_batches_completed: (job.total_batches_completed || 0) + 1,
+      total_batches_completed: (claimedJob.total_batches_completed || 0) + 1,
       records_in_current_batch: result.recordsFetched,
       // Store errors in the existing 'errors' JSONB column
       errors: result.errors.length > 0 ? result.errors : [],
@@ -215,8 +262,8 @@ serve(async (req) => {
       records_inserted: result.recordsInserted,
       records_updated: result.recordsUpdated,
       // Accumulate totals across all batches
-      cumulative_inserted: (job.cumulative_inserted || 0) + result.recordsInserted,
-      cumulative_updated: (job.cumulative_updated || 0) + result.recordsUpdated
+      cumulative_inserted: (claimedJob.cumulative_inserted || 0) + result.recordsInserted,
+      cumulative_updated: (claimedJob.cumulative_updated || 0) + result.recordsUpdated
     };
 
     if (!result.hasMore) {
@@ -226,8 +273,8 @@ serve(async (req) => {
       updateData.no_more_records = true;
       updateData.sync_phase = 'complete';
     } else {
-      // Schedule next batch immediately (or with small delay for rate limiting)
-      updateData.retry_scheduled_at = new Date(Date.now() + 1000).toISOString();
+      // Schedule next batch with a small delay for rate limiting
+      updateData.retry_scheduled_at = new Date(Date.now() + 2000).toISOString();
     }
 
     // CRITICAL: Add error handling to job status update
@@ -254,7 +301,7 @@ serve(async (req) => {
         recordsUpdated: result.recordsUpdated,
         recordsFailed: result.recordsFailed,
         hasMore: result.hasMore,
-        totalProcessed: job.records_processed + result.recordsUpserted,
+        totalProcessed: claimedJob.records_processed + result.recordsUpserted,
         phase: result.phase,
         errors: result.errors
       }

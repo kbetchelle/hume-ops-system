@@ -107,6 +107,9 @@ export function useBackfillJobs() {
     },
   });
 
+  // Track which jobs are currently being continued to prevent duplicate calls
+  const continuingJobsRef = useRef<Set<string>>(new Set());
+
   // Check for jobs that need to be continued after their retry_scheduled_at time
   const checkAndContinueJobs = useCallback(() => {
     if (!jobs) return;
@@ -117,26 +120,37 @@ export function useBackfillJobs() {
         job.status === "running" &&
         job.retry_scheduled_at &&
         new Date(job.retry_scheduled_at) <= now &&
-        !job.no_more_records // Continue if there's more data to fetch
+        !job.no_more_records && // Continue if there's more data to fetch
+        job.sync_phase !== 'processing' && // Don't continue if already processing
+        !continuingJobsRef.current.has(job.id) // Don't continue if we're already continuing this job
     );
 
     for (const job of jobsToRetry) {
+      // Mark this job as being continued
+      continuingJobsRef.current.add(job.id);
       console.log(`[useBackfillJobs] Auto-continuing job ${job.id}`);
-      continueJob.mutate(job);
+      
+      continueJob.mutate(job, {
+        onSettled: () => {
+          // Remove from continuing set when done (success or error)
+          continuingJobsRef.current.delete(job.id);
+        }
+      });
     }
   }, [jobs, continueJob]);
 
-  // Set up auto-continuation timer - check every 2 seconds for faster batch processing
+  // Set up auto-continuation timer - check every 3 seconds to reduce race conditions
   useEffect(() => {
-    continuationTimerRef.current = setInterval(checkAndContinueJobs, 2000);
+    continuationTimerRef.current = setInterval(checkAndContinueJobs, 3000);
     
-    // Also check immediately when jobs change
-    checkAndContinueJobs();
+    // Also check immediately when jobs change (but with a small delay)
+    const timeoutId = setTimeout(checkAndContinueJobs, 500);
 
     return () => {
       if (continuationTimerRef.current) {
         clearInterval(continuationTimerRef.current);
       }
+      clearTimeout(timeoutId);
     };
   }, [checkAndContinueJobs]);
 

@@ -2034,6 +2034,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sling_users_staging: {
+        Row: {
+          email: string | null
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          position_id: number | null
+          position_name: string | null
+          positions: string[] | null
+          raw_data: Json | null
+          sling_user_id: number
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          position_id?: number | null
+          position_name?: string | null
+          positions?: string[] | null
+          raw_data?: Json | null
+          sling_user_id: number
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          position_id?: number | null
+          position_name?: string | null
+          positions?: string[] | null
+          raw_data?: Json | null
+          sling_user_id?: number
+          staged_at?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
       staff_announcement_reads: {
         Row: {
           announcement_id: string | null
@@ -2369,7 +2414,15 @@ export type Database = {
           user_email?: string | null
           user_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_staff_shifts_sling_user"
+            columns: ["sling_user_id"]
+            isOneToOne: false
+            referencedRelation: "sling_users"
+            referencedColumns: ["sling_user_id"]
+          },
+        ]
       }
       sync_metrics: {
         Row: {

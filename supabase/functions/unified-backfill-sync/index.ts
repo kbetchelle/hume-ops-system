@@ -355,19 +355,18 @@ async function fetchFromApi(
     url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
   }
   
-  // OFFSET-BASED PAGINATION FALLBACK
-  // If we have no cursor but have already processed records, use offset pagination
-  // This is required for endpoints like /clients that don't return cursors
-  const useOffsetPagination = !job.batch_cursor && job.records_processed > 0;
-  
+  // Cursor-based pagination only (Arketa doesn't support offset/skip)
   if (job.batch_cursor) {
-    // Cursor-based pagination (preferred)
     url += `&cursor=${job.batch_cursor}`;
     logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
-  } else if (useOffsetPagination) {
-    // Offset-based fallback - use records_processed as the skip value
-    url += `&offset=${job.records_processed}`;
-    logger.info('Using offset-based pagination fallback', { offset: job.records_processed });
+  } else if (job.records_processed > 0) {
+    // We've processed records but have no cursor - this means the API
+    // doesn't provide pagination cursors for this endpoint
+    // Log this situation but continue (will return empty or same data)
+    logger.warn('No cursor available for subsequent batch - API may not support pagination', {
+      recordsProcessed: job.records_processed,
+      endpoint: config.endpointPath
+    });
   }
 
   logger.info(`Fetching from: ${url}`);
@@ -452,21 +451,26 @@ async function fetchFromApi(
   const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
 
   // Determine hasMore with detailed logging
-  // CRITICAL: For offset-based pagination (no cursor returned), we determine hasMore
-  // based on whether we got a full batch of records
   const isBatchFull = records.length === BATCH_SIZE;
   const paginationHasMore = data.pagination?.hasMore === true;
   const cursorPresent = !!nextCursor;
   
-  // If using offset pagination (no cursor returned but API says hasMore), 
-  // rely on batch size to determine if more records exist
-  const isOffsetPaginationMode = !cursorPresent && paginationHasMore;
+  // CRITICAL: Arketa API doesn't support offset pagination
+  // If we get a full batch but NO cursor, we CANNOT fetch more records
+  // even if API says hasMore: true - this is an API limitation
+  // 
+  // hasMore is ONLY true if we have a cursor to use for the next request
+  const hasMore = cursorPresent;
   
-  // hasMore is true if:
-  // 1. We have a cursor (cursor-based pagination), OR
-  // 2. API explicitly says hasMore AND we got a full batch (offset-based), OR
-  // 3. We got a full batch (fallback)
-  const hasMore = cursorPresent || (isOffsetPaginationMode && isBatchFull) || (isBatchFull && !isOffsetPaginationMode && paginationHasMore);
+  // Log warning if API says hasMore but no cursor provided
+  if (paginationHasMore && !cursorPresent && isBatchFull) {
+    logger.warn('API indicates more records but provides no pagination cursor - marking as complete', {
+      recordsFetched: records.length,
+      apiHasMore: paginationHasMore,
+      endpoint: config.endpointPath,
+      note: 'This endpoint does not support cursor pagination. Only first batch of records will be synced.'
+    });
+  }
 
   logger.info('Fetch complete', {
     recordCount: records.length,
@@ -475,19 +479,12 @@ async function fetchFromApi(
       isBatchFull,
       paginationHasMore,
       cursorPresent,
-      isOffsetPaginationMode,
       hasMoreDecision: hasMore,
-      determinedBy: cursorPresent ? 'cursor_present' : 
-                    (isOffsetPaginationMode && isBatchFull) ? 'offset_batch_full' : 
-                    isBatchFull ? 'batch_size' : 'no_more_data'
+      determinedBy: cursorPresent ? 'cursor_present' : 'no_cursor_available'
     }
   });
 
-  // For offset pagination, we store the current offset as a synthetic cursor
-  // This allows job resumption to work correctly
-  const effectiveCursor = cursorPresent ? nextCursor : null;
-
-  return { records, nextCursor: effectiveCursor, hasMore };
+  return { records, nextCursor, hasMore };
 }
 
 async function insertToStaging(

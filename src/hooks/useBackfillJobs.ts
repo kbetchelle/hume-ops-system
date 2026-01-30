@@ -110,7 +110,7 @@ export function useBackfillJobs() {
         job.status === "running" &&
         job.retry_scheduled_at &&
         new Date(job.retry_scheduled_at) <= now &&
-        (job.batch_cursor || job.last_cursor) // Has a cursor to continue from
+        !job.no_more_records // Continue if there's more data to fetch
     );
 
     for (const job of jobsToRetry) {

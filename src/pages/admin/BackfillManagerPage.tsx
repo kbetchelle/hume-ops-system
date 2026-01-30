@@ -307,20 +307,6 @@ function ActiveJobCard({
 
           {/* Right: Actions */}
           <div className="flex flex-col gap-2 shrink-0 lg:w-auto">
-            {/* View Details Toggle Button */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start"
-              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-            >
-              <ChevronRight className={cn(
-                "h-4 w-4 mr-2 transition-transform",
-                isDetailsOpen && "rotate-90"
-              )} />
-              View Details
-            </Button>
-            
             <div className="flex gap-2">
               {isRunning && !isPaused && (
                 <Button variant="outline" size="sm" onClick={onPause}>
@@ -345,6 +331,20 @@ function ActiveJobCard({
                 Cancel
               </Button>
             </div>
+            
+            {/* View Details Toggle Button - below action buttons */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start"
+              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+            >
+              <ChevronRight className={cn(
+                "h-4 w-4 mr-2 transition-transform",
+                isDetailsOpen && "rotate-90"
+              )} />
+              View Details
+            </Button>
           </div>
         </div>
 

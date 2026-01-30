@@ -422,6 +422,10 @@ async function fetchFromApi(
   } else if (data.staff && Array.isArray(data.staff)) {
     records = data.staff;
     matchedFormat = 'staff_field';
+  } else if (data.items && Array.isArray(data.items)) {
+    // Arketa Partner API uses 'items' as the standard array field name
+    records = data.items;
+    matchedFormat = 'items_field';
   } else {
     // CRITICAL: Log extensive details when format is unrecognized
     logger.error('UNKNOWN RESPONSE FORMAT - Records will be empty!', {

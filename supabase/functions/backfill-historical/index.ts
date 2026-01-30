@@ -55,6 +55,11 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Generate UUID for sync batch
+function generateUUID(): string {
+  return crypto.randomUUID();
+}
+
 // Endpoint type mapping for backfill data types to api_endpoints lookup
 const endpointTypeMap: Record<string, string> = {
   'payments': 'payments',
@@ -266,7 +271,7 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
   return recordCount;
 }
 
-// Sync ONE PAGE of Arketa clients and return pagination info for resumable sync
+// Sync ONE PAGE of Arketa clients to STAGING table with granular progress updates
 interface ClientSyncResult {
   recordsProcessed: number;
   nextCursor: string | null;
@@ -274,9 +279,15 @@ interface ClientSyncResult {
   totalInPage: number;
 }
 
-async function syncArketaClientsPage(
+// Progress update batch size - update UI every N records
+const PROGRESS_UPDATE_BATCH_SIZE = 5;
+
+async function syncArketaClientsPageToStaging(
   supabase: any, 
-  cursor: string | null
+  cursor: string | null,
+  syncBatchId: string,
+  jobId: string,
+  currentRecordsProcessed: number
 ): Promise<ClientSyncResult> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
@@ -355,8 +366,8 @@ async function syncArketaClientsPage(
   
   console.log(`[backfill] Page fetched: ${clients.length} clients`);
 
-  // Prepare all records for batch upsert
-  const records = clients.map((client: any) => {
+  // Prepare staging records
+  const stagingRecords = clients.map((client: any) => {
     // Build client name from available fields
     let clientName = client.name || null;
     if (!clientName) {
@@ -365,8 +376,9 @@ async function syncArketaClientsPage(
     }
 
     return {
-      external_id: String(client.id),
-      client_email: client.email || '',
+      sync_batch_id: syncBatchId,
+      arketa_client_id: String(client.id),
+      client_email: client.email || null,
       client_name: clientName,
       client_phone: client.phone || null,
       client_tags: client.tags || [],
@@ -377,38 +389,43 @@ async function syncArketaClientsPage(
       date_of_birth: client.dateOfBirth || null,
       lifecycle_stage: client.lifecycleStage || null,
       raw_data: client,
-      last_synced_at: new Date().toISOString(),
+      staged_at: new Date().toISOString(),
     };
   });
 
-  // Batch upsert in chunks of 100 for better performance
-  const BATCH_SIZE = 100;
+  // Insert to staging in small batches (5 records) with progress updates
   let recordCount = 0;
+  let runningTotal = currentRecordsProcessed;
   
-  for (let i = 0; i < records.length; i += BATCH_SIZE) {
-    const batch = records.slice(i, i + BATCH_SIZE);
-    const { error, count } = await supabase
-      .from('arketa_clients')
-      .upsert(batch, { onConflict: 'external_id', count: 'exact' });
+  for (let i = 0; i < stagingRecords.length; i += PROGRESS_UPDATE_BATCH_SIZE) {
+    const batch = stagingRecords.slice(i, i + PROGRESS_UPDATE_BATCH_SIZE);
+    
+    const { error } = await supabase
+      .from('arketa_clients_staging')
+      .insert(batch);
 
     if (!error) {
       recordCount += batch.length;
+      runningTotal += batch.length;
+      
+      // Update job progress for real-time UI feedback
+      await supabase
+        .from('backfill_jobs')
+        .update({ records_processed: runningTotal })
+        .eq('id', jobId);
     } else {
-      console.error(`[backfill] Batch upsert error at ${i}: ${error.message}`);
+      console.error(`[backfill] Staging insert error at ${i}: ${error.message}`);
     }
   }
 
-  console.log(`[backfill] Batch upserted ${recordCount} clients`);
+  console.log(`[backfill] Staged ${recordCount} clients to staging table`);
 
-  // Check pagination - only continue if we have a cursor AND API says there's more
+  // Check pagination
   const nextCursor = responseData.pagination?.nextCursor || null;
-  // hasMore is only true if:
-  // 1. API explicitly says hasMore=true AND we have a cursor, OR
-  // 2. API doesn't provide hasMore but we got a full page AND have a cursor
   const apiHasMore = responseData.pagination?.hasMore;
   const hasMore = nextCursor ? (apiHasMore ?? clients.length === 500) : false;
 
-  console.log(`[backfill] Upserted ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}, apiHasMore: ${apiHasMore}`);
+  console.log(`[backfill] Staged ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}`);
 
   return {
     recordsProcessed: recordCount,
@@ -416,6 +433,89 @@ async function syncArketaClientsPage(
     hasMore: hasMore && clients.length > 0,
     totalInPage: clients.length,
   };
+}
+
+// Promote records from staging to production
+async function promoteClientsStagingToProduction(
+  supabase: any,
+  syncBatchId: string,
+  jobId: string
+): Promise<number> {
+  console.log(`[backfill] Promoting staging records for batch ${syncBatchId}`);
+  
+  // Fetch all staging records for this batch
+  const { data: stagingRecords, error: fetchError } = await supabase
+    .from('arketa_clients_staging')
+    .select('*')
+    .eq('sync_batch_id', syncBatchId);
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch staging records: ${fetchError.message}`);
+  }
+
+  if (!stagingRecords || stagingRecords.length === 0) {
+    console.log('[backfill] No staging records to promote');
+    return 0;
+  }
+
+  console.log(`[backfill] Found ${stagingRecords.length} staging records to promote`);
+
+  // Transform staging records to production format
+  const productionRecords = stagingRecords.map((record: any) => ({
+    external_id: record.arketa_client_id,
+    client_email: record.client_email || '',
+    client_name: record.client_name,
+    client_phone: record.client_phone,
+    client_tags: record.client_tags || [],
+    custom_fields: record.custom_fields || {},
+    referrer: record.referrer,
+    email_mkt_opt_in: record.email_mkt_opt_in ?? false,
+    sms_mkt_opt_in: record.sms_mkt_opt_in ?? false,
+    date_of_birth: record.date_of_birth,
+    lifecycle_stage: record.lifecycle_stage,
+    raw_data: record.raw_data,
+    last_synced_at: new Date().toISOString(),
+  }));
+
+  // Batch upsert to production in chunks of 100
+  const BATCH_SIZE = 100;
+  let promotedCount = 0;
+  
+  for (let i = 0; i < productionRecords.length; i += BATCH_SIZE) {
+    const batch = productionRecords.slice(i, i + BATCH_SIZE);
+    
+    const { error } = await supabase
+      .from('arketa_clients')
+      .upsert(batch, { onConflict: 'external_id' });
+
+    if (!error) {
+      promotedCount += batch.length;
+    } else {
+      console.error(`[backfill] Production upsert error at ${i}: ${error.message}`);
+    }
+  }
+
+  console.log(`[backfill] Promoted ${promotedCount} records to production`);
+
+  // Clear staging table for this batch
+  const { error: deleteError } = await supabase
+    .from('arketa_clients_staging')
+    .delete()
+    .eq('sync_batch_id', syncBatchId);
+
+  if (deleteError) {
+    console.error(`[backfill] Failed to clear staging: ${deleteError.message}`);
+  } else {
+    console.log(`[backfill] Cleared staging table for batch ${syncBatchId}`);
+  }
+
+  // Mark staging_synced as true
+  await supabase
+    .from('backfill_jobs')
+    .update({ staging_synced: true })
+    .eq('id', jobId);
+
+  return promotedCount;
 }
 
 // Sync Sling shifts for a single date
@@ -621,6 +721,7 @@ Deno.serve(async (req) => {
     }
 
     let job: BackfillJob;
+    let syncBatchId: string;
 
     // Resume existing job or create new one
     if (job_id) {
@@ -638,8 +739,13 @@ Deno.serve(async (req) => {
       }
 
       job = existingJob as BackfillJob;
+      // For clients, extract sync_batch_id from last_cursor if available, or generate new one
+      syncBatchId = job.last_cursor?.startsWith('batch:') 
+        ? job.last_cursor.split('batch:')[1].split('|')[0] 
+        : generateUUID();
     } else {
       // Create new job
+      syncBatchId = generateUUID();
       const totalDays = daysBetween(start_date, end_date);
       
       const { data: newJob, error } = await supabase
@@ -706,32 +812,43 @@ Deno.serve(async (req) => {
         syncFunction = syncSlingShifts;
         break;
       case 'arketa_clients':
-        // Special handling for clients - page-based resumable sync
-        logger.info('Starting resumable clients sync');
+        // Special handling for clients - staging table workflow with granular progress
+        logger.info('Starting resumable clients sync with staging table', { syncBatchId });
 
-        let cursor = job.last_cursor;
+        // Extract cursor from last_cursor (format: "batch:<uuid>|cursor:<api_cursor>")
+        let apiCursor: string | null = null;
+        if (job.last_cursor && job.last_cursor.includes('|cursor:')) {
+          apiCursor = job.last_cursor.split('|cursor:')[1] || null;
+        }
+        
         let totalRecords = job.records_processed || 0;
         let pageCount = 0;
-        const maxPagesPerRun = 100; // Process up to 100 pages per invocation (50k records)
+        const maxPagesPerRun = 100; // Process up to 100 pages per invocation
         let hasMorePages = true;
 
         try {
           while (hasMorePages && pageCount < maxPagesPerRun) {
-            // Sync a single page - handle retries internally for better progress tracking
+            // Sync a single page to staging - with internal retries
             let pageResult: ClientSyncResult | null = null;
             let retryCount = 0;
             const maxRetries = 3;
             
             while (!pageResult && retryCount < maxRetries) {
               try {
-                pageResult = await syncArketaClientsPage(supabase, cursor);
+                pageResult = await syncArketaClientsPageToStaging(
+                  supabase, 
+                  apiCursor,
+                  syncBatchId,
+                  job.id,
+                  totalRecords
+                );
               } catch (pageError) {
                 retryCount++;
                 const errorMessage = pageError instanceof Error ? pageError.message : String(pageError);
                 logger.info(`Page ${pageCount + 1} attempt ${retryCount} failed: ${errorMessage}`);
                 
                 if (retryCount >= maxRetries) {
-                  throw pageError; // Rethrow after max retries
+                  throw pageError;
                 }
                 
                 // Wait before retry with exponential backoff
@@ -744,25 +861,23 @@ Deno.serve(async (req) => {
             }
 
             totalRecords += pageResult.recordsProcessed;
-            cursor = pageResult.nextCursor;
+            apiCursor = pageResult.nextCursor;
             hasMorePages = pageResult.hasMore;
             pageCount++;
 
-            // Update job progress IMMEDIATELY after each page succeeds
-            const updateResult = await supabase
+            // Store cursor in combined format for resumability
+            const combinedCursor = `batch:${syncBatchId}|cursor:${apiCursor || ''}`;
+            
+            await supabase
               .from('backfill_jobs')
               .update({
                 records_processed: totalRecords,
-                last_cursor: cursor,
+                last_cursor: combinedCursor,
                 days_processed: hasMorePages ? 0 : 1,
               })
               .eq('id', job.id);
-            
-            if (updateResult.error) {
-              logger.error(`Failed to update job progress: ${updateResult.error.message}`);
-            }
 
-            logger.info(`Page ${pageCount}: ${pageResult.recordsProcessed} records (total: ${totalRecords})`);
+            logger.info(`Page ${pageCount}: ${pageResult.recordsProcessed} records staged (total: ${totalRecords})`);
 
             // Small delay between pages for rate limiting
             if (hasMorePages) {
@@ -773,21 +888,25 @@ Deno.serve(async (req) => {
           if (hasMorePages) {
             // More pages to process - schedule continuation in 3 minutes
             const retryTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+            const combinedCursor = `batch:${syncBatchId}|cursor:${apiCursor || ''}`;
+            
             await supabase
               .from('backfill_jobs')
               .update({
                 status: 'running',
                 retry_scheduled_at: retryTime,
+                last_cursor: combinedCursor,
               })
               .eq('id', job.id);
 
-            logger.info(`Clients sync paused for rate limit, will continue at ${retryTime}. Total so far: ${totalRecords}`);
+            logger.info(`Clients sync paused for rate limit, will continue at ${retryTime}. Total staged: ${totalRecords}`);
 
             return new Response(
               JSON.stringify({
                 success: true,
                 job_id: job.id,
                 status: 'running',
+                phase: 'fetching',
                 records_processed: totalRecords,
                 has_more: true,
                 retry_scheduled_at: retryTime,
@@ -797,7 +916,12 @@ Deno.serve(async (req) => {
             );
           }
 
-          // All pages processed - mark as completed
+          // All pages fetched - now promote from staging to production
+          logger.info('All pages fetched, promoting to production...');
+          
+          const promotedCount = await promoteClientsStagingToProduction(supabase, syncBatchId, job.id);
+
+          // Mark as completed
           await supabase
             .from('backfill_jobs')
             .update({
@@ -807,18 +931,21 @@ Deno.serve(async (req) => {
               records_processed: totalRecords,
               last_cursor: null,
               retry_scheduled_at: null,
+              staging_synced: true,
             })
             .eq('id', job.id);
 
-          logger.info(`Clients sync completed: ${totalRecords} total records`);
+          logger.info(`Clients sync completed: ${totalRecords} staged, ${promotedCount} promoted`);
 
           return new Response(
             JSON.stringify({
               success: true,
               job_id: job.id,
               status: 'completed',
+              phase: 'complete',
               days_processed: 1,
               records_processed: totalRecords,
+              records_promoted: promotedCount,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
@@ -827,16 +954,18 @@ Deno.serve(async (req) => {
           // Handle error - schedule retry in 3 minutes
           const errorMessage = err instanceof Error ? err.message : String(err);
           const retryTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+          const combinedCursor = `batch:${syncBatchId}|cursor:${apiCursor || ''}`;
           
           await supabase
             .from('backfill_jobs')
             .update({
               status: 'running',
               retry_scheduled_at: retryTime,
+              last_cursor: combinedCursor,
               errors: [...(job.errors || []), { 
                 error: errorMessage, 
                 timestamp: new Date().toISOString(),
-                cursor: cursor,
+                cursor: apiCursor,
               }],
             })
             .eq('id', job.id);
@@ -848,6 +977,7 @@ Deno.serve(async (req) => {
               success: false,
               job_id: job.id,
               status: 'running',
+              phase: 'fetching',
               records_processed: totalRecords,
               error: errorMessage,
               retry_scheduled_at: retryTime,

@@ -91,14 +91,24 @@ function ActiveJobCard({
   const isClientSync = job.data_type === "clients";
   const isWaitingForRetry = job.status === "running" && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();
   
-  // For clients, estimate progress based on records (assume ~5000 total if unknown)
-  const estimatedTotal = job.total_records_expected || 5000;
+  // For clients, estimate progress based on records (assume ~11000 total if unknown)
+  const estimatedTotal = job.total_records_expected || 11000;
   const progress = isClientSync 
     ? Math.min((job.records_processed / estimatedTotal) * 100, 99) // Cap at 99% until complete
     : job.total_days > 0 ? (job.days_processed / job.total_days) * 100 : 0;
     
   const isPaused = job.status === "paused";
   const isRunning = job.status === "running" && !isWaitingForRetry;
+  
+  // Determine sync phase for clients
+  const getSyncPhase = () => {
+    if (!isClientSync) return null;
+    if (job.staging_synced) return "complete";
+    if (job.records_processed > 0 && !isWaitingForRetry) return "fetching";
+    if (isWaitingForRetry) return "waiting";
+    return "starting";
+  };
+  const syncPhase = getSyncPhase();
 
   return (
     <Card className="border-border">
@@ -124,7 +134,12 @@ function ActiveJobCard({
               {isClientSync ? (
                 <>
                   <span>Records synced: {job.records_processed.toLocaleString()}</span>
-                  <span>{job.records_processed > 0 ? "In progress..." : "Starting..."}</span>
+                  <span>
+                    {syncPhase === "starting" && "Starting..."}
+                    {syncPhase === "fetching" && "Fetching from API..."}
+                    {syncPhase === "waiting" && "Waiting to continue..."}
+                    {syncPhase === "complete" && "Complete"}
+                  </span>
                 </>
               ) : (
                 <>
@@ -153,12 +168,14 @@ function ActiveJobCard({
             <div>
               <p className="text-lg font-medium">
                 {isClientSync 
-                  ? (job.records_processed > 0 ? "Syncing" : "Starting")
+                  ? (syncPhase === "starting" ? "Starting" : 
+                     syncPhase === "fetching" ? "Fetching" : 
+                     syncPhase === "waiting" ? "Waiting" : "Complete")
                   : (job.processing_date ? format(new Date(job.processing_date), "MMM d") : "-")
                 }
               </p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {isClientSync ? "Status" : "Current Date"}
+                {isClientSync ? "Phase" : "Current Date"}
               </p>
             </div>
             <div>

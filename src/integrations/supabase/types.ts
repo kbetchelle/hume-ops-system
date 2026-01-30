@@ -831,64 +831,85 @@ export type Database = {
       backfill_jobs: {
         Row: {
           api_source: string
+          batch_cursor: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
+          current_batch_count: number | null
           data_type: string
           days_processed: number
           end_date: string
           errors: Json | null
           id: string
+          last_batch_synced_at: string | null
           last_cursor: string | null
+          no_more_records: boolean | null
           processing_date: string | null
+          records_in_current_batch: number | null
           records_processed: number
           retry_scheduled_at: string | null
           staging_synced: boolean | null
           start_date: string
           started_at: string | null
           status: string
+          sync_phase: string | null
+          total_batches_completed: number | null
           total_days: number
           total_records_expected: number | null
         }
         Insert: {
           api_source: string
+          batch_cursor?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          current_batch_count?: number | null
           data_type: string
           days_processed?: number
           end_date: string
           errors?: Json | null
           id?: string
+          last_batch_synced_at?: string | null
           last_cursor?: string | null
+          no_more_records?: boolean | null
           processing_date?: string | null
+          records_in_current_batch?: number | null
           records_processed?: number
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date: string
           started_at?: string | null
           status?: string
+          sync_phase?: string | null
+          total_batches_completed?: number | null
           total_days?: number
           total_records_expected?: number | null
         }
         Update: {
           api_source?: string
+          batch_cursor?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          current_batch_count?: number | null
           data_type?: string
           days_processed?: number
           end_date?: string
           errors?: Json | null
           id?: string
+          last_batch_synced_at?: string | null
           last_cursor?: string | null
+          no_more_records?: boolean | null
           processing_date?: string | null
+          records_in_current_batch?: number | null
           records_processed?: number
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date?: string
           started_at?: string | null
           status?: string
+          sync_phase?: string | null
+          total_batches_completed?: number | null
           total_days?: number
           total_records_expected?: number | null
         }

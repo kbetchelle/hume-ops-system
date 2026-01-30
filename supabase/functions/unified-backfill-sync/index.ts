@@ -33,7 +33,7 @@ import { getArketaToken, getArketaHeaders, ARKETA_URLS } from "../_shared/arketa
 import { fetchWithRetry } from "../_shared/retry.ts";
 import { createSyncLogger } from "../_shared/logger.ts";
 
-const BATCH_SIZE = 400;
+const BATCH_SIZE = 500;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -178,8 +178,24 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   const logger = createSyncLogger("unified-backfill");
 
+  // #region agent log
+  const debugLog = async (location: string, message: string, data: Record<string, unknown>, hypothesisId: string) => {
+    try {
+      await fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location, message, data, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId })
+      });
+    } catch (_) { /* ignore */ }
+  };
+  // #endregion
+
   try {
     const { job_id, action = 'continue' } = await req.json();
+
+    // #region agent log
+    await debugLog('unified-backfill-sync:entry', 'Edge function invoked', { job_id, action }, 'A,B,C');
+    // #endregion
 
     if (!job_id) {
       throw new Error("job_id is required");
@@ -246,6 +262,9 @@ serve(async (req) => {
       .single();
 
     if (claimError || !claimedJob) {
+      // #region agent log
+      await debugLog('unified-backfill-sync:claimFailed', 'Failed to claim job', { job_id, claimError: claimError?.message, claimedJob: !!claimedJob }, 'B');
+      // #endregion
       logger.info(`Job ${job_id} is already being processed by another invocation`);
       return jsonResponse({ 
         success: true, 
@@ -253,6 +272,10 @@ serve(async (req) => {
         code: 'ALREADY_PROCESSING'
       }, corsHeaders);
     }
+
+    // #region agent log
+    await debugLog('unified-backfill-sync:jobClaimed', 'Job claimed successfully', { job_id, status: claimedJob.status, started_at: claimedJob.started_at, sync_phase: claimedJob.sync_phase }, 'A,B');
+    // #endregion
 
     // Get configuration for this job type
     const configKey = `${job.api_source}-${job.data_type}`;
@@ -264,6 +287,9 @@ serve(async (req) => {
 
     // Update job to running if not already
     if (claimedJob.status !== 'running') {
+      // #region agent log
+      await debugLog('unified-backfill-sync:settingRunning', 'Setting job to running with started_at', { job_id, willSetStartedAt: !claimedJob.started_at }, 'A');
+      // #endregion
       await updateJobStatus(supabase, job_id, 'running', { 
         sync_phase: 'starting',
         started_at: claimedJob.started_at || new Date().toISOString()
@@ -312,19 +338,34 @@ serve(async (req) => {
     }
 
     // CRITICAL: Add error handling to job status update
+    // #region agent log
+    await debugLog('unified-backfill-sync:beforeFinalUpdate', 'About to update job with sync results', { job_id, updateData, recordsFetched: result.recordsFetched, hasMore: result.hasMore }, 'E');
+    // #endregion
+    
     const { error: updateError } = await supabase
       .from('backfill_jobs')
       .update(updateData)
       .eq('id', job_id);
 
     if (updateError) {
+      // #region agent log
+      await debugLog('unified-backfill-sync:updateFailed', 'Failed to update job after sync', { job_id, error: updateError.message }, 'E');
+      // #endregion
       logger.error('Failed to update job status after sync cycle', {
         jobId: job_id,
         error: updateError.message,
         updateData
       });
       // Don't throw - still return the result, but log the failure
+    } else {
+      // #region agent log
+      await debugLog('unified-backfill-sync:updateSuccess', 'Job updated successfully', { job_id, newRecordsProcessed: updateData.records_processed, hasMore: result.hasMore, retryScheduledAt: updateData.retry_scheduled_at }, 'E');
+      // #endregion
     }
+
+    // #region agent log
+    await debugLog('unified-backfill-sync:complete', 'Sync cycle complete, returning response', { job_id, success: true, recordsFetched: result.recordsFetched, recordsUpserted: result.recordsUpserted }, 'A,B,C,E');
+    // #endregion
 
     return jsonResponse({
       success: true,
@@ -342,6 +383,9 @@ serve(async (req) => {
     }, corsHeaders);
 
   } catch (error) {
+    // #region agent log
+    await debugLog('unified-backfill-sync:error', 'Sync cycle failed with error', { error: (error as Error).message, stack: (error as Error).stack?.substring(0, 500) }, 'C');
+    // #endregion
     logger.error("Sync cycle failed", error);
     return jsonResponse({ success: false, error: (error as Error).message }, corsHeaders, 500);
   }
@@ -354,10 +398,29 @@ async function executeSyncCycle(
   batchId: string,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<SyncCycleResult> {
+  // #region agent log
+  const debugLogCycle = async (location: string, message: string, data: Record<string, unknown>, hypothesisId: string) => {
+    try {
+      await fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location, message, data, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId })
+      });
+    } catch (_) { /* ignore */ }
+  };
+  // #endregion
+
+  // #region agent log
+  await debugLogCycle('executeSyncCycle:start', 'Starting sync cycle', { jobId: job.id, configKey: `${job.api_source}-${job.data_type}`, batchCursor: job.batch_cursor }, 'A,E');
+  // #endregion
 
   // Phase 1: Fetch from API
   await updateJobPhase(supabase, job.id, 'fetching_api');
   const fetchResult = await fetchFromApi(job, config, logger);
+
+  // #region agent log
+  await debugLogCycle('executeSyncCycle:afterFetch', 'API fetch complete', { jobId: job.id, recordsFetched: fetchResult.records.length, hasMore: fetchResult.hasMore, nextCursor: fetchResult.nextCursor?.substring(0, 50) }, 'E');
+  // #endregion
 
   if (fetchResult.records.length === 0) {
     logger.info('No records returned from API - sync complete', {

@@ -115,6 +115,14 @@ export function useBackfillJobs() {
     if (!jobs) return;
 
     const now = new Date();
+    
+    // #region agent log
+    const runningJobs = jobs.filter(j => j.status === "running");
+    if (runningJobs.length > 0) {
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:checkAndContinueJobs',message:'Checking running jobs for continuation',data:{runningJobsCount:runningJobs.length,runningJobs:runningJobs.map(j=>({id:j.id,status:j.status,sync_phase:j.sync_phase,retry_scheduled_at:j.retry_scheduled_at,no_more_records:j.no_more_records,started_at:j.started_at,records_processed:j.records_processed}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    }
+    // #endregion
+    
     const jobsToRetry = jobs.filter(
       (job) =>
         job.status === "running" &&
@@ -125,10 +133,20 @@ export function useBackfillJobs() {
         !continuingJobsRef.current.has(job.id) // Don't continue if we're already continuing this job
     );
 
+    // #region agent log
+    if (runningJobs.length > 0 && jobsToRetry.length === 0) {
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:checkAndContinueJobs:noRetry',message:'Running jobs exist but none qualify for retry',data:{reasons:runningJobs.map(j=>({id:j.id,hasRetryTime:!!j.retry_scheduled_at,retryTimeReached:j.retry_scheduled_at?new Date(j.retry_scheduled_at)<=now:false,noMoreRecords:j.no_more_records,isProcessing:j.sync_phase==='processing',alreadyContinuing:continuingJobsRef.current.has(j.id)}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    }
+    // #endregion
+
     for (const job of jobsToRetry) {
       // Mark this job as being continued
       continuingJobsRef.current.add(job.id);
       console.log(`[useBackfillJobs] Auto-continuing job ${job.id}`);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:checkAndContinueJobs:continuing',message:'Auto-continuing job',data:{jobId:job.id,retryScheduledAt:job.retry_scheduled_at},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       
       continueJob.mutate(job, {
         onSettled: () => {
@@ -187,6 +205,9 @@ export function useBackfillJobs() {
       start_date: string;
       end_date: string;
     }) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob:entry',message:'createJob mutation started',data:{params},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C,E'})}).catch(()=>{});
+      // #endregion
       // First create the job record
       const { data: user } = await supabase.auth.getUser();
       
@@ -208,15 +229,26 @@ export function useBackfillJobs() {
         .select()
         .single();
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob:afterInsert',message:'Job record insert result',data:{newJobId:newJob?.id,insertError:insertError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+
       if (insertError) throw insertError;
 
       // Then start the sync
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob:beforeInvoke',message:'About to invoke unified-backfill-sync',data:{jobId:newJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: {
           job_id: newJob.id,
           action: "continue",
         },
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob:afterInvoke',message:'Edge function invoke result',data:{success:data?.success,error:error?.message,dataKeys:data?Object.keys(data):null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       if (error) throw error;
       return { ...data, job_id: newJob.id };

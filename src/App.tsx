@@ -25,6 +25,18 @@ import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
 import SpaDashboard from "./pages/dashboards/SpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
 import MembersPage from "./pages/dashboards/MembersPage";
+
+// Member sub-pages
+import AllClientsPage from "./pages/members/AllClientsPage";
+import GuestsPage from "./pages/members/GuestsPage";
+import ApplicationSubmittedPage from "./pages/members/ApplicationSubmittedPage";
+import WaitlistPage from "./pages/members/WaitlistPage";
+import OnboardingMembersPage from "./pages/members/OnboardingPage";
+import SubscriptionActivePage from "./pages/members/SubscriptionActivePage";
+import SubscriptionPastDuePage from "./pages/members/SubscriptionPastDuePage";
+import TemporaryMembershipsPage from "./pages/members/TemporaryMembershipsPage";
+import PausesPage from "./pages/members/PausesPage";
+import CancellationsPage from "./pages/members/CancellationsPage";
 import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
@@ -132,12 +144,94 @@ const App = () => (
               }
             />
 
-            {/* Members page for managers and trainers */}
+            {/* Members page - redirects to all-clients */}
             <Route
               path="/dashboard/members"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <MembersPage />
+                  <Navigate to="/dashboard/members/all-clients" replace />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Member sub-pages */}
+            <Route
+              path="/dashboard/members/all-clients"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <AllClientsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/guests"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <GuestsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/application-submitted"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <ApplicationSubmittedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/waitlist"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <WaitlistPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/onboarding"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <OnboardingMembersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/subscription-active"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <SubscriptionActivePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/subscription-past-due"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <SubscriptionPastDuePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/temporary-memberships"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <TemporaryMembershipsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/pauses"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <PausesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/cancellations"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
+                  <CancellationsPage />
                 </ProtectedRoute>
               }
             />

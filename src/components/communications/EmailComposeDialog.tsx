@@ -91,7 +91,7 @@ export function EmailComposeDialog({
       subject: subject.trim(),
       content: body.trim(),
       metadata: {
-        to: member.email,
+        to: member.client_email,
         sentAt: new Date().toISOString(),
       },
     });
@@ -120,7 +120,7 @@ export function EmailComposeDialog({
         <DialogHeader>
           <DialogTitle>Compose Email</DialogTitle>
           <DialogDescription>
-            Send an email to {member.full_name || member.email}
+            Send an email to {member.client_name || member.client_email}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,7 +128,7 @@ export function EmailComposeDialog({
           {/* To field */}
           <div className="space-y-2">
             <Label>To</Label>
-            <Input value={member.email} disabled className="bg-muted" />
+            <Input value={member.client_email} disabled className="bg-muted" />
           </div>
 
           {/* Template selector */}

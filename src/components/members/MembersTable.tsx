@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -42,11 +42,11 @@ import { MemberNoteDialog } from "./MemberNoteDialog";
 import { TrainerAssignmentDialog } from "@/components/trainers/TrainerAssignmentDialog";
 import { format } from "date-fns";
 
-const tierColors: Record<string, string> = {
-  basic: "bg-muted text-muted-foreground",
-  standard: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  premium: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  vip: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+const stageColors: Record<string, string> = {
+  lead: "bg-muted text-muted-foreground",
+  prospect: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  member: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  churned: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
 interface MembersTableProps {
@@ -59,7 +59,7 @@ export function MembersTable({
   showTrainerAssignment = false,
 }: MembersTableProps) {
   const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState("all");
+  const [stageFilter, setStageFilter] = useState("all");
   const [trainerFilter, setTrainerFilter] = useState("all");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignMember, setAssignMember] = useState<Member | null>(null);
@@ -70,7 +70,7 @@ export function MembersTable({
 
   const { data: members = [], isLoading, error } = useClients({
     search: search.length >= 2 ? search : undefined,
-    membershipTier: tierFilter,
+    lifecycleStage: stageFilter !== "all" ? stageFilter : undefined,
   });
 
   const syncMutation = useSyncClients();
@@ -104,9 +104,11 @@ export function MembersTable({
   });
 
   const getInitials = (member: Member) => {
-    const first = member.first_name?.[0] || "";
-    const last = member.last_name?.[0] || "";
-    return (first + last).toUpperCase() || member.email[0].toUpperCase();
+    if (member.client_name) {
+      const parts = member.client_name.split(" ");
+      return (parts[0]?.[0] || "" + (parts[1]?.[0] || "")).toUpperCase() || "?";
+    }
+    return member.client_email[0].toUpperCase();
   };
 
   const getTrainerName = (trainerId: string) => {
@@ -118,6 +120,16 @@ export function MembersTable({
     if (!unassignDialog) return;
     await unassignMember(unassignDialog.assignment.id);
     setUnassignDialog(null);
+  };
+
+  // Transform member for TrainerAssignmentDialog
+  const transformMemberForDialog = (member: Member | null) => {
+    if (!member) return null;
+    return {
+      id: member.id,
+      full_name: member.client_name,
+      email: member.client_email,
+    };
   };
 
   if (error) {
@@ -142,16 +154,16 @@ export function MembersTable({
           />
         </div>
 
-        <Select value={tierFilter} onValueChange={setTierFilter}>
+        <Select value={stageFilter} onValueChange={setStageFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Membership Tier" />
+            <SelectValue placeholder="Lifecycle Stage" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Tiers</SelectItem>
-            <SelectItem value="basic">Basic</SelectItem>
-            <SelectItem value="standard">Standard</SelectItem>
-            <SelectItem value="premium">Premium</SelectItem>
-            <SelectItem value="vip">VIP</SelectItem>
+            <SelectItem value="all">All Stages</SelectItem>
+            <SelectItem value="lead">Lead</SelectItem>
+            <SelectItem value="prospect">Prospect</SelectItem>
+            <SelectItem value="member">Member</SelectItem>
+            <SelectItem value="churned">Churned</SelectItem>
           </SelectContent>
         </Select>
 
@@ -209,9 +221,9 @@ export function MembersTable({
               <TableRow>
                 <TableHead>Member</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Membership</TableHead>
+                <TableHead>Stage</TableHead>
                 {showTrainerAssignment && <TableHead>Trainer</TableHead>}
-                <TableHead>Join Date</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -224,26 +236,25 @@ export function MembersTable({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={member.avatar_url || undefined} />
                           <AvatarFallback className="text-xs">
                             {getInitials(member)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium">
-                          {member.full_name || "—"}
+                          {member.client_name || "—"}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {member.email}
+                      {member.client_email}
                     </TableCell>
                     <TableCell>
-                      {member.membership_tier && (
+                      {member.lifecycle_stage && (
                         <Badge
                           variant="secondary"
-                          className={tierColors[member.membership_tier] || ""}
+                          className={stageColors[member.lifecycle_stage] || ""}
                         >
-                          {member.membership_tier.toUpperCase()}
+                          {member.lifecycle_stage.toUpperCase()}
                         </Badge>
                       )}
                     </TableCell>
@@ -260,8 +271,8 @@ export function MembersTable({
                       </TableCell>
                     )}
                     <TableCell className="text-muted-foreground">
-                      {member.join_date
-                        ? format(new Date(member.join_date), "MMM d, yyyy")
+                      {member.created_at
+                        ? format(new Date(member.created_at), "MMM d, yyyy")
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -287,7 +298,7 @@ export function MembersTable({
                                 onClick={() =>
                                   setUnassignDialog({
                                     assignment,
-                                    memberName: member.full_name || member.email,
+                                    memberName: member.client_name || member.client_email,
                                   })
                                 }
                                 className="text-destructive"
@@ -328,7 +339,7 @@ export function MembersTable({
       <TrainerAssignmentDialog
         open={!!assignMember}
         onOpenChange={(open) => !open && setAssignMember(null)}
-        member={assignMember}
+        member={transformMemberForDialog(assignMember)}
         trainers={trainers}
         currentTrainerId={
           assignMember ? memberAssignmentMap.get(assignMember.id)?.trainer_user_id : undefined

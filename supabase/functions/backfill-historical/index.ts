@@ -366,23 +366,27 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
 
   let recordCount = 0;
   for (const client of allClients) {
-    const fullName = [client.firstName, client.lastName]
-      .filter(Boolean)
-      .join(' ') || null;
+    // Build client name from available fields
+    let clientName = client.name || null;
+    if (!clientName) {
+      const parts = [client.firstName, client.lastName].filter(Boolean);
+      clientName = parts.length > 0 ? parts.join(' ') : null;
+    }
 
     const { error } = await supabase
       .from('arketa_clients')
       .upsert({
         external_id: String(client.id),
-        email: client.email || '',
-        first_name: client.firstName || null,
-        last_name: client.lastName || null,
-        full_name: fullName,
-        phone: client.phone || null,
-        join_date: client.createdAt ? new Date(client.createdAt).toISOString() : null,
-        external_trainer_id: client.trainer?.id || null,
-        avatar_url: client.avatar || null,
-        membership_tier: 'basic',
+        client_email: client.email || '',
+        client_name: clientName,
+        client_phone: client.phone || null,
+        client_tags: client.tags || [],
+        custom_fields: client.customFields || {},
+        referrer: client.referrer || null,
+        email_mkt_opt_in: client.emailMarketingOptIn ?? false,
+        sms_mkt_opt_in: client.smsMarketingOptIn ?? false,
+        date_of_birth: client.dateOfBirth || null,
+        lifecycle_stage: client.lifecycleStage || null,
         raw_data: client,
         last_synced_at: new Date().toISOString(),
       }, { onConflict: 'external_id' });

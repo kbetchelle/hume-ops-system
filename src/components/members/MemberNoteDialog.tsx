@@ -58,7 +58,7 @@ export function MemberNoteDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Notes for {member.full_name || member.email}</DialogTitle>
+          <DialogTitle>Notes for {member.client_name || member.client_email}</DialogTitle>
           <DialogDescription>
             Add notes about this member. All notes are visible to authorized staff.
           </DialogDescription>

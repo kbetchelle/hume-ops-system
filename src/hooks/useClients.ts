@@ -6,15 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 export interface Client {
   id: string;
   external_id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  full_name: string | null;
-  phone: string | null;
-  membership_tier: "basic" | "standard" | "premium" | "vip" | null;
-  join_date: string | null;
-  avatar_url: string | null;
-  external_trainer_id: string | null;
+  client_email: string;
+  client_name: string | null;
+  client_phone: string | null;
+  client_tags: string[];
+  custom_fields: Record<string, unknown>;
+  referrer: string | null;
+  email_mkt_opt_in: boolean;
+  sms_mkt_opt_in: boolean;
+  date_of_birth: string | null;
+  lifecycle_stage: string | null;
   created_at: string;
   updated_at: string;
   last_synced_at: string | null;
@@ -34,7 +35,7 @@ export interface MemberNote {
 
 export function useClients(filters?: {
   search?: string;
-  membershipTier?: string;
+  lifecycleStage?: string;
 }) {
   return useQuery({
     queryKey: ["members", filters],
@@ -42,19 +43,16 @@ export function useClients(filters?: {
       let query = supabase
         .from("arketa_clients")
         .select("*")
-        .order("full_name", { ascending: true });
+        .order("client_name", { ascending: true });
 
       if (filters?.search) {
         query = query.or(
-          `full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
+          `client_name.ilike.%${filters.search}%,client_email.ilike.%${filters.search}%`
         );
       }
 
-      if (filters?.membershipTier && filters.membershipTier !== "all") {
-        query = query.eq(
-          "membership_tier",
-          filters.membershipTier as "basic" | "standard" | "premium" | "vip"
-        );
+      if (filters?.lifecycleStage && filters.lifecycleStage !== "all") {
+        query = query.eq("lifecycle_stage", filters.lifecycleStage);
       }
 
       const { data, error } = await query;

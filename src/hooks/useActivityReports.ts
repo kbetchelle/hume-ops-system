@@ -15,11 +15,11 @@ export interface MemberActivitySummary {
   member_id: string;
   member_name: string;
   member_email: string;
-  membership_tier: string | null;
+  lifecycle_stage: string | null;
   total_visits: number;
   total_classes: number;
   last_visit: string | null;
-  join_date: string | null;
+  created_at: string | null;
 }
 
 export function useActivityLogs(filters?: {
@@ -33,7 +33,7 @@ export function useActivityLogs(filters?: {
     queryFn: async () => {
       let query = supabase
         .from("activity_logs")
-        .select("*, arketa_clients(full_name, email)")
+        .select("*, arketa_clients(client_name, client_email)")
         .order("activity_date", { ascending: false });
 
       if (filters?.startDate) {
@@ -66,8 +66,8 @@ export function useMemberActivitySummary(filters?: {
       // Get all clients
       const { data: clients, error: clientsError } = await supabase
         .from("arketa_clients")
-        .select("id, full_name, email, membership_tier, join_date")
-        .order("full_name");
+        .select("id, client_name, client_email, lifecycle_stage, created_at")
+        .order("client_name");
 
       if (clientsError) throw clientsError;
 
@@ -125,13 +125,13 @@ export function useMemberActivitySummary(filters?: {
 
         return {
           member_id: client.id,
-          member_name: client.full_name || "Unknown",
-          member_email: client.email,
-          membership_tier: client.membership_tier,
+          member_name: client.client_name || "Unknown",
+          member_email: client.client_email,
+          lifecycle_stage: client.lifecycle_stage,
           total_visits: activity.visits,
           total_classes: activity.classes,
           last_visit: activity.lastVisit,
-          join_date: client.join_date,
+          created_at: client.created_at,
         };
       });
 
@@ -147,13 +147,13 @@ export function useNewSignups(filters?: { startDate?: string; endDate?: string }
       let query = supabase
         .from("arketa_clients")
         .select("*")
-        .order("join_date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (filters?.startDate) {
-        query = query.gte("join_date", filters.startDate);
+        query = query.gte("created_at", filters.startDate);
       }
       if (filters?.endDate) {
-        query = query.lte("join_date", filters.endDate);
+        query = query.lte("created_at", filters.endDate);
       }
 
       const { data, error } = await query;
@@ -173,7 +173,7 @@ export function useMemberRetention(filters?: {
       // Get all clients
       const { data: clients, error: clientsError } = await supabase
         .from("arketa_clients")
-        .select("id, full_name, email, membership_tier, join_date");
+        .select("id, client_name, client_email, lifecycle_stage, created_at");
 
       if (clientsError) throw clientsError;
 

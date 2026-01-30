@@ -10,7 +10,7 @@ interface BackfillRequest {
   start_date: string;
   end_date: string;
   job_id?: string;
-  action?: 'pause' | 'cancel' | 'resume' | 'retry-failed';
+  action?: 'pause' | 'cancel' | 'resume' | 'retry-failed' | 'continue';
 }
 
 interface BackfillJob {
@@ -29,6 +29,10 @@ interface BackfillJob {
   completed_at: string | null;
   created_by: string | null;
   created_at: string;
+  last_cursor: string | null;
+  total_records_expected: number;
+  retry_scheduled_at: string | null;
+  staging_synced: boolean;
 }
 
 // Calculate days between two dates
@@ -262,14 +266,23 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
   return recordCount;
 }
 
-// Sync Arketa clients for a single date with pagination (fetches all clients, not date-filtered)
-async function syncArketaClients(supabase: any, _date: string): Promise<number> {
+// Sync ONE PAGE of Arketa clients and return pagination info for resumable sync
+interface ClientSyncResult {
+  recordsProcessed: number;
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalInPage: number;
+}
+
+async function syncArketaClientsPage(
+  supabase: any, 
+  cursor: string | null
+): Promise<ClientSyncResult> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
-  // Use prod URL with API key - same as sync-arketa-clients edge function
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  // First, try to get OAuth token from refresh-arketa-token function
+  // Get OAuth token
   let headers: Record<string, string>;
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -305,67 +318,46 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     };
   }
 
-  let allClients: any[] = [];
-  let nextCursor: string | undefined;
-  let pageCount = 0;
-  const maxPages = 100; // Increase for large client lists
+  // Fetch ONE page of clients
+  let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
+  if (cursor) url += `&cursor=${cursor}`;
 
-  do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
-    if (nextCursor) url += `&cursor=${nextCursor}`;
+  console.log(`[backfill] Fetching clients page: ${url}`);
 
-    console.log(`[backfill] Fetching clients page ${pageCount + 1}: ${url}`);
+  const response = await fetch(url, { method: 'GET', headers });
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers,
-    });
-
-    if (!response.ok) {
-      const status = response.status;
-      const errorText = await response.text();
-      console.error(`[backfill] Arketa clients API error: ${status} - ${errorText}`);
-      if (status === 429 || status >= 500) {
-        throw new RetryableError(`Arketa API error: ${status}`, status);
-      }
-      throw new Error(`Arketa API error: ${status} (non-retryable)`);
+  if (!response.ok) {
+    const status = response.status;
+    const errorText = await response.text();
+    console.error(`[backfill] Arketa clients API error: ${status} - ${errorText}`);
+    if (status === 429 || status >= 500) {
+      throw new RetryableError(`Arketa API error: ${status}`, status);
     }
+    throw new Error(`Arketa API error: ${status} (non-retryable)`);
+  }
 
-    const responseData = await response.json();
-    console.log(`[backfill] Response type: ${typeof responseData}, isArray: ${Array.isArray(responseData)}`);
-    
-    // Handle multiple possible response formats
-    let clients: any[];
-    if (Array.isArray(responseData)) {
-      clients = responseData;
-    } else if (responseData.items && Array.isArray(responseData.items)) {
-      clients = responseData.items;
-    } else if (responseData.data && Array.isArray(responseData.data)) {
-      clients = responseData.data;
-    } else if (responseData.clients && Array.isArray(responseData.clients)) {
-      clients = responseData.clients;
-    } else {
-      console.log(`[backfill] Unexpected response structure:`, JSON.stringify(responseData).slice(0, 500));
-      clients = [];
-    }
-    
-    console.log(`[backfill] Page ${pageCount + 1}: found ${clients.length} clients`);
-    allClients.push(...clients);
+  const responseData = await response.json();
+  
+  // Handle multiple possible response formats
+  let clients: any[];
+  if (Array.isArray(responseData)) {
+    clients = responseData;
+  } else if (responseData.items && Array.isArray(responseData.items)) {
+    clients = responseData.items;
+  } else if (responseData.data && Array.isArray(responseData.data)) {
+    clients = responseData.data;
+  } else if (responseData.clients && Array.isArray(responseData.clients)) {
+    clients = responseData.clients;
+  } else {
+    console.log(`[backfill] Unexpected response structure:`, JSON.stringify(responseData).slice(0, 500));
+    clients = [];
+  }
+  
+  console.log(`[backfill] Page fetched: ${clients.length} clients`);
 
-    // Check for pagination
-    nextCursor = responseData.pagination?.nextCursor;
-    const hasMore = responseData.pagination?.hasMore;
-    pageCount++;
-    
-    // Stop if no more pages
-    if (!nextCursor && !hasMore) break;
-    if (clients.length === 0) break; // No more data
-  } while (nextCursor && pageCount < maxPages);
-
-  console.log(`[backfill] Total clients fetched: ${allClients.length}`);
-
+  // Upsert clients directly to target table using external_id (client_id from API)
   let recordCount = 0;
-  for (const client of allClients) {
+  for (const client of clients) {
     // Build client name from available fields
     let clientName = client.name || null;
     if (!clientName) {
@@ -394,8 +386,18 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     if (!error) recordCount++;
   }
 
-  console.log(`[backfill] Successfully upserted ${recordCount} clients`);
-  return recordCount;
+  // Check pagination
+  const nextCursor = responseData.pagination?.nextCursor || null;
+  const hasMore = responseData.pagination?.hasMore ?? (clients.length === 500);
+
+  console.log(`[backfill] Upserted ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}`);
+
+  return {
+    recordsProcessed: recordCount,
+    nextCursor,
+    hasMore: hasMore && clients.length > 0,
+    totalInPage: clients.length,
+  };
 }
 
 // Sync Sling shifts for a single date
@@ -503,9 +505,25 @@ Deno.serve(async (req) => {
 
     const logger = createSyncLogger('backfill', job_id);
 
-    // Handle pause/cancel/resume/retry-failed actions
+    // Handle pause/cancel/resume/retry-failed/continue actions
     if (action && job_id) {
-      if (action === 'retry-failed') {
+      if (action === 'continue') {
+        // Continue syncing from where we left off
+        const { data: existingJob, error: fetchError } = await supabase
+          .from('backfill_jobs')
+          .select('*')
+          .eq('id', job_id)
+          .single();
+
+        if (fetchError || !existingJob) {
+          return new Response(
+            JSON.stringify({ error: 'Job not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // This will fall through to the main processing below
+      } else if (action === 'retry-failed') {
         // Fetch job to get failed dates
         const { data: existingJob, error: fetchError } = await supabase
           .from('backfill_jobs')
@@ -536,8 +554,6 @@ Deno.serve(async (req) => {
           .update({ status: 'running', errors: [] })
           .eq('id', job_id);
 
-        // Process only failed dates (handled below in main processing loop)
-        // For now, return indication that retry has started
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -548,34 +564,34 @@ Deno.serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      } else {
+        let newStatus: string;
+        switch (action) {
+          case 'pause':
+            newStatus = 'paused';
+            break;
+          case 'cancel':
+            newStatus = 'cancelled';
+            break;
+          case 'resume':
+            newStatus = 'running';
+            break;
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
+
+        const { error } = await supabase
+          .from('backfill_jobs')
+          .update({ status: newStatus })
+          .eq('id', job_id);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, job_id, action, status: newStatus }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-
-      let newStatus: string;
-      switch (action) {
-        case 'pause':
-          newStatus = 'paused';
-          break;
-        case 'cancel':
-          newStatus = 'cancelled';
-          break;
-        case 'resume':
-          newStatus = 'running';
-          break;
-        default:
-          throw new Error(`Unknown action: ${action}`);
-      }
-
-      const { error } = await supabase
-        .from('backfill_jobs')
-        .update({ status: newStatus })
-        .eq('id', job_id);
-
-      if (error) throw error;
-
-      return new Response(
-        JSON.stringify({ success: true, job_id, action, status: newStatus }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     // Validate required fields for new/resume job
@@ -622,6 +638,9 @@ Deno.serve(async (req) => {
           records_processed: 0,
           errors: [],
           started_at: new Date().toISOString(),
+          last_cursor: null,
+          total_records_expected: 0,
+          staging_synced: false,
         })
         .select()
         .single();
@@ -636,7 +655,11 @@ Deno.serve(async (req) => {
     // Update status to running
     await supabase
       .from('backfill_jobs')
-      .update({ status: 'running', started_at: job.started_at || new Date().toISOString() })
+      .update({ 
+        status: 'running', 
+        started_at: job.started_at || new Date().toISOString(),
+        retry_scheduled_at: null, // Clear any scheduled retry
+      })
       .eq('id', job.id);
 
     // Get rate limit from api_endpoints using endpoint type mapping
@@ -661,67 +684,139 @@ Deno.serve(async (req) => {
       case 'arketa_payments':
         syncFunction = syncArketaPayments;
         break;
-      case 'arketa_clients':
-        syncFunction = syncArketaClients;
-        break;
       case 'sling_shifts':
         syncFunction = syncSlingShifts;
         break;
+      case 'arketa_clients':
+        // Special handling for clients - page-based resumable sync
+        logger.info('Starting resumable clients sync');
+
+        let cursor = job.last_cursor;
+        let totalRecords = job.records_processed || 0;
+        let pageCount = 0;
+        const maxPagesPerRun = 100; // Process up to 100 pages per invocation (50k records)
+        let hasMorePages = true;
+
+        try {
+          while (hasMorePages && pageCount < maxPagesPerRun) {
+            const { result, attempts } = await withRetry(
+              () => syncArketaClientsPage(supabase, cursor),
+              { maxAttempts: 3, baseDelayMs: 2000, maxDelayMs: 15000, timeoutMs: 60000 },
+              `sync clients page ${pageCount + 1}`
+            );
+
+            totalRecords += result.recordsProcessed;
+            cursor = result.nextCursor;
+            hasMorePages = result.hasMore;
+            pageCount++;
+
+            // Update job progress after each page
+            await supabase
+              .from('backfill_jobs')
+              .update({
+                records_processed: totalRecords,
+                last_cursor: cursor,
+                days_processed: hasMorePages ? 0 : 1, // Mark as 1 day when complete
+              })
+              .eq('id', job.id);
+
+            logger.info(`Page ${pageCount}: ${result.recordsProcessed} records (total: ${totalRecords})`);
+
+            // Small delay between pages
+            if (hasMorePages) {
+              await delay(500);
+            }
+          }
+
+          if (hasMorePages) {
+            // More pages to process - schedule continuation in 3 minutes
+            const retryTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+            await supabase
+              .from('backfill_jobs')
+              .update({
+                status: 'running',
+                retry_scheduled_at: retryTime,
+              })
+              .eq('id', job.id);
+
+            logger.info(`Clients sync paused for rate limit, will continue at ${retryTime}. Total so far: ${totalRecords}`);
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                job_id: job.id,
+                status: 'running',
+                records_processed: totalRecords,
+                has_more: true,
+                retry_scheduled_at: retryTime,
+                message: 'Sync will continue automatically in 3 minutes',
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // All pages processed - mark as completed
+          await supabase
+            .from('backfill_jobs')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              days_processed: 1,
+              records_processed: totalRecords,
+              last_cursor: null,
+              retry_scheduled_at: null,
+            })
+            .eq('id', job.id);
+
+          logger.info(`Clients sync completed: ${totalRecords} total records`);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              job_id: job.id,
+              status: 'completed',
+              days_processed: 1,
+              records_processed: totalRecords,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+
+        } catch (err) {
+          // Handle error - schedule retry in 3 minutes
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          const retryTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+          
+          await supabase
+            .from('backfill_jobs')
+            .update({
+              status: 'running',
+              retry_scheduled_at: retryTime,
+              errors: [...(job.errors || []), { 
+                error: errorMessage, 
+                timestamp: new Date().toISOString(),
+                cursor: cursor,
+              }],
+            })
+            .eq('id', job.id);
+
+          logger.error(`Clients sync error, will retry at ${retryTime}`, err instanceof Error ? err : new Error(String(err)));
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              job_id: job.id,
+              status: 'running',
+              records_processed: totalRecords,
+              error: errorMessage,
+              retry_scheduled_at: retryTime,
+              message: 'Sync will retry automatically in 3 minutes',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
       default:
         throw new Error(`Unsupported sync type: ${api_source}_${data_type}`);
-    }
-
-    // Special case: clients doesn't support date filtering
-    // Run once for entire date range instead of per-day
-    if (api_source === 'arketa' && data_type === 'clients') {
-      logger.info('Clients sync runs once (not date-filtered)');
-
-      try {
-        const { result: records, attempts } = await withRetry(
-          () => syncArketaClients(supabase, start_date),
-          { maxAttempts: 2, baseDelayMs: 2000, maxDelayMs: 10000, timeoutMs: 120000 },
-          'sync clients'
-        );
-
-        // Update job as completed
-        await supabase
-          .from('backfill_jobs')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            days_processed: 1,
-            records_processed: records,
-            processing_date: null,
-          })
-          .eq('id', job.id);
-
-        logger.info(`Clients sync completed: ${records} records synced${attempts > 1 ? ` (${attempts} attempts)` : ''}`);
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            job_id: job.id,
-            status: 'completed',
-            days_processed: 1,
-            records_processed: records,
-            retry_attempts: attempts - 1,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } catch (err) {
-        // Handle error and mark job failed
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        await supabase
-          .from('backfill_jobs')
-          .update({
-            status: 'failed',
-            errors: [{ error: errorMessage, timestamp: new Date().toISOString() }],
-          })
-          .eq('id', job.id);
-
-        logger.error('Clients sync failed', err instanceof Error ? err : new Error(String(err)));
-        throw err;
-      }
     }
 
     // Process day by day for other data types

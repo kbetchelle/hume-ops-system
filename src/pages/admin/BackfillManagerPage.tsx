@@ -224,18 +224,19 @@ function ActiveJobCard({
 
           {/* Right: Actions */}
           <div className="flex flex-col gap-2 shrink-0 lg:w-auto">
-            {/* View Details Collapsible Trigger */}
-            <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <ChevronRight className={cn(
-                    "h-4 w-4 mr-2 transition-transform",
-                    isDetailsOpen && "rotate-90"
-                  )} />
-                  View Details
-                </Button>
-              </CollapsibleTrigger>
-            </Collapsible>
+            {/* View Details Toggle Button */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start"
+              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+            >
+              <ChevronRight className={cn(
+                "h-4 w-4 mr-2 transition-transform",
+                isDetailsOpen && "rotate-90"
+              )} />
+              View Details
+            </Button>
             
             <div className="flex gap-2">
               {isRunning && !isPaused && (
@@ -272,8 +273,7 @@ function ActiveJobCard({
         )}
 
         {/* Expandable Details Section */}
-        <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <CollapsibleContent>
+        {isDetailsOpen && (
             <div className="bg-muted/50 rounded-lg p-4 mt-4 space-y-3 text-sm">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
@@ -322,8 +322,7 @@ function ActiveJobCard({
                 </div>
               )}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+        )}
       </CardContent>
     </Card>
   );

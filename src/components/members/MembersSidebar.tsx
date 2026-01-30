@@ -48,8 +48,7 @@ export function MembersSidebar() {
                 onClick={() => navigate("/dashboard")}
                 className="rounded-none px-4 py-2 h-auto text-xs tracking-wide transition-colors duration-200 hover:bg-muted/50 text-muted-foreground"
               >
-                <ArrowLeft className="h-4 w-4 mr-3" />
-                <span>←</span>
+                <ArrowLeft className="h-4 w-4" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

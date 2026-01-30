@@ -1,7 +1,16 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 interface NavItem {
   number?: number;
@@ -27,68 +36,74 @@ const additionalItems: NavItem[] = [
 
 export function MembersSidebar() {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const isActive = (url: string) => location.pathname === url;
 
   return (
-    <aside className="w-64 border-r border-border bg-card/50 h-full shrink-0">
-      <div className="p-6">
+    <Sidebar className="w-60 border-r border-border">
+      <SidebarContent className="pt-4">
         {/* Back Button */}
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Dashboard</span>
-        </button>
-
-        {/* Title */}
-        <h2 className="text-lg font-semibold mb-6">Member Management</h2>
-
-        {/* Divider */}
-        <div className="h-px bg-border mb-6" />
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate("/dashboard")}
+                className="rounded-none px-4 py-2 h-auto text-xs tracking-wide transition-colors duration-200 hover:bg-muted/50 text-muted-foreground"
+              >
+                <ArrowLeft className="h-4 w-4 mr-3" />
+                <span>←</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
         {/* Lead Funnel Section */}
-        <div className="mb-8">
-          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] font-normal text-muted-foreground px-4 py-2">
             Lead Funnel
-          </h3>
-          <nav className="space-y-1">
-            {leadFunnelItems.map((item) => (
-              <NavLink
-                key={item.url}
-                to={item.url}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-sm transition-colors rounded-sm",
-                  "hover:bg-muted/50"
-                )}
-                activeClassName="bg-muted text-foreground font-medium"
-              >
-                <span className="text-xs text-muted-foreground w-4">{item.number}</span>
-                <span>{item.title}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </div>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {leadFunnelItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild className="rounded-none px-4 py-2 h-auto">
+                    <NavLink
+                      to={item.url}
+                      className="text-xs tracking-wide transition-colors duration-200 hover:bg-muted/50 text-muted-foreground"
+                      activeClassName="bg-muted text-foreground"
+                    >
+                      <span className="text-[10px] text-muted-foreground w-4 mr-3">{item.number}</span>
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Additional Sections */}
-        <nav className="space-y-1">
-          {additionalItems.map((item) => (
-            <NavLink
-              key={item.url}
-              to={item.url}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 text-sm transition-colors rounded-sm",
-                "hover:bg-muted/50"
-              )}
-              activeClassName="bg-muted text-foreground font-medium"
-            >
-              <span>{item.title}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-    </aside>
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] font-normal text-muted-foreground px-4 py-2">
+            Other
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {additionalItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild className="rounded-none px-4 py-2 h-auto">
+                    <NavLink
+                      to={item.url}
+                      className="text-xs tracking-wide transition-colors duration-200 hover:bg-muted/50 text-muted-foreground"
+                      activeClassName="bg-muted text-foreground"
+                    >
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }

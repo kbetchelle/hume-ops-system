@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useBackfillJobs, DATA_TYPES_BY_SOURCE, BackfillJob } from "@/hooks/useBackfillJobs";
+import { useBackfillJobs, DATA_TYPES_BY_SOURCE, BackfillJob, getSyncPhaseLabel } from "@/hooks/useBackfillJobs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SyncPhaseIndicator } from "@/components/backfill/SyncPhaseIndicator";
 import { 
   Loader2, 
   Play, 
@@ -21,9 +22,11 @@ import {
   Calendar,
   Database,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  ChevronRight
 } from "lucide-react";
 import { format, differenceInSeconds, differenceInMinutes, differenceInHours, formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 function formatDuration(startedAt: string | null, completedAt: string | null): string {
   if (!startedAt) return "-";
@@ -39,14 +42,14 @@ function formatDuration(startedAt: string | null, completedAt: string | null): s
   return `${seconds}s`;
 }
 
-function getStatusBadge(status: string, retryScheduledAt: string | null) {
-  const isWaitingForRetry = status === "running" && retryScheduledAt && new Date(retryScheduledAt) > new Date();
+function getStatusBadge(status: string, syncPhase: string | null) {
+  const isActivePhase = syncPhase && !["idle", "complete", "paused", "cancelled"].includes(syncPhase);
   
-  if (isWaitingForRetry) {
+  if (status === "running" && isActivePhase) {
     return (
-      <Badge className="bg-warning/20 text-warning-foreground border-warning/50">
-        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-        Waiting...
+      <Badge className="bg-primary/20 text-primary border-primary/50">
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+        Processing
       </Badge>
     );
   }
@@ -62,9 +65,17 @@ function getStatusBadge(status: string, retryScheduledAt: string | null) {
       return <Badge variant="secondary">Cancelled</Badge>;
     case "paused":
       return <Badge className="bg-muted text-muted-foreground border-border">Paused</Badge>;
+    case "pending":
+      return <Badge variant="outline">Pending</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
+}
+
+function truncateCursor(cursor: string | null, maxLength: number = 20): string {
+  if (!cursor) return "-";
+  if (cursor.length <= maxLength) return cursor;
+  return `${cursor.slice(0, maxLength)}...`;
 }
 
 function ActiveJobCard({
@@ -80,134 +91,230 @@ function ActiveJobCard({
   onCancel: () => void;
   onContinue: () => void;
 }) {
-  // Force re-render every second for live elapsed time updates
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [, setTick] = useState(0);
+  
+  // Force re-render every second for live elapsed time updates
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // For clients, show records-based progress instead of days
-  const isClientSync = job.data_type === "clients";
-  const isWaitingForRetry = job.status === "running" && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();
-  
-  // For clients, estimate progress based on records (assume ~11000 total if unknown)
-  const estimatedTotal = job.total_records_expected || 11000;
-  const progress = isClientSync 
-    ? Math.min((job.records_processed / estimatedTotal) * 100, 99) // Cap at 99% until complete
-    : job.total_days > 0 ? (job.days_processed / job.total_days) * 100 : 0;
-    
   const isPaused = job.status === "paused";
-  const isRunning = job.status === "running" && !isWaitingForRetry;
-  
-  // Determine sync phase for clients
-  const getSyncPhase = () => {
-    if (!isClientSync) return null;
-    if (job.staging_synced) return "complete";
-    if (job.records_processed > 0 && !isWaitingForRetry) return "fetching";
-    if (isWaitingForRetry) return "waiting";
-    return "starting";
+  const isRunning = job.status === "running";
+  const isWaitingForRetry = isRunning && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();
+  const isActivelyProcessing = isRunning && !isWaitingForRetry && job.sync_phase && 
+    !["idle", "complete", "batch_complete"].includes(job.sync_phase);
+
+  // Calculate progress
+  const hasKnownTotal = job.total_records_expected && job.total_records_expected > 0;
+  const progress = hasKnownTotal 
+    ? Math.min((job.records_processed / job.total_records_expected) * 100, 100)
+    : null;
+
+  // Get batch status text
+  const getBatchStatusText = () => {
+    const batchNum = (job.total_batches_completed || 0) + 1;
+    switch (job.sync_phase) {
+      case "fetching_api":
+        return `Fetching batch ${batchNum}...`;
+      case "staging":
+        return `Staging batch ${batchNum}...`;
+      case "transforming":
+        return `Transforming batch ${batchNum}...`;
+      case "upserting":
+        return `Syncing batch ${batchNum}...`;
+      case "clearing_staging":
+        return `Cleaning batch ${batchNum}...`;
+      case "batch_complete":
+        return `Batch ${batchNum - 1} complete`;
+      default:
+        return getSyncPhaseLabel(job.sync_phase);
+    }
   };
-  const syncPhase = getSyncPhase();
+
+  const hasErrors = job.errors && job.errors.length > 0;
 
   return (
-    <Card className="border-border">
+    <Card className={cn(
+      "border-border transition-all",
+      isActivelyProcessing && "ring-1 ring-primary/30"
+    )}>
       <CardContent className="pt-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Database className="h-5 w-5 text-muted-foreground" />
+            <Database className={cn(
+              "h-5 w-5",
+              isActivelyProcessing ? "text-primary animate-pulse" : "text-muted-foreground"
+            )} />
             <div>
-              <p className="text-sm font-medium">
+              <h4 className="text-sm font-medium">
                 {job.api_source.toUpperCase()} - {job.data_type}
-              </p>
+              </h4>
               <p className="text-xs text-muted-foreground">
                 {format(new Date(job.start_date), "MMM d, yyyy")} → {format(new Date(job.end_date), "MMM d, yyyy")}
               </p>
             </div>
           </div>
-          {getStatusBadge(job.status, job.retry_scheduled_at)}
+          {getStatusBadge(job.status, job.sync_phase)}
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-2">
-              {isClientSync ? (
-                <>
-                  <span>Records synced: {job.records_processed.toLocaleString()}</span>
-                  <span>
-                    {syncPhase === "starting" && "Starting..."}
-                    {syncPhase === "fetching" && "Fetching from API..."}
-                    {syncPhase === "waiting" && "Waiting to continue..."}
-                    {syncPhase === "complete" && "Complete"}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span>Progress: {job.days_processed} / {job.total_days} days</span>
-                  <span>{Math.round(progress)}%</span>
-                </>
-              )}
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
+        {/* Sync Phase Indicator */}
+        <div className="mb-4">
+          <SyncPhaseIndicator phase={job.sync_phase} />
+        </div>
 
-          {isWaitingForRetry && job.retry_scheduled_at && (
-            <div className="bg-warning/10 border border-warning/30 rounded p-3">
-              <p className="text-xs text-warning-foreground flex items-center gap-2">
-                <RefreshCw className="h-3 w-3" />
-                Continuing {formatDistanceToNow(new Date(job.retry_scheduled_at), { addSuffix: true })}
-              </p>
+        {/* Progress Section */}
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{getBatchStatusText()}</span>
+            {progress !== null && <span>{Math.round(progress)}%</span>}
+          </div>
+          {progress !== null ? (
+            <Progress value={progress} className="h-2" />
+          ) : (
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full bg-primary/50 rounded-full",
+                  isActivelyProcessing && "animate-pulse"
+                )}
+                style={{ width: "100%" }}
+              />
             </div>
           )}
+          {job.records_in_current_batch > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Current batch: {job.records_in_current_batch.toLocaleString()} records
+            </p>
+          )}
+        </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-lg font-medium">{job.records_processed.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Records</p>
-            </div>
-            <div>
-              <p className="text-lg font-medium">
-                {isClientSync 
-                  ? (syncPhase === "starting" ? "Starting" : 
-                     syncPhase === "fetching" ? "Fetching" : 
-                     syncPhase === "waiting" ? "Waiting" : "Complete")
-                  : (job.processing_date ? format(new Date(job.processing_date), "MMM d") : "-")
-                }
-              </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {isClientSync ? "Phase" : "Current Date"}
-              </p>
-            </div>
-            <div>
-              <p className="text-lg font-medium">{formatDuration(job.started_at, null)}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
-            </div>
+        {/* Waiting for retry notice */}
+        {isWaitingForRetry && job.retry_scheduled_at && (
+          <div className="bg-warning/10 border border-warning/30 rounded p-3 mb-4">
+            <p className="text-xs text-warning-foreground flex items-center gap-2">
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              Continuing {formatDistanceToNow(new Date(job.retry_scheduled_at), { addSuffix: true })}
+            </p>
           </div>
+        )}
 
-          <div className="flex gap-2">
-            {isRunning && (
-              <Button variant="outline" size="sm" onClick={onPause} className="flex-1">
-                <Pause className="h-4 w-4 mr-2" />
-                Pause
-              </Button>
-            )}
-            {isPaused && (
-              <Button variant="outline" size="sm" onClick={onResume} className="flex-1">
-                <Play className="h-4 w-4 mr-2" />
-                Resume
-              </Button>
-            )}
-            {isWaitingForRetry && (
-              <Button variant="outline" size="sm" onClick={onContinue} className="flex-1">
-                <Play className="h-4 w-4 mr-2" />
-                Continue Now
-              </Button>
-            )}
-            <Button variant="destructive" size="sm" onClick={onCancel} className="flex-1">
-              <X className="h-4 w-4 mr-2" />
-              Cancel
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-4 text-center mb-4">
+          <div>
+            <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Records</p>
+          </div>
+          <div>
+            <p className="text-lg font-medium truncate" title={getSyncPhaseLabel(job.sync_phase)}>
+              {getSyncPhaseLabel(job.sync_phase)}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Phase</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Batches</p>
+          </div>
+        </div>
+
+        {/* Estimated remaining */}
+        {hasKnownTotal && job.total_records_expected > job.records_processed && (
+          <p className="text-xs text-muted-foreground text-center mb-4">
+            ~{(job.total_records_expected - job.records_processed).toLocaleString()} records remaining
+          </p>
+        )}
+
+        {/* View Details Collapsible */}
+        <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full mb-4">
+              <ChevronRight className={cn(
+                "h-4 w-4 mr-2 transition-transform",
+                isDetailsOpen && "rotate-90"
+              )} />
+              View Details
             </Button>
-          </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="bg-muted/50 rounded-lg p-4 mb-4 space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Start Date</p>
+                  <p className="font-mono text-xs">{job.start_date}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">End Date</p>
+                  <p className="font-mono text-xs">{job.end_date}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Cursor Position</p>
+                <p className="font-mono text-xs" title={job.batch_cursor || job.last_cursor || undefined}>
+                  {truncateCursor(job.batch_cursor || job.last_cursor, 40)}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Last Batch Synced</p>
+                  <p className="font-mono text-xs">
+                    {job.last_batch_synced_at 
+                      ? formatDistanceToNow(new Date(job.last_batch_synced_at), { addSuffix: true })
+                      : "-"
+                    }
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Elapsed Time</p>
+                  <p className="font-mono text-xs">{formatDuration(job.started_at, null)}</p>
+                </div>
+              </div>
+              {hasErrors && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Errors</p>
+                  <div className="mt-1 max-h-24 overflow-y-auto space-y-1">
+                    {job.errors.slice(0, 5).map((err: any, idx: number) => (
+                      <p key={idx} className="text-xs text-destructive font-mono">
+                        {err.error || err.message || JSON.stringify(err)}
+                      </p>
+                    ))}
+                    {job.errors.length > 5 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{job.errors.length - 5} more errors
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {isRunning && !isPaused && (
+            <Button variant="outline" size="sm" onClick={onPause} className="flex-1">
+              <Pause className="h-4 w-4 mr-2" />
+              Pause
+            </Button>
+          )}
+          {isPaused && (
+            <Button variant="outline" size="sm" onClick={onResume} className="flex-1">
+              <Play className="h-4 w-4 mr-2" />
+              Resume
+            </Button>
+          )}
+          {isWaitingForRetry && (
+            <Button variant="outline" size="sm" onClick={onContinue} className="flex-1">
+              <Play className="h-4 w-4 mr-2" />
+              Continue Now
+            </Button>
+          )}
+          <Button variant="destructive" size="sm" onClick={onCancel} className="flex-1">
+            <X className="h-4 w-4 mr-2" />
+            Cancel
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -248,7 +355,14 @@ function CompletedJobRow({
 
           <div className="flex items-center gap-6">
             <div className="text-right">
-              <p className="text-sm">{job.records_processed.toLocaleString()} records</p>
+              <p className="text-sm">
+                {job.records_processed.toLocaleString()} records
+                {job.total_batches_completed > 0 && (
+                  <span className="text-muted-foreground ml-1">
+                    ({job.total_batches_completed} batches)
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-muted-foreground">{formatDuration(job.started_at, job.completed_at)}</p>
             </div>
 
@@ -262,13 +376,11 @@ function CompletedJobRow({
             </div>
 
             <div className="flex items-center gap-2">
-              {hasErrors && (
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                  </Button>
-                </CollapsibleTrigger>
-              )}
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
               <Button variant="ghost" size="icon" onClick={onDelete}>
                 <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
               </Button>
@@ -277,16 +389,46 @@ function CompletedJobRow({
         </div>
 
         <CollapsibleContent>
-          <div className="mt-4 p-4 bg-secondary/30 rounded">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Error Log</p>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {job.errors.map((err, idx) => (
-                <div key={idx} className="text-xs font-mono">
-                  <span className="text-muted-foreground">{err.date || err.timestamp}:</span>{" "}
-                  <span className="text-destructive">{err.error}</span>
-                </div>
-              ))}
+          <div className="mt-4 p-4 bg-secondary/30 rounded space-y-4">
+            <div className="grid grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Date Range</p>
+                <p className="font-mono text-xs">{job.start_date} → {job.end_date}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Batches</p>
+                <p className="font-mono text-xs">{job.total_batches_completed || 0}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Records Per Batch</p>
+                <p className="font-mono text-xs">
+                  {job.total_batches_completed > 0 
+                    ? Math.round(job.records_processed / job.total_batches_completed)
+                    : "-"
+                  }
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Final Cursor</p>
+                <p className="font-mono text-xs" title={job.batch_cursor || job.last_cursor || undefined}>
+                  {truncateCursor(job.batch_cursor || job.last_cursor, 20)}
+                </p>
+              </div>
             </div>
+            
+            {hasErrors && (
+              <div>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Error Log</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {job.errors.map((err: any, idx: number) => (
+                    <div key={idx} className="text-xs font-mono">
+                      <span className="text-muted-foreground">{err.date || err.timestamp}:</span>{" "}
+                      <span className="text-destructive">{err.error || err.message || JSON.stringify(err)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </div>
@@ -334,7 +476,8 @@ export default function BackfillManagerPage() {
       (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
     // Rough estimates - clients is not date-based
-    if (dataType === "clients") return "All clients (unlimited)";
+    if (dataType === "clients") return "All clients (cursor-based)";
+    if (dataType === "instructors") return "All instructors";
     const avgPerDay = dataType === "classes" ? 20 : dataType === "reservations" ? 100 : 50;
     return days * avgPerDay;
   };
@@ -346,7 +489,7 @@ export default function BackfillManagerPage() {
         <Card className="border-border">
           <CardHeader>
             <CardTitle>Create New Backfill</CardTitle>
-            <CardDescription>Import historical data from external APIs</CardDescription>
+            <CardDescription>Import historical data from external APIs using cursor-based pagination</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -417,8 +560,8 @@ export default function BackfillManagerPage() {
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 <span>
-                  {dataType === "clients" 
-                    ? "Will sync all clients (cursor-based pagination, auto-resumes)"
+                  {dataType === "clients" || dataType === "instructors"
+                    ? "Will sync all records (cursor-based pagination, 400 records per batch)"
                     : `Estimated ~${typeof estimatedRecords() === 'number' ? estimatedRecords()?.toLocaleString() : estimatedRecords()} records`
                   }
                 </span>
@@ -433,6 +576,7 @@ export default function BackfillManagerPage() {
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Active Backfills</h2>
+              <Badge variant="outline" className="ml-2">{activeJobs.length}</Badge>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {activeJobs.map((job) => (
@@ -454,6 +598,9 @@ export default function BackfillManagerPage() {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Backfill History</h2>
+            {completedJobs.length > 0 && (
+              <Badge variant="outline" className="ml-2">{completedJobs.length}</Badge>
+            )}
           </div>
 
           {isLoading ? (
@@ -475,7 +622,11 @@ export default function BackfillManagerPage() {
           ) : (
             <Card className="border-border">
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground text-sm">No completed backfills yet</p>
+                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No backfill history yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create a new backfill job to import historical data
+                </p>
               </CardContent>
             </Card>
           )}

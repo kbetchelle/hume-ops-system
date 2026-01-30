@@ -266,27 +266,65 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
 async function syncArketaClients(supabase: any, _date: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
-  const ARKETA_DEV_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0';
+  // Use prod URL with API key - same as sync-arketa-clients edge function
+  const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
+
+  // First, try to get OAuth token from refresh-arketa-token function
+  let headers: Record<string, string>;
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const tokenResponse = await fetch(`${supabaseUrl}/functions/v1/refresh-arketa-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+    });
+    
+    if (tokenResponse.ok) {
+      const tokenResult = await tokenResponse.json();
+      if (tokenResult.success && tokenResult.access_token) {
+        headers = {
+          'Authorization': `Bearer ${tokenResult.access_token}`,
+          'Content-Type': 'application/json',
+        };
+        console.log('[backfill] Using OAuth token for Arketa clients');
+      } else {
+        throw new Error('No access token in response');
+      }
+    } else {
+      throw new Error(`Token refresh failed: ${tokenResponse.status}`);
+    }
+  } catch (tokenError) {
+    console.log('[backfill] OAuth token failed, falling back to API key:', tokenError);
+    headers = {
+      'x-api-key': ARKETA_API_KEY!,
+      'Content-Type': 'application/json',
+    };
+  }
 
   let allClients: any[] = [];
   let nextCursor: string | undefined;
   let pageCount = 0;
-  const maxPages = 50;
+  const maxPages = 100; // Increase for large client lists
 
   do {
-    let url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
     if (nextCursor) url += `&cursor=${nextCursor}`;
+
+    console.log(`[backfill] Fetching clients page ${pageCount + 1}: ${url}`);
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY!,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
       const status = response.status;
+      const errorText = await response.text();
+      console.error(`[backfill] Arketa clients API error: ${status} - ${errorText}`);
       if (status === 429 || status >= 500) {
         throw new RetryableError(`Arketa API error: ${status}`, status);
       }
@@ -294,14 +332,35 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     }
 
     const responseData = await response.json();
-    const clients = Array.isArray(responseData) 
-      ? responseData 
-      : (responseData.clients || responseData.data || []);
+    console.log(`[backfill] Response type: ${typeof responseData}, isArray: ${Array.isArray(responseData)}`);
+    
+    // Handle multiple possible response formats
+    let clients: any[];
+    if (Array.isArray(responseData)) {
+      clients = responseData;
+    } else if (responseData.data && Array.isArray(responseData.data)) {
+      clients = responseData.data;
+    } else if (responseData.clients && Array.isArray(responseData.clients)) {
+      clients = responseData.clients;
+    } else {
+      console.log(`[backfill] Unexpected response structure:`, JSON.stringify(responseData).slice(0, 500));
+      clients = [];
+    }
+    
+    console.log(`[backfill] Page ${pageCount + 1}: found ${clients.length} clients`);
     allClients.push(...clients);
 
+    // Check for pagination
     nextCursor = responseData.pagination?.nextCursor;
+    const hasMore = responseData.pagination?.hasMore;
     pageCount++;
+    
+    // Stop if no more pages
+    if (!nextCursor && !hasMore) break;
+    if (clients.length === 0) break; // No more data
   } while (nextCursor && pageCount < maxPages);
+
+  console.log(`[backfill] Total clients fetched: ${allClients.length}`);
 
   let recordCount = 0;
   for (const client of allClients) {
@@ -329,6 +388,7 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     if (!error) recordCount++;
   }
 
+  console.log(`[backfill] Successfully upserted ${recordCount} clients`);
   return recordCount;
 }
 

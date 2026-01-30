@@ -211,7 +211,7 @@ function ActiveJobCard({
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Records</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-medium truncate max-w-[100px]" title={getSyncPhaseLabel(job.sync_phase)}>
+              <p className="text-lg font-medium whitespace-nowrap" title={getSyncPhaseLabel(job.sync_phase)}>
                 {getSyncPhaseLabel(job.sync_phase)}
               </p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Phase</p>

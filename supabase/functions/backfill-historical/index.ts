@@ -51,33 +51,54 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Sync Arketa classes for a single date
+// Endpoint type mapping for backfill data types to api_endpoints lookup
+const endpointTypeMap: Record<string, string> = {
+  'payments': 'payments',
+  'shifts': 'shifts',
+  'classes': 'classes',
+  'reservations': 'reservations',
+  'clients': 'clients',
+};
+
+// Sync Arketa classes for a single date with pagination
 async function syncArketaClasses(supabase: any, date: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=500&start_date=${date}&end_date=${date}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'x-api-key': ARKETA_API_KEY!,
-      'Content-Type': 'application/json',
-    },
-  });
+  let allClasses: any[] = [];
+  let nextCursor: string | undefined;
+  let pageCount = 0;
+  const maxPages = 50;
 
-  if (!response.ok) {
-    throw new Error(`Arketa API error: ${response.status}`);
-  }
+  do {
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=500&start_date=${date}&end_date=${date}`;
+    if (nextCursor) url += `&cursor=${nextCursor}`;
 
-  const responseData = await response.json();
-  const classes = Array.isArray(responseData) 
-    ? responseData 
-    : (responseData.classes || responseData.data || []);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-api-key': ARKETA_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Arketa API error: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    const classes = Array.isArray(responseData) 
+      ? responseData 
+      : (responseData.classes || responseData.data || []);
+    allClasses.push(...classes);
+
+    nextCursor = responseData.pagination?.nextCursor;
+    pageCount++;
+  } while (nextCursor && pageCount < maxPages);
 
   let recordCount = 0;
-  for (const cls of classes) {
+  for (const cls of allClasses) {
     const name = cls.name || cls.class_name || 'Unknown Class';
     const instructorName = cls.instructor_name || 
       (cls.instructor ? `${cls.instructor.first_name || ''} ${cls.instructor.last_name || ''}`.trim() : null);
@@ -106,33 +127,45 @@ async function syncArketaClasses(supabase: any, date: string): Promise<number> {
   return recordCount;
 }
 
-// Sync Arketa reservations for a single date
+// Sync Arketa reservations for a single date with pagination
 async function syncArketaReservations(supabase: any, date: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=500&start_date=${date}&end_date=${date}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'x-api-key': ARKETA_API_KEY!,
-      'Content-Type': 'application/json',
-    },
-  });
+  let allReservations: any[] = [];
+  let nextCursor: string | undefined;
+  let pageCount = 0;
+  const maxPages = 50;
 
-  if (!response.ok) {
-    throw new Error(`Arketa API error: ${response.status}`);
-  }
+  do {
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=500&start_date=${date}&end_date=${date}`;
+    if (nextCursor) url += `&cursor=${nextCursor}`;
 
-  const responseData = await response.json();
-  const reservations = Array.isArray(responseData) 
-    ? responseData 
-    : (responseData.reservations || responseData.data || []);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-api-key': ARKETA_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Arketa API error: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    const reservations = Array.isArray(responseData) 
+      ? responseData 
+      : (responseData.reservations || responseData.data || []);
+    allReservations.push(...reservations);
+
+    nextCursor = responseData.pagination?.nextCursor;
+    pageCount++;
+  } while (nextCursor && pageCount < maxPages);
 
   let recordCount = 0;
-  for (const res of reservations) {
+  for (const res of allReservations) {
     const clientName = res.client?.firstName && res.client?.lastName 
       ? `${res.client.firstName} ${res.client.lastName}`.trim()
       : res.client_name || null;
@@ -158,33 +191,45 @@ async function syncArketaReservations(supabase: any, date: string): Promise<numb
   return recordCount;
 }
 
-// Sync Arketa payments for a single date
+// Sync Arketa payments for a single date with pagination
 async function syncArketaPayments(supabase: any, date: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  const url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=500&start_date=${date}&end_date=${date}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'x-api-key': ARKETA_API_KEY!,
-      'Content-Type': 'application/json',
-    },
-  });
+  let allPayments: any[] = [];
+  let nextCursor: string | undefined;
+  let pageCount = 0;
+  const maxPages = 50;
 
-  if (!response.ok) {
-    throw new Error(`Arketa API error: ${response.status}`);
-  }
+  do {
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=500&start_date=${date}&end_date=${date}`;
+    if (nextCursor) url += `&cursor=${nextCursor}`;
 
-  const responseData = await response.json();
-  const payments = Array.isArray(responseData) 
-    ? responseData 
-    : (responseData.purchases || responseData.payments || responseData.data || []);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-api-key': ARKETA_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Arketa API error: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    const payments = Array.isArray(responseData) 
+      ? responseData 
+      : (responseData.purchases || responseData.payments || responseData.data || []);
+    allPayments.push(...payments);
+
+    nextCursor = responseData.pagination?.nextCursor;
+    pageCount++;
+  } while (nextCursor && pageCount < maxPages);
 
   let recordCount = 0;
-  for (const payment of payments) {
+  for (const payment of allPayments) {
     const { error } = await supabase
       .from('arketa_payments')
       .upsert({
@@ -205,33 +250,45 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
   return recordCount;
 }
 
-// Sync Arketa clients for a single date (fetches all clients, not date-filtered)
+// Sync Arketa clients for a single date with pagination (fetches all clients, not date-filtered)
 async function syncArketaClients(supabase: any, _date: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_DEV_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0';
 
-  const url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'x-api-key': ARKETA_API_KEY!,
-      'Content-Type': 'application/json',
-    },
-  });
+  let allClients: any[] = [];
+  let nextCursor: string | undefined;
+  let pageCount = 0;
+  const maxPages = 50;
 
-  if (!response.ok) {
-    throw new Error(`Arketa API error: ${response.status}`);
-  }
+  do {
+    let url = `${ARKETA_DEV_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
+    if (nextCursor) url += `&cursor=${nextCursor}`;
 
-  const responseData = await response.json();
-  const clients = Array.isArray(responseData) 
-    ? responseData 
-    : (responseData.clients || responseData.data || []);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-api-key': ARKETA_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Arketa API error: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    const clients = Array.isArray(responseData) 
+      ? responseData 
+      : (responseData.clients || responseData.data || []);
+    allClients.push(...clients);
+
+    nextCursor = responseData.pagination?.nextCursor;
+    pageCount++;
+  } while (nextCursor && pageCount < maxPages);
 
   let recordCount = 0;
-  for (const client of clients) {
+  for (const client of allClients) {
     const fullName = [client.firstName, client.lastName]
       .filter(Boolean)
       .join(' ') || null;
@@ -465,8 +522,9 @@ Deno.serve(async (req) => {
       .update({ status: 'running', started_at: job.started_at || new Date().toISOString() })
       .eq('id', job.id);
 
-    // Get rate limit from api_endpoints
-    const endpointConfig = await getApiEndpointConfig(supabase, api_source, data_type);
+    // Get rate limit from api_endpoints using endpoint type mapping
+    const lookupType = endpointTypeMap[data_type] || data_type;
+    const endpointConfig = await getApiEndpointConfig(supabase, api_source, lookupType);
     const rateLimitPerMin = endpointConfig?.rateLimitPerMin || 60;
     const delayMs = Math.ceil(60000 / rateLimitPerMin);
 

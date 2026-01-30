@@ -465,29 +465,48 @@ async function fetchFromApi(
     records = [];
   }
 
-  // Extract pagination cursor - check pagination.nextCursor first (Arketa's format)
+  // Extract pagination cursor - check multiple possible locations
+  // Arketa returns: pagination.nextCursor
   const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
 
-  // Determine hasMore with detailed logging
+  // Determine hasMore using multiple signals
   const isBatchFull = records.length === BATCH_SIZE;
   const paginationHasMore = data.pagination?.hasMore === true;
   const cursorPresent = !!nextCursor;
   
-  // CRITICAL: Arketa API doesn't support offset pagination
-  // If we get a full batch but NO cursor, we CANNOT fetch more records
-  // even if API says hasMore: true - this is an API limitation
-  // 
-  // hasMore is ONLY true if we have a cursor to use for the next request
-  const hasMore = cursorPresent;
+  // STRATEGY: Trust the API's hasMore flag when we have a cursor.
+  // If we got a full batch AND the API says hasMore, continue even without explicit cursor
+  // (the API should provide a cursor, but if not, we'll use the last record ID as cursor)
+  let hasMore = false;
+  let effectiveCursor = nextCursor;
   
-  // Log warning if API says hasMore but no cursor provided
-  if (paginationHasMore && !cursorPresent && isBatchFull) {
-    logger.warn('API indicates more records but provides no pagination cursor - marking as complete', {
-      recordsFetched: records.length,
-      apiHasMore: paginationHasMore,
-      endpoint: config.endpointPath,
-      note: 'This endpoint does not support cursor pagination. Only first batch of records will be synced.'
-    });
+  if (cursorPresent) {
+    // Cursor present - use it for next request
+    hasMore = true;
+    logger.info('Cursor-based pagination active', { cursor: nextCursor });
+  } else if (paginationHasMore && isBatchFull && records.length > 0) {
+    // API says more records exist but no cursor provided
+    // Use the last record's ID as a synthetic cursor for the next request
+    const lastRecord = records[records.length - 1];
+    const lastId = lastRecord.id || lastRecord.clientId || lastRecord.external_id;
+    if (lastId) {
+      effectiveCursor = String(lastId);
+      hasMore = true;
+      logger.info('Using last record ID as synthetic cursor for pagination', {
+        lastRecordId: lastId,
+        recordsFetched: records.length,
+        apiHasMore: paginationHasMore
+      });
+    } else {
+      logger.warn('Cannot paginate: no cursor from API and no usable record ID', {
+        recordsFetched: records.length,
+        recordKeys: Object.keys(records[records.length - 1] || {})
+      });
+    }
+  } else if (records.length < BATCH_SIZE) {
+    // Got less than a full batch - we're done
+    hasMore = false;
+    logger.info('Received partial batch - sync complete', { recordsFetched: records.length });
   }
 
   logger.info('Fetch complete', {
@@ -497,12 +516,12 @@ async function fetchFromApi(
       isBatchFull,
       paginationHasMore,
       cursorPresent,
-      hasMoreDecision: hasMore,
-      determinedBy: cursorPresent ? 'cursor_present' : 'no_cursor_available'
+      effectiveCursor: effectiveCursor ? effectiveCursor.substring(0, 20) + '...' : null,
+      hasMoreDecision: hasMore
     }
   });
 
-  return { records, nextCursor, hasMore };
+  return { records, nextCursor: effectiveCursor, hasMore };
 }
 
 async function insertToStaging(

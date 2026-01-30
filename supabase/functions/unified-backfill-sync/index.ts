@@ -355,9 +355,19 @@ async function fetchFromApi(
     url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
   }
   
-  // Add cursor if resuming
+  // OFFSET-BASED PAGINATION FALLBACK
+  // If we have no cursor but have already processed records, use offset pagination
+  // This is required for endpoints like /clients that don't return cursors
+  const useOffsetPagination = !job.batch_cursor && job.records_processed > 0;
+  
   if (job.batch_cursor) {
+    // Cursor-based pagination (preferred)
     url += `&cursor=${job.batch_cursor}`;
+    logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
+  } else if (useOffsetPagination) {
+    // Offset-based fallback - use records_processed as the skip value
+    url += `&offset=${job.records_processed}`;
+    logger.info('Using offset-based pagination fallback', { offset: job.records_processed });
   }
 
   logger.info(`Fetching from: ${url}`);
@@ -442,10 +452,21 @@ async function fetchFromApi(
   const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
 
   // Determine hasMore with detailed logging
+  // CRITICAL: For offset-based pagination (no cursor returned), we determine hasMore
+  // based on whether we got a full batch of records
   const isBatchFull = records.length === BATCH_SIZE;
   const paginationHasMore = data.pagination?.hasMore === true;
   const cursorPresent = !!nextCursor;
-  const hasMore = isBatchFull || paginationHasMore || cursorPresent;
+  
+  // If using offset pagination (no cursor returned but API says hasMore), 
+  // rely on batch size to determine if more records exist
+  const isOffsetPaginationMode = !cursorPresent && paginationHasMore;
+  
+  // hasMore is true if:
+  // 1. We have a cursor (cursor-based pagination), OR
+  // 2. API explicitly says hasMore AND we got a full batch (offset-based), OR
+  // 3. We got a full batch (fallback)
+  const hasMore = cursorPresent || (isOffsetPaginationMode && isBatchFull) || (isBatchFull && !isOffsetPaginationMode && paginationHasMore);
 
   logger.info('Fetch complete', {
     recordCount: records.length,
@@ -454,12 +475,19 @@ async function fetchFromApi(
       isBatchFull,
       paginationHasMore,
       cursorPresent,
+      isOffsetPaginationMode,
       hasMoreDecision: hasMore,
-      determinedBy: isBatchFull ? 'batch_size' : paginationHasMore ? 'pagination_flag' : cursorPresent ? 'cursor_present' : 'no_more_data'
+      determinedBy: cursorPresent ? 'cursor_present' : 
+                    (isOffsetPaginationMode && isBatchFull) ? 'offset_batch_full' : 
+                    isBatchFull ? 'batch_size' : 'no_more_data'
     }
   });
 
-  return { records, nextCursor, hasMore };
+  // For offset pagination, we store the current offset as a synthetic cursor
+  // This allows job resumption to work correctly
+  const effectiveCursor = cursorPresent ? nextCursor : null;
+
+  return { records, nextCursor: effectiveCursor, hasMore };
 }
 
 async function insertToStaging(
@@ -690,10 +718,14 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
   const lastName = raw.lastName as string || '';
   const name = raw.name as string || `${firstName} ${lastName}`.trim() || null;
 
+  // CRITICAL: Handle missing email - use placeholder to satisfy NOT NULL constraint
+  // Some Arketa clients don't have email addresses
+  const email = raw.email || `no-email-${raw.id}@placeholder.local`;
+
   return {
     external_id: String(raw.id),
     client_name: name,
-    client_email: raw.email,
+    client_email: email,
     client_phone: raw.phone,
     client_tags: (raw.tags as string[]) || [],
     custom_fields: raw.customFields || {},

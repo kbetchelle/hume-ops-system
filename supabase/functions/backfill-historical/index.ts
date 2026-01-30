@@ -355,9 +355,8 @@ async function syncArketaClientsPage(
   
   console.log(`[backfill] Page fetched: ${clients.length} clients`);
 
-  // Upsert clients directly to target table using external_id (client_id from API)
-  let recordCount = 0;
-  for (const client of clients) {
+  // Prepare all records for batch upsert
+  const records = clients.map((client: any) => {
     // Build client name from available fields
     let clientName = client.name || null;
     if (!clientName) {
@@ -365,26 +364,41 @@ async function syncArketaClientsPage(
       clientName = parts.length > 0 ? parts.join(' ') : null;
     }
 
-    const { error } = await supabase
-      .from('arketa_clients')
-      .upsert({
-        external_id: String(client.id),
-        client_email: client.email || '',
-        client_name: clientName,
-        client_phone: client.phone || null,
-        client_tags: client.tags || [],
-        custom_fields: client.customFields || {},
-        referrer: client.referrer || null,
-        email_mkt_opt_in: client.emailMarketingOptIn ?? false,
-        sms_mkt_opt_in: client.smsMarketingOptIn ?? false,
-        date_of_birth: client.dateOfBirth || null,
-        lifecycle_stage: client.lifecycleStage || null,
-        raw_data: client,
-        last_synced_at: new Date().toISOString(),
-      }, { onConflict: 'external_id' });
+    return {
+      external_id: String(client.id),
+      client_email: client.email || '',
+      client_name: clientName,
+      client_phone: client.phone || null,
+      client_tags: client.tags || [],
+      custom_fields: client.customFields || {},
+      referrer: client.referrer || null,
+      email_mkt_opt_in: client.emailMarketingOptIn ?? false,
+      sms_mkt_opt_in: client.smsMarketingOptIn ?? false,
+      date_of_birth: client.dateOfBirth || null,
+      lifecycle_stage: client.lifecycleStage || null,
+      raw_data: client,
+      last_synced_at: new Date().toISOString(),
+    };
+  });
 
-    if (!error) recordCount++;
+  // Batch upsert in chunks of 100 for better performance
+  const BATCH_SIZE = 100;
+  let recordCount = 0;
+  
+  for (let i = 0; i < records.length; i += BATCH_SIZE) {
+    const batch = records.slice(i, i + BATCH_SIZE);
+    const { error, count } = await supabase
+      .from('arketa_clients')
+      .upsert(batch, { onConflict: 'external_id', count: 'exact' });
+
+    if (!error) {
+      recordCount += batch.length;
+    } else {
+      console.error(`[backfill] Batch upsert error at ${i}: ${error.message}`);
+    }
   }
+
+  console.log(`[backfill] Batch upserted ${recordCount} clients`);
 
   // Check pagination - only continue if we have a cursor AND API says there's more
   const nextCursor = responseData.pagination?.nextCursor || null;

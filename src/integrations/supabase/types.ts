@@ -338,39 +338,57 @@ export type Database = {
           arketa_class_id: string
           capacity: number | null
           class_name: string
+          cursor_position: string | null
+          description: string | null
           end_time: string | null
+          enrolled: number | null
           id: string
+          instructor_id: string | null
           instructor_name: string | null
           location: string | null
+          raw_data: Json | null
           signups: number | null
           staged_at: string | null
           start_time: string
+          status: string | null
           sync_batch_id: string
         }
         Insert: {
           arketa_class_id: string
           capacity?: number | null
           class_name: string
+          cursor_position?: string | null
+          description?: string | null
           end_time?: string | null
+          enrolled?: number | null
           id?: string
+          instructor_id?: string | null
           instructor_name?: string | null
           location?: string | null
+          raw_data?: Json | null
           signups?: number | null
           staged_at?: string | null
           start_time: string
+          status?: string | null
           sync_batch_id: string
         }
         Update: {
           arketa_class_id?: string
           capacity?: number | null
           class_name?: string
+          cursor_position?: string | null
+          description?: string | null
           end_time?: string | null
+          enrolled?: number | null
           id?: string
+          instructor_id?: string | null
           instructor_name?: string | null
           location?: string | null
+          raw_data?: Json | null
           signups?: number | null
           staged_at?: string | null
           start_time?: string
+          status?: string | null
           sync_batch_id?: string
         }
         Relationships: []
@@ -439,6 +457,7 @@ export type Database = {
           client_name: string | null
           client_phone: string | null
           client_tags: string[] | null
+          cursor_position: string | null
           custom_fields: Json | null
           date_of_birth: string | null
           email_mkt_opt_in: boolean | null
@@ -456,6 +475,7 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           client_tags?: string[] | null
+          cursor_position?: string | null
           custom_fields?: Json | null
           date_of_birth?: string | null
           email_mkt_opt_in?: boolean | null
@@ -473,6 +493,7 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           client_tags?: string[] | null
+          cursor_position?: string | null
           custom_fields?: Json | null
           date_of_birth?: string | null
           email_mkt_opt_in?: boolean | null
@@ -525,6 +546,48 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_instructors_staging: {
+        Row: {
+          active: boolean | null
+          arketa_instructor_id: string
+          cursor_position: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          raw_data: Json | null
+          role: string | null
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          arketa_instructor_id: string
+          cursor_position?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          raw_data?: Json | null
+          role?: string | null
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          active?: boolean | null
+          arketa_instructor_id?: string
+          cursor_position?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          raw_data?: Json | null
+          role?: string | null
+          staged_at?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
       arketa_payments: {
         Row: {
           amount: number | null
@@ -564,6 +627,54 @@ export type Database = {
           raw_data?: Json | null
           status?: string | null
           synced_at?: string | null
+        }
+        Relationships: []
+      }
+      arketa_payments_staging: {
+        Row: {
+          amount: number | null
+          arketa_payment_id: string
+          client_id: string | null
+          created_at: string | null
+          currency: string | null
+          cursor_position: string | null
+          description: string | null
+          id: string
+          payment_type: string | null
+          raw_data: Json | null
+          staged_at: string | null
+          status: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          amount?: number | null
+          arketa_payment_id: string
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          cursor_position?: string | null
+          description?: string | null
+          id?: string
+          payment_type?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          amount?: number | null
+          arketa_payment_id?: string
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          cursor_position?: string | null
+          description?: string | null
+          id?: string
+          payment_type?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          status?: string | null
+          sync_batch_id?: string
         }
         Relationships: []
       }
@@ -615,11 +726,17 @@ export type Database = {
       arketa_reservations_staging: {
         Row: {
           arketa_class_id: string
+          arketa_reservation_id: string | null
+          cancelled_at: string | null
+          checked_in: boolean | null
           checked_in_at: string | null
           client_email: string | null
           client_id: string | null
           client_name: string | null
+          created_at: string | null
+          cursor_position: string | null
           id: string
+          raw_data: Json | null
           reservation_id: string
           staged_at: string | null
           status: string | null
@@ -627,11 +744,17 @@ export type Database = {
         }
         Insert: {
           arketa_class_id: string
+          arketa_reservation_id?: string | null
+          cancelled_at?: string | null
+          checked_in?: boolean | null
           checked_in_at?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
+          created_at?: string | null
+          cursor_position?: string | null
           id?: string
+          raw_data?: Json | null
           reservation_id: string
           staged_at?: string | null
           status?: string | null
@@ -639,11 +762,17 @@ export type Database = {
         }
         Update: {
           arketa_class_id?: string
+          arketa_reservation_id?: string | null
+          cancelled_at?: string | null
+          checked_in?: boolean | null
           checked_in_at?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
+          created_at?: string | null
+          cursor_position?: string | null
           id?: string
+          raw_data?: Json | null
           reservation_id?: string
           staged_at?: string | null
           status?: string | null
@@ -1876,9 +2005,13 @@ export type Database = {
       }
       sling_shifts_staging: {
         Row: {
+          cursor_position: string | null
+          employee_name: string | null
           id: string
+          location: string | null
           position_id: number | null
           position_name: string | null
+          raw_data: Json | null
           shift_date: string
           shift_end: string
           shift_id: number
@@ -1890,9 +2023,13 @@ export type Database = {
           user_name: string | null
         }
         Insert: {
+          cursor_position?: string | null
+          employee_name?: string | null
           id?: string
+          location?: string | null
           position_id?: number | null
           position_name?: string | null
+          raw_data?: Json | null
           shift_date: string
           shift_end: string
           shift_id: number
@@ -1904,9 +2041,13 @@ export type Database = {
           user_name?: string | null
         }
         Update: {
+          cursor_position?: string | null
+          employee_name?: string | null
           id?: string
+          location?: string | null
           position_id?: number | null
           position_name?: string | null
+          raw_data?: Json | null
           shift_date?: string
           shift_end?: string
           shift_id?: number

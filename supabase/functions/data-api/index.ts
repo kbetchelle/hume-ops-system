@@ -50,6 +50,11 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'quick_links': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
   'staff_documents': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  // Backfill tables
+  'backfill_jobs': { management: ['select', 'insert', 'update', 'delete'] },
+  'checklist_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'checklist_template_items': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'checklist_template_completions': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
 };
 
 function normalizeRole(role: string | undefined): string {
@@ -61,21 +66,73 @@ function normalizeRole(role: string | undefined): string {
   return 'staff';
 }
 
+async function getUserRoleFromSupabase(supabase: any, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+  
+  if (data && data.length > 0) {
+    // Check for highest privilege role
+    const roles = data.map((r: { role: string }) => r.role);
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('manager')) return 'manager';
+    if (roles.includes('concierge')) return 'concierge';
+    if (roles.includes('trainer')) return 'trainer';
+    return roles[0];
+  }
+  return 'staff';
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   
   const preflight = handleCorsPreflightRequest(req);
   if (preflight) return preflight;
 
+  // Try multiple auth methods
   const sessionValidation = await validateSessionToken(getTokenFromRequest(req));
   const staffValidation = await validateStaffToken(getStaffTokenFromRequest(req));
+  
+  // Also check for Supabase JWT auth
+  const authHeader = req.headers.get('Authorization');
+  let supabaseUserId: string | null = null;
+  let supabaseUserRole: string | null = null;
+  
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    
+    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+    if (!error && user) {
+      supabaseUserId = user.id;
+      // Get user role from database
+      const serviceClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      supabaseUserRole = await getUserRoleFromSupabase(serviceClient, user.id);
+    }
+  }
 
-  if (!sessionValidation.valid && !staffValidation.valid) {
+  // Check if any auth method succeeded
+  if (!sessionValidation.valid && !staffValidation.valid && !supabaseUserId) {
     return createUnauthorizedResponse('Authentication required', corsHeaders);
   }
 
-  const rawRole = sessionValidation.valid ? sessionValidation.role : 'staff';
-  const effectiveRole = normalizeRole(rawRole);
+  // Determine effective role (priority: session token > supabase auth > staff token)
+  let effectiveRole: string;
+  if (sessionValidation.valid) {
+    effectiveRole = normalizeRole(sessionValidation.role);
+  } else if (supabaseUserId && supabaseUserRole) {
+    effectiveRole = normalizeRole(supabaseUserRole);
+  } else {
+    effectiveRole = 'staff';
+  }
 
   try {
     const { action, table, data, filters, select, order, limit } = await req.json();

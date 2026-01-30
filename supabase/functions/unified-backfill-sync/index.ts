@@ -11,11 +11,11 @@
  * | reservations | /reservations    | arketa_reservations_staging  | arketa_reservations  | external_id   |
  * | payments     | /purchases       | arketa_payments_staging      | arketa_payments      | external_id   |
  * | instructors  | /staff           | arketa_instructors_staging   | arketa_instructors   | external_id   |
- * | shifts       | /reports/roster  | sling_shifts_staging         | daily_schedules      | id            |
- * 
+ * | shifts       | /reports/roster  | sling_shifts_staging         | staff_shifts         | sling_shift_id|
+ *
  * Unique Keys:
  * - Arketa data uses external_id (text) which maps to the API's id field
- * - Sling shifts use the auto-generated id from daily_schedules
+ * - Sling shifts use sling_shift_id which maps to the API's id field
  * 
  * The job remains in "Active Backfills" until:
  * - API returns fewer than 400 records (no more data)
@@ -93,8 +93,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
   'sling-shifts': {
     endpointPath: '/reports/roster',
     stagingTable: 'sling_shifts_staging',
-    targetTable: 'daily_schedules',
-    uniqueKey: 'id',
+    targetTable: 'staff_shifts',
+    uniqueKey: 'sling_shift_id',
     transformFn: transformShift,
     stagingIdField: 'sling_shift_id'
   }
@@ -278,13 +278,31 @@ async function executeSyncCycle(
 }
 
 async function fetchFromApi(
-  job: BackfillJob, 
-  config: BackfillConfig, 
+  job: BackfillJob,
+  config: BackfillConfig,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
-  const token = await getArketaToken(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  const headers = getArketaHeaders(token);
-  
+  // Try OAuth token first, fallback to API key if token refresh fails
+  const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY");
+  let headers: Record<string, string>;
+
+  try {
+    const token = await getArketaToken(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    headers = getArketaHeaders(token);
+    logger.info('Using OAuth token for authentication');
+  } catch (tokenError) {
+    logger.warn('Token refresh failed, using API key fallback', {
+      error: tokenError instanceof Error ? tokenError.message : String(tokenError)
+    });
+    if (!ARKETA_API_KEY) {
+      throw new Error('No API key available as fallback after token refresh failure');
+    }
+    headers = {
+      'x-api-key': ARKETA_API_KEY,
+      'Content-Type': 'application/json'
+    };
+  }
+
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
   let url = `${baseUrl}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
@@ -321,11 +339,36 @@ async function fetchFromApi(
   }
   
   const data = await response.json();
-  
+
   // Handle different response formats from various endpoints
-  const records = data.data || data.clients || data.classes || data.reservations || data.payments || data.staff || [];
-  const nextCursor = data.cursor || data.next_cursor || data.pagination?.cursor || null;
-  const hasMore = records.length === BATCH_SIZE || !!nextCursor;
+  // CRITICAL: Check Array.isArray() first, then nested fields with proper validation
+  let records: Record<string, unknown>[];
+  if (Array.isArray(data)) {
+    // Direct array response (some endpoints return this)
+    records = data;
+  } else if (data.data && Array.isArray(data.data)) {
+    // Standard paginated response: { data: [...], pagination: {...} }
+    records = data.data;
+  } else if (data.clients && Array.isArray(data.clients)) {
+    records = data.clients;
+  } else if (data.classes && Array.isArray(data.classes)) {
+    records = data.classes;
+  } else if (data.reservations && Array.isArray(data.reservations)) {
+    records = data.reservations;
+  } else if (data.payments && Array.isArray(data.payments)) {
+    records = data.payments;
+  } else if (data.purchases && Array.isArray(data.purchases)) {
+    records = data.purchases;
+  } else if (data.staff && Array.isArray(data.staff)) {
+    records = data.staff;
+  } else {
+    logger.warn('Unknown response format', { keys: Object.keys(data), dataType: typeof data });
+    records = [];
+  }
+
+  // Extract pagination cursor - check pagination.nextCursor first (Arketa's format)
+  const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
+  const hasMore = records.length === BATCH_SIZE || data.pagination?.hasMore === true || !!nextCursor;
 
   logger.info(`Fetched ${records.length} records, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'present' : 'none'}`);
 
@@ -414,7 +457,7 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
   const firstName = raw.firstName as string || '';
   const lastName = raw.lastName as string || '';
   const name = raw.name as string || `${firstName} ${lastName}`.trim() || null;
-  
+
   return {
     external_id: String(raw.id),
     client_name: name,
@@ -423,8 +466,9 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
     client_tags: (raw.tags as string[]) || [],
     custom_fields: raw.customFields || {},
     referrer: raw.referrer,
-    email_mkt_opt_in: raw.emailOptIn || false,
-    sms_mkt_opt_in: raw.smsOptIn || false,
+    // API returns emailMarketingOptIn/smsMarketingOptIn, check both for compatibility
+    email_mkt_opt_in: raw.emailMarketingOptIn ?? raw.emailOptIn ?? false,
+    sms_mkt_opt_in: raw.smsMarketingOptIn ?? raw.smsOptIn ?? false,
     date_of_birth: raw.dateOfBirth,
     lifecycle_stage: raw.lifecycleStage,
     raw_data: raw,
@@ -434,19 +478,29 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
 
 function transformClass(raw: Record<string, unknown>): Record<string, unknown> {
   const instructor = raw.instructor as Record<string, unknown> | undefined;
-  
+  // Build instructor name from nested object (first_name + last_name) or direct field
+  const instructorName = raw.instructor_name ||
+    (instructor ? `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim() : null) ||
+    raw.instructorName ||
+    null;
+
+  // Handle room - could be object with name or direct string
+  const room = raw.room as Record<string, unknown> | string | undefined;
+  const roomName = typeof room === 'object' ? room?.name : (raw.location || room || null);
+
   return {
     external_id: String(raw.id),
-    name: raw.name,
-    start_time: raw.startTime,
-    duration_minutes: raw.duration || null,
-    instructor_name: instructor?.name || raw.instructorName,
-    room_name: raw.location || raw.room,
-    capacity: raw.capacity,
-    booked_count: raw.enrolled || raw.bookedCount || 0,
-    waitlist_count: raw.waitlistCount || 0,
-    is_cancelled: raw.cancelled || raw.isCancelled || false,
-    status: raw.status,
+    name: raw.name || raw.class_name,
+    // API may return start_time or startTime
+    start_time: raw.start_time || raw.startTime,
+    duration_minutes: raw.duration_minutes ?? raw.duration ?? null,
+    instructor_name: instructorName,
+    room_name: roomName,
+    capacity: raw.capacity ?? raw.max_capacity ?? null,
+    booked_count: raw.total_booked ?? raw.enrolled ?? raw.bookedCount ?? raw.booked_count ?? 0,
+    waitlist_count: raw.waitlistCount ?? raw.waitlist_count ?? 0,
+    is_cancelled: raw.is_cancelled ?? raw.cancelled ?? raw.isCancelled ?? false,
+    status: raw.status || 'scheduled',
     raw_data: raw,
     synced_at: new Date().toISOString()
   };
@@ -500,21 +554,24 @@ function transformShift(raw: Record<string, unknown>): Record<string, unknown> {
   const user = raw.user as Record<string, unknown> | undefined;
   const position = raw.position as Record<string, unknown> | string | undefined;
   const location = raw.location as Record<string, unknown> | string | undefined;
-  
+
   // Parse shift date from start time
   const startTime = (raw.start || raw.dtstart) as string;
   const endTime = (raw.end || raw.dtend) as string;
-  const shiftStart = new Date(startTime);
-  const shiftEnd = new Date(endTime);
-  
+  const shiftStart = startTime ? new Date(startTime) : null;
+  const shiftEnd = endTime ? new Date(endTime) : null;
+
   return {
-    sling_user_id: raw.userId || user?.id,
+    sling_shift_id: String(raw.id),
+    sling_user_id: String(raw.userId || user?.id || ''),
     staff_name: raw.userName || user?.name,
     position: typeof position === 'object' ? position?.name : position,
     location: typeof location === 'object' ? location?.name : location,
-    schedule_date: shiftStart.toISOString().split('T')[0],
-    shift_start: shiftStart.toISOString(),
-    shift_end: shiftEnd.toISOString(),
+    schedule_date: shiftStart ? shiftStart.toISOString().split('T')[0] : null,
+    shift_start: shiftStart ? shiftStart.toISOString() : null,
+    shift_end: shiftEnd ? shiftEnd.toISOString() : null,
+    status: raw.status || 'scheduled',
+    raw_data: raw,
     last_synced_at: new Date().toISOString()
   };
 }

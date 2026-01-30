@@ -370,24 +370,48 @@ function ActiveJobCard({
               )}
 
               {/* Records Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="bg-background/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Total Synced</p>
                 </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center border-l-2 border-primary/30">
+                  <p className="text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">New Records</p>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center border-l-2 border-accent/30">
+                  <p className="text-2xl font-bold text-accent-foreground">{(job.cumulative_updated || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Updated</p>
+                </div>
                 <div className="bg-background/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold">{job.records_in_current_batch || 0}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Last Batch Size</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Last Batch</p>
                 </div>
                 <div className="bg-background/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Batches Done</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Batches</p>
                 </div>
                 <div className="bg-background/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold">{formatDuration(job.started_at, null)}</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
                 </div>
               </div>
+
+              {/* Last Batch Breakdown */}
+              {(job.records_inserted > 0 || job.records_updated > 0) && (
+                <div className="bg-background/50 rounded-lg p-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Last Batch Breakdown</p>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm">
+                      <span className="text-primary font-medium">{job.records_inserted || 0}</span> new
+                    </span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-sm">
+                      <span className="font-medium">{job.records_updated || 0}</span> updated
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Sync Cycle Progress */}
               <div>
@@ -512,6 +536,22 @@ function CompletedJobRow({
 
         <CollapsibleContent>
           <div className="mt-4 p-4 bg-secondary/30 rounded space-y-4">
+            {/* Record Breakdown - New Feature */}
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="bg-background/50 rounded-lg p-3 text-center">
+                <p className="text-xl font-bold">{job.records_processed.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Total Synced</p>
+              </div>
+              <div className="bg-background/50 rounded-lg p-3 text-center border-l-2 border-primary/30">
+                <p className="text-xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">New Records</p>
+              </div>
+              <div className="bg-background/50 rounded-lg p-3 text-center border-l-2 border-accent/30">
+                <p className="text-xl font-bold text-accent-foreground">{(job.cumulative_updated || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Updated</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Date Range</p>

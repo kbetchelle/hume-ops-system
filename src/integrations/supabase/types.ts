@@ -835,6 +835,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string | null
+          cumulative_inserted: number | null
+          cumulative_updated: number | null
           current_batch_count: number | null
           data_type: string
           days_processed: number
@@ -846,7 +848,9 @@ export type Database = {
           no_more_records: boolean | null
           processing_date: string | null
           records_in_current_batch: number | null
+          records_inserted: number | null
           records_processed: number
+          records_updated: number | null
           retry_scheduled_at: string | null
           staging_synced: boolean | null
           start_date: string
@@ -863,6 +867,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cumulative_inserted?: number | null
+          cumulative_updated?: number | null
           current_batch_count?: number | null
           data_type: string
           days_processed?: number
@@ -874,7 +880,9 @@ export type Database = {
           no_more_records?: boolean | null
           processing_date?: string | null
           records_in_current_batch?: number | null
+          records_inserted?: number | null
           records_processed?: number
+          records_updated?: number | null
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date: string
@@ -891,6 +899,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cumulative_inserted?: number | null
+          cumulative_updated?: number | null
           current_batch_count?: number | null
           data_type?: string
           days_processed?: number
@@ -902,7 +912,9 @@ export type Database = {
           no_more_records?: boolean | null
           processing_date?: string | null
           records_in_current_batch?: number | null
+          records_inserted?: number | null
           records_processed?: number
+          records_updated?: number | null
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date?: string

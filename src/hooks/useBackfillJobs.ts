@@ -29,6 +29,11 @@ export interface BackfillJob {
   records_in_current_batch: number;
   no_more_records: boolean;
   last_batch_synced_at: string | null;
+  // New vs updated tracking
+  records_inserted: number;
+  records_updated: number;
+  cumulative_inserted: number;
+  cumulative_updated: number;
 }
 
 // Human-readable labels for sync phases

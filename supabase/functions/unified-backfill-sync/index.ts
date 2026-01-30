@@ -235,6 +235,18 @@ serve(async (req) => {
     // CONCURRENCY GUARD: Use an atomic update to claim this batch
     // This prevents multiple edge function invocations from processing the same batch
     const processingToken = crypto.randomUUID();
+    const staleThreshold = new Date(Date.now() - 30000).toISOString();
+    
+    // #region agent log
+    console.log('[DEBUG] unified-backfill-sync:beforeClaim', { 
+      job_id, 
+      jobStatus: job.status, 
+      jobSyncPhase: job.sync_phase, 
+      lastBatchSyncedAt: job.last_batch_synced_at,
+      staleThreshold 
+    });
+    // #endregion
+    
     const { data: claimedJob, error: claimError } = await supabase
       .from('backfill_jobs')
       .update({ 
@@ -244,14 +256,22 @@ serve(async (req) => {
       })
       .eq('id', job_id)
       .in('status', ['pending', 'running', 'paused'])
-      // Only claim if not already being processed (sync_phase not 'processing' or older than 30s)
-      .or(`sync_phase.neq.processing,last_batch_synced_at.lt.${new Date(Date.now() - 30000).toISOString()}`)
+      // Only claim if not already being processed (sync_phase not 'processing' or stale or never synced)
+      // CRITICAL: Handle NULL last_batch_synced_at for new jobs that have never been synced
+      .or(`sync_phase.neq.processing,last_batch_synced_at.is.null,last_batch_synced_at.lt.${staleThreshold}`)
       .select()
       .single();
 
     if (claimError || !claimedJob) {
       // #region agent log
-      console.log('[DEBUG] unified-backfill-sync:claimFailed', { job_id, claimError: claimError?.message, claimedJob: !!claimedJob });
+      console.log('[DEBUG] unified-backfill-sync:claimFailed', { 
+        job_id, 
+        claimError: claimError?.message,
+        claimErrorCode: claimError?.code,
+        claimErrorDetails: claimError?.details,
+        claimedJob: !!claimedJob,
+        originalJobState: { status: job.status, sync_phase: job.sync_phase, last_batch_synced_at: job.last_batch_synced_at }
+      });
       // #endregion
       logger.info(`Job ${job_id} is already being processed by another invocation`);
       return jsonResponse({ 

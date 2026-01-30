@@ -59,11 +59,11 @@ import {
 } from "@/components/ui/dialog";
 import { EmailTemplate } from "@/hooks/useMemberCommunications";
 
-const tierColors = {
-  basic: "bg-zinc-100 text-zinc-800",
-  standard: "bg-blue-100 text-blue-800",
-  premium: "bg-purple-100 text-purple-800",
-  vip: "bg-amber-100 text-amber-800",
+const stageColors: Record<string, string> = {
+  lead: "bg-zinc-100 text-zinc-800",
+  prospect: "bg-blue-100 text-blue-800",
+  member: "bg-green-100 text-green-800",
+  churned: "bg-red-100 text-red-800",
 };
 
 export default function MemberCommunicationsHub() {
@@ -173,20 +173,20 @@ export default function MemberCommunicationsHub() {
                             <div className="flex items-center justify-between gap-2">
                               <div className="min-w-0">
                                 <p className="font-medium truncate">
-                                  {member.full_name || "No name"}
+                                  {member.client_name || "No name"}
                                 </p>
                                 <p className="text-xs text-muted-foreground truncate">
-                                  {member.email}
+                                  {member.client_email}
                                 </p>
                               </div>
-                              {member.membership_tier && (
+                              {member.lifecycle_stage && (
                                 <Badge
                                   variant="secondary"
                                   className={`shrink-0 text-[10px] ${
-                                    tierColors[member.membership_tier]
+                                    stageColors[member.lifecycle_stage] || ""
                                   }`}
                                 >
-                                  {member.membership_tier.toUpperCase()}
+                                  {member.lifecycle_stage.toUpperCase()}
                                 </Badge>
                               )}
                             </div>
@@ -206,11 +206,11 @@ export default function MemberCommunicationsHub() {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle>
-                            {selectedMember.full_name || "No name"}
+                            {selectedMember.client_name || "No name"}
                           </CardTitle>
                           <CardDescription>
-                            {selectedMember.email}
-                            {selectedMember.phone && ` • ${selectedMember.phone}`}
+                            {selectedMember.client_email}
+                            {selectedMember.client_phone && ` • ${selectedMember.client_phone}`}
                           </CardDescription>
                         </div>
                         <div className="flex gap-2">
@@ -380,7 +380,7 @@ export default function MemberCommunicationsHub() {
             <DialogTitle>Log Phone Call</DialogTitle>
             <DialogDescription>
               Record notes from your call with{" "}
-              {selectedMember?.full_name || selectedMember?.email}
+              {selectedMember?.client_name || selectedMember?.client_email}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

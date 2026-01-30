@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/features/auth/AuthProvider";
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from "date-fns";
 
 export interface DateRange {
   start: Date;
@@ -42,7 +42,7 @@ export function useAnalytics(dateRange: DateRange, viewType: "all" | "trainer" |
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arketa_clients")
-        .select("id, join_date, membership_tier, created_at");
+        .select("id, created_at, lifecycle_stage");
       if (error) throw error;
       return data;
     },
@@ -127,8 +127,8 @@ export function useAnalytics(dateRange: DateRange, viewType: "all" | "trainer" |
     });
 
     let cumulativeTotal = members.filter(m => {
-      const joinDate = m.join_date ? parseISO(m.join_date) : parseISO(m.created_at);
-      return joinDate < dateRange.start;
+      const createdAt = parseISO(m.created_at);
+      return createdAt < dateRange.start;
     }).length;
 
     return months.map(month => {
@@ -136,8 +136,8 @@ export function useAnalytics(dateRange: DateRange, viewType: "all" | "trainer" |
       const monthEnd = endOfMonth(month);
       
       const newThisMonth = members.filter(m => {
-        const joinDate = m.join_date ? parseISO(m.join_date) : parseISO(m.created_at);
-        return joinDate >= monthStart && joinDate <= monthEnd;
+        const createdAt = parseISO(m.created_at);
+        return createdAt >= monthStart && createdAt <= monthEnd;
       }).length;
 
       cumulativeTotal += newThisMonth;

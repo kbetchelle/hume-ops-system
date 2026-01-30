@@ -17,6 +17,13 @@ import { TrainingPlanCard } from "@/components/training/TrainingPlanCard";
 import { TrainingPlanEditor } from "@/components/training/TrainingPlanEditor";
 import { CreatePlanDialog } from "@/components/training/CreatePlanDialog";
 
+// Transformed member type for CreatePlanDialog
+interface DialogMember {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
+
 export default function TrainingPlansPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [memberFilter, setMemberFilter] = useState<string>("all");
@@ -38,7 +45,14 @@ export default function TrainingPlansPage() {
     isUpdating,
   } = useTrainingPlans();
 
-  const { data: members = [] } = useClients();
+  const { data: clients = [] } = useClients();
+
+  // Transform clients to the format expected by CreatePlanDialog
+  const members: DialogMember[] = clients.map((c) => ({
+    id: c.id,
+    full_name: c.client_name,
+    email: c.client_email,
+  }));
 
   // Filter plans
   const filteredPlans = plans.filter((plan) => {

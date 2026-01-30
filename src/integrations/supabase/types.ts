@@ -377,58 +377,57 @@ export type Database = {
       }
       arketa_clients: {
         Row: {
-          avatar_url: string | null
+          client_email: string
+          client_name: string | null
+          client_phone: string | null
+          client_tags: string[] | null
           created_at: string
-          email: string
+          custom_fields: Json | null
+          date_of_birth: string | null
+          email_mkt_opt_in: boolean | null
           external_id: string
-          external_trainer_id: string | null
-          first_name: string | null
-          full_name: string | null
           id: string
-          join_date: string | null
-          last_name: string | null
           last_synced_at: string | null
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
-          phone: string | null
+          lifecycle_stage: string | null
           raw_data: Json | null
+          referrer: string | null
+          sms_mkt_opt_in: boolean | null
           updated_at: string
         }
         Insert: {
-          avatar_url?: string | null
+          client_email: string
+          client_name?: string | null
+          client_phone?: string | null
+          client_tags?: string[] | null
           created_at?: string
-          email: string
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email_mkt_opt_in?: boolean | null
           external_id: string
-          external_trainer_id?: string | null
-          first_name?: string | null
-          full_name?: string | null
           id?: string
-          join_date?: string | null
-          last_name?: string | null
           last_synced_at?: string | null
-          membership_tier?:
-            | Database["public"]["Enums"]["membership_tier"]
-            | null
-          phone?: string | null
+          lifecycle_stage?: string | null
           raw_data?: Json | null
+          referrer?: string | null
+          sms_mkt_opt_in?: boolean | null
           updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
+          client_email?: string
+          client_name?: string | null
+          client_phone?: string | null
+          client_tags?: string[] | null
           created_at?: string
-          email?: string
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email_mkt_opt_in?: boolean | null
           external_id?: string
-          external_trainer_id?: string | null
-          first_name?: string | null
-          full_name?: string | null
           id?: string
-          join_date?: string | null
-          last_name?: string | null
           last_synced_at?: string | null
-          membership_tier?:
-            | Database["public"]["Enums"]["membership_tier"]
-            | null
-          phone?: string | null
+          lifecycle_stage?: string | null
           raw_data?: Json | null
+          referrer?: string | null
+          sms_mkt_opt_in?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -436,43 +435,52 @@ export type Database = {
       arketa_clients_staging: {
         Row: {
           arketa_client_id: string
-          email: string | null
-          first_name: string | null
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          client_tags: string[] | null
+          custom_fields: Json | null
+          date_of_birth: string | null
+          email_mkt_opt_in: boolean | null
           id: string
-          join_date: string | null
-          last_name: string | null
-          membership_status: string | null
-          membership_type: string | null
-          phone: string | null
+          lifecycle_stage: string | null
           raw_data: Json | null
+          referrer: string | null
+          sms_mkt_opt_in: boolean | null
           staged_at: string | null
           sync_batch_id: string
         }
         Insert: {
           arketa_client_id: string
-          email?: string | null
-          first_name?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          client_tags?: string[] | null
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email_mkt_opt_in?: boolean | null
           id?: string
-          join_date?: string | null
-          last_name?: string | null
-          membership_status?: string | null
-          membership_type?: string | null
-          phone?: string | null
+          lifecycle_stage?: string | null
           raw_data?: Json | null
+          referrer?: string | null
+          sms_mkt_opt_in?: boolean | null
           staged_at?: string | null
           sync_batch_id: string
         }
         Update: {
           arketa_client_id?: string
-          email?: string | null
-          first_name?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          client_tags?: string[] | null
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email_mkt_opt_in?: boolean | null
           id?: string
-          join_date?: string | null
-          last_name?: string | null
-          membership_status?: string | null
-          membership_type?: string | null
-          phone?: string | null
+          lifecycle_stage?: string | null
           raw_data?: Json | null
+          referrer?: string | null
+          sms_mkt_opt_in?: boolean | null
           staged_at?: string | null
           sync_batch_id?: string
         }

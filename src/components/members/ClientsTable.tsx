@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 import { format } from "date-fns";
@@ -20,12 +20,12 @@ interface ClientsTableProps {
   emptyMessage?: string;
 }
 
-// Membership tier badge styles
-const tierStyles: Record<string, string> = {
-  basic: "bg-secondary text-secondary-foreground",
-  standard: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  premium: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-  vip: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+// Lifecycle stage badge styles
+const stageStyles: Record<string, string> = {
+  lead: "bg-secondary text-secondary-foreground",
+  prospect: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  member: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  churned: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
 export function ClientsTable({ filterType, emptyMessage = "No clients found" }: ClientsTableProps) {
@@ -76,8 +76,8 @@ export function ClientsTable({ filterType, emptyMessage = "No clients found" }: 
               <TableHead className="w-[300px]">Client</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Membership</TableHead>
-              <TableHead>Join Date</TableHead>
+              <TableHead>Lifecycle Stage</TableHead>
+              <TableHead>Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,28 +108,27 @@ export function ClientsTable({ filterType, emptyMessage = "No clients found" }: 
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={client.avatar_url || undefined} />
                         <AvatarFallback className="text-xs">
-                          {getInitials(client.full_name)}
+                          {getInitials(client.client_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{client.full_name || "Unknown"}</span>
+                      <span className="font-medium">{client.client_name || "Unknown"}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{client.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{client.phone || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{client.client_email}</TableCell>
+                  <TableCell className="text-muted-foreground">{client.client_phone || "—"}</TableCell>
                   <TableCell>
-                    {client.membership_tier ? (
-                      <Badge className={tierStyles[client.membership_tier] || ""}>
-                        {client.membership_tier}
+                    {client.lifecycle_stage ? (
+                      <Badge className={stageStyles[client.lifecycle_stage] || ""}>
+                        {client.lifecycle_stage}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {client.join_date 
-                      ? format(new Date(client.join_date), "MMM d, yyyy")
+                    {client.created_at 
+                      ? format(new Date(client.created_at), "MMM d, yyyy")
                       : "—"
                     }
                   </TableCell>

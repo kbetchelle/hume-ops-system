@@ -3,17 +3,9 @@ import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -45,11 +37,11 @@ import {
 } from "@/hooks/useActivityReports";
 import { cn } from "@/lib/utils";
 
-const tierColors: Record<string, string> = {
-  basic: "bg-zinc-100 text-zinc-800",
-  standard: "bg-blue-100 text-blue-800",
-  premium: "bg-purple-100 text-purple-800",
-  vip: "bg-amber-100 text-amber-800",
+const stageColors: Record<string, string> = {
+  lead: "bg-zinc-100 text-zinc-800",
+  prospect: "bg-blue-100 text-blue-800",
+  member: "bg-green-100 text-green-800",
+  churned: "bg-red-100 text-red-800",
 };
 
 export default function ReportsPage() {
@@ -305,7 +297,7 @@ export default function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Member</TableHead>
-                        <TableHead>Tier</TableHead>
+                        <TableHead>Stage</TableHead>
                         <TableHead className="text-right">Visits</TableHead>
                         <TableHead className="text-right">Classes</TableHead>
                         <TableHead>Last Visit</TableHead>
@@ -323,12 +315,12 @@ export default function ReportsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {member.membership_tier && (
+                            {member.lifecycle_stage && (
                               <Badge
                                 variant="secondary"
-                                className={tierColors[member.membership_tier] || ""}
+                                className={stageColors[member.lifecycle_stage] || ""}
                               >
-                                {member.membership_tier}
+                                {member.lifecycle_stage}
                               </Badge>
                             )}
                           </TableCell>
@@ -374,8 +366,8 @@ export default function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Member</TableHead>
-                        <TableHead>Tier</TableHead>
-                        <TableHead>Join Date</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead>Created At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -383,25 +375,25 @@ export default function ReportsPage() {
                         <TableRow key={member.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{member.full_name}</p>
+                              <p className="font-medium">{member.client_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {member.email}
+                                {member.client_email}
                               </p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            {member.membership_tier && (
+                            {member.lifecycle_stage && (
                               <Badge
                                 variant="secondary"
-                                className={tierColors[member.membership_tier] || ""}
+                                className={stageColors[member.lifecycle_stage] || ""}
                               >
-                                {member.membership_tier}
+                                {member.lifecycle_stage}
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell>
-                            {member.join_date
-                              ? format(new Date(member.join_date), "MMM d, yyyy")
+                            {member.created_at
+                              ? format(new Date(member.created_at), "MMM d, yyyy")
                               : "—"}
                           </TableCell>
                         </TableRow>
@@ -476,18 +468,18 @@ export default function ReportsPage() {
                           >
                             <div>
                               <p className="text-sm font-medium">
-                                {member.full_name}
+                                {member.client_name}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {member.email}
+                                {member.client_email}
                               </p>
                             </div>
-                            {member.membership_tier && (
+                            {member.lifecycle_stage && (
                               <Badge
                                 variant="secondary"
-                                className={tierColors[member.membership_tier] || ""}
+                                className={stageColors[member.lifecycle_stage] || ""}
                               >
-                                {member.membership_tier}
+                                {member.lifecycle_stage}
                               </Badge>
                             )}
                           </div>

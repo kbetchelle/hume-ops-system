@@ -5,14 +5,19 @@ import { fetchWithRetry, withRetry, isRetryableSupabaseError } from "../_shared/
 interface PartnerClient {
   id: string;
   email: string;
+  name?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
   createdAt?: string;
-  trainer?: {
-    id: string;
-  };
-  avatar?: string;
+  updatedAt?: string;
+  tags?: string[];
+  customFields?: Record<string, unknown>;
+  referrer?: string;
+  emailMarketingOptIn?: boolean;
+  smsMarketingOptIn?: boolean;
+  dateOfBirth?: string;
+  lifecycleStage?: string;
   [key: string]: unknown;
 }
 
@@ -63,6 +68,13 @@ async function getValidToken(supabase: any): Promise<string> {
   return result.access_token;
 }
 
+// Build client name from available fields
+function buildClientName(client: PartnerClient): string | null {
+  if (client.name) return client.name;
+  const parts = [client.firstName, client.lastName].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
 // deno-lint-ignore no-explicit-any
 async function upsertClientWithRetry(
   supabase: any,
@@ -70,17 +82,16 @@ async function upsertClientWithRetry(
 ): Promise<{ success: boolean; error?: string; attempts: number }> {
   const clientData = {
     external_id: client.id,
-    email: client.email,
-    first_name: client.firstName || null,
-    last_name: client.lastName || null,
-    full_name: [client.firstName, client.lastName]
-      .filter(Boolean)
-      .join(" ") || null,
-    phone: client.phone || null,
-    join_date: client.createdAt ? new Date(client.createdAt).toISOString() : null,
-    external_trainer_id: client.trainer?.id || null,
-    avatar_url: client.avatar || null,
-    membership_tier: "basic" as const,
+    client_email: client.email,
+    client_name: buildClientName(client),
+    client_phone: client.phone || null,
+    client_tags: client.tags || [],
+    custom_fields: client.customFields || {},
+    referrer: client.referrer || null,
+    email_mkt_opt_in: client.emailMarketingOptIn ?? false,
+    sms_mkt_opt_in: client.smsMarketingOptIn ?? false,
+    date_of_birth: client.dateOfBirth || null,
+    lifecycle_stage: client.lifecycleStage || null,
     raw_data: client,
     last_synced_at: new Date().toISOString(),
   };

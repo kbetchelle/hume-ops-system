@@ -5,6 +5,7 @@
  * Includes retry logic with exponential backoff for transient failures.
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import { getAuthHeaders } from './auth';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -76,6 +77,14 @@ function createTimeoutController(timeoutMs: number): AbortController {
 }
 
 /**
+ * Get the current user's access token from Supabase session
+ */
+async function getAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+}
+
+/**
  * Main data API function with retry logic
  */
 export async function dataApi<T = unknown>(
@@ -88,18 +97,24 @@ export async function dataApi<T = unknown>(
   
   let lastError: Error | null = null;
 
+  // Get the user's access token for authentication
+  const accessToken = await getAccessToken();
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = createTimeoutController(timeout);
       
+      // Build headers - use user's access token if available, otherwise fall back to anon key
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        ...getAuthHeaders(),
+      };
+      
       const response = await fetch(`${SUPABASE_URL}/functions/v1/data-api`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          ...getAuthHeaders(),
-        },
+        headers,
         body: JSON.stringify(request),
         signal: controller.signal,
       });

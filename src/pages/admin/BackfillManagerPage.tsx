@@ -205,7 +205,7 @@ function ActiveJobCard({
           </div>
 
           {/* Center: Stats */}
-          <div className="flex items-center gap-8 lg:gap-12 shrink-0">
+          <div className="flex items-center justify-between flex-1 px-4">
             <div className="text-center">
               <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Records</p>

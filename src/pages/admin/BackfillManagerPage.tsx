@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBackfillJobs, DATA_TYPES_BY_SOURCE, BackfillJob } from "@/hooks/useBackfillJobs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +80,13 @@ function ActiveJobCard({
   onCancel: () => void;
   onContinue: () => void;
 }) {
+  // Force re-render every second for live elapsed time updates
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // For clients, show records-based progress instead of days
   const isClientSync = job.data_type === "clients";
   const isWaitingForRetry = job.status === "running" && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();

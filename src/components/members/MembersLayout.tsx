@@ -19,6 +19,7 @@ import humeLogo from "@/assets/hume-logo.png";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MembersSidebar } from "./MembersSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 interface MembersLayoutProps {
   children: ReactNode;
@@ -182,14 +183,16 @@ function MembersHeader({ title }: { title: string }) {
 
 export function MembersLayout({ children, title }: MembersLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <MembersHeader title={title} />
-      <div className="flex flex-1 overflow-hidden">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
         <MembersSidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+        <div className="flex flex-col flex-1">
+          <MembersHeader title={title} />
+          <main className="flex-1 p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

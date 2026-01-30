@@ -1857,8 +1857,6 @@ export type Database = {
       sling_shifts_staging: {
         Row: {
           id: string
-          location_id: number | null
-          location_name: string | null
           position_id: number | null
           position_name: string | null
           shift_date: string
@@ -1873,8 +1871,6 @@ export type Database = {
         }
         Insert: {
           id?: string
-          location_id?: number | null
-          location_name?: string | null
           position_id?: number | null
           position_name?: string | null
           shift_date: string
@@ -1889,8 +1885,6 @@ export type Database = {
         }
         Update: {
           id?: string
-          location_id?: number | null
-          location_name?: string | null
           position_id?: number | null
           position_name?: string | null
           shift_date?: string
@@ -2367,51 +2361,45 @@ export type Database = {
           created_at: string
           external_id: string
           id: string
-          location: string | null
           position: string | null
           raw_data: Json | null
-          shift_date: string
+          shift_date: string | null
           shift_end: string
           shift_start: string
           sling_shift_id: number | null
           sling_user_id: number | null
           status: string | null
           synced_at: string
-          user_email: string | null
           user_name: string | null
         }
         Insert: {
           created_at?: string
           external_id: string
           id?: string
-          location?: string | null
           position?: string | null
           raw_data?: Json | null
-          shift_date: string
+          shift_date?: string | null
           shift_end: string
           shift_start: string
           sling_shift_id?: number | null
           sling_user_id?: number | null
           status?: string | null
           synced_at?: string
-          user_email?: string | null
           user_name?: string | null
         }
         Update: {
           created_at?: string
           external_id?: string
           id?: string
-          location?: string | null
           position?: string | null
           raw_data?: Json | null
-          shift_date?: string
+          shift_date?: string | null
           shift_end?: string
           shift_start?: string
           sling_shift_id?: number | null
           sling_user_id?: number | null
           status?: string | null
           synced_at?: string
-          user_email?: string | null
           user_name?: string | null
         }
         Relationships: [

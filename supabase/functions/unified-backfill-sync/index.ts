@@ -197,13 +197,14 @@ serve(async (req) => {
 
     // Update job with results
     const updateData: Record<string, unknown> = {
-      records_processed: job.records_processed + result.recordsUpserted,
+      records_processed: (job.records_processed || 0) + result.recordsUpserted,
       batch_cursor: result.nextCursor,
       sync_phase: result.phase,
       last_batch_synced_at: new Date().toISOString(),
-      total_batches_completed: job.total_batches_completed + 1,
+      total_batches_completed: (job.total_batches_completed || 0) + 1,
       records_in_current_batch: result.recordsFetched,
-      last_batch_errors: result.errors.length > 0 ? result.errors : null
+      // Store errors in the existing 'errors' JSONB column
+      errors: result.errors.length > 0 ? result.errors : []
     };
 
     if (!result.hasMore) {

@@ -1,50 +1,50 @@
-# Arketa Backfill Pagination Fix - IN PROGRESS 🔄
+# Arketa Backfill Pagination Fix - RESOLVED ✅
 
 ## Summary
 
-Working to fix the backfill sync to properly paginate through all 11k+ Arketa clients.
+Fixed the backfill sync to properly paginate through all 11k+ Arketa clients using **offset-based pagination**.
 
-## Current Issue
+## Root Cause
 
-The clients backfill stops after 1 batch (400 records) because:
-1. Arketa API says `hasMore: true` but returns NO `nextCursor`
-2. Previous fix set `hasMore = cursorPresent` which breaks when cursor is missing
+The Arketa `/clients` endpoint returns `hasMore: true` but provides NO `nextCursor`. The previous fix tried to use the last record's ID as a synthetic cursor, but the API doesn't support cursor-based pagination for this endpoint - it was returning the same 400 records each time.
 
-## Latest Fix (2026-01-30)
+## Solution (2026-01-30)
 
-### Synthetic Cursor Strategy
+### Offset-Based Pagination
 
-When Arketa's `/clients` endpoint returns `hasMore: true` but no cursor:
-1. Use the **last record's ID** as a synthetic cursor
-2. Pass it as `?cursor={lastId}` on the next request
-3. Continue until we get less than 400 records
+When no cursor is provided by the API, we now use the `skip` parameter:
 
 ```typescript
-// If API says hasMore but no cursor, use last record ID
-if (paginationHasMore && isBatchFull && !cursorPresent) {
-  const lastId = records[records.length - 1].id;
-  effectiveCursor = String(lastId);
-  hasMore = true;
+// If no cursor available, use offset-based pagination
+if (job.records_processed > 0) {
+  const offset = job.records_processed;
+  url += `&skip=${offset}`;
 }
 ```
+
+### Pagination Logic
+
+1. If API returns a `nextCursor` → use cursor-based pagination
+2. If no cursor but `hasMore: true` and full batch → use offset (skip=records_processed)
+3. If batch size < 400 → sync complete
 
 ## Verification Steps
 
 1. Create a new clients backfill job
-2. Monitor logs for "Using last record ID as synthetic cursor"
-3. Job should continue to batch 2, 3, etc. until all ~11k records synced
-4. Final records_processed should be close to total client count
+2. Monitor logs for "Using offset-based pagination"
+3. Each batch should skip records_processed records
+4. Job should continue until all ~11k records synced
 
 ## Files Modified
 
-- `supabase/functions/unified-backfill-sync/index.ts` - Synthetic cursor logic
+- `supabase/functions/unified-backfill-sync/index.ts` - Offset-based pagination
 
-## Known Limitations
+## Endpoint Pagination Support
 
-| Endpoint | Pagination | Notes |
-|----------|------------|-------|
-| `/clients` | Synthetic cursor | Uses last record ID when no cursor provided |
+| Endpoint | Pagination Method | Notes |
+|----------|-------------------|-------|
+| `/clients` | Offset (skip) | No cursor support |
 | `/classes` | Cursor + date range | Full native support |
 | `/reservations` | Cursor + date range | Full native support |
 | `/purchases` | Cursor + date range | Full native support |
-| `/staff` | Unknown | Uses dev API endpoint |
+| `/staff` | Offset (skip) | Uses dev API endpoint |

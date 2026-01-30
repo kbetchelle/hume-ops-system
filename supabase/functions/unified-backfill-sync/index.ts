@@ -61,9 +61,9 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformClient,
     stagingIdField: 'arketa_client_id',
-    useDev: true, // CRITICAL: Clients endpoint requires partnerApiDev
-    paginationStyle: 'start_after',
-    paginationCursorField: 'nextStartAfterId',
+    useDev: false, // Use prod URL to match working sync-arketa-clients implementation
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
     primaryIdField: 'client_id', // API returns client_id, not id
     responseDataPaths: ['data', 'clients', 'items', 'results']
   },
@@ -75,8 +75,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     transformFn: transformClass,
     stagingIdField: 'arketa_class_id',
     useDev: false,
-    paginationStyle: 'start_after',
-    paginationCursorField: 'nextStartAfterId',
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
     responseDataPaths: ['data', 'classes', 'items']
   },
@@ -88,8 +88,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     transformFn: transformReservation,
     stagingIdField: 'arketa_reservation_id',
     useDev: false,
-    paginationStyle: 'start_after',
-    paginationCursorField: 'nextStartAfterId',
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
     responseDataPaths: ['data', 'reservations', 'items', 'bookings']
   },
@@ -101,8 +101,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     transformFn: transformPayment,
     stagingIdField: 'arketa_payment_id',
     useDev: false,
-    paginationStyle: 'page',
-    paginationCursorField: 'page',
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
     responseDataPaths: ['data', 'purchases', 'payments', 'items']
   },
@@ -114,8 +114,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     transformFn: transformInstructor,
     stagingIdField: 'arketa_instructor_id',
     useDev: true, // Staff endpoint uses partnerApiDev
-    paginationStyle: 'start_after',
-    paginationCursorField: 'nextStartAfterId',
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
     responseDataPaths: ['data', 'staff', 'items']
   },

@@ -203,12 +203,13 @@ function SidebarNav() {
         </SidebarGroup>
       </SidebarContent>
       
-      {/* Role Switcher at bottom of sidebar */}
+      {/* Role Switcher and User Info at bottom of sidebar */}
       <div className={cn(
-        "p-3 border-t border-border",
-        collapsed && "flex justify-center"
+        "border-t border-border",
+        collapsed ? "p-2" : "p-3"
       )}>
         <RoleSwitcher collapsed={collapsed} />
+        <UserInfoDropdown collapsed={collapsed} />
       </div>
     </Sidebar>
   );
@@ -293,7 +294,7 @@ function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   );
 }
 
-function DashboardHeader({ title }: { title: string }) {
+function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const { user, signOut } = useAuthContext();
   const { data: profile } = useUserProfile(user?.id);
@@ -308,6 +309,11 @@ function DashboardHeader({ title }: { title: string }) {
     }
   };
 
+  const getFirstName = (fullName: string | null | undefined) => {
+    if (!fullName) return "User";
+    return fullName.split(" ")[0];
+  };
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
     return name
@@ -319,6 +325,71 @@ function DashboardHeader({ title }: { title: string }) {
   };
 
   return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className={cn(
+            "w-full justify-start gap-2 mt-2 rounded-none",
+            collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2"
+          )}
+        >
+          <User className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <span className="text-[10px] uppercase tracking-widest truncate">
+              Hi, {getFirstName(profile?.full_name)}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent 
+        className="w-56 rounded-none border-border bg-background z-50" 
+        align="start" 
+        side="top"
+      >
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-[10px] uppercase tracking-widest font-normal">
+              {profile?.full_name || "User"}
+            </p>
+            <p className="text-[10px] tracking-wide text-muted-foreground">
+              {user?.email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem 
+          onClick={() => navigate("/profile")}
+          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+        >
+          <User className="mr-2 h-3 w-3" />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => navigate("/settings")}
+          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+        >
+          <Settings className="mr-2 h-3 w-3" />
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem 
+          onClick={handleSignOut} 
+          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+        >
+          <LogOut className="mr-2 h-3 w-3" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function DashboardHeader({ title }: { title: string }) {
+  const navigate = useNavigate();
+
+  return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
@@ -326,69 +397,18 @@ function DashboardHeader({ title }: { title: string }) {
             <Menu className="h-4 w-4" />
           </SidebarTrigger>
           
-          <div className="hidden md:flex items-center gap-4">
-            <img 
-              src={humeLogo} 
-              alt="Hume" 
-              className="h-4 w-auto cursor-pointer hover:opacity-70 transition-opacity"
-              onClick={() => navigate("/dashboard")}
-            />
-            <div className="h-4 w-px bg-border" />
-            <h1 className="text-[10px] uppercase tracking-widest font-normal">{title}</h1>
-          </div>
-
-          {/* Mobile title */}
-          <h1 className="md:hidden text-[10px] uppercase tracking-widest font-normal truncate max-w-[150px]">
+          <h1 className="text-[10px] uppercase tracking-widest font-normal truncate">
             {title}
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="text-[10px] uppercase tracking-widest">
-                  {getInitials(profile?.full_name)}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 rounded-none border-border bg-background" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-[10px] uppercase tracking-widest font-normal">
-                    {profile?.full_name || "User"}
-                  </p>
-                  <p className="text-[10px] tracking-wide text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem 
-                onClick={() => navigate("/profile")}
-                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
-                <User className="mr-2 h-3 w-3" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => navigate("/settings")}
-                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
-                <Settings className="mr-2 h-3 w-3" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem 
-                onClick={handleSignOut} 
-                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
-                <LogOut className="mr-2 h-3 w-3" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Logo aligned to the right - 75% larger (h-4 -> h-7) */}
+        <img 
+          src={humeLogo} 
+          alt="Hume" 
+          className="h-7 w-auto cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={() => navigate("/dashboard")}
+        />
       </div>
     </header>
   );

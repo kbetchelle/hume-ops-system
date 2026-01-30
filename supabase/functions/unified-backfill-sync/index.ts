@@ -373,15 +373,19 @@ async function fetchFromApi(
     url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
   }
   
-  // Cursor-based pagination only (Arketa doesn't support offset/skip)
-  if (job.batch_cursor) {
+  // Pagination strategy:
+  // 1. If we have a cursor from the API, use it
+  // 2. Otherwise, use offset-based pagination (skip parameter)
+  if (job.batch_cursor && !job.batch_cursor.startsWith('offset:')) {
+    // Real cursor from API
     url += `&cursor=${job.batch_cursor}`;
     logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
   } else if (job.records_processed > 0) {
-    // We've processed records but have no cursor - this means the API
-    // doesn't provide pagination cursors for this endpoint
-    // Log this situation but continue (will return empty or same data)
-    logger.warn('No cursor available for subsequent batch - API may not support pagination', {
+    // Use offset-based pagination - Arketa supports 'skip' parameter
+    const offset = job.records_processed;
+    url += `&skip=${offset}`;
+    logger.info('Using offset-based pagination', { 
+      offset,
       recordsProcessed: job.records_processed,
       endpoint: config.endpointPath
     });
@@ -474,9 +478,8 @@ async function fetchFromApi(
   const paginationHasMore = data.pagination?.hasMore === true;
   const cursorPresent = !!nextCursor;
   
-  // STRATEGY: Trust the API's hasMore flag when we have a cursor.
-  // If we got a full batch AND the API says hasMore, continue even without explicit cursor
-  // (the API should provide a cursor, but if not, we'll use the last record ID as cursor)
+  // STRATEGY: Trust the API's hasMore flag when present.
+  // Use cursor if available, otherwise use offset-based pagination.
   let hasMore = false;
   let effectiveCursor = nextCursor;
   
@@ -484,25 +487,25 @@ async function fetchFromApi(
     // Cursor present - use it for next request
     hasMore = true;
     logger.info('Cursor-based pagination active', { cursor: nextCursor });
-  } else if (paginationHasMore && isBatchFull && records.length > 0) {
+  } else if (paginationHasMore && isBatchFull) {
     // API says more records exist but no cursor provided
-    // Use the last record's ID as a synthetic cursor for the next request
-    const lastRecord = records[records.length - 1];
-    const lastId = lastRecord.id || lastRecord.clientId || lastRecord.external_id;
-    if (lastId) {
-      effectiveCursor = String(lastId);
-      hasMore = true;
-      logger.info('Using last record ID as synthetic cursor for pagination', {
-        lastRecordId: lastId,
-        recordsFetched: records.length,
-        apiHasMore: paginationHasMore
-      });
-    } else {
-      logger.warn('Cannot paginate: no cursor from API and no usable record ID', {
-        recordsFetched: records.length,
-        recordKeys: Object.keys(records[records.length - 1] || {})
-      });
-    }
+    // Signal to use offset-based pagination on next call
+    // We don't set a cursor - the function will use records_processed as offset
+    hasMore = true;
+    effectiveCursor = null; // Clear any synthetic cursor - use offset instead
+    logger.info('Using offset-based pagination for next batch', {
+      recordsFetched: records.length,
+      apiHasMore: paginationHasMore,
+      willUseOffset: job.records_processed + records.length
+    });
+  } else if (isBatchFull && !paginationHasMore && records.length > 0) {
+    // Got a full batch but API says no more - still try one more request
+    // Some APIs don't report hasMore correctly
+    hasMore = true;
+    effectiveCursor = null;
+    logger.info('Full batch received without hasMore flag - will attempt one more fetch', {
+      recordsFetched: records.length
+    });
   } else if (records.length < BATCH_SIZE) {
     // Got less than a full batch - we're done
     hasMore = false;
@@ -516,7 +519,7 @@ async function fetchFromApi(
       isBatchFull,
       paginationHasMore,
       cursorPresent,
-      effectiveCursor: effectiveCursor ? effectiveCursor.substring(0, 20) + '...' : null,
+      usingOffset: !cursorPresent && hasMore,
       hasMoreDecision: hasMore
     }
   });

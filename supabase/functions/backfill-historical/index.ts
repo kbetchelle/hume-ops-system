@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';
-import { withRetry } from '../_shared/retry.ts';
+import { withRetry, RetryableError } from '../_shared/retry.ts';
 import { createSyncLogger } from '../_shared/logger.ts';
 
 interface BackfillRequest {
@@ -84,7 +84,11 @@ async function syncArketaClasses(supabase: any, date: string): Promise<number> {
     });
 
     if (!response.ok) {
-      throw new Error(`Arketa API error: ${response.status}`);
+      const status = response.status;
+      if (status === 429 || status >= 500) {
+        throw new RetryableError(`Arketa API error: ${status}`, status);
+      }
+      throw new Error(`Arketa API error: ${status} (non-retryable)`);
     }
 
     const responseData = await response.json();
@@ -151,7 +155,11 @@ async function syncArketaReservations(supabase: any, date: string): Promise<numb
     });
 
     if (!response.ok) {
-      throw new Error(`Arketa API error: ${response.status}`);
+      const status = response.status;
+      if (status === 429 || status >= 500) {
+        throw new RetryableError(`Arketa API error: ${status}`, status);
+      }
+      throw new Error(`Arketa API error: ${status} (non-retryable)`);
     }
 
     const responseData = await response.json();
@@ -215,7 +223,11 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
     });
 
     if (!response.ok) {
-      throw new Error(`Arketa API error: ${response.status}`);
+      const status = response.status;
+      if (status === 429 || status >= 500) {
+        throw new RetryableError(`Arketa API error: ${status}`, status);
+      }
+      throw new Error(`Arketa API error: ${status} (non-retryable)`);
     }
 
     const responseData = await response.json();
@@ -274,7 +286,11 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     });
 
     if (!response.ok) {
-      throw new Error(`Arketa API error: ${response.status}`);
+      const status = response.status;
+      if (status === 429 || status >= 500) {
+        throw new RetryableError(`Arketa API error: ${status}`, status);
+      }
+      throw new Error(`Arketa API error: ${status} (non-retryable)`);
     }
 
     const responseData = await response.json();
@@ -333,7 +349,11 @@ async function syncSlingShifts(supabase: any, date: string): Promise<number> {
   });
 
   if (!response.ok) {
-    throw new Error(`Sling API error: ${response.status}`);
+    const status = response.status;
+    if (status === 429 || status >= 500) {
+      throw new RetryableError(`Sling API error: ${status}`, status);
+    }
+    throw new Error(`Sling API error: ${status} (non-retryable)`);
   }
 
   const roster = await response.json();
@@ -554,7 +574,60 @@ Deno.serve(async (req) => {
         throw new Error(`Unsupported sync type: ${api_source}_${data_type}`);
     }
 
-    // Process day by day
+    // Special case: clients doesn't support date filtering
+    // Run once for entire date range instead of per-day
+    if (api_source === 'arketa' && data_type === 'clients') {
+      logger.info('Clients sync runs once (not date-filtered)');
+
+      try {
+        const { result: records, attempts } = await withRetry(
+          () => syncArketaClients(supabase, start_date),
+          { maxAttempts: 2, baseDelayMs: 2000, maxDelayMs: 10000, timeoutMs: 120000 },
+          'sync clients'
+        );
+
+        // Update job as completed
+        await supabase
+          .from('backfill_jobs')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            days_processed: 1,
+            records_processed: records,
+            processing_date: null,
+          })
+          .eq('id', job.id);
+
+        logger.info(`Clients sync completed: ${records} records synced${attempts > 1 ? ` (${attempts} attempts)` : ''}`);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            job_id: job.id,
+            status: 'completed',
+            days_processed: 1,
+            records_processed: records,
+            retry_attempts: attempts - 1,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        // Handle error and mark job failed
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        await supabase
+          .from('backfill_jobs')
+          .update({
+            status: 'failed',
+            errors: [{ error: errorMessage, timestamp: new Date().toISOString() }],
+          })
+          .eq('id', job.id);
+
+        logger.error('Clients sync failed', err instanceof Error ? err : new Error(String(err)));
+        throw err;
+      }
+    }
+
+    // Process day by day for other data types
     let currentDate = job.processing_date || start_date;
     let daysProcessed = job.days_processed;
     let recordsProcessed = job.records_processed;

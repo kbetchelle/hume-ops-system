@@ -300,7 +300,24 @@ async function fetchFromApi(
   logger.info(`Fetching from: ${url}`);
   
   const fetchResult = await fetchWithRetry(url, { headers });
-  const data = await fetchResult.response.json();
+  const response = fetchResult.response;
+  
+  // Check if response is OK before parsing
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error(`API returned ${response.status}: ${errorText.substring(0, 200)}`);
+    throw new Error(`Arketa API error ${response.status}: ${response.statusText}`);
+  }
+  
+  // Check content type to ensure we're getting JSON
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const bodyPreview = await response.text();
+    logger.error(`Expected JSON but got ${contentType}: ${bodyPreview.substring(0, 200)}`);
+    throw new Error(`Arketa API returned non-JSON response (${contentType})`);
+  }
+  
+  const data = await response.json();
   
   // Handle different response formats from various endpoints
   const records = data.data || data.clients || data.classes || data.reservations || data.payments || data.staff || [];

@@ -338,6 +338,8 @@ async function syncArketaClients(supabase: any, _date: string): Promise<number> 
     let clients: any[];
     if (Array.isArray(responseData)) {
       clients = responseData;
+    } else if (responseData.items && Array.isArray(responseData.items)) {
+      clients = responseData.items;
     } else if (responseData.data && Array.isArray(responseData.data)) {
       clients = responseData.data;
     } else if (responseData.clients && Array.isArray(responseData.clients)) {

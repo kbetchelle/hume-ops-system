@@ -746,7 +746,7 @@ export default function BackfillManagerPage() {
             </div>
           ) : completedJobs.length > 0 ? (
             <Card className="border-border">
-              <CardContent className="pt-6">
+              <CardContent className="pt-0">
                 {completedJobs.map((job) => (
                   <CompletedJobRow
                     key={job.id}

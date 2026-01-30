@@ -386,11 +386,15 @@ async function syncArketaClientsPage(
     if (!error) recordCount++;
   }
 
-  // Check pagination
+  // Check pagination - only continue if we have a cursor AND API says there's more
   const nextCursor = responseData.pagination?.nextCursor || null;
-  const hasMore = responseData.pagination?.hasMore ?? (clients.length === 500);
+  // hasMore is only true if:
+  // 1. API explicitly says hasMore=true AND we have a cursor, OR
+  // 2. API doesn't provide hasMore but we got a full page AND have a cursor
+  const apiHasMore = responseData.pagination?.hasMore;
+  const hasMore = nextCursor ? (apiHasMore ?? clients.length === 500) : false;
 
-  console.log(`[backfill] Upserted ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}`);
+  console.log(`[backfill] Upserted ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}, apiHasMore: ${apiHasMore}`);
 
   return {
     recordsProcessed: recordCount,

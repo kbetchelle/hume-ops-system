@@ -124,7 +124,7 @@ function ActiveJobCard({
               {isClientSync ? (
                 <>
                   <span>Records synced: {job.records_processed.toLocaleString()}</span>
-                  <span>{job.last_cursor ? "In progress..." : "Starting..."}</span>
+                  <span>{job.records_processed > 0 ? "In progress..." : "Starting..."}</span>
                 </>
               ) : (
                 <>
@@ -153,7 +153,7 @@ function ActiveJobCard({
             <div>
               <p className="text-lg font-medium">
                 {isClientSync 
-                  ? (job.last_cursor ? "Paginating" : "Starting")
+                  ? (job.records_processed > 0 ? "Syncing" : "Starting")
                   : (job.processing_date ? format(new Date(job.processing_date), "MMM d") : "-")
                 }
               </p>

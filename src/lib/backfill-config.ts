@@ -22,7 +22,8 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'clients',
     endpointPath: '/clients',
-    fieldsToFetch: ['id', 'name', 'firstName', 'lastName', 'email', 'phone', 'tags', 'customFields', 'referrer', 'emailOptIn', 'smsOptIn', 'dateOfBirth', 'lifecycleStage'],
+    // API returns snake_case: client_id, first_name, last_name, email_mkt_opt_in, etc.
+    fieldsToFetch: ['client_id', 'name', 'first_name', 'last_name', 'email', 'phone', 'tags', 'custom_fields', 'referrer', 'email_mkt_opt_in', 'sms_mkt_opt_in', 'date_of_birth', 'lifecycle_stage'],
     stagingTable: 'arketa_clients_staging',
     targetTable: 'arketa_clients',
     uniqueKey: 'external_id',
@@ -32,7 +33,8 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'classes',
     endpointPath: '/classes',
-    fieldsToFetch: ['id', 'name', 'description', 'startTime', 'endTime', 'instructor', 'location', 'capacity', 'enrolled', 'status'],
+    // API returns snake_case: start_time, duration_minutes, total_booked, etc.
+    fieldsToFetch: ['id', 'name', 'description', 'start_time', 'duration_minutes', 'instructor', 'room', 'capacity', 'total_booked', 'status', 'is_cancelled'],
     stagingTable: 'arketa_classes_staging',
     targetTable: 'arketa_classes',
     uniqueKey: 'external_id',
@@ -42,7 +44,8 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'reservations',
     endpointPath: '/reservations',
-    fieldsToFetch: ['id', 'clientId', 'classId', 'status', 'checkedIn', 'createdAt', 'cancelledAt'],
+    // API returns snake_case: client_id, class_id, checked_in, checked_in_at, etc.
+    fieldsToFetch: ['id', 'client_id', 'class_id', 'client', 'status', 'checked_in', 'checked_in_at', 'created_at', 'cancelled_at'],
     stagingTable: 'arketa_reservations_staging',
     targetTable: 'arketa_reservations',
     uniqueKey: 'external_id',
@@ -52,7 +55,8 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'payments',
     endpointPath: '/purchases',
-    fieldsToFetch: ['id', 'clientId', 'amount', 'currency', 'status', 'type', 'createdAt', 'description'],
+    // API returns snake_case: client_id, payment_type, created_at, etc.
+    fieldsToFetch: ['id', 'client_id', 'amount', 'price', 'currency', 'status', 'type', 'created_at', 'description', 'name'],
     stagingTable: 'arketa_payments_staging',
     targetTable: 'arketa_payments',
     uniqueKey: 'external_id',
@@ -62,7 +66,8 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'instructors',
     endpointPath: '/staff',
-    fieldsToFetch: ['id', 'name', 'firstName', 'lastName', 'email', 'role', 'active'],
+    // API returns snake_case: first_name, last_name, is_active, etc.
+    fieldsToFetch: ['id', 'name', 'first_name', 'last_name', 'email', 'phone', 'role', 'active', 'is_active'],
     stagingTable: 'arketa_instructors_staging',
     targetTable: 'arketa_instructors',
     uniqueKey: 'external_id',
@@ -72,7 +77,7 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'sling',
     dataType: 'shifts',
     endpointPath: '/reports/roster',
-    fieldsToFetch: ['id', 'userId', 'position', 'start', 'end', 'location', 'status'],
+    fieldsToFetch: ['id', 'userId', 'user', 'position', 'start', 'dtstart', 'end', 'dtend', 'location', 'status'],
     stagingTable: 'sling_shifts_staging',
     targetTable: 'staff_shifts',
     uniqueKey: 'sling_shift_id',

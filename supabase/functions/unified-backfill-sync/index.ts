@@ -46,6 +46,11 @@ interface BackfillConfig {
   transformFn: (raw: Record<string, unknown>) => Record<string, unknown>;
   stagingIdField: string;
   useDev?: boolean; // Use the dev API endpoint (partnerApiDev)
+  // Endpoint-specific pagination configuration
+  paginationStyle: 'start_after' | 'cursor' | 'page' | 'skip'; // How to pass cursor to API
+  paginationCursorField: string; // Field name in response.pagination to extract next cursor
+  primaryIdField: string; // Field name in raw record to use as ID (e.g., 'client_id' vs 'id')
+  responseDataPaths: string[]; // Ordered list of field names to try for extracting records array
 }
 
 const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
@@ -55,7 +60,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_clients',
     uniqueKey: 'external_id',
     transformFn: transformClient,
-    stagingIdField: 'arketa_client_id'
+    stagingIdField: 'arketa_client_id',
+    useDev: true, // CRITICAL: Clients endpoint requires partnerApiDev
+    paginationStyle: 'start_after',
+    paginationCursorField: 'nextStartAfterId',
+    primaryIdField: 'client_id', // API returns client_id, not id
+    responseDataPaths: ['data', 'clients', 'items', 'results']
   },
   'arketa-classes': {
     endpointPath: '/classes',
@@ -63,7 +73,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_classes',
     uniqueKey: 'external_id',
     transformFn: transformClass,
-    stagingIdField: 'arketa_class_id'
+    stagingIdField: 'arketa_class_id',
+    useDev: false,
+    paginationStyle: 'start_after',
+    paginationCursorField: 'nextStartAfterId',
+    primaryIdField: 'id',
+    responseDataPaths: ['data', 'classes', 'items']
   },
   'arketa-reservations': {
     endpointPath: '/reservations',
@@ -71,7 +86,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_reservations',
     uniqueKey: 'external_id',
     transformFn: transformReservation,
-    stagingIdField: 'arketa_reservation_id'
+    stagingIdField: 'arketa_reservation_id',
+    useDev: false,
+    paginationStyle: 'start_after',
+    paginationCursorField: 'nextStartAfterId',
+    primaryIdField: 'id',
+    responseDataPaths: ['data', 'reservations', 'items', 'bookings']
   },
   'arketa-payments': {
     endpointPath: '/purchases',
@@ -79,7 +99,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_payments',
     uniqueKey: 'external_id',
     transformFn: transformPayment,
-    stagingIdField: 'arketa_payment_id'
+    stagingIdField: 'arketa_payment_id',
+    useDev: false,
+    paginationStyle: 'page',
+    paginationCursorField: 'page',
+    primaryIdField: 'id',
+    responseDataPaths: ['data', 'purchases', 'payments', 'items']
   },
   'arketa-instructors': {
     endpointPath: '/staff',
@@ -88,7 +113,11 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformInstructor,
     stagingIdField: 'arketa_instructor_id',
-    useDev: true // Staff endpoint uses partnerApiDev
+    useDev: true, // Staff endpoint uses partnerApiDev
+    paginationStyle: 'start_after',
+    paginationCursorField: 'nextStartAfterId',
+    primaryIdField: 'id',
+    responseDataPaths: ['data', 'staff', 'items']
   },
   'sling-shifts': {
     endpointPath: '/reports/roster',
@@ -96,7 +125,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'staff_shifts',
     uniqueKey: 'sling_shift_id',
     transformFn: transformShift,
-    stagingIdField: 'sling_shift_id'
+    stagingIdField: 'sling_shift_id',
+    useDev: false,
+    paginationStyle: 'skip',
+    paginationCursorField: 'cursor',
+    primaryIdField: 'id',
+    responseDataPaths: ['data', 'shifts', 'items']
   }
 };
 
@@ -346,7 +380,7 @@ async function executeSyncCycle(
 
   // Phase 2: Insert to staging
   await updateJobPhase(supabase, job.id, 'staging');
-  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField, logger);
+  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField, config.primaryIdField, logger);
 
   // Phase 3: Transform records with validation
   await updateJobPhase(supabase, job.id, 'transforming');
@@ -404,8 +438,9 @@ async function fetchFromApi(
     if (!ARKETA_API_KEY) {
       throw new Error('No API key available as fallback after token refresh failure');
     }
+    // Use Bearer format for API key (matches working arketa-gym-flow pattern)
     headers = {
-      'x-api-key': ARKETA_API_KEY,
+      'Authorization': `Bearer ${ARKETA_API_KEY}`,
       'Content-Type': 'application/json'
     };
   }
@@ -413,32 +448,48 @@ async function fetchFromApi(
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
   let url = `${baseUrl}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
-  
+
   // Add date range if applicable (not for clients or staff/instructors endpoints)
   const skipDateFiltering = ['/clients', '/staff'].includes(config.endpointPath);
   if (job.start_date && job.end_date && !skipDateFiltering) {
     url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
   }
-  
-  // Pagination strategy:
-  // 1. If we have a cursor from the API, use it
-  // 2. Otherwise, use offset-based pagination (skip parameter)
-  if (job.batch_cursor && !job.batch_cursor.startsWith('offset:')) {
-    // Real cursor from API
-    url += `&cursor=${job.batch_cursor}`;
-    logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
-  } else if (job.records_processed > 0) {
-    // Use offset-based pagination - Arketa supports 'skip' parameter
-    const offset = job.records_processed;
-    url += `&skip=${offset}`;
-    logger.info('Using offset-based pagination', { 
-      offset,
-      recordsProcessed: job.records_processed,
-      endpoint: config.endpointPath
-    });
+
+  // Config-driven pagination based on endpoint requirements
+  if (job.batch_cursor) {
+    switch (config.paginationStyle) {
+      case 'start_after':
+        // Arketa's preferred pagination style
+        url += `&start_after=${encodeURIComponent(job.batch_cursor)}`;
+        logger.info('Using start_after pagination', { cursor: job.batch_cursor });
+        break;
+      case 'page':
+        // Page-based pagination
+        url += `&page=${job.batch_cursor}`;
+        logger.info('Using page-based pagination', { page: job.batch_cursor });
+        break;
+      case 'skip':
+        // Offset-based pagination
+        url += `&skip=${job.batch_cursor}`;
+        logger.info('Using skip-based pagination', { skip: job.batch_cursor });
+        break;
+      case 'cursor':
+      default:
+        url += `&cursor=${encodeURIComponent(job.batch_cursor)}`;
+        logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
+        break;
+    }
+  } else if (config.paginationStyle === 'skip' && job.records_processed > 0) {
+    // For skip-based pagination, use records_processed as offset when no cursor
+    url += `&skip=${job.records_processed}`;
+    logger.info('Using skip-based pagination from records_processed', { skip: job.records_processed });
   }
 
-  logger.info(`Fetching from: ${url}`);
+  logger.info(`Fetching from: ${url}`, {
+    paginationStyle: config.paginationStyle,
+    useDev: config.useDev,
+    cursor: job.batch_cursor ? 'present' : 'none'
+  });
   
   const fetchResult = await fetchWithRetry(url, { headers });
   const response = fetchResult.response;
@@ -472,89 +523,104 @@ async function fetchFromApi(
     } : null
   });
 
-  // Handle different response formats from various endpoints
-  // CRITICAL: Check Array.isArray() first, then nested fields with proper validation
+  // Handle different response formats - use config-driven paths first
   let records: Record<string, unknown>[];
   let matchedFormat = 'none';
 
   if (Array.isArray(data)) {
     records = data;
     matchedFormat = 'direct_array';
-  } else if (data.data && Array.isArray(data.data)) {
-    records = data.data;
-    matchedFormat = 'data_field';
-  } else if (data.clients && Array.isArray(data.clients)) {
-    records = data.clients;
-    matchedFormat = 'clients_field';
-  } else if (data.classes && Array.isArray(data.classes)) {
-    records = data.classes;
-    matchedFormat = 'classes_field';
-  } else if (data.reservations && Array.isArray(data.reservations)) {
-    records = data.reservations;
-    matchedFormat = 'reservations_field';
-  } else if (data.payments && Array.isArray(data.payments)) {
-    records = data.payments;
-    matchedFormat = 'payments_field';
-  } else if (data.purchases && Array.isArray(data.purchases)) {
-    records = data.purchases;
-    matchedFormat = 'purchases_field';
-  } else if (data.staff && Array.isArray(data.staff)) {
-    records = data.staff;
-    matchedFormat = 'staff_field';
-  } else if (data.items && Array.isArray(data.items)) {
-    // Arketa Partner API uses 'items' as the standard array field name
-    records = data.items;
-    matchedFormat = 'items_field';
   } else {
-    // CRITICAL: Log extensive details when format is unrecognized
-    logger.error('UNKNOWN RESPONSE FORMAT - Records will be empty!', {
-      keys: Object.keys(data),
-      dataType: typeof data,
-      sampleData: JSON.stringify(data).substring(0, 500),
-      endpoint: config.endpointPath
-    });
+    // Try each path from config in order
     records = [];
+    for (const path of config.responseDataPaths) {
+      if (data[path] && Array.isArray(data[path])) {
+        records = data[path];
+        matchedFormat = `${path}_field`;
+        break;
+      }
+    }
+
+    // Fallback to legacy field checks if config paths didn't match
+    if (records.length === 0) {
+      const legacyPaths = ['data', 'clients', 'classes', 'reservations', 'payments', 'purchases', 'staff', 'items', 'results'];
+      for (const path of legacyPaths) {
+        if (data[path] && Array.isArray(data[path])) {
+          records = data[path];
+          matchedFormat = `legacy_${path}_field`;
+          logger.warn(`Used legacy path '${path}' - consider adding to config.responseDataPaths`);
+          break;
+        }
+      }
+    }
+
+    // CRITICAL: Log extensive details when format is unrecognized
+    if (records.length === 0 && Object.keys(data).length > 0) {
+      logger.error('UNKNOWN RESPONSE FORMAT - Records will be empty!', {
+        keys: Object.keys(data),
+        configuredPaths: config.responseDataPaths,
+        dataType: typeof data,
+        sampleData: JSON.stringify(data).substring(0, 500),
+        endpoint: config.endpointPath
+      });
+    }
   }
 
-  // Extract pagination cursor - check multiple possible locations
-  // Arketa returns: pagination.nextCursor
-  const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
+  // Extract pagination cursor using config-driven field name
+  let nextCursor: string | null = null;
+  if (data.pagination) {
+    // Primary: Use the configured pagination cursor field
+    nextCursor = data.pagination[config.paginationCursorField] ||
+      // Fallback to common alternatives
+      data.pagination.nextCursor ||
+      data.pagination.next_cursor ||
+      data.pagination.cursor ||
+      data.pagination.start_after ||
+      data.pagination.nextStartAfterId ||
+      null;
+  }
+  // Also check top-level cursor fields
+  if (!nextCursor) {
+    nextCursor = data.cursor || data.next_cursor || data.start_after || null;
+  }
+
+  // For page-based pagination, calculate next page
+  if (config.paginationStyle === 'page' && records.length === BATCH_SIZE) {
+    const currentPage = parseInt(job.batch_cursor || '1', 10);
+    nextCursor = String(currentPage + 1);
+  }
+
+  // For skip-based pagination, calculate next offset
+  if (config.paginationStyle === 'skip' && records.length === BATCH_SIZE) {
+    const currentOffset = parseInt(job.batch_cursor || '0', 10);
+    nextCursor = String(currentOffset + records.length);
+  }
 
   // Determine hasMore using multiple signals
   const isBatchFull = records.length === BATCH_SIZE;
-  const paginationHasMore = data.pagination?.hasMore === true;
+  const paginationHasMore = data.pagination?.hasMore === true || data.pagination?.has_more === true;
   const cursorPresent = !!nextCursor;
-  
-  // STRATEGY: Trust the API's hasMore flag when present.
-  // Use cursor if available, otherwise use offset-based pagination.
+
+  // STRATEGY: Trust the API's hasMore flag when present, or cursor presence
   let hasMore = false;
   let effectiveCursor = nextCursor;
-  
+
   if (cursorPresent) {
-    // Cursor present - use it for next request
     hasMore = true;
-    logger.info('Cursor-based pagination active', { cursor: nextCursor });
+    logger.info('Pagination cursor active', { cursor: nextCursor, style: config.paginationStyle });
   } else if (paginationHasMore && isBatchFull) {
-    // API says more records exist but no cursor provided
-    // Signal to use offset-based pagination on next call
-    // We don't set a cursor - the function will use records_processed as offset
     hasMore = true;
-    effectiveCursor = null; // Clear any synthetic cursor - use offset instead
-    logger.info('Using offset-based pagination for next batch', {
+    logger.info('API indicates more records (will use offset if needed)', {
       recordsFetched: records.length,
-      apiHasMore: paginationHasMore,
-      willUseOffset: job.records_processed + records.length
+      apiHasMore: paginationHasMore
     });
-  } else if (isBatchFull && !paginationHasMore && records.length > 0) {
-    // Got a full batch but API says no more - still try one more request
-    // Some APIs don't report hasMore correctly
+  } else if (isBatchFull && records.length > 0) {
+    // Got a full batch - assume there might be more
     hasMore = true;
-    effectiveCursor = null;
-    logger.info('Full batch received without hasMore flag - will attempt one more fetch', {
+    logger.info('Full batch received - will attempt one more fetch', {
       recordsFetched: records.length
     });
   } else if (records.length < BATCH_SIZE) {
-    // Got less than a full batch - we're done
     hasMore = false;
     logger.info('Received partial batch - sync complete', { recordsFetched: records.length });
   }
@@ -580,13 +646,16 @@ async function insertToStaging(
   records: Record<string, unknown>[],
   batchId: string,
   idField: string,
+  primaryIdField: string,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<void> {
   const stagingRecords = records.map((record, index) => {
-    const recordId = record.id;
+    // Use config-driven primaryIdField (e.g., 'client_id' for clients, 'id' for others)
+    const recordId = record[primaryIdField] ?? record.id;
     if (recordId === undefined || recordId === null) {
-      logger.warn(`Record at index ${index} has no id field`, {
-        recordKeys: Object.keys(record)
+      logger.warn(`Record at index ${index} has no ${primaryIdField} or id field`, {
+        recordKeys: Object.keys(record),
+        expectedField: primaryIdField
       });
     }
     return {
@@ -879,27 +948,33 @@ function jsonResponse(data: unknown, corsHeaders: Record<string, string>, status
 // ============================================================
 
 function transformClient(raw: Record<string, unknown>): Record<string, unknown> {
-  const firstName = raw.firstName as string || '';
-  const lastName = raw.lastName as string || '';
+  // API returns first_name/last_name (snake_case) not firstName/lastName (camelCase)
+  // Also check camelCase for compatibility
+  const firstName = (raw.first_name || raw.firstName || '') as string;
+  const lastName = (raw.last_name || raw.lastName || '') as string;
   const name = raw.name as string || `${firstName} ${lastName}`.trim() || null;
+
+  // CRITICAL: API returns client_id as primary ID, not id
+  // Use client_id first, fallback to id for compatibility
+  const clientId = raw.client_id || raw.id;
 
   // CRITICAL: Handle missing email - use placeholder to satisfy NOT NULL constraint
   // Some Arketa clients don't have email addresses
-  const email = raw.email || `no-email-${raw.id}@placeholder.local`;
+  const email = raw.email || `no-email-${clientId}@placeholder.local`;
 
   return {
-    external_id: String(raw.id),
+    external_id: String(clientId),
     client_name: name,
     client_email: email,
     client_phone: raw.phone,
     client_tags: (raw.tags as string[]) || [],
-    custom_fields: raw.customFields || {},
+    custom_fields: raw.customFields || raw.custom_fields || {},
     referrer: raw.referrer,
-    // API returns emailMarketingOptIn/smsMarketingOptIn, check both for compatibility
-    email_mkt_opt_in: raw.emailMarketingOptIn ?? raw.emailOptIn ?? false,
-    sms_mkt_opt_in: raw.smsMarketingOptIn ?? raw.smsOptIn ?? false,
-    date_of_birth: raw.dateOfBirth,
-    lifecycle_stage: raw.lifecycleStage,
+    // API may return snake_case or camelCase - check all variations
+    email_mkt_opt_in: raw.email_mkt_opt_in ?? raw.emailMarketingOptIn ?? raw.emailOptIn ?? false,
+    sms_mkt_opt_in: raw.sms_mkt_opt_in ?? raw.smsMarketingOptIn ?? raw.smsOptIn ?? false,
+    date_of_birth: raw.dateOfBirth || raw.date_of_birth,
+    lifecycle_stage: raw.lifecycleStage || raw.lifecycle_stage,
     raw_data: raw,
     last_synced_at: new Date().toISOString()
   };

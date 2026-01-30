@@ -78,6 +78,89 @@ function truncateCursor(cursor: string | null, maxLength: number = 20): string {
   return `${cursor.slice(0, maxLength)}...`;
 }
 
+// Countdown timer for next batch
+function NextBatchCountdown({ targetTime }: { targetTime: string }) {
+  const [, setTick] = useState(0);
+  
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 100);
+    return () => clearInterval(timer);
+  }, []);
+
+  const now = new Date();
+  const target = new Date(targetTime);
+  const diffMs = Math.max(0, target.getTime() - now.getTime());
+  const diffSecs = Math.ceil(diffMs / 1000);
+  
+  if (diffSecs <= 0) {
+    return (
+      <span className="text-sm font-medium text-primary flex items-center gap-2">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Starting...
+      </span>
+    );
+  }
+  
+  return (
+    <span className="text-sm font-mono font-medium">{diffSecs}s</span>
+  );
+}
+
+// Visual sync cycle progress indicator
+function SyncCycleProgress({ phase }: { phase: string | null }) {
+  const phases = [
+    { key: 'fetching_api', label: 'Fetch', short: 'F' },
+    { key: 'staging', label: 'Stage', short: 'S' },
+    { key: 'transforming', label: 'Transform', short: 'T' },
+    { key: 'upserting', label: 'Upsert', short: 'U' },
+    { key: 'clearing_staging', label: 'Clear', short: 'C' },
+  ];
+
+  const currentIndex = phases.findIndex(p => p.key === phase);
+  const isComplete = phase === 'batch_complete' || phase === 'complete';
+
+  return (
+    <div className="flex items-center gap-1">
+      {phases.map((p, idx) => {
+        const isActive = p.key === phase;
+        const isPast = currentIndex > idx || isComplete;
+        
+        return (
+          <div key={p.key} className="flex items-center">
+            <div 
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                isActive && "bg-primary text-primary-foreground ring-2 ring-primary/30",
+                isPast && !isActive && "bg-primary/20 text-primary",
+                !isActive && !isPast && "bg-muted text-muted-foreground"
+              )}
+              title={p.label}
+            >
+              {isPast && !isActive ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                p.short
+              )}
+            </div>
+            {idx < phases.length - 1 && (
+              <div className={cn(
+                "w-4 h-0.5 mx-0.5",
+                (isPast || isComplete) ? "bg-primary/50" : "bg-muted"
+              )} />
+            )}
+          </div>
+        );
+      })}
+      {isComplete && (
+        <div className="ml-2 flex items-center gap-1 text-xs text-primary">
+          <CheckCircle2 className="h-4 w-4" />
+          Done
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ActiveJobCard({
   job,
   onPause, 
@@ -274,15 +357,49 @@ function ActiveJobCard({
 
         {/* Expandable Details Section */}
         {isDetailsOpen && (
-            <div className="bg-muted/50 rounded-lg p-4 mt-4 space-y-3 text-sm">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Start Date</p>
-                  <p className="font-mono text-xs">{job.start_date}</p>
+            <div className="bg-muted/50 rounded-lg p-4 mt-4 space-y-4 text-sm">
+              {/* Next Batch Countdown */}
+              {isWaitingForRetry && job.retry_scheduled_at && (
+                <div className="flex items-center justify-between bg-background/50 rounded-lg p-3 border border-border">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-xs uppercase tracking-widest text-muted-foreground">Next Batch</span>
+                  </div>
+                  <NextBatchCountdown targetTime={job.retry_scheduled_at} />
                 </div>
+              )}
+
+              {/* Records Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Total Synced</p>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold">{job.records_in_current_batch || 0}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Last Batch Size</p>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Batches Done</p>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold">{formatDuration(job.started_at, null)}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
+                </div>
+              </div>
+
+              {/* Sync Cycle Progress */}
+              <div>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Current Sync Cycle</p>
+                <SyncCycleProgress phase={job.sync_phase} />
+              </div>
+
+              {/* Technical Details */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">End Date</p>
-                  <p className="font-mono text-xs">{job.end_date}</p>
+                  <p className="text-xs text-muted-foreground">Date Range</p>
+                  <p className="font-mono text-xs">{job.start_date} → {job.end_date}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Last Batch Synced</p>
@@ -293,17 +410,15 @@ function ActiveJobCard({
                     }
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Elapsed Time</p>
-                  <p className="font-mono text-xs">{formatDuration(job.started_at, null)}</p>
-                </div>
               </div>
+
               <div>
                 <p className="text-xs text-muted-foreground">Cursor Position</p>
                 <p className="font-mono text-xs" title={job.batch_cursor || job.last_cursor || undefined}>
                   {truncateCursor(job.batch_cursor || job.last_cursor, 60)}
                 </p>
               </div>
+
               {hasErrors && (
                 <div>
                   <p className="text-xs text-muted-foreground">Errors</p>

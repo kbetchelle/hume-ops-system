@@ -45,6 +45,7 @@ interface BackfillConfig {
   uniqueKey: string;
   transformFn: (raw: Record<string, unknown>) => Record<string, unknown>;
   stagingIdField: string;
+  useDev?: boolean; // Use the dev API endpoint (partnerApiDev)
 }
 
 const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
@@ -86,7 +87,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_instructors',
     uniqueKey: 'external_id',
     transformFn: transformInstructor,
-    stagingIdField: 'arketa_instructor_id'
+    stagingIdField: 'arketa_instructor_id',
+    useDev: true // Staff endpoint uses partnerApiDev
   },
   'sling-shifts': {
     endpointPath: '/reports/roster',
@@ -284,7 +286,8 @@ async function fetchFromApi(
   const headers = getArketaHeaders(token);
   
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
-  let url = `${ARKETA_URLS.prod}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
+  const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
+  let url = `${baseUrl}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
   
   // Add date range if applicable (not for clients or staff/instructors endpoints)
   const skipDateFiltering = ['/clients', '/staff'].includes(config.endpointPath);

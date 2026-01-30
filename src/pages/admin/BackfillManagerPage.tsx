@@ -107,7 +107,7 @@ function ActiveJobCard({
     !["idle", "complete", "batch_complete"].includes(job.sync_phase);
 
   // Calculate progress
-  const hasKnownTotal = job.total_records_expected && job.total_records_expected > 0;
+  const hasKnownTotal = Boolean(job.total_records_expected && job.total_records_expected > 0);
   const progress = hasKnownTotal 
     ? Math.min((job.records_processed / job.total_records_expected) * 100, 100)
     : null;

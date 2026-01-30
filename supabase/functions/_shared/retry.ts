@@ -3,6 +3,16 @@
  * Provides exponential backoff with jitter for HTTP requests and async operations
  */
 
+/**
+ * Custom error class for explicitly retryable errors
+ */
+export class RetryableError extends Error {
+  constructor(message: string, public readonly statusCode?: number) {
+    super(message);
+    this.name = 'RetryableError';
+  }
+}
+
 export interface RetryConfig {
   maxAttempts: number;
   baseDelayMs: number;
@@ -58,6 +68,11 @@ function isRetryableStatusCode(status: number): boolean {
  * Check if an error is retryable (transient errors)
  */
 export function isRetryableError(error: unknown): boolean {
+  // Check for explicit RetryableError
+  if (error instanceof RetryableError) {
+    return true;
+  }
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     

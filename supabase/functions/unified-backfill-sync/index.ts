@@ -103,6 +103,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
 interface SyncCycleResult {
   recordsFetched: number;
   recordsUpserted: number;
+  recordsInserted: number;
+  recordsUpdated: number;
   recordsFailed: number;
   nextCursor: string | null;
   hasMore: boolean;
@@ -112,6 +114,8 @@ interface SyncCycleResult {
 
 interface UpsertResult {
   successful: number;
+  inserted: number;
+  updated: number;
   failed: number;
   errors: Array<{ id: string; error: string }>;
 }
@@ -127,6 +131,8 @@ interface BackfillJob {
   records_processed: number;
   total_batches_completed: number;
   started_at: string | null;
+  cumulative_inserted?: number;
+  cumulative_updated?: number;
 }
 
 serve(async (req) => {
@@ -204,7 +210,13 @@ serve(async (req) => {
       total_batches_completed: (job.total_batches_completed || 0) + 1,
       records_in_current_batch: result.recordsFetched,
       // Store errors in the existing 'errors' JSONB column
-      errors: result.errors.length > 0 ? result.errors : []
+      errors: result.errors.length > 0 ? result.errors : [],
+      // Track new vs updated records for this batch
+      records_inserted: result.recordsInserted,
+      records_updated: result.recordsUpdated,
+      // Accumulate totals across all batches
+      cumulative_inserted: (job.cumulative_inserted || 0) + result.recordsInserted,
+      cumulative_updated: (job.cumulative_updated || 0) + result.recordsUpdated
     };
 
     if (!result.hasMore) {
@@ -238,6 +250,8 @@ serve(async (req) => {
       result: {
         recordsFetched: result.recordsFetched,
         recordsUpserted: result.recordsUpserted,
+        recordsInserted: result.recordsInserted,
+        recordsUpdated: result.recordsUpdated,
         recordsFailed: result.recordsFailed,
         hasMore: result.hasMore,
         totalProcessed: job.records_processed + result.recordsUpserted,
@@ -273,6 +287,8 @@ async function executeSyncCycle(
     return {
       recordsFetched: 0,
       recordsUpserted: 0,
+      recordsInserted: 0,
+      recordsUpdated: 0,
       recordsFailed: 0,
       nextCursor: null,
       hasMore: false,
@@ -311,6 +327,8 @@ async function executeSyncCycle(
   return {
     recordsFetched: fetchResult.records.length,
     recordsUpserted: upsertResult.successful,
+    recordsInserted: upsertResult.inserted,
+    recordsUpdated: upsertResult.updated,
     recordsFailed: upsertResult.failed,
     nextCursor: fetchResult.nextCursor,
     hasMore: fetchResult.hasMore,
@@ -582,6 +600,7 @@ function transformRecordsWithValidation(
 /**
  * Upsert records with per-record retry for better error handling
  * Uses batch upsert first, falls back to per-record on failure
+ * Also tracks which records were new (inserted) vs existing (updated)
  */
 async function upsertToTargetWithRetry(
   supabase: SupabaseClient,
@@ -590,18 +609,40 @@ async function upsertToTargetWithRetry(
   uniqueKey: string,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<UpsertResult> {
+  // First, check which records already exist to track new vs updated
+  const uniqueKeys = records.map(r => String(r[uniqueKey])).filter(Boolean);
+  
+  let existingCount = 0;
+  if (uniqueKeys.length > 0) {
+    const { count, error: countError } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .in(uniqueKey, uniqueKeys);
+    
+    if (!countError && count !== null) {
+      existingCount = count;
+    }
+  }
+
   // First try batch upsert (faster)
   const { error: batchError } = await supabase
     .from(table)
     .upsert(records, { onConflict: uniqueKey });
 
   if (!batchError) {
+    const inserted = records.length - existingCount;
+    const updated = existingCount;
+    
     logger.info('Batch upsert successful', {
       table,
-      recordCount: records.length
+      recordCount: records.length,
+      inserted,
+      updated
     });
     return {
       successful: records.length,
+      inserted,
+      updated,
       failed: 0,
       errors: []
     };
@@ -615,11 +656,21 @@ async function upsertToTargetWithRetry(
   });
 
   let successful = 0;
+  let inserted = 0;
+  let updated = 0;
   let failed = 0;
   const errors: Array<{ id: string; error: string }> = [];
 
   for (const record of records) {
     const recordId = String(record[uniqueKey] || 'unknown');
+
+    // Check if record exists before upsert
+    const { count: existsBefore } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .eq(uniqueKey, recordId);
+
+    const recordExisted = (existsBefore || 0) > 0;
 
     // Try up to 2 times per record
     let lastError: string | null = null;
@@ -630,6 +681,11 @@ async function upsertToTargetWithRetry(
 
       if (!error) {
         successful++;
+        if (recordExisted) {
+          updated++;
+        } else {
+          inserted++;
+        }
         lastError = null;
         break;
       }
@@ -656,11 +712,13 @@ async function upsertToTargetWithRetry(
   logger.info('Per-record upsert complete', {
     table,
     successful,
+    inserted,
+    updated,
     failed,
     totalRecords: records.length
   });
 
-  return { successful, failed, errors };
+  return { successful, inserted, updated, failed, errors };
 }
 
 async function clearStaging(

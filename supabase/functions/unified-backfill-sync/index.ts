@@ -103,9 +103,17 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
 interface SyncCycleResult {
   recordsFetched: number;
   recordsUpserted: number;
+  recordsFailed: number;
   nextCursor: string | null;
   hasMore: boolean;
   phase: string;
+  errors: Array<{ id: string; error: string }>;
+}
+
+interface UpsertResult {
+  successful: number;
+  failed: number;
+  errors: Array<{ id: string; error: string }>;
 }
 
 interface BackfillJob {
@@ -194,7 +202,8 @@ serve(async (req) => {
       sync_phase: result.phase,
       last_batch_synced_at: new Date().toISOString(),
       total_batches_completed: job.total_batches_completed + 1,
-      records_in_current_batch: result.recordsFetched
+      records_in_current_batch: result.recordsFetched,
+      last_batch_errors: result.errors.length > 0 ? result.errors : null
     };
 
     if (!result.hasMore) {
@@ -208,19 +217,31 @@ serve(async (req) => {
       updateData.retry_scheduled_at = new Date(Date.now() + 1000).toISOString();
     }
 
-    await supabase
+    // CRITICAL: Add error handling to job status update
+    const { error: updateError } = await supabase
       .from('backfill_jobs')
       .update(updateData)
       .eq('id', job_id);
+
+    if (updateError) {
+      logger.error('Failed to update job status after sync cycle', {
+        jobId: job_id,
+        error: updateError.message,
+        updateData
+      });
+      // Don't throw - still return the result, but log the failure
+    }
 
     return jsonResponse({
       success: true,
       result: {
         recordsFetched: result.recordsFetched,
         recordsUpserted: result.recordsUpserted,
+        recordsFailed: result.recordsFailed,
         hasMore: result.hasMore,
         totalProcessed: job.records_processed + result.recordsUpserted,
-        phase: result.phase
+        phase: result.phase,
+        errors: result.errors
       }
     }, corsHeaders);
 
@@ -237,32 +258,50 @@ async function executeSyncCycle(
   batchId: string,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<SyncCycleResult> {
-  
+
   // Phase 1: Fetch from API
   await updateJobPhase(supabase, job.id, 'fetching_api');
   const fetchResult = await fetchFromApi(job, config, logger);
-  
+
   if (fetchResult.records.length === 0) {
+    logger.info('No records returned from API - sync complete', {
+      jobId: job.id,
+      endpoint: config.endpointPath,
+      cursor: job.batch_cursor
+    });
     return {
       recordsFetched: 0,
       recordsUpserted: 0,
+      recordsFailed: 0,
       nextCursor: null,
       hasMore: false,
-      phase: 'complete'
+      phase: 'complete',
+      errors: []
     };
   }
 
   // Phase 2: Insert to staging
   await updateJobPhase(supabase, job.id, 'staging');
-  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField);
+  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField, logger);
 
-  // Phase 3: Transform records
+  // Phase 3: Transform records with validation
   await updateJobPhase(supabase, job.id, 'transforming');
-  const transformedRecords = fetchResult.records.map(config.transformFn);
+  const transformedRecords = transformRecordsWithValidation(
+    fetchResult.records,
+    config.transformFn,
+    config.uniqueKey,
+    logger
+  );
 
-  // Phase 4: Upsert to target
+  // Phase 4: Upsert to target with per-record retry
   await updateJobPhase(supabase, job.id, 'upserting');
-  await upsertToTarget(supabase, config.targetTable, transformedRecords, config.uniqueKey);
+  const upsertResult = await upsertToTargetWithRetry(
+    supabase,
+    config.targetTable,
+    transformedRecords,
+    config.uniqueKey,
+    logger
+  );
 
   // Phase 5: Clear staging
   await updateJobPhase(supabase, job.id, 'clearing_staging');
@@ -270,10 +309,12 @@ async function executeSyncCycle(
 
   return {
     recordsFetched: fetchResult.records.length,
-    recordsUpserted: transformedRecords.length,
+    recordsUpserted: upsertResult.successful,
+    recordsFailed: upsertResult.failed,
     nextCursor: fetchResult.nextCursor,
     hasMore: fetchResult.hasMore,
-    phase: 'batch_complete'
+    phase: 'batch_complete',
+    errors: upsertResult.errors
   };
 }
 
@@ -340,70 +381,256 @@ async function fetchFromApi(
   
   const data = await response.json();
 
+  // Log detailed response structure for debugging
+  logger.info('API response received', {
+    isArray: Array.isArray(data),
+    topLevelKeys: Array.isArray(data) ? `[array of ${data.length}]` : Object.keys(data).join(', '),
+    hasDataField: !Array.isArray(data) && !!data.data,
+    hasPagination: !Array.isArray(data) && !!data.pagination,
+    paginationDetails: !Array.isArray(data) && data.pagination ? {
+      hasNextCursor: !!data.pagination.nextCursor,
+      hasMore: data.pagination.hasMore
+    } : null
+  });
+
   // Handle different response formats from various endpoints
   // CRITICAL: Check Array.isArray() first, then nested fields with proper validation
   let records: Record<string, unknown>[];
+  let matchedFormat = 'none';
+
   if (Array.isArray(data)) {
-    // Direct array response (some endpoints return this)
     records = data;
+    matchedFormat = 'direct_array';
   } else if (data.data && Array.isArray(data.data)) {
-    // Standard paginated response: { data: [...], pagination: {...} }
     records = data.data;
+    matchedFormat = 'data_field';
   } else if (data.clients && Array.isArray(data.clients)) {
     records = data.clients;
+    matchedFormat = 'clients_field';
   } else if (data.classes && Array.isArray(data.classes)) {
     records = data.classes;
+    matchedFormat = 'classes_field';
   } else if (data.reservations && Array.isArray(data.reservations)) {
     records = data.reservations;
+    matchedFormat = 'reservations_field';
   } else if (data.payments && Array.isArray(data.payments)) {
     records = data.payments;
+    matchedFormat = 'payments_field';
   } else if (data.purchases && Array.isArray(data.purchases)) {
     records = data.purchases;
+    matchedFormat = 'purchases_field';
   } else if (data.staff && Array.isArray(data.staff)) {
     records = data.staff;
+    matchedFormat = 'staff_field';
   } else {
-    logger.warn('Unknown response format', { keys: Object.keys(data), dataType: typeof data });
+    // CRITICAL: Log extensive details when format is unrecognized
+    logger.error('UNKNOWN RESPONSE FORMAT - Records will be empty!', {
+      keys: Object.keys(data),
+      dataType: typeof data,
+      sampleData: JSON.stringify(data).substring(0, 500),
+      endpoint: config.endpointPath
+    });
     records = [];
   }
 
   // Extract pagination cursor - check pagination.nextCursor first (Arketa's format)
   const nextCursor = data.pagination?.nextCursor || data.pagination?.cursor || data.cursor || data.next_cursor || null;
-  const hasMore = records.length === BATCH_SIZE || data.pagination?.hasMore === true || !!nextCursor;
 
-  logger.info(`Fetched ${records.length} records, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'present' : 'none'}`);
+  // Determine hasMore with detailed logging
+  const isBatchFull = records.length === BATCH_SIZE;
+  const paginationHasMore = data.pagination?.hasMore === true;
+  const cursorPresent = !!nextCursor;
+  const hasMore = isBatchFull || paginationHasMore || cursorPresent;
+
+  logger.info('Fetch complete', {
+    recordCount: records.length,
+    matchedFormat,
+    pagination: {
+      isBatchFull,
+      paginationHasMore,
+      cursorPresent,
+      hasMoreDecision: hasMore,
+      determinedBy: isBatchFull ? 'batch_size' : paginationHasMore ? 'pagination_flag' : cursorPresent ? 'cursor_present' : 'no_more_data'
+    }
+  });
 
   return { records, nextCursor, hasMore };
 }
 
 async function insertToStaging(
-  supabase: SupabaseClient, 
-  table: string, 
-  records: Record<string, unknown>[], 
-  batchId: string, 
-  idField: string
+  supabase: SupabaseClient,
+  table: string,
+  records: Record<string, unknown>[],
+  batchId: string,
+  idField: string,
+  logger: ReturnType<typeof createSyncLogger>
 ): Promise<void> {
-  const stagingRecords = records.map(record => ({
-    sync_batch_id: batchId,
-    [idField]: String(record.id),
-    raw_data: record,
-    staged_at: new Date().toISOString()
-  }));
+  const stagingRecords = records.map((record, index) => {
+    const recordId = record.id;
+    if (recordId === undefined || recordId === null) {
+      logger.warn(`Record at index ${index} has no id field`, {
+        recordKeys: Object.keys(record)
+      });
+    }
+    return {
+      sync_batch_id: batchId,
+      [idField]: String(recordId ?? `unknown_${index}`),
+      raw_data: record,
+      staged_at: new Date().toISOString()
+    };
+  });
 
   const { error } = await supabase.from(table).insert(stagingRecords);
-  if (error) throw new Error(`Staging insert failed: ${error.message}`);
+  if (error) {
+    logger.error('Staging insert failed', {
+      table,
+      batchId,
+      recordCount: stagingRecords.length,
+      error: error.message
+    });
+    throw new Error(`Staging insert failed: ${error.message}`);
+  }
+
+  logger.info('Staging insert complete', {
+    table,
+    recordCount: stagingRecords.length
+  });
 }
 
-async function upsertToTarget(
-  supabase: SupabaseClient, 
-  table: string, 
-  records: Record<string, unknown>[], 
-  uniqueKey: string
-): Promise<void> {
-  const { error } = await supabase
+/**
+ * Transform records with validation to ensure unique key is present
+ */
+function transformRecordsWithValidation(
+  records: Record<string, unknown>[],
+  transformFn: (raw: Record<string, unknown>) => Record<string, unknown>,
+  uniqueKey: string,
+  logger: ReturnType<typeof createSyncLogger>
+): Record<string, unknown>[] {
+  const transformed: Record<string, unknown>[] = [];
+  let warningCount = 0;
+
+  for (let i = 0; i < records.length; i++) {
+    const raw = records[i];
+    try {
+      const result = transformFn(raw);
+
+      // Validate that the unique key is present and not empty
+      const keyValue = result[uniqueKey];
+      if (keyValue === undefined || keyValue === null || keyValue === '') {
+        warningCount++;
+        if (warningCount <= 5) {
+          logger.warn(`Transform produced missing/empty unique key`, {
+            index: i,
+            uniqueKey,
+            rawId: raw.id,
+            transformedKeys: Object.keys(result)
+          });
+        }
+      }
+
+      transformed.push(result);
+    } catch (error) {
+      logger.error(`Transform failed for record at index ${i}`, {
+        rawId: raw.id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Re-throw to fail the batch - transform errors are critical
+      throw error;
+    }
+  }
+
+  if (warningCount > 0) {
+    logger.warn(`Transform validation: ${warningCount} records had missing/empty unique key`, {
+      totalRecords: records.length,
+      uniqueKey
+    });
+  }
+
+  return transformed;
+}
+
+/**
+ * Upsert records with per-record retry for better error handling
+ * Uses batch upsert first, falls back to per-record on failure
+ */
+async function upsertToTargetWithRetry(
+  supabase: SupabaseClient,
+  table: string,
+  records: Record<string, unknown>[],
+  uniqueKey: string,
+  logger: ReturnType<typeof createSyncLogger>
+): Promise<UpsertResult> {
+  // First try batch upsert (faster)
+  const { error: batchError } = await supabase
     .from(table)
     .upsert(records, { onConflict: uniqueKey });
-  
-  if (error) throw new Error(`Target upsert failed: ${error.message}`);
+
+  if (!batchError) {
+    logger.info('Batch upsert successful', {
+      table,
+      recordCount: records.length
+    });
+    return {
+      successful: records.length,
+      failed: 0,
+      errors: []
+    };
+  }
+
+  // Batch failed - fall back to per-record upsert to identify problem records
+  logger.warn('Batch upsert failed, falling back to per-record upsert', {
+    table,
+    batchError: batchError.message,
+    recordCount: records.length
+  });
+
+  let successful = 0;
+  let failed = 0;
+  const errors: Array<{ id: string; error: string }> = [];
+
+  for (const record of records) {
+    const recordId = String(record[uniqueKey] || 'unknown');
+
+    // Try up to 2 times per record
+    let lastError: string | null = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error } = await supabase
+        .from(table)
+        .upsert([record], { onConflict: uniqueKey });
+
+      if (!error) {
+        successful++;
+        lastError = null;
+        break;
+      }
+
+      lastError = error.message;
+      if (attempt < 2) {
+        // Wait briefly before retry
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    if (lastError) {
+      failed++;
+      errors.push({ id: recordId, error: lastError });
+      if (errors.length <= 10) {
+        logger.error(`Failed to upsert record ${recordId}`, {
+          error: lastError,
+          recordKeys: Object.keys(record)
+        });
+      }
+    }
+  }
+
+  logger.info('Per-record upsert complete', {
+    table,
+    successful,
+    failed,
+    totalRecords: records.length
+  });
+
+  return { successful, failed, errors };
 }
 
 async function clearStaging(

@@ -20,9 +20,43 @@ export interface BackfillJob {
   created_by: string | null;
   created_at: string;
   last_cursor: string | null;
+  batch_cursor: string | null;
+  sync_phase: string | null;
   total_records_expected: number;
   retry_scheduled_at: string | null;
   staging_synced: boolean;
+  total_batches_completed: number;
+  records_in_current_batch: number;
+  no_more_records: boolean;
+  last_batch_synced_at: string | null;
+}
+
+// Human-readable labels for sync phases
+export function getSyncPhaseLabel(phase: string | null): string {
+  switch (phase) {
+    case 'idle':
+      return 'Starting...';
+    case 'fetching_api':
+      return 'Fetching from API...';
+    case 'staging':
+      return 'Writing to staging...';
+    case 'transforming':
+      return 'Transforming data...';
+    case 'upserting':
+      return 'Syncing to database...';
+    case 'clearing_staging':
+      return 'Cleaning up...';
+    case 'batch_complete':
+      return 'Batch complete';
+    case 'complete':
+      return 'Completed';
+    case 'paused':
+      return 'Paused';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return phase || 'Initializing...';
+  }
 }
 
 export function useBackfillJobs() {
@@ -42,18 +76,14 @@ export function useBackfillJobs() {
       if (error) throw error;
       return data as BackfillJob[];
     },
-    refetchInterval: 3000, // Poll every 3 seconds for live updates
+    refetchInterval: 2000, // Poll every 2 seconds for live updates
   });
 
   // Continue a job that's waiting for retry
   const continueJob = useMutation({
     mutationFn: async (job: BackfillJob) => {
-      const { data, error } = await supabase.functions.invoke("backfill-historical", {
+      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: {
-          api_source: job.api_source,
-          data_type: job.data_type,
-          start_date: job.start_date,
-          end_date: job.end_date,
           job_id: job.id,
           action: "continue",
         },
@@ -80,7 +110,7 @@ export function useBackfillJobs() {
         job.status === "running" &&
         job.retry_scheduled_at &&
         new Date(job.retry_scheduled_at) <= now &&
-        job.last_cursor // Has a cursor to continue from
+        (job.batch_cursor || job.last_cursor) // Has a cursor to continue from
     );
 
     for (const job of jobsToRetry) {
@@ -89,10 +119,9 @@ export function useBackfillJobs() {
     }
   }, [jobs, continueJob]);
 
-  // Set up auto-continuation timer
+  // Set up auto-continuation timer - check every 2 seconds for faster batch processing
   useEffect(() => {
-    // Check every 30 seconds for jobs that need continuation
-    continuationTimerRef.current = setInterval(checkAndContinueJobs, 30000);
+    continuationTimerRef.current = setInterval(checkAndContinueJobs, 2000);
     
     // Also check immediately when jobs change
     checkAndContinueJobs();
@@ -129,7 +158,7 @@ export function useBackfillJobs() {
     };
   }, [queryClient]);
 
-  // Create new backfill job
+  // Create new backfill job - now uses unified-backfill-sync
   const createJob = useMutation({
     mutationFn: async (params: {
       api_source: "arketa" | "sling";
@@ -137,12 +166,39 @@ export function useBackfillJobs() {
       start_date: string;
       end_date: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("backfill-historical", {
-        body: params,
+      // First create the job record
+      const { data: user } = await supabase.auth.getUser();
+      
+      const { data: newJob, error: insertError } = await supabase
+        .from("backfill_jobs")
+        .insert({
+          api_source: params.api_source,
+          data_type: params.data_type,
+          start_date: params.start_date,
+          end_date: params.end_date,
+          status: "pending",
+          sync_phase: "idle",
+          records_processed: 0,
+          total_batches_completed: 0,
+          records_in_current_batch: 0,
+          no_more_records: false,
+          created_by: user?.user?.id || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Then start the sync
+      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
+        body: {
+          job_id: newJob.id,
+          action: "continue",
+        },
       });
 
       if (error) throw error;
-      return data;
+      return { ...data, job_id: newJob.id };
     },
     onSuccess: (data) => {
       toast({
@@ -160,10 +216,10 @@ export function useBackfillJobs() {
     },
   });
 
-  // Pause job
+  // Pause job - now uses unified-backfill-sync
   const pauseJob = useMutation({
     mutationFn: async (jobId: string) => {
-      const { data, error } = await supabase.functions.invoke("backfill-historical", {
+      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: { job_id: jobId, action: "pause" },
       });
 
@@ -183,16 +239,13 @@ export function useBackfillJobs() {
     },
   });
 
-  // Resume job
+  // Resume job - now uses unified-backfill-sync
   const resumeJob = useMutation({
     mutationFn: async (job: BackfillJob) => {
-      const { data, error } = await supabase.functions.invoke("backfill-historical", {
+      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: {
-          api_source: job.api_source,
-          data_type: job.data_type,
-          start_date: job.start_date,
-          end_date: job.end_date,
           job_id: job.id,
+          action: "continue",
         },
       });
 
@@ -212,10 +265,10 @@ export function useBackfillJobs() {
     },
   });
 
-  // Cancel job
+  // Cancel job - now uses unified-backfill-sync
   const cancelJob = useMutation({
     mutationFn: async (jobId: string) => {
-      const { data, error } = await supabase.functions.invoke("backfill-historical", {
+      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: { job_id: jobId, action: "cancel" },
       });
 
@@ -260,7 +313,7 @@ export function useBackfillJobs() {
 
   // Helper to get active jobs (includes jobs waiting for retry)
   const activeJobs = jobs?.filter(
-    (j) => j.status === "running" || j.status === "pending"
+    (j) => j.status === "running" || j.status === "pending" || j.status === "paused"
   ) || [];
   
   const completedJobs = jobs?.filter(
@@ -280,6 +333,7 @@ export function useBackfillJobs() {
     cancelJob,
     deleteJob,
     continueJob,
+    getSyncPhaseLabel,
   };
 }
 
@@ -290,6 +344,7 @@ export const DATA_TYPES_BY_SOURCE = {
     { value: "classes", label: "Classes" },
     { value: "reservations", label: "Reservations" },
     { value: "payments", label: "Payments" },
+    { value: "instructors", label: "Instructors" },
   ],
   sling: [
     { value: "shifts", label: "Shifts" },

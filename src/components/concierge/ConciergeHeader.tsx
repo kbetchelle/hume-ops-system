@@ -9,7 +9,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { NotificationBell } from "@/components/concierge/NotificationBell";
 
 export function ConciergeHeader() {
@@ -30,9 +29,6 @@ export function ConciergeHeader() {
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
-        {/* Role Switcher for managers */}
-        <RoleSwitcher />
-
         {/* Notification Bell */}
         <NotificationBell />
 

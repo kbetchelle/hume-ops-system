@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Volumes/SSDdeKat/HUME\\\\ Project/hume-ops-system && git pull:*)",
+      "Bash(cd:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd comprehensive logging and error handling to unified backfill sync\n\nMajor improvements:\n- Add error handling to job status update \\(prevents state corruption\\)\n- Add detailed API response logging before parsing \\(debug 0-record issues\\)\n- Log response structure, format detection, and pagination decisions\n- Add transform validation to ensure unique key is present\n- Implement per-record upsert with retry on batch failure\n- Track failed records and errors in sync results\n- Add SyncCycleResult.recordsFailed and errors array\n- Improve staging insert logging with record count verification\n- Log when 0 records returned with context for debugging\n\nThis makes it much easier to diagnose why syncs might return 0 records\nand provides better error recovery when individual records fail.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(deno check supabase/functions/unified-backfill-sync/index.ts)"
+    ]
+  }
+}

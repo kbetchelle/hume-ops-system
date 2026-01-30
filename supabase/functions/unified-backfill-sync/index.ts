@@ -178,23 +178,11 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   const logger = createSyncLogger("unified-backfill");
 
-  // #region agent log
-  const debugLog = async (location: string, message: string, data: Record<string, unknown>, hypothesisId: string) => {
-    try {
-      await fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location, message, data, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId })
-      });
-    } catch (_) { /* ignore */ }
-  };
-  // #endregion
-
   try {
     const { job_id, action = 'continue' } = await req.json();
 
     // #region agent log
-    await debugLog('unified-backfill-sync:entry', 'Edge function invoked', { job_id, action }, 'A,B,C');
+    console.log('[DEBUG] unified-backfill-sync:entry', { job_id, action, timestamp: new Date().toISOString() });
     // #endregion
 
     if (!job_id) {
@@ -263,7 +251,7 @@ serve(async (req) => {
 
     if (claimError || !claimedJob) {
       // #region agent log
-      await debugLog('unified-backfill-sync:claimFailed', 'Failed to claim job', { job_id, claimError: claimError?.message, claimedJob: !!claimedJob }, 'B');
+      console.log('[DEBUG] unified-backfill-sync:claimFailed', { job_id, claimError: claimError?.message, claimedJob: !!claimedJob });
       // #endregion
       logger.info(`Job ${job_id} is already being processed by another invocation`);
       return jsonResponse({ 
@@ -274,7 +262,7 @@ serve(async (req) => {
     }
 
     // #region agent log
-    await debugLog('unified-backfill-sync:jobClaimed', 'Job claimed successfully', { job_id, status: claimedJob.status, started_at: claimedJob.started_at, sync_phase: claimedJob.sync_phase }, 'A,B');
+    console.log('[DEBUG] unified-backfill-sync:jobClaimed', { job_id, status: claimedJob.status, started_at: claimedJob.started_at, sync_phase: claimedJob.sync_phase });
     // #endregion
 
     // Get configuration for this job type
@@ -288,7 +276,7 @@ serve(async (req) => {
     // Update job to running if not already
     if (claimedJob.status !== 'running') {
       // #region agent log
-      await debugLog('unified-backfill-sync:settingRunning', 'Setting job to running with started_at', { job_id, willSetStartedAt: !claimedJob.started_at }, 'A');
+      console.log('[DEBUG] unified-backfill-sync:settingRunning', { job_id, willSetStartedAt: !claimedJob.started_at });
       // #endregion
       await updateJobStatus(supabase, job_id, 'running', { 
         sync_phase: 'starting',
@@ -339,7 +327,7 @@ serve(async (req) => {
 
     // CRITICAL: Add error handling to job status update
     // #region agent log
-    await debugLog('unified-backfill-sync:beforeFinalUpdate', 'About to update job with sync results', { job_id, updateData, recordsFetched: result.recordsFetched, hasMore: result.hasMore }, 'E');
+    console.log('[DEBUG] unified-backfill-sync:beforeFinalUpdate', { job_id, recordsFetched: result.recordsFetched, hasMore: result.hasMore, retryScheduledAt: updateData.retry_scheduled_at });
     // #endregion
     
     const { error: updateError } = await supabase
@@ -349,7 +337,7 @@ serve(async (req) => {
 
     if (updateError) {
       // #region agent log
-      await debugLog('unified-backfill-sync:updateFailed', 'Failed to update job after sync', { job_id, error: updateError.message }, 'E');
+      console.log('[DEBUG] unified-backfill-sync:updateFailed', { job_id, error: updateError.message });
       // #endregion
       logger.error('Failed to update job status after sync cycle', {
         jobId: job_id,
@@ -359,12 +347,12 @@ serve(async (req) => {
       // Don't throw - still return the result, but log the failure
     } else {
       // #region agent log
-      await debugLog('unified-backfill-sync:updateSuccess', 'Job updated successfully', { job_id, newRecordsProcessed: updateData.records_processed, hasMore: result.hasMore, retryScheduledAt: updateData.retry_scheduled_at }, 'E');
+      console.log('[DEBUG] unified-backfill-sync:updateSuccess', { job_id, newRecordsProcessed: updateData.records_processed, hasMore: result.hasMore, retryScheduledAt: updateData.retry_scheduled_at });
       // #endregion
     }
 
     // #region agent log
-    await debugLog('unified-backfill-sync:complete', 'Sync cycle complete, returning response', { job_id, success: true, recordsFetched: result.recordsFetched, recordsUpserted: result.recordsUpserted }, 'A,B,C,E');
+    console.log('[DEBUG] unified-backfill-sync:complete', { job_id, success: true, recordsFetched: result.recordsFetched, recordsUpserted: result.recordsUpserted });
     // #endregion
 
     return jsonResponse({
@@ -384,7 +372,7 @@ serve(async (req) => {
 
   } catch (error) {
     // #region agent log
-    await debugLog('unified-backfill-sync:error', 'Sync cycle failed with error', { error: (error as Error).message, stack: (error as Error).stack?.substring(0, 500) }, 'C');
+    console.log('[DEBUG] unified-backfill-sync:error', { error: (error as Error).message, stack: (error as Error).stack?.substring(0, 500) });
     // #endregion
     logger.error("Sync cycle failed", error);
     return jsonResponse({ success: false, error: (error as Error).message }, corsHeaders, 500);
@@ -399,19 +387,7 @@ async function executeSyncCycle(
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<SyncCycleResult> {
   // #region agent log
-  const debugLogCycle = async (location: string, message: string, data: Record<string, unknown>, hypothesisId: string) => {
-    try {
-      await fetch('http://127.0.0.1:7242/ingest/f7f6e524-36d1-4d22-a040-e89c459ea5f0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location, message, data, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId })
-      });
-    } catch (_) { /* ignore */ }
-  };
-  // #endregion
-
-  // #region agent log
-  await debugLogCycle('executeSyncCycle:start', 'Starting sync cycle', { jobId: job.id, configKey: `${job.api_source}-${job.data_type}`, batchCursor: job.batch_cursor }, 'A,E');
+  console.log('[DEBUG] executeSyncCycle:start', { jobId: job.id, configKey: `${job.api_source}-${job.data_type}`, batchCursor: job.batch_cursor });
   // #endregion
 
   // Phase 1: Fetch from API
@@ -419,7 +395,7 @@ async function executeSyncCycle(
   const fetchResult = await fetchFromApi(job, config, logger);
 
   // #region agent log
-  await debugLogCycle('executeSyncCycle:afterFetch', 'API fetch complete', { jobId: job.id, recordsFetched: fetchResult.records.length, hasMore: fetchResult.hasMore, nextCursor: fetchResult.nextCursor?.substring(0, 50) }, 'E');
+  console.log('[DEBUG] executeSyncCycle:afterFetch', { jobId: job.id, recordsFetched: fetchResult.records.length, hasMore: fetchResult.hasMore, nextCursor: fetchResult.nextCursor?.substring(0, 50) });
   // #endregion
 
   if (fetchResult.records.length === 0) {

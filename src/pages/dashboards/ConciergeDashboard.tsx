@@ -37,7 +37,6 @@ export default function ConciergeDashboard() {
             </div>
             <div className="space-y-4">
               <StaffSchedulePanel />
-              <WhosWorkingView />
             </div>
           </div>
         );

@@ -356,64 +356,83 @@ Deno.serve(async (req) => {
         const roster = await getRoster(SLING_AUTH_TOKEN, SLING_ORG_ID, startDate, endDate);
         console.log(`[Sling API] Fetched ${roster.length} shifts from Sling`);
 
+        // Pre-fetch sling_users for name lookup
+        const userIds = [...new Set(roster.map(s => s.user?.id).filter(Boolean))];
+        const { data: slingUsers } = await supabase
+          .from('sling_users')
+          .select('sling_user_id, first_name, last_name')
+          .in('sling_user_id', userIds);
+        
+        const userNameMap = new Map<number, string>();
+        (slingUsers || []).forEach(u => {
+          const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
+          userNameMap.set(u.sling_user_id, fullName);
+        });
+
         const syncedShifts = [];
         let failedCount = 0;
 
         for (const shift of roster) {
           if (!shift.dtstart || !shift.dtend) continue;
 
-          const shiftDate = new Date(shift.dtstart).toISOString().split('T')[0];
-          const userName = shift.user?.name || 'Unknown';
+          // Extract numeric shift ID (Sling may return "12345:2025-01-30" format)
+          const rawShiftId = String(shift.id);
+          const numericShiftId = parseInt(rawShiftId.split(':')[0], 10);
+          if (isNaN(numericShiftId)) {
+            console.error(`[Sling API] Invalid shift ID format: ${rawShiftId}`);
+            failedCount++;
+            continue;
+          }
+
+          const slingUserId = shift.user?.id || 0;
+          // Get user_name from sling_users table
+          const userName = userNameMap.get(slingUserId) || 'Unknown';
 
           try {
-            const { result } = await withRetry(
-              async () => {
-                const { data: upserted, error } = await supabase
-                  .from('staff_shifts')
-                  .upsert({
-                    sling_shift_id: shift.id,
-                    sling_user_id: shift.user?.id || 0,
-                    external_id: String(shift.id),
-                    user_name: userName,
-                    user_email: shift.user?.email || null,
-                    position: shift.position?.name || null,
-                    location: shift.location?.name || null,
-                    shift_start: shift.dtstart,
-                    shift_end: shift.dtend,
-                    shift_date: shiftDate,
-                    status: shift.status || 'scheduled',
-                    raw_data: shift,
-                    synced_at: new Date().toISOString(),
-                  }, {
-                    onConflict: 'sling_shift_id',
-                  })
-                  .select();
+            // Only include sling_user_id if user exists in sling_users
+            const shiftData: Record<string, unknown> = {
+              sling_shift_id: numericShiftId,
+              external_id: rawShiftId,
+              user_name: userName,
+              position: shift.position?.name || null,
+              shift_start: shift.dtstart,
+              shift_end: shift.dtend,
+              status: shift.status || 'scheduled',
+              raw_data: shift,
+              synced_at: new Date().toISOString(),
+            };
+            
+            // Only set sling_user_id if it exists in sling_users (FK constraint)
+            if (slingUserId && userNameMap.has(slingUserId)) {
+              shiftData.sling_user_id = slingUserId;
+            }
 
-                if (error && !isRetryableSupabaseError(error)) {
-                  throw error;
-                }
-                return { data: upserted, error };
-              },
-              { maxAttempts: 2 },
-              `upsert shift ${shift.id}`
-            );
+            const { data: upserted, error } = await supabase
+              .from('staff_shifts')
+              .upsert(shiftData, {
+                onConflict: 'sling_shift_id',
+              })
+              .select();
 
-            if (result.error) {
-              console.error(`[Sling API] Failed to upsert shift ${shift.id}:`, result.error);
+            if (error) {
+              console.error(`[Sling API] DB error for shift ${shift.id}:`, JSON.stringify(error));
               failedCount++;
               continue;
             }
 
+
             syncedShifts.push({
-              shiftId: shift.id,
-              userId: shift.user?.id,
+              shiftId: numericShiftId,
+              externalId: rawShiftId,
+              userId: slingUserId,
               userName,
               position: shift.position?.name,
               shiftStart: shift.dtstart,
               shiftEnd: shift.dtend,
             });
           } catch (error) {
-            console.error(`[Sling API] Error upserting shift ${shift.id}:`, error);
+            const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
+            console.error(`[Sling API] Error upserting shift ${shift.id}:`, errMsg);
             failedCount++;
           }
         }

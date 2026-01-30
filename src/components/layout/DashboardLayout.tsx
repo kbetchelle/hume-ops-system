@@ -24,7 +24,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
@@ -44,7 +43,6 @@ import {
   Home,
   Bell,
   Briefcase,
-  Menu,
   ArrowLeftRight
 } from "lucide-react";
 import { toast } from "sonner";
@@ -392,15 +390,9 @@ function DashboardHeader({ title }: { title: string }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="h-8 w-8">
-            <Menu className="h-4 w-4" />
-          </SidebarTrigger>
-          
-          <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
-            {title}
-          </h1>
-        </div>
+        <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
+          {title}
+        </h1>
 
         {/* Logo aligned to the right - 75% larger (h-4 -> h-7) */}
         <img 

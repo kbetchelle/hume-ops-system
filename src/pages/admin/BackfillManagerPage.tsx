@@ -288,16 +288,18 @@ function ActiveJobCard({
           </div>
 
           {/* Center: Stats */}
-          <div className="flex items-center justify-between flex-1 px-4">
+          <div className="grid grid-cols-4 gap-4 flex-1 px-4">
             <div className="text-center">
               <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Records</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Total</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-medium whitespace-nowrap" title={getSyncPhaseLabel(job.sync_phase)}>
-                {getSyncPhaseLabel(job.sync_phase)}
-              </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Phase</p>
+              <p className="text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">New</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Updated</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>

@@ -22,18 +22,20 @@ export interface BackfillJob {
   last_cursor: string | null;
   batch_cursor: string | null;
   sync_phase: string | null;
-  total_records_expected: number;
+  total_records_expected: number | null;
   retry_scheduled_at: string | null;
-  staging_synced: boolean;
-  total_batches_completed: number;
-  records_in_current_batch: number;
-  no_more_records: boolean;
+  staging_synced: boolean | null;
+  total_batches_completed: number | null;
+  records_in_current_batch: number | null;
+  no_more_records: boolean | null;
   last_batch_synced_at: string | null;
-  // New vs updated tracking
-  records_inserted: number;
-  records_updated: number;
-  cumulative_inserted: number;
-  cumulative_updated: number;
+  current_batch_count: number | null;
+  // Per-batch new vs updated tracking
+  records_inserted: number | null;
+  records_updated: number | null;
+  // Cumulative totals across all batches
+  cumulative_inserted: number | null;
+  cumulative_updated: number | null;
 }
 
 // Human-readable labels for sync phases

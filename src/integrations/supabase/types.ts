@@ -710,12 +710,16 @@ export type Database = {
           end_date: string
           errors: Json | null
           id: string
+          last_cursor: string | null
           processing_date: string | null
           records_processed: number
+          retry_scheduled_at: string | null
+          staging_synced: boolean | null
           start_date: string
           started_at: string | null
           status: string
           total_days: number
+          total_records_expected: number | null
         }
         Insert: {
           api_source: string
@@ -727,12 +731,16 @@ export type Database = {
           end_date: string
           errors?: Json | null
           id?: string
+          last_cursor?: string | null
           processing_date?: string | null
           records_processed?: number
+          retry_scheduled_at?: string | null
+          staging_synced?: boolean | null
           start_date: string
           started_at?: string | null
           status?: string
           total_days?: number
+          total_records_expected?: number | null
         }
         Update: {
           api_source?: string
@@ -744,12 +752,16 @@ export type Database = {
           end_date?: string
           errors?: Json | null
           id?: string
+          last_cursor?: string | null
           processing_date?: string | null
           records_processed?: number
+          retry_scheduled_at?: string | null
+          staging_synced?: boolean | null
           start_date?: string
           started_at?: string | null
           status?: string
           total_days?: number
+          total_records_expected?: number | null
         }
         Relationships: [
           {

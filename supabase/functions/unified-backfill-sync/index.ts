@@ -1,3 +1,31 @@
+/**
+ * UNIFIED BACKFILL SYNC CONFIGURATION REFERENCE
+ * 
+ * Each API endpoint uses a 400-record batch size with cursor-based pagination.
+ * The sync cycle for each batch is: Fetch → Stage → Transform → Upsert → Clear
+ * 
+ * | Data Type    | API Endpoint     | Staging Table                | Target Table         | Unique Key    |
+ * |--------------|------------------|------------------------------|----------------------|---------------|
+ * | clients      | /clients         | arketa_clients_staging       | arketa_clients       | external_id   |
+ * | classes      | /classes         | arketa_classes_staging       | arketa_classes       | external_id   |
+ * | reservations | /reservations    | arketa_reservations_staging  | arketa_reservations  | external_id   |
+ * | payments     | /purchases       | arketa_payments_staging      | arketa_payments      | external_id   |
+ * | instructors  | /staff           | arketa_instructors_staging   | arketa_instructors   | external_id   |
+ * | shifts       | /reports/roster  | sling_shifts_staging         | daily_schedules      | id            |
+ * 
+ * Unique Keys:
+ * - Arketa data uses external_id (text) which maps to the API's id field
+ * - Sling shifts use the auto-generated id from daily_schedules
+ * 
+ * The job remains in "Active Backfills" until:
+ * - API returns fewer than 400 records (no more data)
+ * - User manually pauses or cancels
+ * - An unrecoverable error occurs
+ * 
+ * Note: clients and instructors endpoints do NOT support date filtering.
+ * They fetch all records using cursor-based pagination only.
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
@@ -258,8 +286,9 @@ async function fetchFromApi(
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
   let url = `${ARKETA_URLS.prod}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
   
-  // Add date range if applicable (not for clients endpoint)
-  if (job.start_date && job.end_date && config.endpointPath !== '/clients') {
+  // Add date range if applicable (not for clients or staff/instructors endpoints)
+  const skipDateFiltering = ['/clients', '/staff'].includes(config.endpointPath);
+  if (job.start_date && job.end_date && !skipDateFiltering) {
     url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
   }
   

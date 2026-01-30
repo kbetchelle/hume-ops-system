@@ -23,6 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 
 export type ConciergeView =
   | "home"
@@ -100,8 +101,8 @@ export function ConciergeSidebar({
   ];
 
   return (
-    <Sidebar className="w-60 border-r border-border">
-      <SidebarContent className="pt-4">
+    <Sidebar className="w-60 border-r border-border flex flex-col">
+      <SidebarContent className="pt-4 flex-1">
         {sections.map((section) => (
           <SidebarGroup key={section.title}>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] font-normal text-muted-foreground px-4 py-2">
@@ -141,6 +142,11 @@ export function ConciergeSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
+      
+      {/* Role Switcher at bottom of sidebar */}
+      <div className="p-3 border-t border-border">
+        <RoleSwitcher />
+      </div>
     </Sidebar>
   );
 }

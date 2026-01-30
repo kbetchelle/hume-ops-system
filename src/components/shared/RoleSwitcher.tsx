@@ -16,11 +16,13 @@ export function RoleSwitcher() {
   const navigate = useNavigate();
   const { activeRole, setActiveRole, availableRoles, getRoleLabel } = useActiveRole();
 
-  // Only show if user has manager role AND is currently viewing a non-manager dashboard
+  // Show if user has multiple roles (managers or admins who can switch between roles)
   const hasManagerRole = availableRoles.some((r) => r.role === "manager");
-  const isNotManagerView = activeRole !== "manager";
+  const hasAdminRole = availableRoles.some((r) => r.role === "admin");
+  const hasMultipleRoles = availableRoles.length > 1;
 
-  if (!hasManagerRole || !isNotManagerView) {
+  // Only show if user has manager/admin role AND has multiple roles to switch between
+  if (!(hasManagerRole || hasAdminRole) || !hasMultipleRoles) {
     return null;
   }
 

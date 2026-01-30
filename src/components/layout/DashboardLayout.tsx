@@ -44,7 +44,8 @@ import {
   Home,
   Bell,
   Briefcase,
-  Menu
+  Menu,
+  ArrowLeftRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -164,12 +165,12 @@ function SidebarNav() {
   return (
     <Sidebar 
       className={cn(
-        "border-r border-border bg-background transition-all duration-300",
+        "border-r border-border bg-background transition-all duration-300 flex flex-col",
         collapsed ? "w-14" : "w-60"
       )}
       collapsible="icon"
     >
-      <SidebarContent className="pt-4">
+      <SidebarContent className="pt-4 flex-1">
         <SidebarGroup>
           <SidebarGroupLabel className={cn(
             "text-[10px] uppercase tracking-widest text-muted-foreground px-3",
@@ -201,15 +202,26 @@ function SidebarNav() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      {/* Role Switcher at bottom of sidebar */}
+      <div className={cn(
+        "p-3 border-t border-border",
+        collapsed && "flex justify-center"
+      )}>
+        <RoleSwitcher collapsed={collapsed} />
+      </div>
     </Sidebar>
   );
 }
 
-function RoleSwitcher() {
+function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const { activeRole, setActiveRole, availableRoles, getRoleLabel } = useActiveRole();
 
   if (availableRoles.length <= 1) {
+    if (collapsed) {
+      return null;
+    }
     return (
       <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
         {activeRole ? getRoleLabel(activeRole) : "No Role"}
@@ -236,14 +248,26 @@ function RoleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-2">
-          <span className="text-[10px] uppercase tracking-widest">
-            {activeRole ? getRoleLabel(activeRole) : "Select Role"}
-          </span>
-          <ChevronDown className="h-3 w-3" />
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className={cn(
+            "gap-2 rounded-none",
+            collapsed ? "h-8 w-8 p-0" : "h-8"
+          )}
+        >
+          <ArrowLeftRight className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="text-[10px] uppercase tracking-widest">
+                {activeRole ? getRoleLabel(activeRole) : "Select Role"}
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48 rounded-none">
+      <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Switch Role
         </DropdownMenuLabel>
@@ -255,7 +279,7 @@ function RoleSwitcher() {
               key={userRole.id}
               onClick={() => handleRoleSwitch(userRole.role)}
               className={cn(
-                "text-[10px] uppercase tracking-widest cursor-pointer",
+                "text-[10px] uppercase tracking-widest cursor-pointer rounded-none",
                 activeRole === userRole.role && "bg-muted"
               )}
             >
@@ -320,8 +344,6 @@ function DashboardHeader({ title }: { title: string }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <RoleSwitcher />
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">

@@ -17,7 +17,6 @@ import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
 import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
-import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -215,7 +214,7 @@ export default function ConciergeDashboard() {
           )}
 
           {/* Main Content */}
-          <main className={`flex-1 overflow-auto ${isMobile ? "pb-20" : "pb-16"}`}>
+          <main className={`flex-1 overflow-auto ${isMobile ? "pb-20" : ""}`}>
             {renderContent()}
           </main>
         </div>
@@ -227,11 +226,6 @@ export default function ConciergeDashboard() {
             onViewChange={setActiveView}
           />
         )}
-
-        {/* Role Switcher for managers - fixed at bottom */}
-        <div className="fixed bottom-4 left-4 z-50">
-          <RoleSwitcher />
-        </div>
       </div>
     </SidebarProvider>
   );

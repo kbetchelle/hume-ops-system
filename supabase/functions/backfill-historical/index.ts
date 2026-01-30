@@ -699,30 +699,54 @@ Deno.serve(async (req) => {
 
         try {
           while (hasMorePages && pageCount < maxPagesPerRun) {
-            const { result, attempts } = await withRetry(
-              () => syncArketaClientsPage(supabase, cursor),
-              { maxAttempts: 3, baseDelayMs: 2000, maxDelayMs: 15000, timeoutMs: 60000 },
-              `sync clients page ${pageCount + 1}`
-            );
+            // Sync a single page - handle retries internally for better progress tracking
+            let pageResult: ClientSyncResult | null = null;
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while (!pageResult && retryCount < maxRetries) {
+              try {
+                pageResult = await syncArketaClientsPage(supabase, cursor);
+              } catch (pageError) {
+                retryCount++;
+                const errorMessage = pageError instanceof Error ? pageError.message : String(pageError);
+                logger.info(`Page ${pageCount + 1} attempt ${retryCount} failed: ${errorMessage}`);
+                
+                if (retryCount >= maxRetries) {
+                  throw pageError; // Rethrow after max retries
+                }
+                
+                // Wait before retry with exponential backoff
+                await delay(Math.min(2000 * Math.pow(2, retryCount - 1), 15000));
+              }
+            }
 
-            totalRecords += result.recordsProcessed;
-            cursor = result.nextCursor;
-            hasMorePages = result.hasMore;
+            if (!pageResult) {
+              throw new Error('Failed to fetch page after retries');
+            }
+
+            totalRecords += pageResult.recordsProcessed;
+            cursor = pageResult.nextCursor;
+            hasMorePages = pageResult.hasMore;
             pageCount++;
 
-            // Update job progress after each page
-            await supabase
+            // Update job progress IMMEDIATELY after each page succeeds
+            const updateResult = await supabase
               .from('backfill_jobs')
               .update({
                 records_processed: totalRecords,
                 last_cursor: cursor,
-                days_processed: hasMorePages ? 0 : 1, // Mark as 1 day when complete
+                days_processed: hasMorePages ? 0 : 1,
               })
               .eq('id', job.id);
+            
+            if (updateResult.error) {
+              logger.error(`Failed to update job progress: ${updateResult.error.message}`);
+            }
 
-            logger.info(`Page ${pageCount}: ${result.recordsProcessed} records (total: ${totalRecords})`);
+            logger.info(`Page ${pageCount}: ${pageResult.recordsProcessed} records (total: ${totalRecords})`);
 
-            // Small delay between pages
+            // Small delay between pages for rate limiting
             if (hasMorePages) {
               await delay(500);
             }

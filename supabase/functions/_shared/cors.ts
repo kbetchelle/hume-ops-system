@@ -1,19 +1,14 @@
-const getAllowedOrigins = (): string[] => {
-  const envOrigins = Deno.env.get('ALLOWED_ORIGINS');
-  if (envOrigins) return envOrigins.split(',').map(o => o.trim());
-  return [
-    'https://hume-ops-system.lovable.app',
-    'http://localhost:5173',
-    'http://localhost:8080',
-  ];
-};
-
 export function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin');
-  const allowedOrigins = getAllowedOrigins();
-  const corsOrigin = (origin && allowedOrigins.some(o => origin.startsWith(o) || origin.endsWith('.lovable.app')))
-    ? origin
-    : allowedOrigins[0];
+  const origin = req.headers.get('origin') || '*';
+  
+  // Allow all lovable.app and lovableproject.com origins, localhost, and the production domain
+  const isAllowed = origin === '*' ||
+    origin.endsWith('.lovable.app') ||
+    origin.endsWith('.lovableproject.com') ||
+    origin.startsWith('http://localhost:') ||
+    origin === 'https://hume-ops-system.lovable.app';
+  
+  const corsOrigin = isAllowed ? origin : 'https://hume-ops-system.lovable.app';
 
   return {
     'Access-Control-Allow-Origin': corsOrigin,

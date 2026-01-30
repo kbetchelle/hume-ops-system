@@ -320,9 +320,9 @@ async function executeSyncCycle(
     logger
   );
 
-  // Phase 5: Clear staging
+  // Phase 5: Clear staging (non-fatal - data already upserted)
   await updateJobPhase(supabase, job.id, 'clearing_staging');
-  await clearStaging(supabase, config.stagingTable, batchId);
+  await clearStaging(supabase, config.stagingTable, batchId, logger);
 
   return {
     recordsFetched: fetchResult.records.length,
@@ -746,14 +746,55 @@ async function upsertToTargetWithRetry(
 async function clearStaging(
   supabase: SupabaseClient, 
   table: string, 
-  batchId: string
+  batchId: string,
+  logger?: ReturnType<typeof createSyncLogger>
 ): Promise<void> {
-  const { error } = await supabase
-    .from(table)
-    .delete()
-    .eq('sync_batch_id', batchId);
-  
-  if (error) throw new Error(`Staging clear failed: ${error.message}`);
+  // Retry staging clear up to 3 times with exponential backoff
+  // This handles transient Cloudflare/network errors
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('sync_batch_id', batchId);
+      
+      if (!error) {
+        return; // Success
+      }
+      
+      // Check if it's a retryable error (network/transient)
+      const isRetryable = error.message.includes('500') || 
+                          error.message.includes('503') ||
+                          error.message.includes('timeout') ||
+                          error.message.includes('Cloudflare');
+      
+      if (!isRetryable || attempt === 3) {
+        // Non-retryable or final attempt - log but don't throw
+        // Staging data will be cleaned up on next batch or can be cleaned manually
+        logger?.warn(`Staging clear failed (non-fatal): ${error.message}`, {
+          table,
+          batchId,
+          attempt
+        });
+        return;
+      }
+      
+      // Wait before retry with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+      
+    } catch (err) {
+      // Catch network/fetch errors (like Cloudflare 500s returning HTML)
+      if (attempt === 3) {
+        logger?.warn(`Staging clear failed after retries (non-fatal)`, {
+          table,
+          batchId,
+          error: err instanceof Error ? err.message : String(err)
+        });
+        return; // Don't throw - staging clear is non-critical
+      }
+      await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+    }
+  }
 }
 
 async function updateJobPhase(

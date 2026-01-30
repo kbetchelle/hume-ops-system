@@ -397,7 +397,7 @@ function DashboardHeader({ title }: { title: string }) {
             <Menu className="h-4 w-4" />
           </SidebarTrigger>
           
-          <h1 className="text-[10px] uppercase tracking-widest font-normal truncate">
+          <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
             {title}
           </h1>
         </div>

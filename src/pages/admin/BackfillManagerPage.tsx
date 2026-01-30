@@ -20,9 +20,10 @@ import {
   Clock,
   Calendar,
   Database,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react";
-import { format, differenceInSeconds, differenceInMinutes, differenceInHours } from "date-fns";
+import { format, differenceInSeconds, differenceInMinutes, differenceInHours, formatDistanceToNow } from "date-fns";
 
 function formatDuration(startedAt: string | null, completedAt: string | null): string {
   if (!startedAt) return "-";
@@ -38,7 +39,18 @@ function formatDuration(startedAt: string | null, completedAt: string | null): s
   return `${seconds}s`;
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, retryScheduledAt: string | null) {
+  const isWaitingForRetry = status === "running" && retryScheduledAt && new Date(retryScheduledAt) > new Date();
+  
+  if (isWaitingForRetry) {
+    return (
+      <Badge className="bg-warning/20 text-warning-foreground border-warning/50">
+        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+        Waiting...
+      </Badge>
+    );
+  }
+  
   switch (status) {
     case "running":
       return <Badge className="bg-primary/20 text-primary border-primary/50">Running</Badge>;
@@ -59,16 +71,27 @@ function ActiveJobCard({
   job,
   onPause, 
   onResume, 
-  onCancel 
+  onCancel,
+  onContinue
 }: { 
   job: BackfillJob; 
   onPause: () => void;
   onResume: () => void;
   onCancel: () => void;
+  onContinue: () => void;
 }) {
-  const progress = job.total_days > 0 ? (job.days_processed / job.total_days) * 100 : 0;
+  // For clients, show records-based progress instead of days
+  const isClientSync = job.data_type === "clients";
+  const isWaitingForRetry = job.status === "running" && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();
+  
+  // For clients, estimate progress based on records (assume ~5000 total if unknown)
+  const estimatedTotal = job.total_records_expected || 5000;
+  const progress = isClientSync 
+    ? Math.min((job.records_processed / estimatedTotal) * 100, 99) // Cap at 99% until complete
+    : job.total_days > 0 ? (job.days_processed / job.total_days) * 100 : 0;
+    
   const isPaused = job.status === "paused";
-  const isRunning = job.status === "running";
+  const isRunning = job.status === "running" && !isWaitingForRetry;
 
   return (
     <Card className="border-border">
@@ -85,17 +108,35 @@ function ActiveJobCard({
               </p>
             </div>
           </div>
-          {getStatusBadge(job.status)}
+          {getStatusBadge(job.status, job.retry_scheduled_at)}
         </div>
 
         <div className="space-y-4">
           <div>
             <div className="flex justify-between text-xs text-muted-foreground mb-2">
-              <span>Progress: {job.days_processed} / {job.total_days} days</span>
-              <span>{Math.round(progress)}%</span>
+              {isClientSync ? (
+                <>
+                  <span>Records synced: {job.records_processed.toLocaleString()}</span>
+                  <span>{job.last_cursor ? "In progress..." : "Starting..."}</span>
+                </>
+              ) : (
+                <>
+                  <span>Progress: {job.days_processed} / {job.total_days} days</span>
+                  <span>{Math.round(progress)}%</span>
+                </>
+              )}
             </div>
             <Progress value={progress} className="h-2" />
           </div>
+
+          {isWaitingForRetry && job.retry_scheduled_at && (
+            <div className="bg-warning/10 border border-warning/30 rounded p-3">
+              <p className="text-xs text-warning-foreground flex items-center gap-2">
+                <RefreshCw className="h-3 w-3" />
+                Continuing {formatDistanceToNow(new Date(job.retry_scheduled_at), { addSuffix: true })}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -104,9 +145,14 @@ function ActiveJobCard({
             </div>
             <div>
               <p className="text-lg font-medium">
-                {job.processing_date ? format(new Date(job.processing_date), "MMM d") : "-"}
+                {isClientSync 
+                  ? (job.last_cursor ? "Paginating" : "Starting")
+                  : (job.processing_date ? format(new Date(job.processing_date), "MMM d") : "-")
+                }
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Current Date</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                {isClientSync ? "Status" : "Current Date"}
+              </p>
             </div>
             <div>
               <p className="text-lg font-medium">{formatDuration(job.started_at, null)}</p>
@@ -125,6 +171,12 @@ function ActiveJobCard({
               <Button variant="outline" size="sm" onClick={onResume} className="flex-1">
                 <Play className="h-4 w-4 mr-2" />
                 Resume
+              </Button>
+            )}
+            {isWaitingForRetry && (
+              <Button variant="outline" size="sm" onClick={onContinue} className="flex-1">
+                <Play className="h-4 w-4 mr-2" />
+                Continue Now
               </Button>
             )}
             <Button variant="destructive" size="sm" onClick={onCancel} className="flex-1">
@@ -177,7 +229,7 @@ function CompletedJobRow({
             </div>
 
             <div className="flex items-center gap-2">
-              {getStatusBadge(job.status)}
+              {getStatusBadge(job.status, null)}
               {hasErrors && (
                 <Badge variant="destructive" className="text-[10px]">
                   {job.errors.length} errors
@@ -206,7 +258,7 @@ function CompletedJobRow({
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {job.errors.map((err, idx) => (
                 <div key={idx} className="text-xs font-mono">
-                  <span className="text-muted-foreground">{err.date}:</span>{" "}
+                  <span className="text-muted-foreground">{err.date || err.timestamp}:</span>{" "}
                   <span className="text-destructive">{err.error}</span>
                 </div>
               ))}
@@ -227,7 +279,8 @@ export default function BackfillManagerPage() {
     pauseJob, 
     resumeJob, 
     cancelJob,
-    deleteJob
+    deleteJob,
+    continueJob
   } = useBackfillJobs();
 
   const [apiSource, setApiSource] = useState<"arketa" | "sling">("arketa");
@@ -256,7 +309,8 @@ export default function BackfillManagerPage() {
     const days = Math.ceil(
       (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
-    // Rough estimates
+    // Rough estimates - clients is not date-based
+    if (dataType === "clients") return "All clients (unlimited)";
     const avgPerDay = dataType === "classes" ? 20 : dataType === "reservations" ? 100 : 50;
     return days * avgPerDay;
   };
@@ -323,7 +377,7 @@ export default function BackfillManagerPage() {
                 <Button 
                   onClick={handleCreateJob}
                   disabled={!dataType || !startDate || !endDate || createJob.isPending}
-                  className="w-full"
+                  className="w-full md:min-w-[160px]"
                 >
                   {createJob.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -335,10 +389,15 @@ export default function BackfillManagerPage() {
               </div>
             </div>
 
-            {estimatedRecords() && (
+            {dataType && startDate && endDate && (
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                <span>Estimated ~{estimatedRecords()?.toLocaleString()} records</span>
+                <span>
+                  {dataType === "clients" 
+                    ? "Will sync all clients (cursor-based pagination, auto-resumes)"
+                    : `Estimated ~${typeof estimatedRecords() === 'number' ? estimatedRecords()?.toLocaleString() : estimatedRecords()} records`
+                  }
+                </span>
               </div>
             )}
           </CardContent>
@@ -359,6 +418,7 @@ export default function BackfillManagerPage() {
                   onPause={() => pauseJob.mutate(job.id)}
                   onResume={() => resumeJob.mutate(job)}
                   onCancel={() => cancelJob.mutate(job.id)}
+                  onContinue={() => continueJob.mutate(job)}
                 />
               ))}
             </div>

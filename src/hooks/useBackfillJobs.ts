@@ -115,25 +115,6 @@ export function useBackfillJobs() {
     if (!jobs) return;
 
     const now = new Date();
-    
-    // #region agent log
-    const runningJobs = jobs.filter(j => j.status === "running");
-    if (runningJobs.length > 0) {
-      console.log('[DEBUG] checkAndContinueJobs - running jobs found', {
-        count: runningJobs.length,
-        jobs: runningJobs.map(j => ({
-          id: j.id,
-          status: j.status,
-          sync_phase: j.sync_phase,
-          retry_scheduled_at: j.retry_scheduled_at,
-          no_more_records: j.no_more_records,
-          started_at: j.started_at,
-          records_processed: j.records_processed
-        }))
-      });
-    }
-    // #endregion
-    
     const jobsToRetry = jobs.filter(
       (job) =>
         job.status === "running" &&
@@ -144,29 +125,10 @@ export function useBackfillJobs() {
         !continuingJobsRef.current.has(job.id) // Don't continue if we're already continuing this job
     );
 
-    // #region agent log
-    if (runningJobs.length > 0 && jobsToRetry.length === 0) {
-      console.log('[DEBUG] checkAndContinueJobs - running jobs NOT qualifying for retry', {
-        reasons: runningJobs.map(j => ({
-          id: j.id,
-          hasRetryTime: !!j.retry_scheduled_at,
-          retryTimeReached: j.retry_scheduled_at ? new Date(j.retry_scheduled_at) <= now : false,
-          noMoreRecords: j.no_more_records,
-          isProcessing: j.sync_phase === 'processing',
-          alreadyContinuing: continuingJobsRef.current.has(j.id)
-        }))
-      });
-    }
-    // #endregion
-
     for (const job of jobsToRetry) {
       // Mark this job as being continued
       continuingJobsRef.current.add(job.id);
       console.log(`[useBackfillJobs] Auto-continuing job ${job.id}`);
-      
-      // #region agent log
-      console.log('[DEBUG] Auto-continuing job', { jobId: job.id, retryScheduledAt: job.retry_scheduled_at });
-      // #endregion
       
       continueJob.mutate(job, {
         onSettled: () => {
@@ -225,9 +187,6 @@ export function useBackfillJobs() {
       start_date: string;
       end_date: string;
     }) => {
-      // #region agent log
-      console.log('[DEBUG] createJob mutation started', { params, timestamp: new Date().toISOString() });
-      // #endregion
       // First create the job record
       const { data: user } = await supabase.auth.getUser();
       
@@ -249,26 +208,15 @@ export function useBackfillJobs() {
         .select()
         .single();
 
-      // #region agent log
-      console.log('[DEBUG] Job record insert result', { newJobId: newJob?.id, insertError: insertError?.message, newJob });
-      // #endregion
-
       if (insertError) throw insertError;
 
       // Then start the sync
-      // #region agent log
-      console.log('[DEBUG] About to invoke unified-backfill-sync', { jobId: newJob.id });
-      // #endregion
       const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
         body: {
           job_id: newJob.id,
           action: "continue",
         },
       });
-
-      // #region agent log
-      console.log('[DEBUG] Edge function invoke result', { success: data?.success, error: error?.message, data, fullError: error });
-      // #endregion
 
       if (error) throw error;
       return { ...data, job_id: newJob.id };

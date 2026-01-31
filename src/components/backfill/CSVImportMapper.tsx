@@ -345,7 +345,17 @@ export function CSVImportMapper() {
           `Unique key CSV column "${uniqueKeyColumn}" is not found in enabled field mappings. Please ensure it's mapped and enabled.`
         );
       }
-      const uniqueKeyDbColumn = uniqueKeyMapping.dbColumn;
+      
+      // CRITICAL FIX: For predefined tables, ensure the unique key maps to the table's actual unique column
+      let uniqueKeyDbColumn = uniqueKeyMapping.dbColumn;
+      if (!isCreatingNewTable) {
+        const tableConfig = AVAILABLE_TABLES.find(t => t.value === selectedTable);
+        if (tableConfig && tableConfig.uniqueKey) {
+          // Override the mapping to use the table's defined unique key column
+          uniqueKeyDbColumn = tableConfig.uniqueKey;
+          console.log(`Auto-mapping unique key: CSV "${uniqueKeyColumn}" -> DB "${uniqueKeyDbColumn}"`);
+        }
+      }
 
       // Parse CSV into lines for chunking
       const lines = csvContent.split("\n").filter((line) => line.trim());
@@ -388,15 +398,31 @@ export function CSVImportMapper() {
         }));
 
         try {
+          // CRITICAL: Ensure the unique key CSV column is mapped to the correct DB column
+          const mappingsToSend = enabledMappings.map((m) => {
+            // If this is the unique key CSV column and we have a table config, use the table's unique key
+            if (m.csvColumn === uniqueKeyColumn && !isCreatingNewTable) {
+              const tableConfig = AVAILABLE_TABLES.find(t => t.value === selectedTable);
+              if (tableConfig && tableConfig.uniqueKey) {
+                return {
+                  csvColumn: m.csvColumn,
+                  dbColumn: tableConfig.uniqueKey, // Use table's actual unique key column
+                  type: m.type,
+                };
+              }
+            }
+            return {
+              csvColumn: m.csvColumn,
+              dbColumn: m.dbColumn,
+              type: m.type,
+            };
+          });
+
           const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
             body: {
               csvContent: chunkCsv,
               targetTable,
-              fieldMappings: enabledMappings.map((m) => ({
-                csvColumn: m.csvColumn,
-                dbColumn: m.dbColumn,
-                type: m.type,
-              })),
+              fieldMappings: mappingsToSend,
               uniqueKeyColumn: uniqueKeyDbColumn, // Send resolved database column name
               createTable: isCreatingNewTable && chunkIndex === 0, // Only create on first chunk
               overwriteExisting, // Allow user to control if existing records are updated
@@ -749,12 +775,14 @@ export function CSVImportMapper() {
                 <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex-shrink-0">
                   <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-blue-900 dark:text-blue-100">Important: Unique Key Requirements</p>
+                    <p className="font-medium text-blue-900 dark:text-blue-100">Unique Key Mapping</p>
                     <ul className="text-muted-foreground space-y-1 mt-1 text-xs list-disc list-inside">
-                      <li>Every row must have a value in the <span className="font-mono bg-blue-500/10 px-1 rounded">{uniqueKeyColumn}</span> CSV column</li>
-                      <li>Rows with empty/null unique keys will be <strong>skipped</strong></li>
-                      <li>The mapping automatically handles database column names - just select your CSV column</li>
-                      <li>For subscriptions: select <span className="font-mono">subscription_id</span> from your CSV (auto-maps to external_id)</li>
+                      <li>Your CSV column <span className="font-mono bg-blue-500/10 px-1 rounded">{uniqueKeyColumn}</span> will be used for deduplication</li>
+                      {!isCreatingNewTable && AVAILABLE_TABLES.find(t => t.value === selectedTable) && (
+                        <li>It will automatically map to the <span className="font-mono bg-blue-500/10 px-1 rounded">{AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey}</span> column in the database</li>
+                      )}
+                      <li>Every row must have a value in this column (empty values will be skipped)</li>
+                      <li>Duplicate values will trigger updates (if overwrite is enabled) or be skipped</li>
                     </ul>
                   </div>
                 </div>
@@ -804,10 +832,19 @@ export function CSVImportMapper() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {fieldMappings.map((mapping, index) => (
+                          {fieldMappings.map((mapping, index) => {
+                            const isUniqueKey = mapping.csvColumn === uniqueKeyColumn;
+                            const actualDbColumn = isUniqueKey && !isCreatingNewTable && AVAILABLE_TABLES.find(t => t.value === selectedTable)
+                              ? AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey
+                              : mapping.dbColumn;
+                            
+                            return (
                             <TableRow
                               key={index}
-                              className={cn(!mapping.enabled && "opacity-50")}
+                              className={cn(
+                                !mapping.enabled && "opacity-50",
+                                isUniqueKey && "bg-blue-500/5 border-l-2 border-l-blue-500"
+                              )}
                             >
                               <TableCell className="w-12">
                                 <Checkbox
@@ -816,22 +853,40 @@ export function CSVImportMapper() {
                                 />
                               </TableCell>
                               <TableCell className="font-mono text-sm min-w-[150px]">
-                                {mapping.csvColumn}
+                                <div className="flex items-center gap-2">
+                                  {mapping.csvColumn}
+                                  {isUniqueKey && (
+                                    <Badge variant="default" className="text-[9px] px-1 py-0">
+                                      UNIQUE KEY
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="w-8">
-                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                <ArrowRight className={cn("h-4 w-4", isUniqueKey ? "text-blue-600" : "text-muted-foreground")} />
                               </TableCell>
                               <TableCell className="min-w-[180px]">
-                                <Input
-                                  value={mapping.dbColumn}
-                                  onChange={(e) =>
-                                    updateMapping(index, {
-                                      dbColumn: normalizeColumnName(e.target.value),
-                                    })
-                                  }
-                                  className="h-8 font-mono text-sm w-full"
-                                  disabled={!mapping.enabled}
-                                />
+                                {isUniqueKey && !isCreatingNewTable && actualDbColumn !== mapping.dbColumn ? (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="font-mono text-sm text-blue-600 font-medium">
+                                      {actualDbColumn}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">
+                                      Auto-mapped to table's unique key
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Input
+                                    value={mapping.dbColumn}
+                                    onChange={(e) =>
+                                      updateMapping(index, {
+                                        dbColumn: normalizeColumnName(e.target.value),
+                                      })
+                                    }
+                                    className="h-8 font-mono text-sm w-full"
+                                    disabled={!mapping.enabled}
+                                  />
+                                )}
                               </TableCell>
                               <TableCell className="w-24">
                                 <Select
@@ -867,7 +922,7 @@ export function CSVImportMapper() {
                                 )}
                               </TableCell>
                             </TableRow>
-                          ))}
+                          )})}
                         </TableBody>
                       </Table>
                     </ScrollArea>

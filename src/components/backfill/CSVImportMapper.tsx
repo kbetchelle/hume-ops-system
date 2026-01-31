@@ -45,13 +45,13 @@ import { cn } from "@/lib/utils";
 
 // Available tables for import
 const AVAILABLE_TABLES = [
-  { value: "arketa_clients", label: "Arketa Clients", uniqueKey: "external_id" },
-  { value: "arketa_subscriptions", label: "Arketa Subscriptions", uniqueKey: "external_id" },
-  { value: "arketa_classes", label: "Arketa Classes", uniqueKey: "external_id" },
-  { value: "arketa_reservations", label: "Arketa Reservations", uniqueKey: "external_id" },
-  { value: "arketa_payments", label: "Arketa Payments", uniqueKey: "external_id" },
-  { value: "arketa_instructors", label: "Arketa Instructors", uniqueKey: "external_id" },
-  { value: "staff_shifts", label: "Staff Shifts", uniqueKey: "sling_shift_id" },
+  { value: "arketa_clients", label: "Arketa Clients", uniqueKey: "external_id", csvUniqueKey: "client_id" },
+  { value: "arketa_subscriptions", label: "Arketa Subscriptions", uniqueKey: "external_id", csvUniqueKey: "subscription_id" },
+  { value: "arketa_classes", label: "Arketa Classes", uniqueKey: "external_id", csvUniqueKey: "class_id" },
+  { value: "arketa_reservations", label: "Arketa Reservations", uniqueKey: "external_id", csvUniqueKey: "reservation_id" },
+  { value: "arketa_payments", label: "Arketa Payments", uniqueKey: "external_id", csvUniqueKey: "payment_id" },
+  { value: "arketa_instructors", label: "Arketa Instructors", uniqueKey: "external_id", csvUniqueKey: "instructor_id" },
+  { value: "staff_shifts", label: "Staff Shifts", uniqueKey: "sling_shift_id", csvUniqueKey: "shift_id" },
 ] as const;
 
 interface FieldMapping {
@@ -262,12 +262,19 @@ export function CSVImportMapper() {
     setIsCreatingNewTable(false);
     setSelectedTable(tableName);
 
-    // Set default unique key to a CSV column that maps to external_id
-    // For Arketa tables, this is typically "subscription_id", "client_id", etc.
+    // Auto-suggest unique key based on table config and available CSV columns
     const tableConfig = AVAILABLE_TABLES.find(t => t.value === tableName);
-    if (tableConfig) {
-      // Don't auto-set the unique key - let the user select from their CSV columns
-      // after field mapping is done
+    if (tableConfig && tableConfig.csvUniqueKey) {
+      // Check if the suggested CSV unique key column exists in the CSV headers
+      const suggestedKey = csvHeaders.find(h => 
+        normalizeColumnName(h) === normalizeColumnName(tableConfig.csvUniqueKey!)
+      );
+      if (suggestedKey) {
+        setUniqueKeyColumn(suggestedKey);
+      } else {
+        setUniqueKeyColumn("");
+      }
+    } else {
       setUniqueKeyColumn("");
     }
   };

@@ -109,7 +109,7 @@ export function CSVImportMapper() {
 
   // Field mapping state
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
-  const [uniqueKeyColumn, setUniqueKeyColumn] = useState<string>("");
+  const [uniqueKeyColumn, setUniqueKeyColumn] = useState<string>(""); // Stores CSV column name
   const [overwriteExisting, setOverwriteExisting] = useState(true);
 
   // Import progress
@@ -330,21 +330,14 @@ export function CSVImportMapper() {
       const enabledMappings = fieldMappings.filter((m) => m.enabled && (!m.isNew || isCreatingNewTable));
       if (enabledMappings.length === 0) throw new Error("No fields selected for import");
 
-      // Validate that the unique key column is mapped to a CSV column
-      const uniqueKeyMapping = enabledMappings.find((m) => m.dbColumn === uniqueKeyColumn);
+      // Resolve the unique key CSV column to its database column name
+      const uniqueKeyMapping = enabledMappings.find((m) => m.csvColumn === uniqueKeyColumn);
       if (!uniqueKeyMapping) {
-        const csvColumnForUniqueKey = enabledMappings.find(
-          (m) => m.csvColumn.toLowerCase().includes("id") || m.csvColumn.toLowerCase() === "id"
-        );
-        if (csvColumnForUniqueKey) {
-          throw new Error(
-            `Unique key "${uniqueKeyColumn}" is not mapped. Consider mapping CSV column "${csvColumnForUniqueKey.csvColumn}" to "${uniqueKeyColumn}".`
-          );
-        }
         throw new Error(
-          `Unique key "${uniqueKeyColumn}" must be mapped to a CSV column. Please update your field mappings.`
+          `Unique key CSV column "${uniqueKeyColumn}" is not found in enabled field mappings. Please ensure it's mapped and enabled.`
         );
       }
+      const uniqueKeyDbColumn = uniqueKeyMapping.dbColumn;
 
       // Parse CSV into lines for chunking
       const lines = csvContent.split("\n").filter((line) => line.trim());
@@ -396,7 +389,7 @@ export function CSVImportMapper() {
                 dbColumn: m.dbColumn,
                 type: m.type,
               })),
-              uniqueKeyColumn,
+              uniqueKeyColumn: uniqueKeyDbColumn, // Send resolved database column name
               createTable: isCreatingNewTable && chunkIndex === 0, // Only create on first chunk
               overwriteExisting, // Allow user to control if existing records are updated
             },
@@ -630,17 +623,17 @@ export function CSVImportMapper() {
                   <Label>Unique Key Column (for upsert)</Label>
                   <Select value={uniqueKeyColumn} onValueChange={setUniqueKeyColumn}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select database column to use as unique key..." />
+                      <SelectValue placeholder="Select CSV column to use as unique key..." />
                     </SelectTrigger>
                     <SelectContent>
                       {fieldMappings
                         .filter((m) => m.enabled)
                         .map((mapping) => (
-                          <SelectItem key={mapping.dbColumn} value={mapping.dbColumn}>
+                          <SelectItem key={mapping.csvColumn} value={mapping.csvColumn}>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{mapping.dbColumn}</span>
+                              <span className="font-medium">{mapping.csvColumn}</span>
                               {mapping.csvColumn !== mapping.dbColumn && (
-                                <span className="text-xs text-muted-foreground">← from CSV: {mapping.csvColumn}</span>
+                                <span className="text-xs text-muted-foreground">→ maps to: {mapping.dbColumn}</span>
                               )}
                             </div>
                           </SelectItem>
@@ -648,7 +641,7 @@ export function CSVImportMapper() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Choose the database column that uniquely identifies each record (e.g., external_id)
+                    Choose the CSV column that uniquely identifies each record (e.g., subscription_id, client_id)
                   </p>
                 </div>
               )}
@@ -681,10 +674,10 @@ export function CSVImportMapper() {
                   <div className="text-sm">
                     <p className="font-medium text-blue-900 dark:text-blue-100">Important: Unique Key Requirements</p>
                     <ul className="text-muted-foreground space-y-1 mt-1 text-xs list-disc list-inside">
-                      <li>Every row must have a value in the <span className="font-mono bg-blue-500/10 px-1 rounded">{uniqueKeyColumn}</span> column</li>
+                      <li>Every row must have a value in the <span className="font-mono bg-blue-500/10 px-1 rounded">{uniqueKeyColumn}</span> CSV column</li>
                       <li>Rows with empty/null unique keys will be <strong>skipped</strong></li>
-                      <li>The unique key column must have a UNIQUE constraint in the database</li>
-                      <li>For subscriptions: map <span className="font-mono">subscription_id</span> → <span className="font-mono">external_id</span></li>
+                      <li>The mapping automatically handles database column names - just select your CSV column</li>
+                      <li>For subscriptions: select <span className="font-mono">subscription_id</span> from your CSV (auto-maps to external_id)</li>
                     </ul>
                   </div>
                 </div>
@@ -836,7 +829,7 @@ export function CSVImportMapper() {
                                 // Find the mapping for this CSV column
                                 const mapping = fieldMappings.find(m => m.csvColumn === csvHeader && m.enabled);
                                 const displayName = mapping ? mapping.dbColumn : csvHeader;
-                                const isUnique = mapping?.dbColumn === uniqueKeyColumn;
+                                const isUnique = csvHeader === uniqueKeyColumn; // Compare CSV column name
                                 
                                 return (
                                   <TableHead 
@@ -870,7 +863,7 @@ export function CSVImportMapper() {
                                 {row.map((cell, cellIndex) => {
                                   const csvHeader = csvHeaders[cellIndex];
                                   const mapping = fieldMappings.find(m => m.csvColumn === csvHeader && m.enabled);
-                                  const isUnique = mapping?.dbColumn === uniqueKeyColumn;
+                                  const isUnique = csvHeader === uniqueKeyColumn; // Compare CSV column name
                                   
                                   return (
                                     <TableCell 

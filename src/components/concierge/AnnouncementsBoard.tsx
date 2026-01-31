@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
-import { Megaphone, Bell, Calendar, ChevronLeft, ChevronRight, Clock, Sparkles } from 'lucide-react';
+import { Megaphone, Bell, Calendar, ChevronLeft, ChevronRight, Clock, Sparkles, Image as ImageIcon } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
+import { AnnouncementComments, CommentCountBadge } from './AnnouncementComments';
+import { useAnnouncementCommentCounts } from '@/hooks/useAnnouncementComments';
 
 interface Announcement {
   id: string;
   title: string;
   content: string;
   announcement_type: 'alert' | 'weekly_update';
-  priority: 'normal' | 'high' | 'urgent';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
   target_departments: string[] | null;
   week_start_date: string | null;
   photo_url: string | null;
   expires_at: string | null;
+  scheduled_at: string | null;
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -32,6 +36,7 @@ interface Announcement {
 
 export function AnnouncementsBoard() {
   const { user } = useAuth();
+  const { roles } = useUserRoles();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'alerts' | 'weekly'>('alerts');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -64,6 +69,43 @@ export function AnnouncementsBoard() {
     },
     enabled: !!user?.id,
   });
+
+  // Filter announcements based on role, schedule, and expiration
+  const filteredAnnouncements = useMemo(() => {
+    if (!announcements) return [];
+    
+    const now = new Date();
+    
+    return announcements.filter((a) => {
+      // Filter out scheduled announcements that haven't been published yet
+      if (a.scheduled_at && new Date(a.scheduled_at) > now) {
+        return false;
+      }
+      
+      // Filter out expired announcements
+      if (a.expires_at && new Date(a.expires_at) < now) {
+        return false;
+      }
+      
+      // Filter by target_departments (role-based filtering)
+      // If no targeting, show to everyone
+      if (!a.target_departments || a.target_departments.length === 0) {
+        return true;
+      }
+      
+      // If user has no roles, only show untargeted announcements
+      if (!roles || roles.length === 0) {
+        return false;
+      }
+      
+      // Check if any of user's roles match the target departments
+      return roles.some((role) => a.target_departments?.includes(role));
+    });
+  }, [announcements, roles]);
+
+  // Get comment counts for all announcements
+  const announcementIds = filteredAnnouncements.map((a) => a.id);
+  const { data: commentCounts } = useAnnouncementCommentCounts(announcementIds);
 
   const markAsRead = useMutation({
     mutationFn: async (announcementId: string) => {
@@ -107,11 +149,11 @@ export function AnnouncementsBoard() {
 
   const readSet = new Set(readAnnouncements || []);
 
-  const alerts = (announcements || [])
+  const alerts = filteredAnnouncements
     .filter(a => a.announcement_type === 'alert')
     .map(a => ({ ...a, is_read: readSet.has(a.id) }));
 
-  const weeklyUpdates = (announcements || [])
+  const weeklyUpdates = filteredAnnouncements
     .filter(a => a.announcement_type === 'weekly_update')
     .map(a => ({ ...a, is_read: readSet.has(a.id) }));
 
@@ -127,11 +169,15 @@ export function AnnouncementsBoard() {
   const unreadAlerts = alerts.filter(a => !a.is_read).length;
   const unreadWeekly = weeklyUpdates.filter(w => !w.is_read).length;
 
+  // Enhanced priority styles including low priority and weekly update blue styling
   const priorityStyles: Record<string, string> = {
     urgent: 'border-destructive bg-destructive/5',
     high: 'border-amber-500 bg-amber-500/5',
     normal: 'border-border',
+    low: 'border-slate-300 bg-slate-50/50',
   };
+
+  const weeklyUpdateStyle = 'border-blue-500 bg-blue-500/5';
 
   return (
     <Card className="rounded-none border">
@@ -180,7 +226,13 @@ export function AnnouncementsBoard() {
               <div className="space-y-3">
                 {alerts
                   .sort((a, b) => {
+                    // Sort by read status first (unread first)
                     if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+                    // Then by priority (urgent > high > normal > low)
+                    const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+                    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                    if (priorityDiff !== 0) return priorityDiff;
+                    // Then by date (newest first)
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                   })
                   .map((alert) => (
@@ -195,29 +247,47 @@ export function AnnouncementsBoard() {
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h4 className="font-medium text-sm">{alert.title}</h4>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {!alert.is_read && (
-                            <Badge variant="default" className="text-[10px] h-5 rounded-none">New</Badge>
+                            <Badge variant="default" className="text-[10px] h-5 rounded-none animate-pulse">New</Badge>
                           )}
                           {alert.priority !== 'normal' && (
                             <Badge
                               variant={alert.priority === 'urgent' ? 'destructive' : 'secondary'}
-                              className="text-[10px] h-5 rounded-none"
+                              className={cn(
+                                "text-[10px] h-5 rounded-none",
+                                alert.priority === 'high' && 'bg-amber-500 text-white'
+                              )}
                             >
                               {alert.priority}
                             </Badge>
                           )}
+                          <CommentCountBadge count={commentCounts?.[alert.id] || 0} />
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground whitespace-pre-wrap">
                         {alert.content}
                       </p>
+                      {alert.photo_url && (
+                        <img
+                          src={alert.photo_url}
+                          alt="Attachment"
+                          className="mt-2 max-h-32 object-cover border"
+                        />
+                      )}
                       <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {format(parseISO(alert.created_at), 'MMM d, h:mm a')}
                         <span>•</span>
                         <span>{alert.created_by}</span>
                       </div>
+                      
+                      {/* Comments Section */}
+                      <AnnouncementComments
+                        announcementId={alert.id}
+                        commentCount={commentCounts?.[alert.id] || 0}
+                        className="mt-2 -mx-3 -mb-3 px-3 pb-3 border-t bg-muted/20"
+                      />
                     </div>
                   ))}
               </div>
@@ -271,14 +341,16 @@ export function AnnouncementsBoard() {
                 ref={(node) => setupReadObserver(node, currentWeekUpdate.id)}
                 className={cn(
                   'p-4 border',
-                  !currentWeekUpdate.is_read && 'ring-1 ring-primary/20 bg-primary/5'
+                  weeklyUpdateStyle,
+                  !currentWeekUpdate.is_read && 'ring-1 ring-primary/20'
                 )}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <Badge variant="secondary" className="rounded-none">Weekly Update</Badge>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <Badge variant="secondary" className="rounded-none bg-blue-100 text-blue-700">Weekly Update</Badge>
                   {!currentWeekUpdate.is_read && (
-                    <Badge variant="default" className="text-[10px] rounded-none">Unread</Badge>
+                    <Badge variant="default" className="text-[10px] rounded-none animate-pulse">Unread</Badge>
                   )}
+                  <CommentCountBadge count={commentCounts?.[currentWeekUpdate.id] || 0} />
                 </div>
                 <h3 className="font-semibold text-sm mb-2">{currentWeekUpdate.title}</h3>
                 <p className="text-xs text-muted-foreground whitespace-pre-wrap">
@@ -288,13 +360,20 @@ export function AnnouncementsBoard() {
                   <img
                     src={currentWeekUpdate.photo_url}
                     alt="Update attachment"
-                    className="mt-3 max-h-48 object-cover"
+                    className="mt-3 max-h-48 object-cover border"
                   />
                 )}
                 <Separator className="my-4" />
                 <div className="text-[10px] text-muted-foreground">
                   Posted by {currentWeekUpdate.created_by} • {format(parseISO(currentWeekUpdate.created_at), 'MMM d, h:mm a')}
                 </div>
+                
+                {/* Comments Section */}
+                <AnnouncementComments
+                  announcementId={currentWeekUpdate.id}
+                  commentCount={commentCounts?.[currentWeekUpdate.id] || 0}
+                  className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
+                />
               </div>
             ) : (
               <p className="text-xs text-muted-foreground text-center py-8">

@@ -95,6 +95,16 @@ export default function AdminDashboard() {
               <CardDescription>Import historical data from APIs</CardDescription>
             </CardHeader>
           </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/staff-announcements")}
+          >
+            <CardHeader>
+              <CardTitle>Staff Announcements</CardTitle>
+              <CardDescription>Create and manage announcements for staff</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         {/* Header */}

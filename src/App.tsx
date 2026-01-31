@@ -50,6 +50,7 @@ import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 import SlingUserManagement from "./pages/admin/SlingUserManagement";
 import SyncManagementPage from "./pages/admin/SyncManagementPage";
 import BackfillManagerPage from "./pages/admin/BackfillManagerPage";
+import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -325,6 +326,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <AnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Staff Announcements for Managers */}
+            <Route
+              path="/dashboard/staff-announcements"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <StaffAnnouncementsPage />
                 </ProtectedRoute>
               }
             />

@@ -91,6 +91,16 @@ export default function ManagerDashboard() {
               <CardDescription>View performance and analytics reports</CardDescription>
             </CardHeader>
           </Card>
+
+          <Card 
+            className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
+            onClick={() => navigate("/dashboard/staff-announcements")}
+          >
+            <CardHeader>
+              <CardTitle>Staff Announcements</CardTitle>
+              <CardDescription>Create and manage announcements for staff</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       </div>
     </DashboardLayout>

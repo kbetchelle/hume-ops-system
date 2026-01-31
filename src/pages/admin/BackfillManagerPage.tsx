@@ -897,24 +897,6 @@ export default function BackfillManagerPage() {
                   </p>
                 </div>
               </div>
-                {importResult && !isImporting && (
-                  <div className="flex items-center gap-4 text-sm">
-                    <Badge variant="outline" className="bg-primary/10">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {importResult.inserted} inserted
-                    </Badge>
-                    <Badge variant="outline">
-                      {importResult.updated} updated
-                    </Badge>
-                    {importResult.skipped > 0 && (
-                      <Badge variant="secondary" className="cursor-pointer">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        {importResult.skipped} skipped
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
               
               {/* Skipped Records Log */}
               {importResult && importResult.skippedRecords && importResult.skippedRecords.length > 0 && (

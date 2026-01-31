@@ -885,22 +885,6 @@ export function CSVImportMapper() {
               )}
             </div>
           )}
-                  {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} records
-                </p>
-              </div>
-              <div className="w-80 space-y-2">
-                <Progress 
-                  value={progress.total > 0 ? (progress.processed / progress.total) * 100 : 0} 
-                  className="h-3"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{progress.inserted.toLocaleString()} inserted</span>
-                  <span>{progress.updated.toLocaleString()} updated</span>
-                  {progress.skipped > 0 && <span>{progress.skipped.toLocaleString()} skipped</span>}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Step 4: Complete */}
           {step === "complete" && (

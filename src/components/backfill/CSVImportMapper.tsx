@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +77,6 @@ interface ImportProgress {
   inserted: number;
   updated: number;
   skipped: number;
-  errors: string[];
 }
 
 export function CSVImportMapper() {
@@ -113,39 +112,28 @@ export function CSVImportMapper() {
     inserted: 0,
     updated: 0,
     skipped: 0,
-    errors: [],
   });
 
   // Fetch table columns when a table is selected
   const { data: tableColumns, isLoading: isLoadingColumns } = useQuery({
     queryKey: ["table-columns", selectedTable],
-    queryFn: async () => {
+    queryFn: async (): Promise<TableColumn[]> => {
       if (!selectedTable || isCreatingNewTable) return [];
       
-      // Use information_schema to get column info
-      const { data, error } = await supabase.rpc("get_table_columns", {
-        table_name_param: selectedTable,
-      });
-
-      if (error) {
-        console.error("Error fetching columns:", error);
-        // Fallback: try to infer from a sample query
-        const { data: sampleData, error: sampleError } = await supabase
-          .from(selectedTable as any)
-          .select("*")
-          .limit(1);
-        
-        if (sampleError || !sampleData?.[0]) return [];
-        
-        return Object.keys(sampleData[0]).map(col => ({
-          column_name: col,
-          data_type: "text",
-          is_nullable: "YES",
-          column_default: null,
-        }));
-      }
-
-      return (data || []) as TableColumn[];
+      // Infer columns from a sample query
+      const { data: sampleData, error: sampleError } = await supabase
+        .from(selectedTable as any)
+        .select("*")
+        .limit(1);
+      
+      if (sampleError || !sampleData?.[0]) return [];
+      
+      return Object.keys(sampleData[0]).map(col => ({
+        column_name: col,
+        data_type: "text",
+        is_nullable: "YES",
+        column_default: null,
+      }));
     },
     enabled: !!selectedTable && !isCreatingNewTable,
   });
@@ -271,28 +259,36 @@ export function CSVImportMapper() {
   const autoMapColumns = useCallback(() => {
     if (!tableColumns || tableColumns.length === 0) return;
 
+    const tableColumnNames = tableColumns.map((col) => col.column_name);
+
     setFieldMappings((prev) =>
       prev.map((mapping) => {
         // Try to find a matching table column
+        const normalizedCsvCol = normalizeColumnName(mapping.csvColumn);
         const matchingColumn = tableColumns.find(
           (col) =>
             col.column_name === mapping.dbColumn ||
-            col.column_name === normalizeColumnName(mapping.csvColumn) ||
-            col.column_name.includes(normalizeColumnName(mapping.csvColumn)) ||
-            normalizeColumnName(mapping.csvColumn).includes(col.column_name)
+            col.column_name === normalizedCsvCol ||
+            col.column_name.includes(normalizedCsvCol) ||
+            normalizedCsvCol.includes(col.column_name)
         );
+
+        // If no match found, check if the current dbColumn exists in the table
+        const dbColumnExists = tableColumnNames.includes(mapping.dbColumn);
 
         return {
           ...mapping,
           dbColumn: matchingColumn?.column_name || mapping.dbColumn,
-          isNew: !matchingColumn,
+          isNew: !matchingColumn && !dbColumnExists,
+          // Auto-disable columns that don't exist in the table (for existing tables)
+          enabled: matchingColumn || dbColumnExists ? mapping.enabled : false,
         };
       })
     );
   }, [tableColumns]);
 
-  // Run auto-mapping when table columns load
-  useCallback(() => {
+  // Run auto-mapping when table columns load - use useEffect instead of useCallback
+  useEffect(() => {
     if (tableColumns && tableColumns.length > 0) {
       autoMapColumns();
     }
@@ -310,71 +306,143 @@ export function CSVImportMapper() {
     updateMapping(index, { enabled: !fieldMappings[index].enabled });
   };
 
-  // Import mutation
+  // Chunk size for processing
+  const CHUNK_SIZE = 500;
+
+  // Import mutation with chunked processing
   const importMutation = useMutation({
     mutationFn: async () => {
       const targetTable = isCreatingNewTable ? newTableName : selectedTable;
       if (!targetTable) throw new Error("No table selected");
       if (!csvContent) throw new Error("No CSV content");
+      if (!uniqueKeyColumn) throw new Error("No unique key column selected");
 
-      const enabledMappings = fieldMappings.filter((m) => m.enabled);
+      // For existing tables, filter out "isNew" columns since they don't exist in the database
+      const enabledMappings = fieldMappings.filter((m) => m.enabled && (!m.isNew || isCreatingNewTable));
       if (enabledMappings.length === 0) throw new Error("No fields selected for import");
 
+      // Validate that the unique key column is mapped to a CSV column
+      const uniqueKeyMapping = enabledMappings.find((m) => m.dbColumn === uniqueKeyColumn);
+      if (!uniqueKeyMapping) {
+        const csvColumnForUniqueKey = enabledMappings.find(
+          (m) => m.csvColumn.toLowerCase().includes("id") || m.csvColumn.toLowerCase() === "id"
+        );
+        if (csvColumnForUniqueKey) {
+          throw new Error(
+            `Unique key "${uniqueKeyColumn}" is not mapped. Consider mapping CSV column "${csvColumnForUniqueKey.csvColumn}" to "${uniqueKeyColumn}".`
+          );
+        }
+        throw new Error(
+          `Unique key "${uniqueKeyColumn}" must be mapped to a CSV column. Please update your field mappings.`
+        );
+      }
+
+      // Parse CSV into lines for chunking
+      const lines = csvContent.split("\n").filter((line) => line.trim());
+      const headerLine = lines[0];
+      const dataLines = lines.slice(1);
+      const totalRows = dataLines.length;
+      const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
+
+      setStep("importing");
       setProgress({
-        status: "uploading",
-        message: "Sending data to server...",
-        total: progress.total,
+        status: "processing",
+        message: `Starting import of ${totalRows.toLocaleString()} records...`,
+        total: totalRows,
         processed: 0,
         inserted: 0,
         updated: 0,
         skipped: 0,
-        errors: [],
       });
 
-      setStep("importing");
+      // Aggregate results
+      let totalInserted = 0;
+      let totalUpdated = 0;
+      let totalSkipped = 0;
+      const allErrors: string[] = [];
 
-      const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
-        body: {
-          csvContent,
-          targetTable,
-          fieldMappings: enabledMappings.map((m) => ({
-            csvColumn: m.csvColumn,
-            dbColumn: m.dbColumn,
-            type: m.type,
-          })),
-          uniqueKeyColumn,
-          createTable: isCreatingNewTable,
-        },
-      });
+      // Process in chunks
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const startIdx = chunkIndex * CHUNK_SIZE;
+        const endIdx = Math.min(startIdx + CHUNK_SIZE, totalRows);
+        const chunkLines = dataLines.slice(startIdx, endIdx);
+        const chunkCsv = [headerLine, ...chunkLines].join("\n");
+        const processedSoFar = endIdx;
+        const percentComplete = Math.round((processedSoFar / totalRows) * 100);
 
-      if (error) throw new Error(error.message || "Import failed");
+        setProgress((prev) => ({
+          ...prev,
+          status: "processing",
+          message: `Processing chunk ${chunkIndex + 1}/${totalChunks} (${percentComplete}%)...`,
+          processed: startIdx,
+        }));
 
-      return data;
+        try {
+          const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
+            body: {
+              csvContent: chunkCsv,
+              targetTable,
+              fieldMappings: enabledMappings.map((m) => ({
+                csvColumn: m.csvColumn,
+                dbColumn: m.dbColumn,
+                type: m.type,
+              })),
+              uniqueKeyColumn,
+              createTable: isCreatingNewTable && chunkIndex === 0, // Only create on first chunk
+            },
+          });
+
+          if (error) {
+            allErrors.push(`Chunk ${chunkIndex + 1}: ${error.message}`);
+            continue;
+          }
+
+          totalInserted += data?.inserted || 0;
+          totalUpdated += data?.updated || 0;
+          totalSkipped += data?.skipped || 0;
+
+          if (data?.errors) {
+            allErrors.push(...data.errors.slice(0, 5)); // Limit errors per chunk
+          }
+
+          // Update progress after each chunk
+          setProgress((prev) => ({
+            ...prev,
+            processed: processedSoFar,
+            inserted: totalInserted,
+            updated: totalUpdated,
+            skipped: totalSkipped,
+            message: `Processed ${processedSoFar.toLocaleString()}/${totalRows.toLocaleString()} records (${percentComplete}%)`,
+          }));
+        } catch (err) {
+          allErrors.push(`Chunk ${chunkIndex + 1}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
+      }
+
+      return {
+        success: allErrors.length === 0,
+        total: totalRows,
+        inserted: totalInserted,
+        updated: totalUpdated,
+        skipped: totalSkipped,
+        errors: allErrors,
+      };
     },
     onSuccess: (data) => {
-      const errors = data.errors || [];
       setProgress({
         status: "complete",
         message: "Import complete!",
-        total: data.total || progress.total,
-        processed: data.total || progress.total,
-        inserted: data.inserted || 0,
-        updated: data.updated || 0,
-        skipped: data.skipped || 0,
-        errors,
+        total: data.total,
+        processed: data.total,
+        inserted: data.inserted,
+        updated: data.updated,
+        skipped: data.skipped,
       });
       setStep("complete");
       queryClient.invalidateQueries();
-
-      // Log errors to console for debugging
-      if (errors.length > 0) {
-        console.error("Import errors:", errors);
-      }
-
       toast({
         title: "Import Complete",
-        description: `${data.inserted || 0} inserted, ${data.updated || 0} updated${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
-        variant: data.skipped > 0 && data.inserted === 0 ? "destructive" : "default",
+        description: `${data.inserted.toLocaleString()} inserted, ${data.updated.toLocaleString()} updated${data.skipped > 0 ? `, ${data.skipped.toLocaleString()} skipped` : ""}`,
       });
     },
     onError: (error) => {
@@ -411,7 +479,6 @@ export function CSVImportMapper() {
       inserted: 0,
       updated: 0,
       skipped: 0,
-      errors: [],
     });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -539,14 +606,7 @@ export function CSVImportMapper() {
               {/* Unique Key Selection */}
               {(selectedTable || newTableName) && (
                 <div className="space-y-2 flex-shrink-0">
-                  <Label className="flex items-center gap-2">
-                    Unique Key Column (for upsert)
-                    {selectedTable && (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        Required: {AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey}
-                      </span>
-                    )}
-                  </Label>
+                  <Label>Unique Key Column (for upsert)</Label>
                   <Select value={uniqueKeyColumn} onValueChange={setUniqueKeyColumn}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select unique key column..." />
@@ -557,20 +617,26 @@ export function CSVImportMapper() {
                         .map((mapping) => (
                           <SelectItem key={mapping.dbColumn} value={mapping.dbColumn}>
                             {mapping.dbColumn}
-                            {selectedTable && mapping.dbColumn === AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey && (
-                              <span className="ml-2 text-xs text-green-600">(recommended)</span>
-                            )}
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
-                  {/* Warning if unique key not in mappings */}
-                  {selectedTable && uniqueKeyColumn && !fieldMappings.some(m => m.enabled && m.dbColumn === uniqueKeyColumn) && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      The unique key column "{uniqueKeyColumn}" is not mapped. Ensure a CSV column maps to this DB column.
+                </div>
+              )}
+
+              {/* Warning for unmapped columns */}
+              {(selectedTable || newTableName) && !isCreatingNewTable && fieldMappings.some(m => m.isNew && m.enabled) && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Some columns don't exist in the target table</p>
+                    <p className="text-muted-foreground">
+                      Columns marked as "New" will cause import errors. Either disable them or add them to the database first.
                     </p>
-                  )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Missing: {fieldMappings.filter(m => m.isNew && m.enabled).map(m => m.dbColumn).join(", ")}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -579,9 +645,14 @@ export function CSVImportMapper() {
                 <div className="space-y-2 flex flex-col min-h-0 flex-1">
                   <Label className="flex items-center justify-between flex-shrink-0">
                     <span>Field Mappings ({fieldMappings.length} fields)</span>
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {fieldMappings.filter(m => m.enabled).length} enabled
-                    </span>
+                    <div className="flex gap-3 text-xs text-muted-foreground font-normal">
+                      <span>{fieldMappings.filter(m => m.enabled).length} enabled</span>
+                      {!isCreatingNewTable && fieldMappings.some(m => m.isNew) && (
+                        <span className="text-destructive">
+                          {fieldMappings.filter(m => m.isNew && m.enabled).length} will fail
+                        </span>
+                      )}
+                    </div>
                   </Label>
                   <div className="border rounded-lg flex flex-col min-h-0 flex-1" style={{ maxHeight: 'calc(100vh - 480px)', minHeight: '200px' }}>
                     {/* Sticky header */}
@@ -712,31 +783,42 @@ export function CSVImportMapper() {
           {/* Step 3: Importing */}
           {step === "importing" && (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <div className="relative">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">
+                    {progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
               <div className="text-center space-y-2">
-                <p className="font-medium">{progress.message}</p>
+                <p className="font-medium text-lg">{progress.message}</p>
                 <p className="text-sm text-muted-foreground">
-                  Processing {progress.total.toLocaleString()} records...
+                  {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} records
                 </p>
               </div>
-              <Progress value={50} className="w-64" />
+              <div className="w-80 space-y-2">
+                <Progress 
+                  value={progress.total > 0 ? (progress.processed / progress.total) * 100 : 0} 
+                  className="h-3"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{progress.inserted.toLocaleString()} inserted</span>
+                  <span>{progress.updated.toLocaleString()} updated</span>
+                  {progress.skipped > 0 && <span>{progress.skipped.toLocaleString()} skipped</span>}
+                </div>
+              </div>
             </div>
           )}
 
           {/* Step 4: Complete */}
           {step === "complete" && (
-            <div className="flex flex-col items-center justify-center py-8 space-y-6">
-              {progress.inserted > 0 || progress.updated > 0 ? (
-                <CheckCircle2 className="h-12 w-12 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-12 w-12 text-yellow-500" />
-              )}
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
               <div className="text-center space-y-2">
-                <p className="text-lg font-medium">
-                  {progress.inserted > 0 || progress.updated > 0 ? "Import Complete!" : "Import Failed"}
-                </p>
+                <p className="text-lg font-medium">Import Complete!</p>
                 <p className="text-sm text-muted-foreground">
-                  Processed {progress.total.toLocaleString()} records
+                  Successfully processed {progress.total.toLocaleString()} records
                 </p>
               </div>
               <div className="flex gap-4">
@@ -749,30 +831,12 @@ export function CSVImportMapper() {
                   {progress.updated} updated
                 </Badge>
                 {progress.skipped > 0 && (
-                  <Badge variant="destructive" className="text-sm px-3 py-1">
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     {progress.skipped} skipped
                   </Badge>
                 )}
               </div>
-
-              {/* Display errors when records are skipped */}
-              {progress.errors.length > 0 && (
-                <div className="w-full max-w-lg mt-4">
-                  <details open={progress.inserted === 0 && progress.updated === 0}>
-                    <summary className="text-sm font-medium text-destructive cursor-pointer hover:underline">
-                      View errors ({progress.errors.length} shown)
-                    </summary>
-                    <ScrollArea className="h-32 mt-2 border rounded-lg p-3 bg-muted/50">
-                      <ul className="text-xs space-y-1 text-muted-foreground font-mono">
-                        {progress.errors.map((error, index) => (
-                          <li key={index} className="break-all">• {error}</li>
-                        ))}
-                      </ul>
-                    </ScrollArea>
-                  </details>
-                </div>
-              )}
             </div>
           )}
         </div>

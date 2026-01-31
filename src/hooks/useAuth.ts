@@ -8,9 +8,24 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if this is a session-only login (user didn't check "stay signed in")
+    // If the session marker doesn't exist but user had a session, it means browser was closed and reopened
+    const isSessionOnly = localStorage.getItem("hume_stay_signed_in") === "false";
+    const hadSessionMarker = sessionStorage.getItem("hume_session_only") === "true";
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
+        // If user chose not to stay signed in and this is a new browser session, sign out
+        if (session && isSessionOnly && !hadSessionMarker) {
+          // New browser session detected for a user who didn't want to stay signed in
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -18,7 +33,16 @@ export function useAuth() {
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      // If user chose not to stay signed in and this is a new browser session, sign out
+      if (session && isSessionOnly && !hadSessionMarker) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -47,6 +71,8 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Clear session markers on sign out
+    sessionStorage.removeItem("hume_session_only");
     const { error } = await supabase.auth.signOut();
     return { error };
   };

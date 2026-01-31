@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBackfillJobs, DATA_TYPES_BY_SOURCE, BackfillJob, getSyncPhaseLabel } from "@/hooks/useBackfillJobs";
+import { useCSVImport } from "@/hooks/useCSVImport";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,9 @@ import {
   Database,
   Trash2,
   RefreshCw,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  FileSpreadsheet
 } from "lucide-react";
 import { format, differenceInSeconds, differenceInMinutes, differenceInHours, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -701,10 +704,24 @@ export default function BackfillManagerPage() {
     continueJob
   } = useBackfillJobs();
 
+  const { importCSV, isImporting, progress: importProgress, result: importResult } = useCSVImport();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [apiSource, setApiSource] = useState<"arketa" | "sling">("arketa");
   const [dataType, setDataType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      importCSV(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const dataTypes = DATA_TYPES_BY_SOURCE[apiSource];
 
@@ -834,6 +851,81 @@ export default function BackfillManagerPage() {
                 </span>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* CSV Import Section */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import from CSV
+            </CardTitle>
+            <CardDescription>
+              Import client data from a CSV file. Deduplicates on external_id (client_id column).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isImporting}
+                  className="min-w-[160px]"
+                >
+                  {isImporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  {isImporting ? "Importing..." : "Select CSV File"}
+                </Button>
+                
+                {isImporting && (
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{importProgress.status}</span>
+                      {importProgress.total > 0 && (
+                        <span>{importProgress.total.toLocaleString()} records</span>
+                      )}
+                    </div>
+                    <Progress value={importProgress.total > 0 ? 100 : 50} className="h-2" />
+                  </div>
+                )}
+                
+                {importResult && !isImporting && (
+                  <div className="flex items-center gap-4 text-sm">
+                    <Badge variant="outline" className="bg-primary/10">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      {importResult.inserted} inserted
+                    </Badge>
+                    <Badge variant="outline">
+                      {importResult.updated} updated
+                    </Badge>
+                    {importResult.skipped > 0 && (
+                      <Badge variant="secondary">
+                        {importResult.skipped} skipped
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3">
+                <p className="font-medium mb-1">Expected CSV format (semicolon-delimited):</p>
+                <code className="text-[10px]">
+                  client_id; client_name; email; phone_number; tags; custom_fields; lifecycle_stage_name; date_of_birth; referrer; email_marketing_opt_in; sms_marketing_opt_in
+                </code>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

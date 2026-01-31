@@ -307,39 +307,81 @@ function ActiveJobCard({
             </div>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex flex-col gap-2 shrink-0 lg:w-auto">
-            <div className="flex gap-2">
-              {isRunning && !isPaused && (
-                <Button variant="outline" size="sm" onClick={onPause}>
-                  <Pause className="h-4 w-4 mr-2" />
-                  Pause
-                </Button>
-              )}
-              {isPaused && (
-                <Button variant="outline" size="sm" onClick={onResume}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Resume
-                </Button>
-              )}
+          {/* Right: Actions - Fixed width grid for stable layout */}
+          <div className="shrink-0 w-[280px]">
+            <div className="grid grid-cols-2 gap-2">
+              {/* Pause/Resume Button - Always in same position */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (isPaused) {
+                    onResume();
+                  } else {
+                    onPause();
+                  }
+                }}
+                disabled={!isRunning && !isPaused}
+                className="w-full"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Resume
+                  </>
+                ) : (
+                  <>
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </>
+                )}
+              </Button>
+              
+              {/* Cancel Button - Always in same position */}
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel();
+                }}
+                className="w-full"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              
+              {/* Continue Now Button - Spans full width when visible */}
               {isWaitingForRetry && (
-                <Button variant="outline" size="sm" onClick={onContinue}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onContinue();
+                  }}
+                  className="col-span-2 w-full"
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Continue Now
                 </Button>
               )}
-              <Button variant="destructive" size="sm" onClick={onCancel}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
             </div>
             
-            {/* View Details Toggle Button - below action buttons */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start"
-              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+            {/* View Details Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start mt-2"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDetailsOpen(!isDetailsOpen);
+              }}
             >
               <ChevronRight className={cn(
                 "h-4 w-4 mr-2 transition-transform",

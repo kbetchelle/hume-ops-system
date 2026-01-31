@@ -780,6 +780,111 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_subscriptions: {
+        Row: {
+          api_updated_at: string | null
+          cancel_at_date: string | null
+          cancellation_date: string | null
+          client_email: string | null
+          client_id: string | null
+          created_at: string | null
+          end_date: string | null
+          external_id: string
+          has_payment_method: boolean | null
+          id: string
+          name: string | null
+          next_renewal_date: string | null
+          offering_id: string | null
+          pause_end_date: string | null
+          pause_start_date: string | null
+          price: number | null
+          raw_data: Json | null
+          remaining_uses: number | null
+          start_date: string | null
+          status: string | null
+          substatus: string | null
+          synced_at: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_updated_at?: string | null
+          cancel_at_date?: string | null
+          cancellation_date?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          external_id: string
+          has_payment_method?: boolean | null
+          id?: string
+          name?: string | null
+          next_renewal_date?: string | null
+          offering_id?: string | null
+          pause_end_date?: string | null
+          pause_start_date?: string | null
+          price?: number | null
+          raw_data?: Json | null
+          remaining_uses?: number | null
+          start_date?: string | null
+          status?: string | null
+          substatus?: string | null
+          synced_at?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_updated_at?: string | null
+          cancel_at_date?: string | null
+          cancellation_date?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          external_id?: string
+          has_payment_method?: boolean | null
+          id?: string
+          name?: string | null
+          next_renewal_date?: string | null
+          offering_id?: string | null
+          pause_end_date?: string | null
+          pause_start_date?: string | null
+          price?: number | null
+          raw_data?: Json | null
+          remaining_uses?: number | null
+          start_date?: string | null
+          status?: string | null
+          substatus?: string | null
+          synced_at?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      arketa_subscriptions_staging: {
+        Row: {
+          arketa_subscription_id: string
+          id: string
+          raw_data: Json
+          staged_at: string | null
+          sync_batch_id: string
+        }
+        Insert: {
+          arketa_subscription_id: string
+          id?: string
+          raw_data: Json
+          staged_at?: string | null
+          sync_batch_id: string
+        }
+        Update: {
+          arketa_subscription_id?: string
+          id?: string
+          raw_data?: Json
+          staged_at?: string | null
+          sync_batch_id?: string
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           category: string

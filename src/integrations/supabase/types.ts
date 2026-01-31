@@ -2302,11 +2302,13 @@ export type Database = {
           content: string
           created_at: string | null
           created_by: string
+          created_by_id: string | null
           expires_at: string | null
           id: string
           is_active: boolean | null
           photo_url: string | null
           priority: string | null
+          scheduled_at: string | null
           target_departments: string[] | null
           title: string
           week_start_date: string | null
@@ -2316,11 +2318,13 @@ export type Database = {
           content: string
           created_at?: string | null
           created_by: string
+          created_by_id?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
           photo_url?: string | null
           priority?: string | null
+          scheduled_at?: string | null
           target_departments?: string[] | null
           title: string
           week_start_date?: string | null
@@ -2330,11 +2334,13 @@ export type Database = {
           content?: string
           created_at?: string | null
           created_by?: string
+          created_by_id?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
           photo_url?: string | null
           priority?: string | null
+          scheduled_at?: string | null
           target_departments?: string[] | null
           title?: string
           week_start_date?: string | null

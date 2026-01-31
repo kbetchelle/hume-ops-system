@@ -465,8 +465,7 @@ async function executeSyncCycle(
   await updateJobPhase(supabase, job.id, 'clearing_staging');
   await clearStaging(supabase, config.stagingTable, batchId, logger);
 
-  // Get first record ID for duplicate detection
-  const firstRecordId = String(fetchResult.records[0]?.[config.primaryIdField] || fetchResult.records[0]?.id || 'unknown');
+  // Use already-computed firstRecordId from duplicate detection above
 
   return {
     recordsFetched: fetchResult.records.length,

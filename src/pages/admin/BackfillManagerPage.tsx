@@ -188,6 +188,32 @@ function ActiveJobCard({
   const isWaitingForRetry = isRunning && job.retry_scheduled_at && new Date(job.retry_scheduled_at) > new Date();
   const isActivelyProcessing = isRunning && !isWaitingForRetry && job.sync_phase && 
     !["idle", "complete", "batch_complete"].includes(job.sync_phase);
+  
+  // Button handlers with logging
+  const handlePause = () => {
+    console.log('[ActiveJobCard] Pause clicked for job:', job.id);
+    onPause();
+  };
+  
+  const handleResume = () => {
+    console.log('[ActiveJobCard] Resume clicked for job:', job.id);
+    onResume();
+  };
+  
+  const handleCancel = () => {
+    console.log('[ActiveJobCard] Cancel clicked for job:', job.id);
+    onCancel();
+  };
+  
+  const handleContinue = () => {
+    console.log('[ActiveJobCard] Continue clicked for job:', job.id);
+    onContinue();
+  };
+  
+  const handleViewDetails = () => {
+    console.log('[ActiveJobCard] View Details clicked, current state:', isDetailsOpen);
+    setIsDetailsOpen(!isDetailsOpen);
+  };
 
   // Calculate progress
   const hasKnownTotal = Boolean(job.total_records_expected && job.total_records_expected > 0);
@@ -307,88 +333,69 @@ function ActiveJobCard({
             </div>
           </div>
 
-          {/* Right: Actions - Fixed width grid for stable layout */}
-          <div className="shrink-0 w-[280px]">
+          {/* Right: Actions - Fixed width for stable layout */}
+          <div className="shrink-0 w-[300px] space-y-2">
+            {/* Action buttons in fixed grid */}
             <div className="grid grid-cols-2 gap-2">
-              {/* Pause/Resume Button - Always in same position */}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (isPaused) {
-                    onResume();
-                  } else {
-                    onPause();
-                  }
-                }}
-                disabled={!isRunning && !isPaused}
-                className="w-full"
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Resume
-                  </>
-                ) : (
-                  <>
-                    <Pause className="h-4 w-4 mr-2" />
-                    Pause
-                  </>
-                )}
-              </Button>
+              {/* Pause/Resume Button */}
+              {isPaused ? (
+                <button
+                  type="button"
+                  onClick={handleResume}
+                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Resume
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handlePause}
+                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+                >
+                  <Pause className="h-4 w-4 mr-2" />
+                  Pause
+                </button>
+              )}
               
-              {/* Cancel Button - Always in same position */}
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCancel();
-                }}
-                className="w-full"
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md"
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
-              </Button>
-              
-              {/* Continue Now Button - Spans full width when visible */}
-              {isWaitingForRetry && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onContinue();
-                  }}
-                  className="col-span-2 w-full"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Continue Now
-                </Button>
-              )}
+              </button>
             </div>
             
+            {/* Continue Now Button - Only when waiting for retry */}
+            {isWaitingForRetry && (
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="w-full inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Continue Now
+              </button>
+            )}
+            
+            {/* Empty spacer when Continue button is hidden to maintain layout */}
+            {!isWaitingForRetry && <div className="h-9" />}
+            
             {/* View Details Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start mt-2"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDetailsOpen(!isDetailsOpen);
-              }}
+            <button
+              type="button"
+              onClick={handleViewDetails}
+              className="w-full inline-flex items-center justify-start h-9 px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md"
             >
               <ChevronRight className={cn(
                 "h-4 w-4 mr-2 transition-transform",
                 isDetailsOpen && "rotate-90"
               )} />
               View Details
-            </Button>
+            </button>
           </div>
         </div>
 

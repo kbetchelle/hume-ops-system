@@ -316,7 +316,8 @@ export function CSVImportMapper() {
       if (!csvContent) throw new Error("No CSV content");
       if (!uniqueKeyColumn) throw new Error("No unique key column selected");
 
-      const enabledMappings = fieldMappings.filter((m) => m.enabled);
+      // For existing tables, filter out "isNew" columns since they don't exist in the database
+      const enabledMappings = fieldMappings.filter((m) => m.enabled && (!m.isNew || isCreatingNewTable));
       if (enabledMappings.length === 0) throw new Error("No fields selected for import");
 
       // Validate that the unique key column is mapped to a CSV column

@@ -265,9 +265,11 @@ function ActiveJobCard({
     >
       <CardContent className="pt-6">
         {/* Main horizontal layout */}
-        <div className="flex flex-col xl:flex-row xl:items-start gap-6">
-          {/* Left: Header and Phase Indicator */}
-          <div className="xl:w-[320px] xl:shrink-0 space-y-4">
+        <div className="flex flex-col gap-4">
+          {/* Top row: Header and stats */}
+          <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+            {/* Left: Header and Phase Indicator */}
+            <div className="lg:w-[300px] lg:shrink-0 space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -347,32 +349,34 @@ function ActiveJobCard({
             )}
           </div>
 
-          {/* Center: Stats */}
-          <div className="flex items-center justify-around gap-4 flex-1 min-w-[400px] px-4 py-2 bg-muted/30 rounded-lg">
-            <div className="text-center min-w-[70px]">
-              <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fetched</p>
+          {/* Bottom row: Stats and Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+            {/* Center: Stats */}
+            <div className="flex items-center justify-around gap-2 sm:gap-4 flex-1 px-2 sm:px-4 py-2 bg-muted/30 rounded-lg overflow-x-auto">
+              <div className="text-center min-w-[60px] flex-shrink-0">
+                <p className="text-xl sm:text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fetched</p>
+              </div>
+              <div className="text-center min-w-[60px] flex-shrink-0">
+                <p className="text-xl sm:text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Inserted</p>
+              </div>
+              <div className="text-center min-w-[60px] flex-shrink-0">
+                <p className="text-xl sm:text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Updated</p>
+              </div>
+              <div className="text-center min-w-[55px] flex-shrink-0">
+                <p className="text-xl sm:text-2xl font-bold">{job.total_batches_completed || 0}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Batches</p>
+              </div>
+              <div className="text-center min-w-[60px] flex-shrink-0">
+                <p className="text-xl sm:text-2xl font-bold text-accent-foreground">{formatDuration(job.started_at, null)}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Elapsed</p>
+              </div>
             </div>
-            <div className="text-center min-w-[70px]">
-              <p className="text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Inserted</p>
-            </div>
-            <div className="text-center min-w-[70px]">
-              <p className="text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Updated</p>
-            </div>
-            <div className="text-center min-w-[60px]">
-              <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Batches</p>
-            </div>
-            <div className="text-center min-w-[60px]">
-              <p className="text-2xl font-bold text-accent-foreground">{formatDuration(job.started_at, null)}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Elapsed</p>
-            </div>
-          </div>
 
-          {/* Right: Actions - Fixed width for stable layout */}
-          <div className="xl:shrink-0 xl:w-[280px] space-y-2 relative z-50">
+            {/* Right: Actions */}
+            <div className="sm:shrink-0 sm:w-[240px] space-y-2 relative z-50">
             {/* Action buttons in fixed grid */}
             <div className="grid grid-cols-2 gap-2">
               {/* Pause/Resume Button */}

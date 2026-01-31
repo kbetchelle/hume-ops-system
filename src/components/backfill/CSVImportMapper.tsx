@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 // Available tables for import
 const AVAILABLE_TABLES = [
   { value: "arketa_clients", label: "Arketa Clients", uniqueKey: "external_id" },
+  { value: "arketa_subscriptions", label: "Arketa Subscriptions", uniqueKey: "external_id" },
   { value: "arketa_classes", label: "Arketa Classes", uniqueKey: "external_id" },
   { value: "arketa_reservations", label: "Arketa Reservations", uniqueKey: "external_id" },
   { value: "arketa_payments", label: "Arketa Payments", uniqueKey: "external_id" },
@@ -76,6 +77,7 @@ interface ImportProgress {
   inserted: number;
   updated: number;
   skipped: number;
+  errors: string[];
 }
 
 export function CSVImportMapper() {
@@ -111,6 +113,7 @@ export function CSVImportMapper() {
     inserted: 0,
     updated: 0,
     skipped: 0,
+    errors: [],
   });
 
   // Fetch table columns when a table is selected
@@ -325,6 +328,7 @@ export function CSVImportMapper() {
         inserted: 0,
         updated: 0,
         skipped: 0,
+        errors: [],
       });
 
       setStep("importing");
@@ -348,6 +352,7 @@ export function CSVImportMapper() {
       return data;
     },
     onSuccess: (data) => {
+      const errors = data.errors || [];
       setProgress({
         status: "complete",
         message: "Import complete!",
@@ -356,12 +361,20 @@ export function CSVImportMapper() {
         inserted: data.inserted || 0,
         updated: data.updated || 0,
         skipped: data.skipped || 0,
+        errors,
       });
       setStep("complete");
       queryClient.invalidateQueries();
+
+      // Log errors to console for debugging
+      if (errors.length > 0) {
+        console.error("Import errors:", errors);
+      }
+
       toast({
         title: "Import Complete",
-        description: `${data.inserted || 0} inserted, ${data.updated || 0} updated`,
+        description: `${data.inserted || 0} inserted, ${data.updated || 0} updated${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
+        variant: data.skipped > 0 && data.inserted === 0 ? "destructive" : "default",
       });
     },
     onError: (error) => {
@@ -398,6 +411,7 @@ export function CSVImportMapper() {
       inserted: 0,
       updated: 0,
       skipped: 0,
+      errors: [],
     });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -525,7 +539,14 @@ export function CSVImportMapper() {
               {/* Unique Key Selection */}
               {(selectedTable || newTableName) && (
                 <div className="space-y-2 flex-shrink-0">
-                  <Label>Unique Key Column (for upsert)</Label>
+                  <Label className="flex items-center gap-2">
+                    Unique Key Column (for upsert)
+                    {selectedTable && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        Required: {AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey}
+                      </span>
+                    )}
+                  </Label>
                   <Select value={uniqueKeyColumn} onValueChange={setUniqueKeyColumn}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select unique key column..." />
@@ -536,10 +557,20 @@ export function CSVImportMapper() {
                         .map((mapping) => (
                           <SelectItem key={mapping.dbColumn} value={mapping.dbColumn}>
                             {mapping.dbColumn}
+                            {selectedTable && mapping.dbColumn === AVAILABLE_TABLES.find(t => t.value === selectedTable)?.uniqueKey && (
+                              <span className="ml-2 text-xs text-green-600">(recommended)</span>
+                            )}
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
+                  {/* Warning if unique key not in mappings */}
+                  {selectedTable && uniqueKeyColumn && !fieldMappings.some(m => m.enabled && m.dbColumn === uniqueKeyColumn) && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      The unique key column "{uniqueKeyColumn}" is not mapped. Ensure a CSV column maps to this DB column.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -694,12 +725,18 @@ export function CSVImportMapper() {
 
           {/* Step 4: Complete */}
           {step === "complete" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
+            <div className="flex flex-col items-center justify-center py-8 space-y-6">
+              {progress.inserted > 0 || progress.updated > 0 ? (
+                <CheckCircle2 className="h-12 w-12 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-12 w-12 text-yellow-500" />
+              )}
               <div className="text-center space-y-2">
-                <p className="text-lg font-medium">Import Complete!</p>
+                <p className="text-lg font-medium">
+                  {progress.inserted > 0 || progress.updated > 0 ? "Import Complete!" : "Import Failed"}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  Successfully processed {progress.total.toLocaleString()} records
+                  Processed {progress.total.toLocaleString()} records
                 </p>
               </div>
               <div className="flex gap-4">
@@ -712,12 +749,30 @@ export function CSVImportMapper() {
                   {progress.updated} updated
                 </Badge>
                 {progress.skipped > 0 && (
-                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                  <Badge variant="destructive" className="text-sm px-3 py-1">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     {progress.skipped} skipped
                   </Badge>
                 )}
               </div>
+
+              {/* Display errors when records are skipped */}
+              {progress.errors.length > 0 && (
+                <div className="w-full max-w-lg mt-4">
+                  <details open={progress.inserted === 0 && progress.updated === 0}>
+                    <summary className="text-sm font-medium text-destructive cursor-pointer hover:underline">
+                      View errors ({progress.errors.length} shown)
+                    </summary>
+                    <ScrollArea className="h-32 mt-2 border rounded-lg p-3 bg-muted/50">
+                      <ul className="text-xs space-y-1 text-muted-foreground font-mono">
+                        {progress.errors.map((error, index) => (
+                          <li key={index} className="break-all">• {error}</li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
+                  </details>
+                </div>
+              )}
             </div>
           )}
         </div>

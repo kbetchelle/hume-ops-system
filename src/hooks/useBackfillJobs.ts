@@ -362,8 +362,7 @@ export function useBackfillJobs() {
 export const DATA_TYPES_BY_SOURCE = {
   arketa: [
     { value: "clients", label: "Clients" },
-    { value: "classes", label: "Classes" },
-    { value: "reservations", label: "Reservations" },
+    { value: "subscriptions", label: "Subscriptions" },
     { value: "payments", label: "Payments" },
     { value: "instructors", label: "Instructors" },
   ],

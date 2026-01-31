@@ -139,8 +139,11 @@ serve(async (req) => {
     }
 
     console.log(`Starting import to table: ${targetTable}`);
-    console.log(`Field mappings: ${JSON.stringify(fieldMappings)}`);
-    console.log(`Unique key: ${uniqueKeyColumn}`);
+    console.log(`Unique key column: ${uniqueKeyColumn}`);
+    console.log(`Field mappings (${fieldMappings.length} fields):`);
+    fieldMappings.forEach((m) => {
+      console.log(`  CSV "${m.csvColumn}" -> DB "${m.dbColumn}" (${m.type})`);
+    });
 
     // Parse CSV
     const lines = csvContent.split("\n").filter((line) => line.trim());
@@ -263,8 +266,21 @@ serve(async (req) => {
         .upsert(batch, { onConflict: uniqueKeyColumn });
 
       if (upsertError) {
-        console.error(`Batch ${Math.floor(i / BATCH_SIZE) + 1} upsert error:`, upsertError);
-        errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${upsertError.message}`);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        console.error(`Batch ${batchNum} upsert error:`, upsertError);
+        console.error(`Batch ${batchNum} sample record:`, JSON.stringify(batch[0]));
+
+        // Provide more helpful error message
+        let errorDetail = upsertError.message;
+        if (upsertError.message.includes("violates unique constraint")) {
+          errorDetail = `Duplicate key: ${upsertError.message}`;
+        } else if (upsertError.message.includes("column") && upsertError.message.includes("does not exist")) {
+          errorDetail = `Column mismatch: ${upsertError.message}. Check your field mappings.`;
+        } else if (upsertError.message.includes("ON CONFLICT")) {
+          errorDetail = `Unique key error: The column "${uniqueKeyColumn}" may not have a UNIQUE constraint. ${upsertError.message}`;
+        }
+
+        errors.push(`Batch ${batchNum}: ${errorDetail}`);
         skipped += batch.length;
         continue;
       }

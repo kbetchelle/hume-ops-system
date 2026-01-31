@@ -14,7 +14,12 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nRemove macOS resource fork files and update gitignore\n\nThese ._* files were accidentally tracked and causing git corruption.\nAdded ._* pattern to .gitignore to prevent future issues.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
       "Bash(brew install:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

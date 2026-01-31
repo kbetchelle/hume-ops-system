@@ -157,6 +157,20 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     responseDataPaths: ['items', 'data', 'staff'], // items first; API may return direct array
     supportsLimit: false, // Staff API returns all records, no limit support
   },
+  'arketa-subscriptions': {
+    endpointPath: '/subscriptions',
+    stagingTable: 'arketa_subscriptions_staging',
+    targetTable: 'arketa_subscriptions',
+    uniqueKey: 'external_id',
+    transformFn: transformSubscription,
+    stagingIdField: 'arketa_subscription_id',
+    useDev: false, // Uses partnerApi (prod)
+    paginationStyle: 'cursor',
+    paginationCursorField: 'nextCursor',
+    primaryIdField: 'subscription_id',
+    responseDataPaths: ['items', 'data', 'subscriptions'],
+    supportsLimit: true,
+  },
   'sling-shifts': {
     endpointPath: '/reports/roster',
     stagingTable: 'sling_shifts_staging',
@@ -1375,6 +1389,32 @@ function transformInstructor(raw: Record<string, unknown>): Record<string, unkno
     email: raw.email,
     phone: raw.phone,
     is_active: raw.active !== false,
+    raw_data: raw,
+    synced_at: new Date().toISOString()
+  };
+}
+
+function transformSubscription(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    external_id: String(raw.subscription_id || raw.id),
+    client_id: raw.client_id,
+    client_email: raw.client_email,
+    type: raw.type,
+    offering_id: raw.offering_id,
+    status: raw.status,
+    name: raw.name,
+    start_date: raw.start_date,
+    end_date: raw.end_date,
+    remaining_uses: raw.remaining_uses ? Number(raw.remaining_uses) : null,
+    price: raw.price ? Number(raw.price) : null,
+    api_updated_at: raw.api_updated_at,
+    cancellation_date: raw.cancellation_date || null,
+    pause_start_date: raw.pause_start_date || null,
+    cancel_at_date: raw.cancel_at_date || null,
+    pause_end_date: raw.pause_end_date || null,
+    next_renewal_date: raw.next_renewal_date || null,
+    has_payment_method: raw.has_payment_method === true || raw.has_payment_method === 'true',
+    substatus: raw.substatus || null,
     raw_data: raw,
     synced_at: new Date().toISOString()
   };

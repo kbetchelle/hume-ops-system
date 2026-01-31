@@ -1,12 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
+interface SkippedRecord {
+  row: number;
+  reason: string;
+  data?: string;
+}
+
 interface ImportResult {
   success: boolean;
   total: number;
   inserted: number;
   updated: number;
   skipped: number;
+  skippedRecords: SkippedRecord[];
   errors: string[];
 }
 
@@ -95,6 +102,7 @@ Deno.serve(async (req) => {
       inserted: 0,
       updated: 0,
       skipped: 0,
+      skippedRecords: [],
       errors: []
     };
 
@@ -114,8 +122,15 @@ Deno.serve(async (req) => {
       const batch = dataRows.slice(i, i + BATCH_SIZE);
       const records: Record<string, unknown>[] = [];
       
-      for (const line of batch) {
-        if (!line.trim()) continue;
+      for (let j = 0; j < batch.length; j++) {
+        const line = batch[j];
+        const rowNum = i + j + 2; // +2 for 1-indexed and header row
+        
+        if (!line.trim()) {
+          result.skipped++;
+          result.skippedRecords.push({ row: rowNum, reason: "Empty row" });
+          continue;
+        }
         
         try {
           const values = parseCSVLine(line);
@@ -123,12 +138,22 @@ Deno.serve(async (req) => {
           
           if (!clientId) {
             result.skipped++;
+            result.skippedRecords.push({ 
+              row: rowNum, 
+              reason: "Missing client_id",
+              data: values[headerMap['client_name']] || values[headerMap['email']] || 'Unknown'
+            });
             continue;
           }
 
           const email = values[headerMap['email']]?.trim();
           if (!email) {
             result.skipped++;
+            result.skippedRecords.push({ 
+              row: rowNum, 
+              reason: "Missing email",
+              data: `client_id: ${clientId}, name: ${values[headerMap['client_name']] || 'Unknown'}`
+            });
             continue;
           }
 
@@ -165,7 +190,12 @@ Deno.serve(async (req) => {
 
           records.push(record);
         } catch (err) {
-          result.errors.push(`Row parse error: ${err}`);
+          const rowNum = i + batch.indexOf(line) + 2;
+          result.skippedRecords.push({ 
+            row: rowNum, 
+            reason: `Parse error: ${err instanceof Error ? err.message : 'Unknown'}`,
+          });
+          result.errors.push(`Row ${rowNum} parse error: ${err}`);
           result.skipped++;
         }
       }

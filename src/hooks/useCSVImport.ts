@@ -3,12 +3,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface ImportResult {
+export interface SkippedRecord {
+  row: number;
+  reason: string;
+  data?: string;
+}
+
+export interface ImportResult {
   success: boolean;
   total: number;
   inserted: number;
   updated: number;
   skipped: number;
+  skippedRecords: SkippedRecord[];
   errors: string[];
 }
 
@@ -52,9 +59,10 @@ export function useCSVImport() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
+      const skippedMsg = data.skipped > 0 ? ` (${data.skipped} skipped)` : "";
       toast({
         title: "Import Complete",
-        description: `${data.inserted} inserted, ${data.updated} updated, ${data.skipped} skipped`,
+        description: `${data.inserted} inserted, ${data.updated} updated${skippedMsg}`,
       });
     },
     onError: (error) => {

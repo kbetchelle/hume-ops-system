@@ -39,6 +39,7 @@ import {
   Edit2,
   Database,
   TableIcon,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -463,10 +464,9 @@ export function CSVImportMapper() {
 
           {/* Step 2: Configure Mapping */}
           {step === "configure" && (
-            <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4">
+            <div className="flex flex-col h-full space-y-4 overflow-hidden">
               {/* File info */}
-              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg flex-shrink-0">
                 <FileSpreadsheet className="h-5 w-5 text-primary" />
                 <div className="flex-1">
                   <p className="font-medium">{selectedFile?.name}</p>
@@ -486,7 +486,7 @@ export function CSVImportMapper() {
               </div>
 
               {/* Table Selection */}
-              <div className="space-y-2">
+              <div className="space-y-2 flex-shrink-0">
                 <Label>Target Table</Label>
                 <div className="flex gap-2">
                   <Select value={isCreatingNewTable ? "__new__" : selectedTable} onValueChange={handleTableSelect}>
@@ -524,7 +524,7 @@ export function CSVImportMapper() {
 
               {/* Unique Key Selection */}
               {(selectedTable || newTableName) && (
-                <div className="space-y-2">
+                <div className="space-y-2 flex-shrink-0">
                   <Label>Unique Key Column (for upsert)</Label>
                   <Select value={uniqueKeyColumn} onValueChange={setUniqueKeyColumn}>
                     <SelectTrigger>
@@ -545,100 +545,110 @@ export function CSVImportMapper() {
 
               {/* Field Mappings */}
               {(selectedTable || newTableName) && (
-                <div className="space-y-2">
-                  <Label className="flex items-center justify-between">
+                <div className="space-y-2 flex flex-col min-h-0 flex-1">
+                  <Label className="flex items-center justify-between flex-shrink-0">
                     <span>Field Mappings ({fieldMappings.length} fields)</span>
                     <span className="text-xs text-muted-foreground font-normal">
                       {fieldMappings.filter(m => m.enabled).length} enabled
                     </span>
                   </Label>
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12">Use</TableHead>
-                          <TableHead>CSV Column</TableHead>
-                          <TableHead className="w-8"></TableHead>
-                          <TableHead>Database Column</TableHead>
-                          <TableHead className="w-24">Type</TableHead>
-                          <TableHead className="w-20">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {fieldMappings.map((mapping, index) => (
-                          <TableRow
-                            key={index}
-                            className={cn(!mapping.enabled && "opacity-50")}
-                          >
-                            <TableCell>
-                              <Checkbox
-                                checked={mapping.enabled}
-                                onCheckedChange={() => toggleField(index)}
-                              />
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">
-                              {mapping.csvColumn}
-                            </TableCell>
-                            <TableCell>
-                              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={mapping.dbColumn}
-                                onChange={(e) =>
-                                  updateMapping(index, {
-                                    dbColumn: normalizeColumnName(e.target.value),
-                                  })
-                                }
-                                className="h-8 font-mono text-sm"
-                                disabled={!mapping.enabled}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={mapping.type}
-                                onValueChange={(value) =>
-                                  updateMapping(index, { type: value as FieldMapping["type"] })
-                                }
-                                disabled={!mapping.enabled}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="text">Text</SelectItem>
-                                  <SelectItem value="number">Number</SelectItem>
-                                  <SelectItem value="boolean">Boolean</SelectItem>
-                                  <SelectItem value="date">Date</SelectItem>
-                                  <SelectItem value="json">JSON</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              {mapping.isNew && !isCreatingNewTable ? (
-                                <Badge variant="outline" className="text-xs bg-primary/10">
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  New
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Mapped
-                                </Badge>
-                              )}
-                            </TableCell>
+                  <div className="border rounded-lg flex flex-col min-h-0 flex-1" style={{ maxHeight: 'calc(100vh - 480px)', minHeight: '200px' }}>
+                    {/* Sticky header */}
+                    <div className="border-b bg-muted/50 flex-shrink-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">Use</TableHead>
+                            <TableHead className="min-w-[150px]">CSV Column</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                            <TableHead className="min-w-[180px]">Database Column</TableHead>
+                            <TableHead className="w-24">Type</TableHead>
+                            <TableHead className="w-20">Status</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                      </Table>
+                    </div>
+                    {/* Scrollable body */}
+                    <ScrollArea className="flex-1">
+                      <Table>
+                        <TableBody>
+                          {fieldMappings.map((mapping, index) => (
+                            <TableRow
+                              key={index}
+                              className={cn(!mapping.enabled && "opacity-50")}
+                            >
+                              <TableCell className="w-12">
+                                <Checkbox
+                                  checked={mapping.enabled}
+                                  onCheckedChange={() => toggleField(index)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-mono text-sm min-w-[150px]">
+                                {mapping.csvColumn}
+                              </TableCell>
+                              <TableCell className="w-8">
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                              </TableCell>
+                              <TableCell className="min-w-[180px]">
+                                <Input
+                                  value={mapping.dbColumn}
+                                  onChange={(e) =>
+                                    updateMapping(index, {
+                                      dbColumn: normalizeColumnName(e.target.value),
+                                    })
+                                  }
+                                  className="h-8 font-mono text-sm w-full"
+                                  disabled={!mapping.enabled}
+                                />
+                              </TableCell>
+                              <TableCell className="w-24">
+                                <Select
+                                  value={mapping.type}
+                                  onValueChange={(value) =>
+                                    updateMapping(index, { type: value as FieldMapping["type"] })
+                                  }
+                                  disabled={!mapping.enabled}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">Text</SelectItem>
+                                    <SelectItem value="number">Number</SelectItem>
+                                    <SelectItem value="boolean">Boolean</SelectItem>
+                                    <SelectItem value="date">Date</SelectItem>
+                                    <SelectItem value="json">JSON</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="w-20">
+                                {mapping.isNew && !isCreatingNewTable ? (
+                                  <Badge variant="outline" className="text-xs bg-primary/10">
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    New
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Mapped
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
                   </div>
                 </div>
               )}
 
-              {/* Preview */}
+              {/* Preview - Collapsible */}
               {csvPreview.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Preview (first 5 rows)</Label>
+                <details className="space-y-2 flex-shrink-0">
+                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                    Preview (first 5 rows) - click to expand
+                  </summary>
                   <ScrollArea className="h-32 border rounded-lg">
                     <Table>
                       <TableHeader>
@@ -663,10 +673,9 @@ export function CSVImportMapper() {
                       </TableBody>
                     </Table>
                   </ScrollArea>
-                </div>
+                </details>
               )}
             </div>
-            </ScrollArea>
           )}
 
           {/* Step 3: Importing */}

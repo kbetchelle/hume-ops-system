@@ -483,9 +483,9 @@ export function CSVImportMapper() {
     onSuccess: (data) => {
       // Use functional update to preserve detailedErrors collected during import
       setProgress((prev) => {
-        const newProgress = {
+        const newProgress: ImportProgress = {
           ...prev, // Preserve detailedErrors from previous state
-          status: "complete",
+          status: "complete" as const,
           message: "Import complete!",
           total: data.total,
           processed: data.total,
@@ -542,10 +542,11 @@ export function CSVImportMapper() {
       }
 
       // Attempt to insert all skipped records without validation
-      const { data, error } = await supabase
-        .from(targetTable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase
+        .from(targetTable as any)
         .insert(records)
-        .select();
+        .select());
 
       if (error) {
         console.error("Force import error:", error);

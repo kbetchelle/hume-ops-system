@@ -338,6 +338,10 @@ export function CSVImportMapper() {
       const enabledMappings = fieldMappings.filter((m) => m.enabled && (!m.isNew || isCreatingNewTable));
       if (enabledMappings.length === 0) throw new Error("No fields selected for import");
 
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CSVImportMapper.tsx:341',message:'HYPOTHESIS A,B,C: Resolving unique key mapping',data:{uniqueKeyColumn,enabledMappingsCount:enabledMappings.length,allMappings:enabledMappings.map(m=>({csv:m.csvColumn,db:m.dbColumn,enabled:m.enabled,isNew:m.isNew}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C'})}).catch(()=>{});
+      // #endregion
+
       // Resolve the unique key CSV column to its database column name
       const uniqueKeyMapping = enabledMappings.find((m) => m.csvColumn === uniqueKeyColumn);
       if (!uniqueKeyMapping) {
@@ -346,6 +350,10 @@ export function CSVImportMapper() {
         );
       }
       const uniqueKeyDbColumn = uniqueKeyMapping.dbColumn;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CSVImportMapper.tsx:349',message:'HYPOTHESIS A,C: Resolved unique key - CRITICAL VALUE',data:{csvColumn:uniqueKeyColumn,dbColumn:uniqueKeyDbColumn,mappingFound:!!uniqueKeyMapping},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+      // #endregion
 
       // Parse CSV into lines for chunking
       const lines = csvContent.split("\n").filter((line) => line.trim());
@@ -387,6 +395,10 @@ export function CSVImportMapper() {
           processed: startIdx,
         }));
 
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CSVImportMapper.tsx:391',message:'HYPOTHESIS A: Sending to edge function - CRITICAL PAYLOAD',data:{targetTable,uniqueKeyColumnSent:uniqueKeyDbColumn,overwriteExisting,mappingsCount:enabledMappings.length,sampleMapping:enabledMappings[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+
         try {
           const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
             body: {
@@ -402,6 +414,10 @@ export function CSVImportMapper() {
               overwriteExisting, // Allow user to control if existing records are updated
             },
           });
+
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CSVImportMapper.tsx:410',message:'Edge function response received',data:{error:error?.message,inserted:data?.inserted,updated:data?.updated,skipped:data?.skipped,detailedErrorsCount:data?.detailedErrors?.length,firstError:data?.detailedErrors?.[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
 
           if (error) {
             allErrors.push(`Chunk ${chunkIndex + 1}: ${error.message}`);

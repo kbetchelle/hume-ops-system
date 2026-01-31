@@ -137,6 +137,12 @@ serve(async (req) => {
     const body: ImportRequest = await req.json();
     const { csvContent, targetTable, fieldMappings, uniqueKeyColumn, createTable, overwriteExisting = true } = body;
 
+    // #region agent log
+    const logFile = "/Volumes/SSDdeKat/HUME_Project/hume-ops-system/.cursor/debug.log";
+    const logEntry = JSON.stringify({location:'import-csv-mapped/index.ts:138',message:'HYPOTHESIS A: Edge function received request',data:{targetTable,uniqueKeyColumnReceived:uniqueKeyColumn,mappingsCount:fieldMappings?.length,firstMapping:fieldMappings?.[0],overwriteExisting},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})+'\n';
+    try{await Deno.writeTextFile(logFile,logEntry,{append:true});}catch{}
+    // #endregion
+
     // Validate inputs
     if (!csvContent) {
       throw new Error("CSV content is required");
@@ -241,6 +247,10 @@ serve(async (req) => {
         const values = parseCSVLine(lines[i]);
         const record: Record<string, unknown> = {};
 
+        // #region agent log
+        if(i<=3){const logEntry=JSON.stringify({location:'import-csv-mapped/index.ts:244',message:`HYPOTHESIS D,E: Parsing row ${i} - first 3 rows only`,data:{rowNum:i,rawLine:lines[i].substring(0,200),parsedValuesCount:values.length,sampleValues:values.slice(0,5)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D,E'})+'\n';try{await Deno.writeTextFile("/Volumes/SSDdeKat/HUME_Project/hume-ops-system/.cursor/debug.log",logEntry,{append:true});}catch{}}
+        // #endregion
+
         for (const mapping of fieldMappings) {
           const columnIndex = headerIndexMap.get(mapping.csvColumn)!;
           const rawValue = values[columnIndex] || "";
@@ -253,6 +263,10 @@ serve(async (req) => {
           }
         }
 
+        // #region agent log
+        if(i<=3){const logEntry=JSON.stringify({location:'import-csv-mapped/index.ts:258',message:`HYPOTHESIS A,C,E: Record ${i} after conversion - first 3 rows`,data:{rowNum:i,uniqueKeyColumn,uniqueKeyValue:record[uniqueKeyColumn],recordKeys:Object.keys(record),fullRecord:record},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C,E'})+'\n';try{await Deno.writeTextFile("/Volumes/SSDdeKat/HUME_Project/hume-ops-system/.cursor/debug.log",logEntry,{append:true});}catch{}}
+        // #endregion
+
         // Skip records where unique key is null/empty - but provide detailed reason
         const uniqueKeyValue = record[uniqueKeyColumn];
         if (!uniqueKeyValue || String(uniqueKeyValue).trim() === "") {
@@ -264,6 +278,11 @@ serve(async (req) => {
             reason: `Missing or empty unique key field: ${uniqueKeyColumn} (CSV column: ${rawUniqueKeyColumn})`,
             record: record
           });
+
+          // #region agent log
+          if(i<=3){const logEntry=JSON.stringify({location:'import-csv-mapped/index.ts:268',message:`HYPOTHESIS A,C,E: SKIPPING row ${i} - unique key missing - first 3 skips`,data:{rowNum:i,uniqueKeyColumn,uniqueKeyValue,rawUniqueKeyColumn,recordKeys:Object.keys(record)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C,E'})+'\n';try{await Deno.writeTextFile("/Volumes/SSDdeKat/HUME_Project/hume-ops-system/.cursor/debug.log",logEntry,{append:true});}catch{}}
+          // #endregion
+
           console.log(`Skipping row ${i + 1}: unique key "${uniqueKeyColumn}" is empty. Raw values:`, values);
           continue;
         }
@@ -280,6 +299,10 @@ serve(async (req) => {
     }
 
     console.log(`Parsed ${records.length} valid records (${errors.length} errors)`);
+
+    // #region agent log
+    const logEntry2=JSON.stringify({location:'import-csv-mapped/index.ts:298',message:'HYPOTHESIS A,E: Parse complete - CRITICAL RESULT',data:{totalLinesInCSV:lines.length-1,recordsParsed:records.length,errorsCount:errors.length,detailedErrorsCount:detailedErrors.length,firstDetailedError:detailedErrors[0],uniqueKeyColumn},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,E'})+'\n';try{await Deno.writeTextFile("/Volumes/SSDdeKat/HUME_Project/hume-ops-system/.cursor/debug.log",logEntry2,{append:true});}catch{}
+    // #endregion
 
     if (records.length === 0) {
       throw new Error("No valid records to import");

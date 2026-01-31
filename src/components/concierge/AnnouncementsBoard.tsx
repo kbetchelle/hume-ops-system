@@ -37,8 +37,11 @@ interface Announcement {
 
 export function AnnouncementsBoard() {
   const { user } = useAuth();
-  const { roles } = useUserRoles();
+  const { data: userRoles } = useUserRoles(user?.id);
   const queryClient = useQueryClient();
+  
+  // Extract role names from user role objects
+  const roles = userRoles?.map((r) => r.role) || [];
   const [activeTab, setActiveTab] = useState<'alerts' | 'weekly'>('alerts');
   const [weekOffset, setWeekOffset] = useState(0);
   const [showAllWeekly, setShowAllWeekly] = useState(false);

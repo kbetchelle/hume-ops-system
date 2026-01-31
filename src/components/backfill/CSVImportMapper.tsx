@@ -297,7 +297,10 @@ export function CSVImportMapper() {
     updateMapping(index, { enabled: !fieldMappings[index].enabled });
   };
 
-  // Import mutation
+  // Chunk size for processing
+  const CHUNK_SIZE = 500;
+
+  // Import mutation with chunked processing
   const importMutation = useMutation({
     mutationFn: async () => {
       const targetTable = isCreatingNewTable ? newTableName : selectedTable;
@@ -311,7 +314,6 @@ export function CSVImportMapper() {
       // Validate that the unique key column is mapped to a CSV column
       const uniqueKeyMapping = enabledMappings.find((m) => m.dbColumn === uniqueKeyColumn);
       if (!uniqueKeyMapping) {
-        // Check if there's a CSV column that could map to the unique key
         const csvColumnForUniqueKey = enabledMappings.find(
           (m) => m.csvColumn.toLowerCase().includes("id") || m.csvColumn.toLowerCase() === "id"
         );
@@ -325,51 +327,112 @@ export function CSVImportMapper() {
         );
       }
 
+      // Parse CSV into lines for chunking
+      const lines = csvContent.split("\n").filter((line) => line.trim());
+      const headerLine = lines[0];
+      const dataLines = lines.slice(1);
+      const totalRows = dataLines.length;
+      const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
+
+      setStep("importing");
       setProgress({
-        status: "uploading",
-        message: "Sending data to server...",
-        total: progress.total,
+        status: "processing",
+        message: `Starting import of ${totalRows.toLocaleString()} records...`,
+        total: totalRows,
         processed: 0,
         inserted: 0,
         updated: 0,
         skipped: 0,
       });
 
-      setStep("importing");
+      // Aggregate results
+      let totalInserted = 0;
+      let totalUpdated = 0;
+      let totalSkipped = 0;
+      const allErrors: string[] = [];
 
-      const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
-        body: {
-          csvContent,
-          targetTable,
-          fieldMappings: enabledMappings.map((m) => ({
-            csvColumn: m.csvColumn,
-            dbColumn: m.dbColumn,
-            type: m.type,
-          })),
-          uniqueKeyColumn,
-          createTable: isCreatingNewTable,
-        },
-      });
+      // Process in chunks
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const startIdx = chunkIndex * CHUNK_SIZE;
+        const endIdx = Math.min(startIdx + CHUNK_SIZE, totalRows);
+        const chunkLines = dataLines.slice(startIdx, endIdx);
+        const chunkCsv = [headerLine, ...chunkLines].join("\n");
+        const processedSoFar = endIdx;
+        const percentComplete = Math.round((processedSoFar / totalRows) * 100);
 
-      if (error) throw new Error(error.message || "Import failed");
+        setProgress((prev) => ({
+          ...prev,
+          status: "processing",
+          message: `Processing chunk ${chunkIndex + 1}/${totalChunks} (${percentComplete}%)...`,
+          processed: startIdx,
+        }));
 
-      return data;
+        try {
+          const { data, error } = await supabase.functions.invoke("import-csv-mapped", {
+            body: {
+              csvContent: chunkCsv,
+              targetTable,
+              fieldMappings: enabledMappings.map((m) => ({
+                csvColumn: m.csvColumn,
+                dbColumn: m.dbColumn,
+                type: m.type,
+              })),
+              uniqueKeyColumn,
+              createTable: isCreatingNewTable && chunkIndex === 0, // Only create on first chunk
+            },
+          });
+
+          if (error) {
+            allErrors.push(`Chunk ${chunkIndex + 1}: ${error.message}`);
+            continue;
+          }
+
+          totalInserted += data?.inserted || 0;
+          totalUpdated += data?.updated || 0;
+          totalSkipped += data?.skipped || 0;
+
+          if (data?.errors) {
+            allErrors.push(...data.errors.slice(0, 5)); // Limit errors per chunk
+          }
+
+          // Update progress after each chunk
+          setProgress((prev) => ({
+            ...prev,
+            processed: processedSoFar,
+            inserted: totalInserted,
+            updated: totalUpdated,
+            skipped: totalSkipped,
+            message: `Processed ${processedSoFar.toLocaleString()}/${totalRows.toLocaleString()} records (${percentComplete}%)`,
+          }));
+        } catch (err) {
+          allErrors.push(`Chunk ${chunkIndex + 1}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
+      }
+
+      return {
+        success: allErrors.length === 0,
+        total: totalRows,
+        inserted: totalInserted,
+        updated: totalUpdated,
+        skipped: totalSkipped,
+        errors: allErrors,
+      };
     },
     onSuccess: (data) => {
       setProgress({
         status: "complete",
         message: "Import complete!",
-        total: data.total || progress.total,
-        processed: data.total || progress.total,
-        inserted: data.inserted || 0,
-        updated: data.updated || 0,
-        skipped: data.skipped || 0,
+        total: data.total,
+        processed: data.total,
+        inserted: data.inserted,
+        updated: data.updated,
+        skipped: data.skipped,
       });
       setStep("complete");
       queryClient.invalidateQueries();
       toast({
         title: "Import Complete",
-        description: `${data.inserted || 0} inserted, ${data.updated || 0} updated`,
+        description: `${data.inserted.toLocaleString()} inserted, ${data.updated.toLocaleString()} updated${data.skipped > 0 ? `, ${data.skipped.toLocaleString()} skipped` : ""}`,
       });
     },
     onError: (error) => {
@@ -689,14 +752,31 @@ export function CSVImportMapper() {
           {/* Step 3: Importing */}
           {step === "importing" && (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <div className="relative">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">
+                    {progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
               <div className="text-center space-y-2">
-                <p className="font-medium">{progress.message}</p>
+                <p className="font-medium text-lg">{progress.message}</p>
                 <p className="text-sm text-muted-foreground">
-                  Processing {progress.total.toLocaleString()} records...
+                  {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} records
                 </p>
               </div>
-              <Progress value={50} className="w-64" />
+              <div className="w-80 space-y-2">
+                <Progress 
+                  value={progress.total > 0 ? (progress.processed / progress.total) * 100 : 0} 
+                  className="h-3"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{progress.inserted.toLocaleString()} inserted</span>
+                  <span>{progress.updated.toLocaleString()} updated</span>
+                  {progress.skipped > 0 && <span>{progress.skipped.toLocaleString()} skipped</span>}
+                </div>
+              </div>
             </div>
           )}
 

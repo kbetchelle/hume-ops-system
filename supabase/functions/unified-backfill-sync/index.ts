@@ -74,6 +74,7 @@ interface BackfillConfig {
   targetTable: string;
   uniqueKey: string;
   transformFn: (raw: Record<string, unknown>) => Record<string, unknown>;
+  stagingTransformFn?: (raw: Record<string, unknown>, batchId: string) => Record<string, unknown>; // Optional staging-specific transform
   stagingIdField: string;
   useDev?: boolean; // Use the dev API endpoint (partnerApiDev)
   // Endpoint-specific pagination configuration
@@ -105,6 +106,7 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     targetTable: 'arketa_classes',
     uniqueKey: 'external_id',
     transformFn: transformClass,
+    stagingTransformFn: stagingTransformClass,
     stagingIdField: 'arketa_class_id',
     useDev: false, // Uses partnerApi (prod)
     paginationStyle: 'cursor', // Verified from sync-arketa-classes
@@ -470,7 +472,7 @@ async function executeSyncCycle(
 
   // Phase 2: Insert to staging
   await updateJobPhase(supabase, job.id, 'staging');
-  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField, config.primaryIdField, logger);
+  await insertToStaging(supabase, config.stagingTable, fetchResult.records, batchId, config.stagingIdField, config.primaryIdField, logger, config.stagingTransformFn);
 
   // Phase 3: Transform records with validation
   await updateJobPhase(supabase, job.id, 'transforming');
@@ -836,10 +838,16 @@ async function insertToStaging(
   batchId: string,
   idField: string,
   primaryIdField: string,
-  logger: ReturnType<typeof createSyncLogger>
+  logger: ReturnType<typeof createSyncLogger>,
+  stagingTransformFn?: (raw: Record<string, unknown>, batchId: string) => Record<string, unknown>
 ): Promise<void> {
   const stagingRecords = records.map((record, index) => {
-    // Use config-driven primaryIdField (e.g., 'client_id' for clients, 'id' for others)
+    // If a staging-specific transform is provided, use it for full schema mapping
+    if (stagingTransformFn) {
+      return stagingTransformFn(record, batchId);
+    }
+    
+    // Default behavior: minimal staging record (works for simpler staging tables)
     const recordId = record[primaryIdField] ?? record.id;
     if (recordId === undefined || recordId === null) {
       logger.warn(`Record at index ${index} has no ${primaryIdField} or id field`, {
@@ -1234,6 +1242,34 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
   };
 }
 
+// Staging transform for classes - maps to arketa_classes_staging schema
+function stagingTransformClass(raw: Record<string, unknown>, batchId: string): Record<string, unknown> {
+  const instructor = raw.instructor as Record<string, unknown> | undefined;
+  const instructorName = raw.instructor_name ||
+    (instructor ? `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim() : null) ||
+    raw.instructorName ||
+    null;
+  const instructorId = instructor?.id || raw.instructor_id || null;
+
+  return {
+    sync_batch_id: batchId,
+    arketa_class_id: String(raw.id),
+    class_name: raw.name || raw.class_name || 'Unnamed Class', // Required NOT NULL field
+    instructor_name: instructorName,
+    instructor_id: instructorId ? String(instructorId) : null,
+    start_time: raw.start_time || raw.startTime,
+    end_time: raw.end_time || raw.endTime || null,
+    capacity: raw.capacity ?? raw.max_capacity ?? null,
+    enrolled: raw.total_booked ?? raw.enrolled ?? raw.bookedCount ?? 0,
+    signups: raw.total_booked ?? raw.enrolled ?? raw.bookedCount ?? 0,
+    location: raw.location || (typeof raw.room === 'object' ? (raw.room as Record<string, unknown>)?.name : raw.room) || null,
+    description: raw.description || null,
+    status: raw.status || 'scheduled',
+    raw_data: raw,
+    staged_at: new Date().toISOString()
+  };
+}
+
 function transformClass(raw: Record<string, unknown>): Record<string, unknown> {
   const instructor = raw.instructor as Record<string, unknown> | undefined;
   // Build instructor name from nested object (first_name + last_name) or direct field
@@ -1248,7 +1284,7 @@ function transformClass(raw: Record<string, unknown>): Record<string, unknown> {
 
   return {
     external_id: String(raw.id),
-    name: raw.name || raw.class_name,
+    name: raw.name || raw.class_name || 'Unnamed Class', // Ensure not null
     // API may return start_time or startTime
     start_time: raw.start_time || raw.startTime,
     duration_minutes: raw.duration_minutes ?? raw.duration ?? null,

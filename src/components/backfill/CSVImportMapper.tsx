@@ -259,10 +259,13 @@ export function CSVImportMapper() {
     setIsCreatingNewTable(false);
     setSelectedTable(tableName);
 
-    // Set default unique key
+    // Set default unique key to a CSV column that maps to external_id
+    // For Arketa tables, this is typically "subscription_id", "client_id", etc.
     const tableConfig = AVAILABLE_TABLES.find(t => t.value === tableName);
     if (tableConfig) {
-      setUniqueKeyColumn(tableConfig.uniqueKey);
+      // Don't auto-set the unique key - let the user select from their CSV columns
+      // after field mapping is done
+      setUniqueKeyColumn("");
     }
   };
 

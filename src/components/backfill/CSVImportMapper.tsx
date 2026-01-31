@@ -443,24 +443,28 @@ export function CSVImportMapper() {
     },
     onSuccess: (data) => {
       // Use functional update to preserve detailedErrors collected during import
-      setProgress((prev) => ({
-        ...prev, // Preserve detailedErrors from previous state
-        status: "complete",
-        message: "Import complete!",
-        total: data.total,
-        processed: data.total,
-        inserted: data.inserted,
-        updated: data.updated,
-        skipped: data.skipped,
-      }));
-      
-      // If there are skipped records, go to review step, otherwise complete
-      if (data.skipped > 0 && data.detailedErrors && data.detailedErrors.length > 0) {
-        setSkippedRecordsData(data.detailedErrors);
-        setStep("review");
-      } else {
-        setStep("complete");
-      }
+      setProgress((prev) => {
+        const newProgress = {
+          ...prev, // Preserve detailedErrors from previous state
+          status: "complete",
+          message: "Import complete!",
+          total: data.total,
+          processed: data.total,
+          inserted: data.inserted,
+          updated: data.updated,
+          skipped: data.skipped,
+        };
+        
+        // If there are skipped records, go to review step, otherwise complete
+        if (data.skipped > 0 && prev.detailedErrors && prev.detailedErrors.length > 0) {
+          setSkippedRecordsData(prev.detailedErrors);
+          setStep("review");
+        } else {
+          setStep("complete");
+        }
+        
+        return newProgress;
+      });
       
       queryClient.invalidateQueries();
       toast({

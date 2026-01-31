@@ -485,24 +485,28 @@ async function fetchFromApi(
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
   // SIMPLIFIED AUTH: Use API key directly (matches working arketa-gym-flow pattern)
-  // This avoids the complexity of nested Edge Function calls which can fail silently
-  const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY");
-  const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
+  // Try both env var naming conventions for compatibility
+  const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY") || Deno.env.get("PARTNER_API_KEY");
+  const partnerId = Deno.env.get("ARKETA_PARTNER_ID") || Deno.env.get("PARTNER_ID");
   
   // Validate required environment variables
   if (!ARKETA_API_KEY) {
-    logger.error('ARKETA_API_KEY environment variable is not set');
-    throw new Error('ARKETA_API_KEY is required but not configured');
+    logger.error('API key not found - checked ARKETA_API_KEY and PARTNER_API_KEY');
+    throw new Error('API key is required but not configured (checked ARKETA_API_KEY, PARTNER_API_KEY)');
   }
   if (!partnerId) {
-    logger.error('ARKETA_PARTNER_ID environment variable is not set');
-    throw new Error('ARKETA_PARTNER_ID is required but not configured');
+    logger.error('Partner ID not found - checked ARKETA_PARTNER_ID and PARTNER_ID');
+    throw new Error('Partner ID is required but not configured (checked ARKETA_PARTNER_ID, PARTNER_ID)');
   }
   
   logger.info('Authentication configured', {
     hasApiKey: !!ARKETA_API_KEY,
     apiKeyPrefix: ARKETA_API_KEY.substring(0, 8) + '...',
-    partnerId: partnerId
+    partnerId: partnerId,
+    usedEnvVars: {
+      apiKey: Deno.env.get("ARKETA_API_KEY") ? 'ARKETA_API_KEY' : 'PARTNER_API_KEY',
+      partnerId: Deno.env.get("ARKETA_PARTNER_ID") ? 'ARKETA_PARTNER_ID' : 'PARTNER_ID'
+    }
   });
   
   // Use Bearer token auth (matches working arketa-gym-flow pattern)
@@ -513,57 +517,51 @@ async function fetchFromApi(
 
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
   
-  // Build URL - only add limit if the API supports it
-  let url = `${baseUrl}/${partnerId}${config.endpointPath}`;
-  const supportsLimit = config.supportsLimit !== false; // Default true
+  // Build URL using URL class (matches working arketa-gym-flow pattern)
+  const url = new URL(`${baseUrl}/${partnerId}${config.endpointPath}`);
+  
+  // Add limit parameter if supported
+  const supportsLimit = config.supportsLimit !== false;
   if (supportsLimit) {
-    url += `?limit=${BATCH_SIZE}`;
+    url.searchParams.set('limit', String(BATCH_SIZE));
   }
-
-  // Helper to add query params with correct separator
-  const addParam = (param: string) => {
-    url += url.includes('?') ? `&${param}` : `?${param}`;
-  };
 
   // Add date range if applicable (not for clients or staff/instructors endpoints)
   const skipDateFiltering = ['/clients', '/staff'].includes(config.endpointPath);
   if (job.start_date && job.end_date && !skipDateFiltering) {
-    addParam(`start_date=${job.start_date}`);
-    addParam(`end_date=${job.end_date}`);
+    url.searchParams.set('start_date', job.start_date);
+    url.searchParams.set('end_date', job.end_date);
   }
 
   // Config-driven pagination based on endpoint requirements
   if (job.batch_cursor) {
     switch (config.paginationStyle) {
       case 'start_after':
-        // Arketa's preferred pagination style
-        addParam(`start_after=${encodeURIComponent(job.batch_cursor)}`);
+        url.searchParams.set('start_after', job.batch_cursor);
         logger.info('Using start_after pagination', { cursor: job.batch_cursor });
         break;
       case 'page':
-        // Page-based pagination
-        addParam(`page=${job.batch_cursor}`);
+        url.searchParams.set('page', job.batch_cursor);
         logger.info('Using page-based pagination', { page: job.batch_cursor });
         break;
       case 'skip':
-        // Offset-based pagination
-        addParam(`skip=${job.batch_cursor}`);
+        url.searchParams.set('skip', job.batch_cursor);
         logger.info('Using skip-based pagination', { skip: job.batch_cursor });
         break;
       case 'cursor':
       default:
-        addParam(`cursor=${encodeURIComponent(job.batch_cursor)}`);
+        url.searchParams.set('cursor', job.batch_cursor);
         logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
         break;
     }
   } else if (config.paginationStyle === 'skip' && job.records_processed > 0) {
-    // For skip-based pagination, use records_processed as offset when no cursor
-    addParam(`skip=${job.records_processed}`);
+    url.searchParams.set('skip', String(job.records_processed));
     logger.info('Using skip-based pagination from records_processed', { skip: job.records_processed });
   }
 
   // CRITICAL: Log full pagination state for debugging
-  logger.info(`Fetching batch - URL: ${url}`, {
+  const urlString = url.toString();
+  logger.info(`Fetching batch - URL: ${urlString}`, {
     paginationStyle: config.paginationStyle,
     useDev: config.useDev,
     baseUrl: baseUrl,
@@ -576,7 +574,7 @@ async function fetchFromApi(
   // Wrap in try-catch to capture all fetch errors
   let response: Response;
   try {
-    const fetchResult = await fetchWithRetry(url, { headers });
+    const fetchResult = await fetchWithRetry(urlString, { headers });
     response = fetchResult.response;
     logger.info('Fetch completed', { 
       status: response.status, 
@@ -585,7 +583,7 @@ async function fetchFromApi(
     });
   } catch (fetchError) {
     logger.error('Fetch failed completely', {
-      url,
+      url: urlString,
       error: fetchError instanceof Error ? fetchError.message : String(fetchError),
       stack: fetchError instanceof Error ? fetchError.stack?.substring(0, 300) : undefined
     });
@@ -599,7 +597,7 @@ async function fetchFromApi(
       status: response.status,
       statusText: response.statusText,
       body: errorText.substring(0, 500),
-      url
+      url: urlString
     });
     throw new Error(`Arketa API error ${response.status}: ${response.statusText} - ${errorText.substring(0, 200)}`);
   }
@@ -611,7 +609,7 @@ async function fetchFromApi(
     logger.error(`Expected JSON response`, {
       contentType,
       bodyPreview: bodyPreview.substring(0, 500),
-      url
+      url: urlString
     });
     throw new Error(`Arketa API returned non-JSON response (${contentType})`);
   }

@@ -2267,6 +2267,41 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_announcement_comments: {
+        Row: {
+          announcement_id: string
+          comment: string
+          created_at: string
+          id: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          announcement_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          announcement_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_announcement_comments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_announcement_reads: {
         Row: {
           announcement_id: string | null

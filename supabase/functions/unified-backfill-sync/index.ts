@@ -426,6 +426,16 @@ async function executeSyncCycle(
   await updateJobPhase(supabase, job.id, 'fetching_api');
   const fetchResult = await fetchFromApi(job, config, logger);
 
+  // IMMEDIATE PROGRESS UPDATE: Update records fetched count right after fetch completes
+  // This ensures the UI shows progress as soon as data is retrieved from the API
+  if (fetchResult.records.length > 0) {
+    await supabase.from('backfill_jobs').update({
+      records_in_current_batch: fetchResult.records.length,
+      last_batch_synced_at: new Date().toISOString()
+    }).eq('id', job.id);
+    logger.info('Updated job with fetch count', { recordsFetched: fetchResult.records.length });
+  }
+
   if (fetchResult.records.length === 0) {
     logger.info('No records returned from API - sync complete', {
       jobId: job.id,
@@ -483,14 +493,21 @@ async function executeSyncCycle(
     logger
   );
 
-  // Phase 4: Upsert to target with per-record retry
+  // Phase 4: Upsert to target with chunked processing and incremental progress updates
   await updateJobPhase(supabase, job.id, 'upserting');
   const upsertResult = await upsertToTargetWithRetry(
     supabase,
     config.targetTable,
     transformedRecords,
     config.uniqueKey,
-    logger
+    logger,
+    // Pass job context for real-time progress updates after each chunk
+    {
+      jobId: job.id,
+      baseRecordsProcessed: job.records_processed,
+      baseCumulativeInserted: job.cumulative_inserted || 0,
+      baseCumulativeUpdated: job.cumulative_updated || 0
+    }
   );
 
   // Phase 5: Clear staging (non-fatal - data already upserted)
@@ -933,59 +950,43 @@ function transformRecordsWithValidation(
 }
 
 /**
- * Upsert records with per-record retry for better error handling
- * Uses batch upsert first, falls back to per-record on failure
- * Also tracks which records were new (inserted) vs existing (updated)
+ * Job context for incremental progress updates during upsert
+ */
+interface UpsertJobContext {
+  jobId: string;
+  baseRecordsProcessed: number;
+  baseCumulativeInserted: number;
+  baseCumulativeUpdated: number;
+}
+
+// Chunk size for granular progress updates - smaller = more frequent UI updates
+const UPSERT_CHUNK_SIZE = 25;
+
+/**
+ * Upsert records with chunked processing and incremental progress updates
+ * Updates the backfill_jobs table after each chunk for real-time UI feedback
+ * Falls back to per-record upsert on batch failure
  */
 async function upsertToTargetWithRetry(
   supabase: SupabaseClient,
   table: string,
   records: Record<string, unknown>[],
   uniqueKey: string,
-  logger: ReturnType<typeof createSyncLogger>
+  logger: ReturnType<typeof createSyncLogger>,
+  jobContext?: UpsertJobContext
 ): Promise<UpsertResult> {
-  // First, check which records already exist to track new vs updated
-  const uniqueKeys = records.map(r => String(r[uniqueKey])).filter(Boolean);
-  
   // Log sample of unique keys to verify they're correct
-  logger.info('Checking for existing records', {
+  const uniqueKeys = records.map(r => String(r[uniqueKey])).filter(Boolean);
+  logger.info('Starting chunked upsert', {
     table,
     uniqueKey,
     totalRecords: records.length,
-    uniqueKeysCount: uniqueKeys.length,
-    sampleKeys: uniqueKeys.slice(0, 5),
-    lastKeys: uniqueKeys.slice(-3)
+    chunkSize: UPSERT_CHUNK_SIZE,
+    hasJobContext: !!jobContext,
+    sampleKeys: uniqueKeys.slice(0, 5)
   });
-  
-  let existingCount = 0;
-  if (uniqueKeys.length > 0) {
-    // Split into chunks of 100 to avoid PostgreSQL IN clause limits
-    const chunkSize = 100;
-    for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
-      const chunk = uniqueKeys.slice(i, i + chunkSize);
-      const { count, error: countError } = await supabase
-        .from(table)
-        .select('*', { count: 'exact', head: true })
-        .in(uniqueKey, chunk);
-      
-      if (countError) {
-        logger.warn('Error counting existing records', {
-          error: countError.message,
-          chunk: i / chunkSize,
-          chunkSize: chunk.length
-        });
-      } else if (count !== null) {
-        existingCount += count;
-      }
-    }
-    
-    logger.info('Existing records count complete', {
-      existingCount,
-      newRecords: records.length - existingCount
-    });
-  }
 
-  // Get actual table count BEFORE upsert
+  // Get actual table count BEFORE upsert for accurate new vs updated tracking
   const { count: countBefore, error: countBeforeError } = await supabase
     .from(table)
     .select('*', { count: 'exact', head: true });
@@ -994,121 +995,156 @@ async function upsertToTargetWithRetry(
     logger.warn('Could not get pre-upsert table count', { error: countBeforeError.message });
   }
 
-  // First try batch upsert (faster)
-  const { error: batchError } = await supabase
-    .from(table)
-    .upsert(records, { onConflict: uniqueKey });
+  let totalSuccessful = 0;
+  let totalInserted = 0;
+  let totalUpdated = 0;
+  let totalFailed = 0;
+  const allErrors: Array<{ id: string; error: string }> = [];
 
-  if (!batchError) {
-    // CRITICAL: Verify actual table count AFTER upsert
-    const { count: countAfter, error: countAfterError } = await supabase
+  // Process records in chunks for granular progress updates
+  for (let chunkStart = 0; chunkStart < records.length; chunkStart += UPSERT_CHUNK_SIZE) {
+    const chunkEnd = Math.min(chunkStart + UPSERT_CHUNK_SIZE, records.length);
+    const chunk = records.slice(chunkStart, chunkEnd);
+    const chunkNumber = Math.floor(chunkStart / UPSERT_CHUNK_SIZE) + 1;
+    const totalChunks = Math.ceil(records.length / UPSERT_CHUNK_SIZE);
+
+    logger.info(`Processing chunk ${chunkNumber}/${totalChunks}`, {
+      chunkStart,
+      chunkEnd,
+      chunkSize: chunk.length
+    });
+
+    // Get count before this chunk for accurate insert/update tracking
+    const { count: chunkCountBefore } = await supabase
       .from(table)
       .select('*', { count: 'exact', head: true });
-    
-    const actualNewRecords = countAfter && countBefore ? countAfter - countBefore : 0;
-    const expectedNew = records.length - existingCount;
-    
-    logger.info('Batch upsert verification', {
-      table,
-      countBefore: countBefore || 'unknown',
-      countAfter: countAfter || 'unknown',
-      actualNewRecords,
-      expectedNew,
-      mismatch: actualNewRecords !== expectedNew,
-      uniqueKeysSample: uniqueKeys.slice(0, 3)
-    });
-    
-    // Use ACTUAL counts, not expected
-    const inserted = actualNewRecords;
-    const updated = records.length - actualNewRecords;
-    
-    logger.info('Batch upsert successful', {
-      table,
-      recordCount: records.length,
-      inserted,
-      updated,
-      tableNowHas: countAfter
-    });
-    return {
-      successful: records.length,
-      inserted,
-      updated,
-      failed: 0,
-      errors: []
-    };
-  }
 
-  // Batch failed - fall back to per-record upsert to identify problem records
-  logger.warn('Batch upsert failed, falling back to per-record upsert', {
-    table,
-    batchError: batchError.message,
-    recordCount: records.length
-  });
-
-  let successful = 0;
-  let inserted = 0;
-  let updated = 0;
-  let failed = 0;
-  const errors: Array<{ id: string; error: string }> = [];
-
-  for (const record of records) {
-    const recordId = String(record[uniqueKey] || 'unknown');
-
-    // Check if record exists before upsert
-    const { count: existsBefore } = await supabase
+    // Try batch upsert for this chunk
+    const { error: batchError } = await supabase
       .from(table)
-      .select('*', { count: 'exact', head: true })
-      .eq(uniqueKey, recordId);
+      .upsert(chunk, { onConflict: uniqueKey });
 
-    const recordExisted = (existsBefore || 0) > 0;
+    let chunkInserted = 0;
+    let chunkUpdated = 0;
+    let chunkFailed = 0;
+    let chunkSuccessful = 0;
 
-    // Try up to 2 times per record
-    let lastError: string | null = null;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const { error } = await supabase
+    if (!batchError) {
+      // Get count after chunk upsert
+      const { count: chunkCountAfter } = await supabase
         .from(table)
-        .upsert([record], { onConflict: uniqueKey });
+        .select('*', { count: 'exact', head: true });
 
-      if (!error) {
-        successful++;
-        if (recordExisted) {
-          updated++;
-        } else {
-          inserted++;
+      chunkInserted = chunkCountAfter && chunkCountBefore ? chunkCountAfter - chunkCountBefore : 0;
+      chunkUpdated = chunk.length - chunkInserted;
+      chunkSuccessful = chunk.length;
+
+      logger.info(`Chunk ${chunkNumber} upsert successful`, {
+        inserted: chunkInserted,
+        updated: chunkUpdated
+      });
+    } else {
+      // Batch failed for this chunk - fall back to per-record upsert
+      logger.warn(`Chunk ${chunkNumber} batch upsert failed, falling back to per-record`, {
+        error: batchError.message
+      });
+
+      for (const record of chunk) {
+        const recordId = String(record[uniqueKey] || 'unknown');
+
+        // Check if record exists before upsert
+        const { count: existsBefore } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq(uniqueKey, recordId);
+
+        const recordExisted = (existsBefore || 0) > 0;
+
+        // Try up to 2 times per record
+        let lastError: string | null = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const { error } = await supabase
+            .from(table)
+            .upsert([record], { onConflict: uniqueKey });
+
+          if (!error) {
+            chunkSuccessful++;
+            if (recordExisted) {
+              chunkUpdated++;
+            } else {
+              chunkInserted++;
+            }
+            lastError = null;
+            break;
+          }
+
+          lastError = error.message;
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
         }
-        lastError = null;
-        break;
-      }
 
-      lastError = error.message;
-      if (attempt < 2) {
-        // Wait briefly before retry
-        await new Promise(resolve => setTimeout(resolve, 100));
+        if (lastError) {
+          chunkFailed++;
+          allErrors.push({ id: recordId, error: lastError });
+          if (allErrors.length <= 10) {
+            logger.error(`Failed to upsert record ${recordId}`, {
+              error: lastError,
+              recordKeys: Object.keys(record)
+            });
+          }
+        }
       }
     }
 
-    if (lastError) {
-      failed++;
-      errors.push({ id: recordId, error: lastError });
-      if (errors.length <= 10) {
-        logger.error(`Failed to upsert record ${recordId}`, {
-          error: lastError,
-          recordKeys: Object.keys(record)
-        });
-      }
+    // Accumulate totals
+    totalSuccessful += chunkSuccessful;
+    totalInserted += chunkInserted;
+    totalUpdated += chunkUpdated;
+    totalFailed += chunkFailed;
+
+    // INCREMENTAL PROGRESS UPDATE: Update job after each chunk for real-time UI feedback
+    if (jobContext) {
+      const progressUpdate = {
+        records_processed: jobContext.baseRecordsProcessed + chunkEnd,
+        cumulative_inserted: jobContext.baseCumulativeInserted + totalInserted,
+        cumulative_updated: jobContext.baseCumulativeUpdated + totalUpdated,
+        last_batch_synced_at: new Date().toISOString()
+      };
+
+      await supabase.from('backfill_jobs').update(progressUpdate).eq('id', jobContext.jobId);
+      
+      logger.info(`Progress update after chunk ${chunkNumber}`, {
+        totalProcessed: progressUpdate.records_processed,
+        cumulativeInserted: progressUpdate.cumulative_inserted,
+        cumulativeUpdated: progressUpdate.cumulative_updated
+      });
     }
   }
 
-  logger.info('Per-record upsert complete', {
+  // Final verification with table count
+  const { count: countAfter } = await supabase
+    .from(table)
+    .select('*', { count: 'exact', head: true });
+
+  logger.info('Chunked upsert complete', {
     table,
-    successful,
-    inserted,
-    updated,
-    failed,
-    totalRecords: records.length
+    totalRecords: records.length,
+    successful: totalSuccessful,
+    inserted: totalInserted,
+    updated: totalUpdated,
+    failed: totalFailed,
+    tableCountBefore: countBefore,
+    tableCountAfter: countAfter
   });
 
-  return { successful, inserted, updated, failed, errors };
+  return {
+    successful: totalSuccessful,
+    inserted: totalInserted,
+    updated: totalUpdated,
+    failed: totalFailed,
+    errors: allErrors
+  };
 }
 
 async function clearStaging(

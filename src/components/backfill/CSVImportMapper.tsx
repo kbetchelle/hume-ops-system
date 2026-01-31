@@ -419,7 +419,7 @@ export function CSVImportMapper() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[95vh] h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
@@ -463,7 +463,8 @@ export function CSVImportMapper() {
 
           {/* Step 2: Configure Mapping */}
           {step === "configure" && (
-            <div className="space-y-6 overflow-hidden flex flex-col h-full">
+            <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4">
               {/* File info */}
               <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
                 <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -544,9 +545,14 @@ export function CSVImportMapper() {
 
               {/* Field Mappings */}
               {(selectedTable || newTableName) && (
-                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                  <Label className="mb-2">Field Mappings</Label>
-                  <ScrollArea className="flex-1 border rounded-lg">
+                <div className="space-y-2">
+                  <Label className="flex items-center justify-between">
+                    <span>Field Mappings ({fieldMappings.length} fields)</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {fieldMappings.filter(m => m.enabled).length} enabled
+                    </span>
+                  </Label>
+                  <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -625,7 +631,7 @@ export function CSVImportMapper() {
                         ))}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
 
@@ -660,6 +666,7 @@ export function CSVImportMapper() {
                 </div>
               )}
             </div>
+            </ScrollArea>
           )}
 
           {/* Step 3: Importing */}

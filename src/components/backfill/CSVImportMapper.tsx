@@ -627,18 +627,26 @@ export function CSVImportMapper() {
                   <Label>Unique Key Column (for upsert)</Label>
                   <Select value={uniqueKeyColumn} onValueChange={setUniqueKeyColumn}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select unique key column..." />
+                      <SelectValue placeholder="Select database column to use as unique key..." />
                     </SelectTrigger>
                     <SelectContent>
                       {fieldMappings
                         .filter((m) => m.enabled)
                         .map((mapping) => (
                           <SelectItem key={mapping.dbColumn} value={mapping.dbColumn}>
-                            {mapping.dbColumn}
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{mapping.dbColumn}</span>
+                              {mapping.csvColumn !== mapping.dbColumn && (
+                                <span className="text-xs text-muted-foreground">← from CSV: {mapping.csvColumn}</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose the database column that uniquely identifies each record (e.g., external_id)
+                  </p>
                 </div>
               )}
 
@@ -659,6 +667,22 @@ export function CSVImportMapper() {
                         ? "Will update existing records with matching unique keys"
                         : "Will only insert new records, skip existing ones"}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Important note about unique key */}
+              {uniqueKeyColumn && (
+                <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-900 dark:text-blue-100">Important: Unique Key Requirements</p>
+                    <ul className="text-muted-foreground space-y-1 mt-1 text-xs list-disc list-inside">
+                      <li>Every row must have a value in the <span className="font-mono bg-blue-500/10 px-1 rounded">{uniqueKeyColumn}</span> column</li>
+                      <li>Rows with empty/null unique keys will be <strong>skipped</strong></li>
+                      <li>The unique key column must have a UNIQUE constraint in the database</li>
+                      <li>For subscriptions: map <span className="font-mono">subscription_id</span> → <span className="font-mono">external_id</span></li>
+                    </ul>
                   </div>
                 </div>
               )}
@@ -784,12 +808,17 @@ export function CSVImportMapper() {
                 </div>
               )}
 
-              {/* Preview - Collapsible */}
+              {/* Visual separator */}
+              {csvPreview.length > 0 && fieldMappings.length > 0 && (
+                <div className="border-t my-6"></div>
+              )}
+
+              {/* Preview - Shows mapped database column names */}
               {csvPreview.length > 0 && (
                 <details open className="space-y-2 flex-shrink-0">
                   <summary className="text-xs font-medium cursor-pointer hover:text-foreground flex items-center gap-2">
                     <FileSpreadsheet className="h-3 w-3" />
-                    CSV Preview (first 5 rows)
+                    Preview (first 5 rows) - Showing mapped field names
                   </summary>
                   <div className="border rounded-lg overflow-hidden">
                     <ScrollArea className="h-[200px] w-full">
@@ -800,11 +829,33 @@ export function CSVImportMapper() {
                               <TableHead className="text-xs font-semibold bg-muted sticky left-0 z-10">
                                 Row
                               </TableHead>
-                              {csvHeaders.map((header, i) => (
-                                <TableHead key={i} className="text-xs font-semibold bg-muted whitespace-nowrap min-w-[120px]">
-                                  {header}
-                                </TableHead>
-                              ))}
+                              {csvHeaders.map((csvHeader, i) => {
+                                // Find the mapping for this CSV column
+                                const mapping = fieldMappings.find(m => m.csvColumn === csvHeader && m.enabled);
+                                const displayName = mapping ? mapping.dbColumn : csvHeader;
+                                const isUnique = mapping?.dbColumn === uniqueKeyColumn;
+                                
+                                return (
+                                  <TableHead 
+                                    key={i} 
+                                    className={cn(
+                                      "text-xs font-semibold bg-muted whitespace-nowrap min-w-[120px]",
+                                      isUnique && "bg-primary/10 text-primary"
+                                    )}
+                                    title={mapping ? `CSV: ${csvHeader} → DB: ${displayName}` : csvHeader}
+                                  >
+                                    <div className="flex flex-col gap-0.5">
+                                      <span>{displayName}</span>
+                                      {isUnique && (
+                                        <span className="text-[9px] font-normal text-primary">UNIQUE KEY</span>
+                                      )}
+                                      {mapping && csvHeader !== displayName && (
+                                        <span className="text-[9px] font-normal text-muted-foreground">from: {csvHeader}</span>
+                                      )}
+                                    </div>
+                                  </TableHead>
+                                );
+                              })}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -813,13 +864,25 @@ export function CSVImportMapper() {
                                 <TableCell className="text-xs font-mono text-muted-foreground bg-muted/50 sticky left-0 z-10">
                                   {rowIndex + 1}
                                 </TableCell>
-                                {row.map((cell, cellIndex) => (
-                                  <TableCell key={cellIndex} className="text-xs min-w-[120px]">
-                                    <div className="max-w-[200px] truncate" title={cell}>
-                                      {cell}
-                                    </div>
-                                  </TableCell>
-                                ))}
+                                {row.map((cell, cellIndex) => {
+                                  const csvHeader = csvHeaders[cellIndex];
+                                  const mapping = fieldMappings.find(m => m.csvColumn === csvHeader && m.enabled);
+                                  const isUnique = mapping?.dbColumn === uniqueKeyColumn;
+                                  
+                                  return (
+                                    <TableCell 
+                                      key={cellIndex} 
+                                      className={cn(
+                                        "text-xs min-w-[120px]",
+                                        isUnique && "bg-primary/5 font-medium"
+                                      )}
+                                    >
+                                      <div className="max-w-[200px] truncate" title={cell}>
+                                        {cell}
+                                      </div>
+                                    </TableCell>
+                                  );
+                                })}
                               </TableRow>
                             ))}
                           </TableBody>

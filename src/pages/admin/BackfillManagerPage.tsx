@@ -956,13 +956,6 @@ export default function BackfillManagerPage() {
                   </CollapsibleContent>
                 </Collapsible>
               )}
-              
-              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3">
-                <p className="font-medium mb-1">Expected CSV format (semicolon-delimited):</p>
-                <code className="text-[10px]">
-                  client_id; client_name; email; phone_number; tags; custom_fields; lifecycle_stage_name; date_of_birth; referrer; email_marketing_opt_in; sms_marketing_opt_in
-                </code>
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -37,6 +37,36 @@ const BATCH_SIZE = 100; // Matching working arketa-gym-flow implementation
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Type definitions for API responses
+interface ApiPagination {
+  nextStartAfterId?: string;
+  nextCursor?: string;
+  next_cursor?: string;
+  cursor?: string;
+  start_after?: string;
+  hasMore?: boolean;
+  has_more?: boolean;
+  limit?: number;
+  [key: string]: unknown; // Allow dynamic access for config-driven fields
+}
+
+interface ApiResponse {
+  items?: Record<string, unknown>[];
+  data?: Record<string, unknown>[];
+  clients?: Record<string, unknown>[];
+  classes?: Record<string, unknown>[];
+  reservations?: Record<string, unknown>[];
+  payments?: Record<string, unknown>[];
+  purchases?: Record<string, unknown>[];
+  staff?: Record<string, unknown>[];
+  results?: Record<string, unknown>[];
+  pagination?: ApiPagination;
+  cursor?: string;
+  next_cursor?: string;
+  start_after?: string;
+  [key: string]: unknown; // Allow dynamic field access
+}
+
 // Configuration mapping for all sync types
 interface BackfillConfig {
   endpointPath: string;
@@ -616,9 +646,9 @@ async function fetchFromApi(
     throw new Error(`Arketa API returned non-JSON response (${contentType})`);
   }
   
-  let data: Record<string, unknown>;
+  let data: ApiResponse;
   try {
-    data = await response.json();
+    data = await response.json() as ApiResponse;
   } catch (jsonError) {
     logger.error('Failed to parse JSON response', {
       error: jsonError instanceof Error ? jsonError.message : String(jsonError)
@@ -697,8 +727,9 @@ async function fetchFromApi(
   });
   
   if (data.pagination) {
-    // Primary: Use the configured pagination cursor field
-    nextCursor = data.pagination[config.paginationCursorField] ||
+    // Primary: Use the configured pagination cursor field (cast to string since we know these are cursor strings)
+    const paginationCursorValue = data.pagination[config.paginationCursorField];
+    nextCursor = (typeof paginationCursorValue === 'string' ? paginationCursorValue : null) ||
       // Fallback to common alternatives
       data.pagination.nextCursor ||
       data.pagination.next_cursor ||

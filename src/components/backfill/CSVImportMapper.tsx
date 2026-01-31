@@ -447,7 +447,9 @@ export function CSVImportMapper() {
       };
     },
     onSuccess: (data) => {
-      setProgress({
+      // Use functional update to preserve detailedErrors collected during import
+      setProgress((prev) => ({
+        ...prev, // Preserve detailedErrors from previous state
         status: "complete",
         message: "Import complete!",
         total: data.total,
@@ -455,7 +457,7 @@ export function CSVImportMapper() {
         inserted: data.inserted,
         updated: data.updated,
         skipped: data.skipped,
-      });
+      }));
       setStep("complete");
       queryClient.invalidateQueries();
       toast({
@@ -563,7 +565,8 @@ export function CSVImportMapper() {
 
           {/* Step 2: Configure Mapping */}
           {step === "configure" && (
-            <div className="flex flex-col h-full space-y-4 overflow-hidden">
+            <ScrollArea className="h-full w-full">
+              <div className="flex flex-col space-y-6 pr-4 pb-4">
               {/* File info */}
               <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg flex-shrink-0">
                 <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -893,7 +896,8 @@ export function CSVImportMapper() {
                   </div>
                 </details>
               )}
-            </div>
+              </div>
+            </ScrollArea>
           )}
 
           {/* Step 3: Importing */}
@@ -951,7 +955,8 @@ export function CSVImportMapper() {
 
           {/* Step 4: Complete */}
           {step === "complete" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+            <ScrollArea className="h-full w-full">
+              <div className="flex flex-col items-center justify-center py-12 space-y-6">
               <CheckCircle2 className="h-12 w-12 text-green-500" />
               <div className="text-center space-y-2">
                 <p className="text-lg font-medium">Import Complete!</p>
@@ -1008,7 +1013,8 @@ export function CSVImportMapper() {
                   </ScrollArea>
                 </div>
               )}
-            </div>
+              </div>
+            </ScrollArea>
           )}
         </div>
 

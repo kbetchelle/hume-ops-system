@@ -116,33 +116,23 @@ export function CSVImportMapper() {
   // Fetch table columns when a table is selected
   const { data: tableColumns, isLoading: isLoadingColumns } = useQuery({
     queryKey: ["table-columns", selectedTable],
-    queryFn: async () => {
+    queryFn: async (): Promise<TableColumn[]> => {
       if (!selectedTable || isCreatingNewTable) return [];
       
-      // Use information_schema to get column info
-      const { data, error } = await supabase.rpc("get_table_columns", {
-        table_name_param: selectedTable,
-      });
-
-      if (error) {
-        console.error("Error fetching columns:", error);
-        // Fallback: try to infer from a sample query
-        const { data: sampleData, error: sampleError } = await supabase
-          .from(selectedTable as any)
-          .select("*")
-          .limit(1);
-        
-        if (sampleError || !sampleData?.[0]) return [];
-        
-        return Object.keys(sampleData[0]).map(col => ({
-          column_name: col,
-          data_type: "text",
-          is_nullable: "YES",
-          column_default: null,
-        }));
-      }
-
-      return (data || []) as TableColumn[];
+      // Infer columns from a sample query
+      const { data: sampleData, error: sampleError } = await supabase
+        .from(selectedTable as any)
+        .select("*")
+        .limit(1);
+      
+      if (sampleError || !sampleData?.[0]) return [];
+      
+      return Object.keys(sampleData[0]).map(col => ({
+        column_name: col,
+        data_type: "text",
+        is_nullable: "YES",
+        column_default: null,
+      }));
     },
     enabled: !!selectedTable && !isCreatingNewTable,
   });

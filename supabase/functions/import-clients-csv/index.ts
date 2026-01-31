@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
     
     const body = await req.json();
     const csvContent: string = body.csvContent;
+    const chunkInfo = body.chunkInfo as { chunkIndex: number; totalChunks: number; startRow: number } | undefined;
     
     if (!csvContent) {
       throw new Error("No CSV content provided");
@@ -89,8 +90,9 @@ Deno.serve(async (req) => {
     const lines = csvContent.split('\n').filter(line => line.trim());
     const headers = parseCSVLine(lines[0]);
     
-    console.log("[import-clients-csv] Headers:", headers);
-    console.log("[import-clients-csv] Total rows:", lines.length - 1);
+    const chunkLabel = chunkInfo ? `[Chunk ${chunkInfo.chunkIndex + 1}/${chunkInfo.totalChunks}]` : '';
+    console.log(`[import-clients-csv] ${chunkLabel} Headers:`, headers.slice(0, 5).join(', '), '...');
+    console.log(`[import-clients-csv] ${chunkLabel} Total rows:`, lines.length - 1);
 
     // Map header indices
     const headerMap: Record<string, number> = {};

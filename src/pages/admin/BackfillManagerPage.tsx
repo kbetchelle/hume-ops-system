@@ -770,13 +770,16 @@ export default function BackfillManagerPage() {
   };
 
   return (
-    <DashboardLayout title="Backfill Manager">
+    <DashboardLayout title="Backfill & Import Manager">
       <div className="space-y-8">
         {/* Create New Backfill */}
         <Card className="border-border">
           <CardHeader>
             <CardTitle>Create New Backfill</CardTitle>
-            <CardDescription>Import historical data from external APIs using cursor-based pagination</CardDescription>
+            <CardDescription>
+              Fetch and sync historical data from external APIs (Arketa, Sling). 
+              Supports: Clients, Subscriptions, Payments, Instructors, and Staff Shifts.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -869,54 +872,31 @@ export default function BackfillManagerPage() {
               Import from CSV
             </CardTitle>
             <CardDescription>
-              Import data from CSV files with flexible table and field mapping options.
+              Import data from CSV files with flexible field mapping and table selection. 
+              Supports all Arketa data types (Clients, Subscriptions, Payments, Instructors) and custom tables.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Import Options */}
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* Quick Import (existing functionality) */}
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isImporting}
-                    className="min-w-[160px]"
-                  >
-                    {isImporting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Upload className="h-4 w-4 mr-2" />
-                    )}
-                    {isImporting ? "Importing..." : "Quick Import (Clients)"}
-                  </Button>
-                </div>
-
-                <span className="text-muted-foreground text-sm">or</span>
-
-                {/* Advanced Import with Mapping */}
+              {/* CSV Import with Advanced Mapping */}
+              <div className="flex flex-col gap-3">
                 <CSVImportMapper />
-                
-                {isImporting && (
-                  <div className="flex-1 space-y-1">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{importProgress.status}</span>
-                      {importProgress.total > 0 && (
-                        <span>{importProgress.total.toLocaleString()} records</span>
-                      )}
-                    </div>
-                    <Progress value={importProgress.total > 0 ? 100 : 50} className="h-2" />
-                  </div>
-                )}
-                
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    <span>Upload any CSV file and map fields to your database tables</span>
+                  </p>
+                  <p className="flex items-center gap-2 ml-5">
+                    <span>• Choose existing tables or create new ones</span>
+                  </p>
+                  <p className="flex items-center gap-2 ml-5">
+                    <span>• Control field mappings, data types, and unique keys</span>
+                  </p>
+                  <p className="flex items-center gap-2 ml-5">
+                    <span>• View detailed error logs for any skipped records</span>
+                  </p>
+                </div>
+              </div>
                 {importResult && !isImporting && (
                   <div className="flex items-center gap-4 text-sm">
                     <Badge variant="outline" className="bg-primary/10">
@@ -1010,15 +990,18 @@ export default function BackfillManagerPage() {
           </div>
         )}
 
-        {/* Completed Backfills */}
+        {/* Completed Backfills & Import History */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Backfill History</h2>
+            <h2 className="text-sm uppercase tracking-[0.15em] font-normal">Sync & Import History</h2>
             {completedJobs.length > 0 && (
               <Badge variant="outline" className="ml-2">{completedJobs.length}</Badge>
             )}
           </div>
+          <p className="text-xs text-muted-foreground">
+            View completed API backfills and CSV imports. Note: CSV import history currently tracked through backfill jobs.
+          </p>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -1040,9 +1023,9 @@ export default function BackfillManagerPage() {
             <Card className="border-border">
               <CardContent className="py-12 text-center">
                 <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No backfill history yet</p>
+                <p className="text-muted-foreground">No sync history yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Create a new backfill job to import historical data
+                  Create a backfill job or import CSV data to see history
                 </p>
               </CardContent>
             </Card>

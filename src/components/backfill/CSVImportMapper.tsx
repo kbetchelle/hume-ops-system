@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -786,34 +786,48 @@ export function CSVImportMapper() {
 
               {/* Preview - Collapsible */}
               {csvPreview.length > 0 && (
-                <details className="space-y-2 flex-shrink-0">
-                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                    Preview (first 5 rows) - click to expand
+                <details open className="space-y-2 flex-shrink-0">
+                  <summary className="text-xs font-medium cursor-pointer hover:text-foreground flex items-center gap-2">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    CSV Preview (first 5 rows)
                   </summary>
-                  <ScrollArea className="h-32 border rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {csvHeaders.map((header, i) => (
-                            <TableHead key={i} className="text-xs whitespace-nowrap">
-                              {header}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {csvPreview.map((row, rowIndex) => (
-                          <TableRow key={rowIndex}>
-                            {row.map((cell, cellIndex) => (
-                              <TableCell key={cellIndex} className="text-xs whitespace-nowrap">
-                                {cell.length > 30 ? `${cell.slice(0, 30)}...` : cell}
-                              </TableCell>
+                  <div className="border rounded-lg overflow-hidden">
+                    <ScrollArea className="h-[200px] w-full">
+                      <div className="min-w-max">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs font-semibold bg-muted sticky left-0 z-10">
+                                Row
+                              </TableHead>
+                              {csvHeaders.map((header, i) => (
+                                <TableHead key={i} className="text-xs font-semibold bg-muted whitespace-nowrap min-w-[120px]">
+                                  {header}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {csvPreview.map((row, rowIndex) => (
+                              <TableRow key={rowIndex}>
+                                <TableCell className="text-xs font-mono text-muted-foreground bg-muted/50 sticky left-0 z-10">
+                                  {rowIndex + 1}
+                                </TableCell>
+                                {row.map((cell, cellIndex) => (
+                                  <TableCell key={cellIndex} className="text-xs min-w-[120px]">
+                                    <div className="max-w-[200px] truncate" title={cell}>
+                                      {cell}
+                                    </div>
+                                  </TableCell>
+                                ))}
+                              </TableRow>
                             ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                  </div>
                 </details>
               )}
             </div>
@@ -833,6 +847,44 @@ export function CSVImportMapper() {
               <div className="text-center space-y-2">
                 <p className="font-medium text-lg">{progress.message}</p>
                 <p className="text-sm text-muted-foreground">
+                  {progress.processed > 0 && `${progress.processed.toLocaleString()} / ${progress.total.toLocaleString()} records`}
+                </p>
+                <div className="flex gap-3 justify-center pt-2">
+                  {progress.inserted > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <Plus className="h-3 w-3 mr-1" />
+                      {progress.inserted} inserted
+                    </Badge>
+                  )}
+                  {progress.updated > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      {progress.updated} updated
+                    </Badge>
+                  )}
+                  {progress.skipped > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {progress.skipped} skipped
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Show errors as they accumulate during import */}
+              {progress.detailedErrors && progress.detailedErrors.length > 0 && (
+                <div className="w-full max-w-2xl mt-6 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Errors detected ({progress.detailedErrors.length} records skipped)</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Details will be available after import completes
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
                   {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} records
                 </p>
               </div>

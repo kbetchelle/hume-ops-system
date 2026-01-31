@@ -465,9 +465,6 @@ async function executeSyncCycle(
   await updateJobPhase(supabase, job.id, 'clearing_staging');
   await clearStaging(supabase, config.stagingTable, batchId, logger);
 
-  // Get first record ID for duplicate detection
-  const firstRecordId = String(fetchResult.records[0]?.[config.primaryIdField] || fetchResult.records[0]?.id || 'unknown');
-
   return {
     recordsFetched: fetchResult.records.length,
     recordsUpserted: upsertResult.successful,
@@ -487,29 +484,33 @@ async function fetchFromApi(
   config: BackfillConfig,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
-  // Try OAuth token first, fallback to API key if token refresh fails
+  // SIMPLIFIED AUTH: Use API key directly (matches working arketa-gym-flow pattern)
+  // This avoids the complexity of nested Edge Function calls which can fail silently
   const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY");
-  let headers: Record<string, string>;
-
-  try {
-    const token = await getArketaToken(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    headers = getArketaHeaders(token);
-    logger.info('Using OAuth token for authentication');
-  } catch (tokenError) {
-    logger.warn('Token refresh failed, using API key fallback', {
-      error: tokenError instanceof Error ? tokenError.message : String(tokenError)
-    });
-    if (!ARKETA_API_KEY) {
-      throw new Error('No API key available as fallback after token refresh failure');
-    }
-    // Use Bearer format for API key (matches working arketa-gym-flow pattern)
-    headers = {
-      'Authorization': `Bearer ${ARKETA_API_KEY}`,
-      'Content-Type': 'application/json'
-    };
-  }
-
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
+  
+  // Validate required environment variables
+  if (!ARKETA_API_KEY) {
+    logger.error('ARKETA_API_KEY environment variable is not set');
+    throw new Error('ARKETA_API_KEY is required but not configured');
+  }
+  if (!partnerId) {
+    logger.error('ARKETA_PARTNER_ID environment variable is not set');
+    throw new Error('ARKETA_PARTNER_ID is required but not configured');
+  }
+  
+  logger.info('Authentication configured', {
+    hasApiKey: !!ARKETA_API_KEY,
+    apiKeyPrefix: ARKETA_API_KEY.substring(0, 8) + '...',
+    partnerId: partnerId
+  });
+  
+  // Use Bearer token auth (matches working arketa-gym-flow pattern)
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${ARKETA_API_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
   
   // Build URL - only add limit if the API supports it
@@ -565,30 +566,65 @@ async function fetchFromApi(
   logger.info(`Fetching batch - URL: ${url}`, {
     paginationStyle: config.paginationStyle,
     useDev: config.useDev,
+    baseUrl: baseUrl,
     batchNumber: job.total_batches_completed + 1,
     currentCursor: job.batch_cursor ? job.batch_cursor.substring(0, 50) : 'NONE (first batch)',
-    recordsProcessedSoFar: job.records_processed
+    recordsProcessedSoFar: job.records_processed,
+    headersConfigured: Object.keys(headers)
   });
   
-  const fetchResult = await fetchWithRetry(url, { headers });
-  const response = fetchResult.response;
+  // Wrap in try-catch to capture all fetch errors
+  let response: Response;
+  try {
+    const fetchResult = await fetchWithRetry(url, { headers });
+    response = fetchResult.response;
+    logger.info('Fetch completed', { 
+      status: response.status, 
+      statusText: response.statusText,
+      attempts: fetchResult.attempts 
+    });
+  } catch (fetchError) {
+    logger.error('Fetch failed completely', {
+      url,
+      error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+      stack: fetchError instanceof Error ? fetchError.stack?.substring(0, 300) : undefined
+    });
+    throw fetchError;
+  }
   
   // Check if response is OK before parsing
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error(`API returned ${response.status}: ${errorText.substring(0, 200)}`);
-    throw new Error(`Arketa API error ${response.status}: ${response.statusText}`);
+    logger.error(`API returned error status`, {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText.substring(0, 500),
+      url
+    });
+    throw new Error(`Arketa API error ${response.status}: ${response.statusText} - ${errorText.substring(0, 200)}`);
   }
   
   // Check content type to ensure we're getting JSON
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
     const bodyPreview = await response.text();
-    logger.error(`Expected JSON but got ${contentType}: ${bodyPreview.substring(0, 200)}`);
+    logger.error(`Expected JSON response`, {
+      contentType,
+      bodyPreview: bodyPreview.substring(0, 500),
+      url
+    });
     throw new Error(`Arketa API returned non-JSON response (${contentType})`);
   }
   
-  const data = await response.json();
+  let data: Record<string, unknown>;
+  try {
+    data = await response.json();
+  } catch (jsonError) {
+    logger.error('Failed to parse JSON response', {
+      error: jsonError instanceof Error ? jsonError.message : String(jsonError)
+    });
+    throw new Error('Arketa API returned invalid JSON');
+  }
 
   // Log detailed response structure for debugging
   logger.info('API response received', {

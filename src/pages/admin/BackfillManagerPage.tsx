@@ -911,13 +911,55 @@ export default function BackfillManagerPage() {
                       {importResult.updated} updated
                     </Badge>
                     {importResult.skipped > 0 && (
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="cursor-pointer">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
                         {importResult.skipped} skipped
                       </Badge>
                     )}
                   </div>
                 )}
               </div>
+              
+              {/* Skipped Records Log */}
+              {importResult && importResult.skippedRecords && importResult.skippedRecords.length > 0 && (
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground hover:text-foreground">
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        View {importResult.skippedRecords.length} skipped records
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-2 border rounded-lg overflow-hidden bg-background">
+                      <div className="max-h-[300px] overflow-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-muted/50 sticky top-0">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-medium">Row</th>
+                              <th className="text-left px-3 py-2 font-medium">Reason</th>
+                              <th className="text-left px-3 py-2 font-medium">Data</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {importResult.skippedRecords.map((record, idx) => (
+                              <tr key={idx} className="hover:bg-muted/30">
+                                <td className="px-3 py-2 font-mono">{record.row}</td>
+                                <td className="px-3 py-2 text-destructive">{record.reason}</td>
+                                <td className="px-3 py-2 text-muted-foreground truncate max-w-[300px]" title={record.data}>
+                                  {record.data || '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
               
               <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3">
                 <p className="font-medium mb-1">Expected CSV format (semicolon-delimited):</p>

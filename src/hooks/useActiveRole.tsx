@@ -1,6 +1,6 @@
 import { useState, createContext, useContext, ReactNode, useEffect } from "react";
 import { AppRole, UserRole, ROLES } from "@/types/roles";
-import { useAuthContext } from "@/features/auth/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles, getPrimaryRole, getRoleDashboardPath } from "@/hooks/useUserRoles";
 
 interface ActiveRoleContextType {
@@ -15,7 +15,8 @@ interface ActiveRoleContextType {
 const ActiveRoleContext = createContext<ActiveRoleContextType | undefined>(undefined);
 
 export function ActiveRoleProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuthContext();
+  // Use useAuth directly instead of useAuthContext to avoid context dependency issues during HMR
+  const { user } = useAuth();
   const { data: userRoles, isLoading } = useUserRoles(user?.id);
   const [activeRole, setActiveRoleState] = useState<AppRole | null>(null);
 

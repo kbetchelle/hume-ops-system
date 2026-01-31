@@ -182,6 +182,11 @@ function ActiveJobCard({
     const timer = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(timer);
   }, []);
+  
+  // Debug: Log when component mounts to verify code is running
+  useEffect(() => {
+    console.log('[ActiveJobCard] Component mounted for job:', job.id, 'status:', job.status);
+  }, [job.id, job.status]);
 
   const isPaused = job.status === "paused";
   const isRunning = job.status === "running";
@@ -245,10 +250,15 @@ function ActiveJobCard({
   const hasErrors = job.errors && job.errors.length > 0;
 
   return (
-    <Card className={cn(
-      "border-border transition-all w-full",
-      isActivelyProcessing && "ring-1 ring-primary/30"
-    )}>
+    <Card 
+      className={cn(
+        "border-border transition-all w-full",
+        isActivelyProcessing && "ring-1 ring-primary/30"
+      )}
+      onClick={(e) => {
+        console.log('[ActiveJobCard] Card clicked, target:', (e.target as HTMLElement).tagName, (e.target as HTMLElement).className);
+      }}
+    >
       <CardContent className="pt-6">
         {/* Main horizontal layout */}
         <div className="flex flex-col lg:flex-row lg:items-start gap-6">
@@ -334,7 +344,7 @@ function ActiveJobCard({
           </div>
 
           {/* Right: Actions - Fixed width for stable layout */}
-          <div className="shrink-0 w-[300px] space-y-2">
+          <div className="shrink-0 w-[300px] space-y-2 relative z-50">
             {/* Action buttons in fixed grid */}
             <div className="grid grid-cols-2 gap-2">
               {/* Pause/Resume Button */}
@@ -342,7 +352,8 @@ function ActiveJobCard({
                 <button
                   type="button"
                   onClick={handleResume}
-                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Play className="h-4 w-4 mr-2" />
                   Resume
@@ -351,7 +362,8 @@ function ActiveJobCard({
                 <button
                   type="button"
                   onClick={handlePause}
-                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Pause className="h-4 w-4 mr-2" />
                   Pause
@@ -362,7 +374,8 @@ function ActiveJobCard({
               <button
                 type="button"
                 onClick={handleCancel}
-                className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md"
+                className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md cursor-pointer relative z-50"
+                style={{ pointerEvents: 'auto' }}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
@@ -374,7 +387,8 @@ function ActiveJobCard({
               <button
                 type="button"
                 onClick={handleContinue}
-                className="w-full inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+                className="w-full inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                style={{ pointerEvents: 'auto' }}
               >
                 <Play className="h-4 w-4 mr-2" />
                 Continue Now
@@ -388,7 +402,8 @@ function ActiveJobCard({
             <button
               type="button"
               onClick={handleViewDetails}
-              className="w-full inline-flex items-center justify-start h-9 px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md"
+              className="w-full inline-flex items-center justify-start h-9 px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+              style={{ pointerEvents: 'auto' }}
             >
               <ChevronRight className={cn(
                 "h-4 w-4 mr-2 transition-transform",

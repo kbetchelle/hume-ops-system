@@ -94,7 +94,9 @@ export function CSVImportMapper() {
 
   // Dialog state
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<"select-file" | "configure" | "importing" | "complete">("select-file");
+  const [step, setStep] = useState<"select-file" | "configure" | "importing" | "review" | "complete">("select-file");
+  const [skippedRecordsData, setSkippedRecordsData] = useState<RecordError[]>([]);
+  const [keepSkippedRecords, setKeepSkippedRecords] = useState(false);
 
   // File and parsing state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -451,10 +453,18 @@ export function CSVImportMapper() {
         updated: data.updated,
         skipped: data.skipped,
       }));
-      setStep("complete");
+      
+      // If there are skipped records, go to review step, otherwise complete
+      if (data.skipped > 0 && data.detailedErrors && data.detailedErrors.length > 0) {
+        setSkippedRecordsData(data.detailedErrors);
+        setStep("review");
+      } else {
+        setStep("complete");
+      }
+      
       queryClient.invalidateQueries();
       toast({
-        title: "Import Complete",
+        title: data.skipped > 0 ? "Import Complete (with skips)" : "Import Complete",
         description: `${data.inserted.toLocaleString()} inserted, ${data.updated.toLocaleString()} updated${data.skipped > 0 ? `, ${data.skipped.toLocaleString()} skipped` : ""}`,
       });
     },
@@ -466,6 +476,61 @@ export function CSVImportMapper() {
       }));
       toast({
         title: "Import Failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Force import skipped records mutation
+  const forceImportMutation = useMutation({
+    mutationFn: async () => {
+      const targetTable = isCreatingNewTable ? newTableName : selectedTable;
+      if (!targetTable) throw new Error("No table selected");
+      if (skippedRecordsData.length === 0) throw new Error("No skipped records to import");
+
+      // Extract the records from skipped data
+      const records = skippedRecordsData
+        .filter((err) => err.record)
+        .map((err) => err.record!);
+
+      if (records.length === 0) {
+        throw new Error("No valid record data found in skipped records");
+      }
+
+      // Attempt to insert all skipped records without validation
+      const { data, error } = await supabase
+        .from(targetTable)
+        .insert(records)
+        .select();
+
+      if (error) {
+        console.error("Force import error:", error);
+        throw new Error(`Force import failed: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        inserted: data?.length || 0,
+        failed: records.length - (data?.length || 0),
+      };
+    },
+    onSuccess: (data) => {
+      setProgress((prev) => ({
+        ...prev,
+        inserted: prev.inserted + data.inserted,
+        skipped: Math.max(0, prev.skipped - data.inserted),
+      }));
+      toast({
+        title: "Force Import Complete",
+        description: `${data.inserted} records imported, ${data.failed} failed due to database constraints`,
+      });
+      setStep("complete");
+      queryClient.invalidateQueries();
+    },
+    onError: (error) => {
+      toast({
+        title: "Force Import Failed",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
@@ -484,6 +549,8 @@ export function CSVImportMapper() {
     setIsCreatingNewTable(false);
     setFieldMappings([]);
     setUniqueKeyColumn("");
+    setSkippedRecordsData([]);
+    setKeepSkippedRecords(false);
     setProgress({
       status: "idle",
       message: "",
@@ -701,8 +768,8 @@ export function CSVImportMapper() {
 
               {/* Field Mappings */}
               {(selectedTable || newTableName) && (
-                <div className="space-y-2 flex flex-col min-h-0 flex-1">
-                  <Label className="flex items-center justify-between flex-shrink-0">
+                <div className="space-y-2 flex-shrink-0">
+                  <Label className="flex items-center justify-between">
                     <span>Field Mappings ({fieldMappings.length} fields)</span>
                     <div className="flex gap-3 text-xs text-muted-foreground font-normal">
                       <span>{fieldMappings.filter(m => m.enabled).length} enabled</span>
@@ -713,25 +780,19 @@ export function CSVImportMapper() {
                       )}
                     </div>
                   </Label>
-                  <div className="border rounded-lg flex flex-col min-h-0 flex-1" style={{ maxHeight: 'calc(100vh - 480px)', minHeight: '200px' }}>
-                    {/* Sticky header */}
-                    <div className="border-b bg-muted/50 flex-shrink-0">
+                  <div className="border rounded-lg overflow-hidden">
+                    <ScrollArea className="h-[300px] w-full">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-12">Use</TableHead>
-                            <TableHead className="min-w-[150px]">CSV Column</TableHead>
-                            <TableHead className="w-8"></TableHead>
-                            <TableHead className="min-w-[180px]">Database Column</TableHead>
-                            <TableHead className="w-24">Type</TableHead>
-                            <TableHead className="w-20">Status</TableHead>
+                            <TableHead className="w-12 sticky top-0 bg-muted z-10">Use</TableHead>
+                            <TableHead className="min-w-[150px] sticky top-0 bg-muted z-10">CSV Column</TableHead>
+                            <TableHead className="w-8 sticky top-0 bg-muted z-10"></TableHead>
+                            <TableHead className="min-w-[180px] sticky top-0 bg-muted z-10">Database Column</TableHead>
+                            <TableHead className="w-24 sticky top-0 bg-muted z-10">Type</TableHead>
+                            <TableHead className="w-20 sticky top-0 bg-muted z-10">Status</TableHead>
                           </TableRow>
                         </TableHeader>
-                      </Table>
-                    </div>
-                    {/* Scrollable body */}
-                    <ScrollArea className="flex-1">
-                      <Table>
                         <TableBody>
                           {fieldMappings.map((mapping, index) => (
                             <TableRow
@@ -946,7 +1007,117 @@ export function CSVImportMapper() {
             </div>
           )}
 
-          {/* Step 4: Complete */}
+          {/* Step 4: Review Skipped Records */}
+          {step === "review" && (
+            <ScrollArea className="h-full w-full">
+              <div className="flex flex-col py-6 space-y-6 pr-4">
+                <div className="text-center space-y-2">
+                  <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+                  <h3 className="text-lg font-semibold">Review Skipped Records</h3>
+                  <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+                    {progress.skipped} records were skipped during import. Review the errors below and decide whether to keep these records anyway or discard them.
+                  </p>
+                </div>
+
+                {/* Import Summary */}
+                <div className="flex gap-4 justify-center flex-wrap">
+                  <Badge variant="outline" className="text-sm px-3 py-1.5">
+                    <Plus className="h-3 w-3 mr-1" />
+                    {progress.inserted} inserted
+                  </Badge>
+                  <Badge variant="outline" className="text-sm px-3 py-1.5">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    {progress.updated} updated
+                  </Badge>
+                  <Badge variant="destructive" className="text-sm px-3 py-1.5">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {progress.skipped} skipped
+                  </Badge>
+                </div>
+
+                {/* Manual Override Option */}
+                <div className="max-w-2xl mx-auto w-full space-y-4">
+                  <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="keep-skipped"
+                        checked={keepSkippedRecords}
+                        onCheckedChange={(checked) => setKeepSkippedRecords(checked as boolean)}
+                      />
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="keep-skipped" className="cursor-pointer font-medium text-base">
+                          Force import skipped records anyway
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          This will attempt to insert all skipped records into the target table, ignoring validation errors. 
+                          Records may still fail if they violate database constraints (e.g., unique key conflicts, missing required fields).
+                        </p>
+                      </div>
+                    </div>
+                    {keepSkippedRecords && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-900 dark:text-amber-100">
+                          <strong>Warning:</strong> Forcing import may result in incomplete or invalid data in your database. 
+                          It's recommended to fix the source CSV and re-import instead.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Skipped Records Table */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Skipped Records ({skippedRecordsData.length})</Label>
+                      <Badge variant="outline" className="text-xs">
+                        Showing first {Math.min(100, skippedRecordsData.length)} records
+                      </Badge>
+                    </div>
+                    <ScrollArea className="h-[400px] w-full border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-20 sticky top-0 bg-muted z-10">Row #</TableHead>
+                            <TableHead className="sticky top-0 bg-muted z-10">Error Reason</TableHead>
+                            <TableHead className="w-24 sticky top-0 bg-muted z-10">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {skippedRecordsData.map((error, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-mono text-xs">{error.rowNumber}</TableCell>
+                              <TableCell className="text-sm">
+                                <div className="space-y-1">
+                                  <p className="text-destructive">{error.reason}</p>
+                                  {error.record && (
+                                    <details className="text-xs">
+                                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                        View record data
+                                      </summary>
+                                      <pre className="mt-2 p-2 bg-background rounded text-xs overflow-x-auto max-h-40">
+                                        {JSON.stringify(error.record, null, 2)}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={keepSkippedRecords ? "default" : "secondary"} className="text-xs">
+                                  {keepSkippedRecords ? "Will retry" : "Skipped"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+
+          {/* Step 5: Complete */}
           {step === "complete" && (
             <ScrollArea className="h-full w-full">
               <div className="flex flex-col items-center justify-center py-12 space-y-6">
@@ -1032,6 +1203,41 @@ export function CSVImportMapper() {
                   <Upload className="h-4 w-4 mr-2" />
                 )}
                 Import {progress.total.toLocaleString()} Records
+              </Button>
+            </>
+          )}
+          {step === "review" && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setKeepSkippedRecords(false);
+                  setStep("complete");
+                }}
+                disabled={forceImportMutation.isPending}
+              >
+                Discard Skipped Records
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (keepSkippedRecords) {
+                    forceImportMutation.mutate();
+                  } else {
+                    setStep("complete");
+                  }
+                }}
+                disabled={forceImportMutation.isPending}
+              >
+                {forceImportMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Force Importing...
+                  </>
+                ) : keepSkippedRecords ? (
+                  "Force Import Skipped Records"
+                ) : (
+                  "Continue"
+                )}
               </Button>
             </>
           )}

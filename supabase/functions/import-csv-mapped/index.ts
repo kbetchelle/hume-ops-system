@@ -68,6 +68,7 @@ function parseCSVLine(line: string): string[] {
 
 // Convert a value to the specified type
 function convertValue(value: string, type: FieldMapping["type"]): unknown {
+  // Handle completely empty values
   if (!value || value.trim() === "") {
     return null;
   }
@@ -76,20 +77,29 @@ function convertValue(value: string, type: FieldMapping["type"]): unknown {
 
   switch (type) {
     case "number":
-      const num = Number(trimmed);
+      // Be more lenient with number parsing
+      const cleaned = trimmed.replace(/[,$]/g, ""); // Remove common separators
+      const num = Number(cleaned);
       return isNaN(num) ? null : num;
 
     case "boolean":
       const lower = trimmed.toLowerCase();
-      if (["true", "1", "yes", "y"].includes(lower)) return true;
-      if (["false", "0", "no", "n"].includes(lower)) return false;
+      if (["true", "1", "yes", "y", "t"].includes(lower)) return true;
+      if (["false", "0", "no", "n", "f"].includes(lower)) return false;
+      // If it's a number, treat non-zero as true
+      const numVal = Number(trimmed);
+      if (!isNaN(numVal)) return numVal !== 0;
       return null;
 
     case "date":
-      // Try to parse as date
-      const date = new Date(trimmed);
-      if (isNaN(date.getTime())) return null;
-      return date.toISOString();
+      // Try to parse as date - be more permissive
+      try {
+        const date = new Date(trimmed);
+        if (isNaN(date.getTime())) return null;
+        return date.toISOString();
+      } catch {
+        return null;
+      }
 
     case "json":
       try {
@@ -234,18 +244,27 @@ serve(async (req) => {
         for (const mapping of fieldMappings) {
           const columnIndex = headerIndexMap.get(mapping.csvColumn)!;
           const rawValue = values[columnIndex] || "";
-          record[mapping.dbColumn] = convertValue(rawValue, mapping.type);
+          const convertedValue = convertValue(rawValue, mapping.type);
+          
+          // Only set the value if it's not null or if it's the unique key column
+          // This prevents filling the database with null values for optional fields
+          if (convertedValue !== null || mapping.dbColumn === uniqueKeyColumn) {
+            record[mapping.dbColumn] = convertedValue;
+          }
         }
 
-        // Skip records where unique key is null/empty
-        if (!record[uniqueKeyColumn]) {
-          const errorMsg = `Row ${i + 1}: Missing unique key value in "${uniqueKeyColumn}"`;
+        // Skip records where unique key is null/empty - but provide detailed reason
+        const uniqueKeyValue = record[uniqueKeyColumn];
+        if (!uniqueKeyValue || String(uniqueKeyValue).trim() === "") {
+          const rawUniqueKeyColumn = fieldMappings.find(m => m.dbColumn === uniqueKeyColumn)?.csvColumn;
+          const errorMsg = `Row ${i + 1}: Missing unique key value. Column "${uniqueKeyColumn}" (CSV: "${rawUniqueKeyColumn}") is empty or null`;
           errors.push(errorMsg);
           detailedErrors.push({
             rowNumber: i + 1,
-            reason: `Missing or empty unique key field: ${uniqueKeyColumn}`,
+            reason: `Missing or empty unique key field: ${uniqueKeyColumn} (CSV column: ${rawUniqueKeyColumn})`,
             record: record
           });
+          console.log(`Skipping row ${i + 1}: unique key "${uniqueKeyColumn}" is empty. Raw values:`, values);
           continue;
         }
 

@@ -1,3 +1,19 @@
+-- Create staff_shifts table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.staff_shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_name TEXT,
+  schedule_date DATE,
+  shift_start TIMESTAMPTZ,
+  shift_end TIMESTAMPTZ,
+  position TEXT,
+  location TEXT,
+  status TEXT DEFAULT 'scheduled',
+  raw_data JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_synced_at TIMESTAMPTZ
+);
+
 -- Update staff_shifts table to include sling-specific columns
 ALTER TABLE public.staff_shifts 
   ADD COLUMN IF NOT EXISTS sling_shift_id bigint UNIQUE,

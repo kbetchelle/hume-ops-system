@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SyncPhaseIndicator } from "@/components/backfill/SyncPhaseIndicator";
+import { CSVImportMapper } from "@/components/backfill/CSVImportMapper";
 import { 
   Loader2, 
   Play, 
@@ -862,32 +863,41 @@ export default function BackfillManagerPage() {
               Import from CSV
             </CardTitle>
             <CardDescription>
-              Import client data from a CSV file. Deduplicates on external_id (client_id column).
+              Import data from CSV files with flexible table and field mapping options.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isImporting}
-                  className="min-w-[160px]"
-                >
-                  {isImporting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  {isImporting ? "Importing..." : "Select CSV File"}
-                </Button>
+              {/* Import Options */}
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Quick Import (existing functionality) */}
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isImporting}
+                    className="min-w-[160px]"
+                  >
+                    {isImporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {isImporting ? "Importing..." : "Quick Import (Clients)"}
+                  </Button>
+                </div>
+
+                <span className="text-muted-foreground text-sm">or</span>
+
+                {/* Advanced Import with Mapping */}
+                <CSVImportMapper />
                 
                 {isImporting && (
                   <div className="flex-1 space-y-1">

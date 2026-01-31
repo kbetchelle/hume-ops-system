@@ -147,6 +147,7 @@ interface SyncCycleResult {
   hasMore: boolean;
   phase: string;
   errors: Array<{ id: string; error: string }>;
+  firstRecordId?: string | null; // Track first record ID for duplicate detection
 }
 
 interface UpsertResult {
@@ -170,6 +171,7 @@ interface BackfillJob {
   started_at: string | null;
   cumulative_inserted?: number;
   cumulative_updated?: number;
+  last_batch_first_id?: string; // Track first record ID to detect duplicate batches
 }
 
 serve(async (req) => {
@@ -311,7 +313,9 @@ serve(async (req) => {
       records_updated: result.recordsUpdated,
       // Accumulate totals across all batches
       cumulative_inserted: (claimedJob.cumulative_inserted || 0) + result.recordsInserted,
-      cumulative_updated: (claimedJob.cumulative_updated || 0) + result.recordsUpdated
+      cumulative_updated: (claimedJob.cumulative_updated || 0) + result.recordsUpdated,
+      // Track first record ID for duplicate batch detection
+      last_batch_first_id: result.firstRecordId || null
     };
 
     // CRITICAL DEBUG: Log cursor being stored
@@ -402,7 +406,32 @@ async function executeSyncCycle(
       nextCursor: null,
       hasMore: false,
       phase: 'complete',
-      errors: []
+      errors: [],
+      firstRecordId: null
+    };
+  }
+
+  // CRITICAL: Detect duplicate batches (API returning same data)
+  const firstRecordId = String(fetchResult.records[0][config.primaryIdField] || fetchResult.records[0].id || 'unknown');
+  if (job.last_batch_first_id && job.last_batch_first_id === firstRecordId) {
+    logger.error('DUPLICATE BATCH DETECTED - API is returning same records!', {
+      firstRecordId,
+      lastBatchFirstId: job.last_batch_first_id,
+      batchNumber: job.total_batches_completed + 1,
+      cursor: job.batch_cursor
+    });
+    // Stop the sync - something is wrong with pagination
+    return {
+      recordsFetched: fetchResult.records.length,
+      recordsUpserted: 0,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      recordsFailed: 0,
+      nextCursor: null, // Stop pagination
+      hasMore: false,
+      phase: 'error_duplicate_batch',
+      errors: [{ id: 'pagination', error: 'API returning duplicate batches - pagination not working' }],
+      firstRecordId
     };
   }
 
@@ -433,6 +462,9 @@ async function executeSyncCycle(
   await updateJobPhase(supabase, job.id, 'clearing_staging');
   await clearStaging(supabase, config.stagingTable, batchId, logger);
 
+  // Get first record ID for duplicate detection
+  const firstRecordId = String(fetchResult.records[0]?.[config.primaryIdField] || fetchResult.records[0]?.id || 'unknown');
+
   return {
     recordsFetched: fetchResult.records.length,
     recordsUpserted: upsertResult.successful,
@@ -442,7 +474,8 @@ async function executeSyncCycle(
     nextCursor: fetchResult.nextCursor,
     hasMore: fetchResult.hasMore,
     phase: 'batch_complete',
-    errors: upsertResult.errors
+    errors: upsertResult.errors,
+    firstRecordId
   };
 }
 
@@ -858,20 +891,49 @@ async function upsertToTargetWithRetry(
     });
   }
 
+  // Get actual table count BEFORE upsert
+  const { count: countBefore, error: countBeforeError } = await supabase
+    .from(table)
+    .select('*', { count: 'exact', head: true });
+  
+  if (countBeforeError) {
+    logger.warn('Could not get pre-upsert table count', { error: countBeforeError.message });
+  }
+
   // First try batch upsert (faster)
   const { error: batchError } = await supabase
     .from(table)
     .upsert(records, { onConflict: uniqueKey });
 
   if (!batchError) {
-    const inserted = records.length - existingCount;
-    const updated = existingCount;
+    // CRITICAL: Verify actual table count AFTER upsert
+    const { count: countAfter, error: countAfterError } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true });
+    
+    const actualNewRecords = countAfter && countBefore ? countAfter - countBefore : 0;
+    const expectedNew = records.length - existingCount;
+    
+    logger.info('Batch upsert verification', {
+      table,
+      countBefore: countBefore || 'unknown',
+      countAfter: countAfter || 'unknown',
+      actualNewRecords,
+      expectedNew,
+      mismatch: actualNewRecords !== expectedNew,
+      uniqueKeysSample: uniqueKeys.slice(0, 3)
+    });
+    
+    // Use ACTUAL counts, not expected
+    const inserted = actualNewRecords;
+    const updated = records.length - actualNewRecords;
     
     logger.info('Batch upsert successful', {
       table,
       recordCount: records.length,
       inserted,
-      updated
+      updated,
+      tableNowHas: countAfter
     });
     return {
       successful: records.length,

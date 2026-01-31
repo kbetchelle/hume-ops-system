@@ -321,17 +321,37 @@ function ActiveJobCard({
                 </p>
               </div>
             )}
+            
+            {/* Error notice - especially for duplicate batches */}
+            {hasErrors && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded p-3">
+                <p className="text-xs text-destructive flex items-center gap-2">
+                  <AlertTriangle className="h-3 w-3" />
+                  {job.errors?.[0]?.error || 'An error occurred during sync'}
+                </p>
+              </div>
+            )}
+            
+            {/* Warning if inserted count seems wrong */}
+            {job.records_processed > 0 && (job.cumulative_inserted || 0) === 0 && (job.cumulative_updated || 0) === job.records_processed && (
+              <div className="bg-warning/10 border border-warning/30 rounded p-3">
+                <p className="text-xs text-warning-foreground flex items-center gap-2">
+                  <AlertTriangle className="h-3 w-3" />
+                  All records appear to be updates - API may be returning duplicate data
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Center: Stats */}
-          <div className="grid grid-cols-4 gap-4 flex-1 px-4">
+          <div className="grid grid-cols-5 gap-3 flex-1 px-4">
             <div className="text-center">
               <p className="text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Total</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Fetched</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">New</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Inserted</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
@@ -340,6 +360,10 @@ function ActiveJobCard({
             <div className="text-center">
               <p className="text-2xl font-bold">{job.total_batches_completed || 0}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Batches</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-accent-foreground">{formatDuration(job.started_at, null)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
             </div>
           </div>
 

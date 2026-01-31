@@ -33,7 +33,7 @@ import { getArketaToken, getArketaHeaders, ARKETA_URLS } from "../_shared/arketa
 import { fetchWithRetry } from "../_shared/retry.ts";
 import { createSyncLogger } from "../_shared/logger.ts";
 
-const BATCH_SIZE = 500;
+const BATCH_SIZE = 100; // Matching working arketa-gym-flow implementation
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -62,12 +62,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformClient,
     stagingIdField: 'arketa_client_id',
-    useDev: false, // Use prod URL to match working sync-arketa-clients implementation
-    paginationStyle: 'cursor',
-    paginationCursorField: 'nextCursor',
-    primaryIdField: 'id', // API returns 'id' field (verified from working sync-arketa-clients)
-    responseDataPaths: ['data', 'clients', 'items', 'results'],
-    supportsLimit: false, // Arketa clients API uses its own page size, doesn't accept limit
+    useDev: true, // CRITICAL: Must use partnerApiDev endpoint (verified from working arketa-gym-flow)
+    paginationStyle: 'start_after', // Uses start_after param, NOT cursor
+    paginationCursorField: 'nextStartAfterId', // Response uses nextStartAfterId, NOT nextCursor
+    primaryIdField: 'client_id', // API returns client_id as primary ID
+    responseDataPaths: ['items', 'data', 'clients'], // items is primary in working implementation
+    supportsLimit: true, // API supports limit parameter (uses 100 in working impl)
   },
   'arketa-classes': {
     endpointPath: '/classes',
@@ -76,11 +76,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformClass,
     stagingIdField: 'arketa_class_id',
-    useDev: false,
-    paginationStyle: 'cursor',
+    useDev: false, // Uses partnerApi (prod)
+    paginationStyle: 'cursor', // Verified from sync-arketa-classes
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['data', 'classes', 'items']
+    responseDataPaths: ['items', 'data', 'classes'], // items first for consistency
+    supportsLimit: true,
   },
   'arketa-reservations': {
     endpointPath: '/reservations',
@@ -89,11 +90,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformReservation,
     stagingIdField: 'arketa_reservation_id',
-    useDev: false,
-    paginationStyle: 'cursor',
+    useDev: false, // Uses partnerApi (prod)
+    paginationStyle: 'cursor', // Verified from sync-arketa-reservations
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['data', 'reservations', 'items', 'bookings']
+    responseDataPaths: ['items', 'data', 'reservations', 'bookings'], // items first
+    supportsLimit: true,
   },
   'arketa-payments': {
     endpointPath: '/purchases',
@@ -102,11 +104,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformPayment,
     stagingIdField: 'arketa_payment_id',
-    useDev: false,
+    useDev: false, // Uses partnerApi (prod)
     paginationStyle: 'cursor',
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['data', 'purchases', 'payments', 'items']
+    responseDataPaths: ['items', 'data', 'purchases', 'payments'], // items first
+    supportsLimit: true,
   },
   'arketa-instructors': {
     endpointPath: '/staff',
@@ -115,12 +118,12 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformInstructor,
     stagingIdField: 'arketa_instructor_id',
-    useDev: true, // Staff endpoint uses partnerApiDev
-    paginationStyle: 'cursor',
+    useDev: true, // Uses partnerApiDev - verified from sync-arketa-instructors
+    paginationStyle: 'cursor', // Note: API returns direct array, no pagination
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['data', 'staff', 'items'],
-    supportsLimit: false, // Staff API likely uses its own page size
+    responseDataPaths: ['items', 'data', 'staff'], // items first; API may return direct array
+    supportsLimit: false, // Staff API returns all records, no limit support
   },
   'sling-shifts': {
     endpointPath: '/reports/roster',
@@ -591,11 +594,15 @@ async function fetchFromApi(
   logger.info('API response received', {
     isArray: Array.isArray(data),
     topLevelKeys: Array.isArray(data) ? `[array of ${data.length}]` : Object.keys(data).join(', '),
+    hasItemsField: !Array.isArray(data) && !!data.items,
     hasDataField: !Array.isArray(data) && !!data.data,
     hasPagination: !Array.isArray(data) && !!data.pagination,
     paginationDetails: !Array.isArray(data) && data.pagination ? {
+      hasNextStartAfterId: !!data.pagination.nextStartAfterId,
       hasNextCursor: !!data.pagination.nextCursor,
-      hasMore: data.pagination.hasMore
+      hasMore: data.pagination.hasMore,
+      limit: data.pagination.limit,
+      allPaginationKeys: Object.keys(data.pagination)
     } : null
   });
 
@@ -723,6 +730,20 @@ async function fetchFromApi(
 
   // Extract primary IDs from records to detect duplicates across batches
   const recordIds = records.map(r => String(r[config.primaryIdField] || r.id || r.client_id || 'unknown')).slice(0, 10);
+  
+  // Log sample record structure to verify field names
+  if (records.length > 0) {
+    const sampleRecord = records[0];
+    logger.info('Sample record structure', {
+      fieldNames: Object.keys(sampleRecord).slice(0, 15),
+      hasClientId: 'client_id' in sampleRecord,
+      hasId: 'id' in sampleRecord,
+      clientIdValue: sampleRecord.client_id ? String(sampleRecord.client_id).substring(0, 20) : 'missing',
+      idValue: sampleRecord.id ? String(sampleRecord.id).substring(0, 20) : 'missing',
+      hasClientName: 'client_name' in sampleRecord,
+      hasEmail: 'email' in sampleRecord
+    });
+  }
   
   logger.info('Fetch complete', {
     recordCount: records.length,
@@ -1106,33 +1127,43 @@ function jsonResponse(data: unknown, corsHeaders: Record<string, string>, status
 // ============================================================
 
 function transformClient(raw: Record<string, unknown>): Record<string, unknown> {
-  // API returns first_name/last_name (snake_case) not firstName/lastName (camelCase)
-  // Also check camelCase for compatibility
-  const firstName = (raw.first_name || raw.firstName || '') as string;
-  const lastName = (raw.last_name || raw.lastName || '') as string;
-  const name = raw.name as string || `${firstName} ${lastName}`.trim() || null;
+  // VERIFIED from working arketa-gym-flow implementation
+  // API returns: client_id, client_name, email, phone_number, tags, custom_fields,
+  // lifecycle_stage_id, lifecycle_stage, date_of_birth, gender, referrer,
+  // email_marketing_opt_in, sms_marketing_opt_in, transactional_sms_opt_in, removed
 
-  // Get client ID - API returns 'id' field (verified from working sync-arketa-clients)
-  // Check both 'id' and 'client_id' for compatibility with different API versions
-  const clientId = raw.id || raw.client_id;
+  // Get client ID - API returns client_id as primary identifier
+  const clientId = raw.client_id || raw.id;
+  
+  if (!clientId) {
+    console.warn('[transformClient] No client_id found in record:', Object.keys(raw).slice(0, 10));
+  }
 
-  // CRITICAL: Handle missing email - use placeholder to satisfy NOT NULL constraint
-  // Some Arketa clients don't have email addresses
+  // client_name comes directly from API
+  const name = raw.client_name as string || raw.name as string || null;
+
+  // Handle missing email - use placeholder to satisfy NOT NULL constraint
   const email = raw.email || `no-email-${clientId}@placeholder.local`;
+  
+  // phone_number is the correct field name (not phone)
+  const phone = raw.phone_number || raw.phone || null;
+
+  // lifecycle_stage can be an object with id and name
+  const lifecycleStage = raw.lifecycle_stage as { id?: string; name?: string } | null;
+  const lifecycleStageName = lifecycleStage?.name || raw.lifecycle_stage_name || null;
 
   return {
     external_id: String(clientId),
     client_name: name,
     client_email: email,
-    client_phone: raw.phone,
+    client_phone: phone,
     client_tags: (raw.tags as string[]) || [],
-    custom_fields: raw.customFields || raw.custom_fields || {},
-    referrer: raw.referrer,
-    // API may return snake_case or camelCase - check all variations
-    email_mkt_opt_in: raw.email_mkt_opt_in ?? raw.emailMarketingOptIn ?? raw.emailOptIn ?? false,
-    sms_mkt_opt_in: raw.sms_mkt_opt_in ?? raw.smsMarketingOptIn ?? raw.smsOptIn ?? false,
-    date_of_birth: raw.dateOfBirth || raw.date_of_birth,
-    lifecycle_stage: raw.lifecycleStage || raw.lifecycle_stage,
+    custom_fields: raw.custom_fields || raw.customFields || {},
+    referrer: raw.referrer || null,
+    email_mkt_opt_in: raw.email_marketing_opt_in ?? raw.email_mkt_opt_in ?? false,
+    sms_mkt_opt_in: raw.sms_marketing_opt_in ?? raw.sms_mkt_opt_in ?? false,
+    date_of_birth: raw.date_of_birth || raw.dateOfBirth || null,
+    lifecycle_stage: lifecycleStageName,
     raw_data: raw,
     last_synced_at: new Date().toISOString()
   };

@@ -51,6 +51,7 @@ interface BackfillConfig {
   paginationCursorField: string; // Field name in response.pagination to extract next cursor
   primaryIdField: string; // Field name in raw record to use as ID (e.g., 'client_id' vs 'id')
   responseDataPaths: string[]; // Ordered list of field names to try for extracting records array
+  supportsLimit?: boolean; // Whether API supports limit param (default true)
 }
 
 const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
@@ -64,8 +65,9 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     useDev: false, // Use prod URL to match working sync-arketa-clients implementation
     paginationStyle: 'cursor',
     paginationCursorField: 'nextCursor',
-    primaryIdField: 'client_id', // API returns client_id, not id
-    responseDataPaths: ['data', 'clients', 'items', 'results']
+    primaryIdField: 'id', // API returns 'id' field (verified from working sync-arketa-clients)
+    responseDataPaths: ['data', 'clients', 'items', 'results'],
+    supportsLimit: false, // Arketa clients API uses its own page size, doesn't accept limit
   },
   'arketa-classes': {
     endpointPath: '/classes',
@@ -117,7 +119,8 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     paginationStyle: 'cursor',
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['data', 'staff', 'items']
+    responseDataPaths: ['data', 'staff', 'items'],
+    supportsLimit: false, // Staff API likely uses its own page size
   },
   'sling-shifts': {
     endpointPath: '/reports/roster',
@@ -276,6 +279,14 @@ serve(async (req) => {
     // Generate batch ID for this cycle
     const batchId = crypto.randomUUID();
     
+    // CRITICAL DEBUG: Log cursor state before fetch
+    logger.info('Starting sync cycle', {
+      batchNumber: (claimedJob.total_batches_completed || 0) + 1,
+      currentCursor: claimedJob.batch_cursor ? claimedJob.batch_cursor.substring(0, 100) : 'NULL (first batch)',
+      recordsProcessedSoFar: claimedJob.records_processed,
+      endpoint: config.endpointPath
+    });
+    
     // Execute the complete sync cycle
     const result = await executeSyncCycle(
       supabase,
@@ -303,15 +314,29 @@ serve(async (req) => {
       cumulative_updated: (claimedJob.cumulative_updated || 0) + result.recordsUpdated
     };
 
+    // CRITICAL DEBUG: Log cursor being stored
+    logger.info('Batch complete - storing cursor', {
+      batchNumber: (claimedJob.total_batches_completed || 0) + 1,
+      recordsFetched: result.recordsFetched,
+      recordsUpserted: result.recordsUpserted,
+      inserted: result.recordsInserted,
+      updated: result.recordsUpdated,
+      failed: result.recordsFailed,
+      nextCursor: result.nextCursor ? result.nextCursor.substring(0, 100) : 'NULL (no more data)',
+      hasMore: result.hasMore
+    });
+
     if (!result.hasMore) {
       // No more records - job is complete
       updateData.status = 'completed';
       updateData.completed_at = new Date().toISOString();
       updateData.no_more_records = true;
       updateData.sync_phase = 'complete';
+      logger.info('Job complete - no more records');
     } else {
       // Schedule next batch with a small delay for rate limiting
       updateData.retry_scheduled_at = new Date(Date.now() + 2000).toISOString();
+      logger.info('Scheduling next batch', { scheduledAt: updateData.retry_scheduled_at });
     }
 
     // CRITICAL: Add error handling to job status update
@@ -450,12 +475,24 @@ async function fetchFromApi(
 
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID");
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
-  let url = `${baseUrl}/${partnerId}${config.endpointPath}?limit=${BATCH_SIZE}`;
+  
+  // Build URL - only add limit if the API supports it
+  let url = `${baseUrl}/${partnerId}${config.endpointPath}`;
+  const supportsLimit = config.supportsLimit !== false; // Default true
+  if (supportsLimit) {
+    url += `?limit=${BATCH_SIZE}`;
+  }
+
+  // Helper to add query params with correct separator
+  const addParam = (param: string) => {
+    url += url.includes('?') ? `&${param}` : `?${param}`;
+  };
 
   // Add date range if applicable (not for clients or staff/instructors endpoints)
   const skipDateFiltering = ['/clients', '/staff'].includes(config.endpointPath);
   if (job.start_date && job.end_date && !skipDateFiltering) {
-    url += `&start_date=${job.start_date}&end_date=${job.end_date}`;
+    addParam(`start_date=${job.start_date}`);
+    addParam(`end_date=${job.end_date}`);
   }
 
   // Config-driven pagination based on endpoint requirements
@@ -463,28 +500,28 @@ async function fetchFromApi(
     switch (config.paginationStyle) {
       case 'start_after':
         // Arketa's preferred pagination style
-        url += `&start_after=${encodeURIComponent(job.batch_cursor)}`;
+        addParam(`start_after=${encodeURIComponent(job.batch_cursor)}`);
         logger.info('Using start_after pagination', { cursor: job.batch_cursor });
         break;
       case 'page':
         // Page-based pagination
-        url += `&page=${job.batch_cursor}`;
+        addParam(`page=${job.batch_cursor}`);
         logger.info('Using page-based pagination', { page: job.batch_cursor });
         break;
       case 'skip':
         // Offset-based pagination
-        url += `&skip=${job.batch_cursor}`;
+        addParam(`skip=${job.batch_cursor}`);
         logger.info('Using skip-based pagination', { skip: job.batch_cursor });
         break;
       case 'cursor':
       default:
-        url += `&cursor=${encodeURIComponent(job.batch_cursor)}`;
+        addParam(`cursor=${encodeURIComponent(job.batch_cursor)}`);
         logger.info('Using cursor-based pagination', { cursor: job.batch_cursor });
         break;
     }
   } else if (config.paginationStyle === 'skip' && job.records_processed > 0) {
     // For skip-based pagination, use records_processed as offset when no cursor
-    url += `&skip=${job.records_processed}`;
+    addParam(`skip=${job.records_processed}`);
     logger.info('Using skip-based pagination from records_processed', { skip: job.records_processed });
   }
 
@@ -1013,9 +1050,9 @@ function transformClient(raw: Record<string, unknown>): Record<string, unknown> 
   const lastName = (raw.last_name || raw.lastName || '') as string;
   const name = raw.name as string || `${firstName} ${lastName}`.trim() || null;
 
-  // CRITICAL: API returns client_id as primary ID, not id
-  // Use client_id first, fallback to id for compatibility
-  const clientId = raw.client_id || raw.id;
+  // Get client ID - API returns 'id' field (verified from working sync-arketa-clients)
+  // Check both 'id' and 'client_id' for compatibility with different API versions
+  const clientId = raw.id || raw.client_id;
 
   // CRITICAL: Handle missing email - use placeholder to satisfy NOT NULL constraint
   // Some Arketa clients don't have email addresses

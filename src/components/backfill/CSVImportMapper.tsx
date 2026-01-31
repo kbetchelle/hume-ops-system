@@ -303,9 +303,27 @@ export function CSVImportMapper() {
       const targetTable = isCreatingNewTable ? newTableName : selectedTable;
       if (!targetTable) throw new Error("No table selected");
       if (!csvContent) throw new Error("No CSV content");
+      if (!uniqueKeyColumn) throw new Error("No unique key column selected");
 
       const enabledMappings = fieldMappings.filter((m) => m.enabled);
       if (enabledMappings.length === 0) throw new Error("No fields selected for import");
+
+      // Validate that the unique key column is mapped to a CSV column
+      const uniqueKeyMapping = enabledMappings.find((m) => m.dbColumn === uniqueKeyColumn);
+      if (!uniqueKeyMapping) {
+        // Check if there's a CSV column that could map to the unique key
+        const csvColumnForUniqueKey = enabledMappings.find(
+          (m) => m.csvColumn.toLowerCase().includes("id") || m.csvColumn.toLowerCase() === "id"
+        );
+        if (csvColumnForUniqueKey) {
+          throw new Error(
+            `Unique key "${uniqueKeyColumn}" is not mapped. Consider mapping CSV column "${csvColumnForUniqueKey.csvColumn}" to "${uniqueKeyColumn}".`
+          );
+        }
+        throw new Error(
+          `Unique key "${uniqueKeyColumn}" must be mapped to a CSV column. Please update your field mappings.`
+        );
+      }
 
       setProgress({
         status: "uploading",

@@ -270,191 +270,192 @@ function ActiveJobCard({
           <div className="flex flex-col lg:flex-row lg:items-start gap-4">
             {/* Left: Header and Phase Indicator */}
             <div className="lg:w-[300px] lg:shrink-0 space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Database className={cn(
-                  "h-5 w-5",
-                  isActivelyProcessing ? "text-primary animate-pulse" : "text-muted-foreground"
-                )} />
-                <div>
-                  <h4 className="text-sm font-medium">
-                    {job.api_source.toUpperCase()} - {job.data_type}
-                  </h4>
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Database className={cn(
+                    "h-5 w-5",
+                    isActivelyProcessing ? "text-primary animate-pulse" : "text-muted-foreground"
+                  )} />
+                  <div>
+                    <h4 className="text-sm font-medium">
+                      {job.api_source.toUpperCase()} - {job.data_type}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(job.start_date), "MMM d, yyyy")} → {format(new Date(job.end_date), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                </div>
+                {getStatusBadge(job.status, job.sync_phase)}
+              </div>
+
+              {/* Sync Phase Indicator */}
+              <SyncPhaseIndicator phase={job.sync_phase} />
+
+              {/* Progress Section */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{getBatchStatusText()}</span>
+                  {progress !== null && <span>{Math.round(progress)}%</span>}
+                </div>
+                {progress !== null ? (
+                  <Progress value={progress} className="h-2" />
+                ) : (
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full bg-primary/50 rounded-full",
+                        isActivelyProcessing && "animate-pulse"
+                      )}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                )}
+                {job.records_in_current_batch > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(job.start_date), "MMM d, yyyy")} → {format(new Date(job.end_date), "MMM d, yyyy")}
+                    Current batch: {job.records_in_current_batch.toLocaleString()} records
+                  </p>
+                )}
+              </div>
+
+              {/* Waiting for retry notice */}
+              {isWaitingForRetry && job.retry_scheduled_at && (
+                <div className="bg-warning/10 border border-warning/30 rounded p-3">
+                  <p className="text-xs text-warning-foreground flex items-center gap-2">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Continuing {formatDistanceToNow(new Date(job.retry_scheduled_at), { addSuffix: true })}
                   </p>
                 </div>
-              </div>
-              {getStatusBadge(job.status, job.sync_phase)}
-            </div>
-
-            {/* Sync Phase Indicator */}
-            <SyncPhaseIndicator phase={job.sync_phase} />
-
-            {/* Progress Section */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{getBatchStatusText()}</span>
-                {progress !== null && <span>{Math.round(progress)}%</span>}
-              </div>
-              {progress !== null ? (
-                <Progress value={progress} className="h-2" />
-              ) : (
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={cn(
-                      "h-full bg-primary/50 rounded-full",
-                      isActivelyProcessing && "animate-pulse"
-                    )}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-              )}
-              {job.records_in_current_batch > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Current batch: {job.records_in_current_batch.toLocaleString()} records
-                </p>
-              )}
-            </div>
-
-            {/* Waiting for retry notice */}
-            {isWaitingForRetry && job.retry_scheduled_at && (
-              <div className="bg-warning/10 border border-warning/30 rounded p-3">
-                <p className="text-xs text-warning-foreground flex items-center gap-2">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Continuing {formatDistanceToNow(new Date(job.retry_scheduled_at), { addSuffix: true })}
-                </p>
-              </div>
-            )}
-            
-            {/* Error notice - especially for duplicate batches */}
-            {hasErrors && (
-              <div className="bg-destructive/10 border border-destructive/30 rounded p-3">
-                <p className="text-xs text-destructive flex items-center gap-2">
-                  <AlertTriangle className="h-3 w-3" />
-                  {job.errors?.[0]?.error || 'An error occurred during sync'}
-                </p>
-              </div>
-            )}
-            
-            {/* Warning if inserted count seems wrong */}
-            {job.records_processed > 0 && (job.cumulative_inserted || 0) === 0 && (job.cumulative_updated || 0) === job.records_processed && (
-              <div className="bg-warning/10 border border-warning/30 rounded p-3">
-                <p className="text-xs text-warning-foreground flex items-center gap-2">
-                  <AlertTriangle className="h-3 w-3" />
-                  All records appear to be updates - API may be returning duplicate data
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom row: Stats and Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-            {/* Center: Stats */}
-            <div className="flex items-center justify-around gap-2 sm:gap-4 flex-1 px-2 sm:px-4 py-2 bg-muted/30 rounded-lg overflow-x-auto">
-              <div className="text-center min-w-[60px] flex-shrink-0">
-                <p className="text-xl sm:text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fetched</p>
-              </div>
-              <div className="text-center min-w-[60px] flex-shrink-0">
-                <p className="text-xl sm:text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Inserted</p>
-              </div>
-              <div className="text-center min-w-[60px] flex-shrink-0">
-                <p className="text-xl sm:text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Updated</p>
-              </div>
-              <div className="text-center min-w-[55px] flex-shrink-0">
-                <p className="text-xl sm:text-2xl font-bold">{job.total_batches_completed || 0}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Batches</p>
-              </div>
-              <div className="text-center min-w-[60px] flex-shrink-0">
-                <p className="text-xl sm:text-2xl font-bold text-accent-foreground">{formatDuration(job.started_at, null)}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Elapsed</p>
-              </div>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="sm:shrink-0 sm:w-[240px] space-y-2 relative z-50">
-            {/* Action buttons in fixed grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Pause/Resume Button */}
-              {isPaused ? (
-                <button
-                  type="button"
-                  onClick={handleResume}
-                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Resume
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handlePause}
-                  className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  <Pause className="h-4 w-4 mr-2" />
-                  Pause
-                </button>
               )}
               
-              {/* Cancel Button */}
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md cursor-pointer relative z-50"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </button>
+              {/* Error notice - especially for duplicate batches */}
+              {hasErrors && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded p-3">
+                  <p className="text-xs text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    {job.errors?.[0]?.error || 'An error occurred during sync'}
+                  </p>
+                </div>
+              )}
+              
+              {/* Warning if inserted count seems wrong */}
+              {job.records_processed > 0 && (job.cumulative_inserted || 0) === 0 && (job.cumulative_updated || 0) === job.records_processed && (
+                <div className="bg-warning/10 border border-warning/30 rounded p-3">
+                  <p className="text-xs text-warning-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    All records appear to be updates - API may be returning duplicate data
+                  </p>
+                </div>
+              )}
             </div>
-            
-            {/* Continue Now Button - Only when waiting for retry */}
-            {isWaitingForRetry && (
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="w-full inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Continue Now
-              </button>
-            )}
-            
-            {/* Empty spacer when Continue button is hidden to maintain layout */}
-            {!isWaitingForRetry && <div className="h-9" />}
-            
-            {/* View Details Toggle */}
-            <button
-              type="button"
-              onClick={handleViewDetails}
-              className="w-full inline-flex items-center justify-start h-9 px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <ChevronRight className={cn(
-                "h-4 w-4 mr-2 transition-transform",
-                isDetailsOpen && "rotate-90"
-              )} />
-              View Details
-            </button>
+
+            {/* Bottom row: Stats and Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch flex-1">
+              {/* Center: Stats */}
+              <div className="flex items-center justify-around gap-2 sm:gap-4 flex-1 px-2 sm:px-4 py-2 bg-muted/30 rounded-lg overflow-x-auto">
+                <div className="text-center min-w-[60px] flex-shrink-0">
+                  <p className="text-xl sm:text-2xl font-bold">{job.records_processed.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fetched</p>
+                </div>
+                <div className="text-center min-w-[60px] flex-shrink-0">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">{(job.cumulative_inserted || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Inserted</p>
+                </div>
+                <div className="text-center min-w-[60px] flex-shrink-0">
+                  <p className="text-xl sm:text-2xl font-bold">{(job.cumulative_updated || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Updated</p>
+                </div>
+                <div className="text-center min-w-[55px] flex-shrink-0">
+                  <p className="text-xl sm:text-2xl font-bold">{job.total_batches_completed || 0}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Batches</p>
+                </div>
+                <div className="text-center min-w-[60px] flex-shrink-0">
+                  <p className="text-xl sm:text-2xl font-bold text-accent-foreground">{formatDuration(job.started_at, null)}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Elapsed</p>
+                </div>
+              </div>
+
+              {/* Right: Actions */}
+              <div className="sm:shrink-0 sm:w-[240px] space-y-2 relative z-50">
+                {/* Action buttons in fixed grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Pause/Resume Button */}
+                  {isPaused ? (
+                    <button
+                      type="button"
+                      onClick={handleResume}
+                      className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Resume
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handlePause}
+                      className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      <Pause className="h-4 w-4 mr-2" />
+                      Pause
+                    </button>
+                  )}
+                  
+                  {/* Cancel Button */}
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md cursor-pointer relative z-50"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </button>
+                </div>
+                
+                {/* Continue Now Button - Only when waiting for retry */}
+                {isWaitingForRetry && (
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    className="w-full inline-flex items-center justify-center h-9 px-4 py-2 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Continue Now
+                  </button>
+                )}
+                
+                {/* Empty spacer when Continue button is hidden to maintain layout */}
+                {!isWaitingForRetry && <div className="h-9" />}
+                
+                {/* View Details Toggle */}
+                <button
+                  type="button"
+                  onClick={handleViewDetails}
+                  className="w-full inline-flex items-center justify-start h-9 px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer relative z-50"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <ChevronRight className={cn(
+                    "h-4 w-4 mr-2 transition-transform",
+                    isDetailsOpen && "rotate-90"
+                  )} />
+                  View Details
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Estimated remaining */}
-        {hasKnownTotal && job.total_records_expected > job.records_processed && (
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            ~{(job.total_records_expected - job.records_processed).toLocaleString()} records remaining
-          </p>
-        )}
+          {/* Estimated remaining */}
+          {hasKnownTotal && job.total_records_expected > job.records_processed && (
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              ~{(job.total_records_expected - job.records_processed).toLocaleString()} records remaining
+            </p>
+          )}
 
-        {/* Expandable Details Section */}
-        {isDetailsOpen && (
+          {/* Expandable Details Section */}
+          {isDetailsOpen && (
             <div className="bg-muted/50 rounded-lg p-4 mt-4 space-y-4 text-sm">
               {/* Next Batch Countdown */}
               {isWaitingForRetry && job.retry_scheduled_at && (
@@ -559,7 +560,8 @@ function ActiveJobCard({
                 </div>
               )}
             </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );

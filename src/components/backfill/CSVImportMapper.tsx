@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -258,28 +258,36 @@ export function CSVImportMapper() {
   const autoMapColumns = useCallback(() => {
     if (!tableColumns || tableColumns.length === 0) return;
 
+    const tableColumnNames = tableColumns.map((col) => col.column_name);
+
     setFieldMappings((prev) =>
       prev.map((mapping) => {
         // Try to find a matching table column
+        const normalizedCsvCol = normalizeColumnName(mapping.csvColumn);
         const matchingColumn = tableColumns.find(
           (col) =>
             col.column_name === mapping.dbColumn ||
-            col.column_name === normalizeColumnName(mapping.csvColumn) ||
-            col.column_name.includes(normalizeColumnName(mapping.csvColumn)) ||
-            normalizeColumnName(mapping.csvColumn).includes(col.column_name)
+            col.column_name === normalizedCsvCol ||
+            col.column_name.includes(normalizedCsvCol) ||
+            normalizedCsvCol.includes(col.column_name)
         );
+
+        // If no match found, check if the current dbColumn exists in the table
+        const dbColumnExists = tableColumnNames.includes(mapping.dbColumn);
 
         return {
           ...mapping,
           dbColumn: matchingColumn?.column_name || mapping.dbColumn,
-          isNew: !matchingColumn,
+          isNew: !matchingColumn && !dbColumnExists,
+          // Auto-disable columns that don't exist in the table (for existing tables)
+          enabled: matchingColumn || dbColumnExists ? mapping.enabled : false,
         };
       })
     );
   }, [tableColumns]);
 
-  // Run auto-mapping when table columns load
-  useCallback(() => {
+  // Run auto-mapping when table columns load - use useEffect instead of useCallback
+  useEffect(() => {
     if (tableColumns && tableColumns.length > 0) {
       autoMapColumns();
     }
@@ -614,14 +622,35 @@ export function CSVImportMapper() {
                 </div>
               )}
 
+              {/* Warning for unmapped columns */}
+              {(selectedTable || newTableName) && !isCreatingNewTable && fieldMappings.some(m => m.isNew && m.enabled) && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Some columns don't exist in the target table</p>
+                    <p className="text-muted-foreground">
+                      Columns marked as "New" will cause import errors. Either disable them or add them to the database first.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Missing: {fieldMappings.filter(m => m.isNew && m.enabled).map(m => m.dbColumn).join(", ")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Field Mappings */}
               {(selectedTable || newTableName) && (
                 <div className="space-y-2 flex flex-col min-h-0 flex-1">
                   <Label className="flex items-center justify-between flex-shrink-0">
                     <span>Field Mappings ({fieldMappings.length} fields)</span>
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {fieldMappings.filter(m => m.enabled).length} enabled
-                    </span>
+                    <div className="flex gap-3 text-xs text-muted-foreground font-normal">
+                      <span>{fieldMappings.filter(m => m.enabled).length} enabled</span>
+                      {!isCreatingNewTable && fieldMappings.some(m => m.isNew) && (
+                        <span className="text-destructive">
+                          {fieldMappings.filter(m => m.isNew && m.enabled).length} will fail
+                        </span>
+                      )}
+                    </div>
                   </Label>
                   <div className="border rounded-lg flex flex-col min-h-0 flex-1" style={{ maxHeight: 'calc(100vh - 480px)', minHeight: '200px' }}>
                     {/* Sticky header */}

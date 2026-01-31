@@ -26,6 +26,13 @@ interface ImportRequest {
   fieldMappings: FieldMapping[];
   uniqueKeyColumn: string;
   createTable?: boolean;
+  overwriteExisting?: boolean; // If false, only insert new records, don't update existing
+}
+
+interface RecordError {
+  rowNumber: number;
+  reason: string;
+  record?: Record<string, unknown>;
 }
 
 interface ImportResult {
@@ -35,6 +42,7 @@ interface ImportResult {
   updated: number;
   skipped: number;
   errors: string[];
+  detailedErrors: RecordError[];
 }
 
 // Parse a CSV line handling quoted fields
@@ -117,7 +125,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     const body: ImportRequest = await req.json();
-    const { csvContent, targetTable, fieldMappings, uniqueKeyColumn, createTable } = body;
+    const { csvContent, targetTable, fieldMappings, uniqueKeyColumn, createTable, overwriteExisting = true } = body;
 
     // Validate inputs
     if (!csvContent) {
@@ -216,6 +224,7 @@ serve(async (req) => {
     // Parse all data rows
     const records: Record<string, unknown>[] = [];
     const errors: string[] = [];
+    const detailedErrors: RecordError[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       try {
@@ -230,13 +239,24 @@ serve(async (req) => {
 
         // Skip records where unique key is null/empty
         if (!record[uniqueKeyColumn]) {
-          errors.push(`Row ${i + 1}: Missing unique key value`);
+          const errorMsg = `Row ${i + 1}: Missing unique key value in "${uniqueKeyColumn}"`;
+          errors.push(errorMsg);
+          detailedErrors.push({
+            rowNumber: i + 1,
+            reason: `Missing or empty unique key field: ${uniqueKeyColumn}`,
+            record: record
+          });
           continue;
         }
 
         records.push(record);
       } catch (err) {
-        errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : "Parse error"}`);
+        const errorMsg = `Row ${i + 1}: ${err instanceof Error ? err.message : "Parse error"}`;
+        errors.push(errorMsg);
+        detailedErrors.push({
+          rowNumber: i + 1,
+          reason: err instanceof Error ? err.message : "Parse error"
+        });
       }
     }
 
@@ -246,27 +266,45 @@ serve(async (req) => {
       throw new Error("No valid records to import");
     }
 
-    // Upsert in batches
+    // Upsert or Insert in batches
     const BATCH_SIZE = 100;
     let inserted = 0;
     let updated = 0;
     let skipped = 0;
 
+    console.log(`Overwrite existing: ${overwriteExisting}`);
+
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
       const batch = records.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       
       // Get count before upsert
       const { count: countBefore } = await supabase
         .from(targetTable)
         .select("*", { count: "exact", head: true });
 
-      // Upsert batch
-      const { error: upsertError } = await supabase
-        .from(targetTable)
-        .upsert(batch, { onConflict: uniqueKeyColumn });
+      // Upsert or insert based on overwriteExisting flag
+      let upsertError, upsertData;
+      
+      if (overwriteExisting) {
+        // Upsert: Insert new records or update existing ones
+        const result = await supabase
+          .from(targetTable)
+          .upsert(batch, { onConflict: uniqueKeyColumn })
+          .select();
+        upsertError = result.error;
+        upsertData = result.data;
+      } else {
+        // Insert only: Skip records that already exist
+        const result = await supabase
+          .from(targetTable)
+          .insert(batch)
+          .select();
+        upsertError = result.error;
+        upsertData = result.data;
+      }
 
       if (upsertError) {
-        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
         console.error(`Batch ${batchNum} upsert error:`, upsertError);
         console.error(`Batch ${batchNum} sample record:`, JSON.stringify(batch[0]));
 
@@ -281,6 +319,17 @@ serve(async (req) => {
         }
 
         errors.push(`Batch ${batchNum}: ${errorDetail}`);
+        
+        // Add detailed error for each record in failed batch
+        batch.forEach((record, idx) => {
+          const globalRowNum = i + idx + 2; // +2 for header and 0-index
+          detailedErrors.push({
+            rowNumber: globalRowNum,
+            reason: `Batch failure: ${errorDetail}`,
+            record: record
+          });
+        });
+        
         skipped += batch.length;
         continue;
       }
@@ -306,9 +355,11 @@ serve(async (req) => {
       updated,
       skipped,
       errors: errors.slice(0, 10), // Return first 10 errors
+      detailedErrors: detailedErrors.slice(0, 100), // Return first 100 detailed errors
     };
 
     console.log(`Import complete:`, result);
+    console.log(`Detailed errors count: ${detailedErrors.length}`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

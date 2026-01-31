@@ -69,6 +69,12 @@ interface TableColumn {
   column_default: string | null;
 }
 
+interface RecordError {
+  rowNumber: number;
+  reason: string;
+  record?: Record<string, unknown>;
+}
+
 interface ImportProgress {
   status: "idle" | "uploading" | "processing" | "complete" | "error";
   message: string;
@@ -77,6 +83,8 @@ interface ImportProgress {
   inserted: number;
   updated: number;
   skipped: number;
+  errors?: string[];
+  detailedErrors?: RecordError[];
 }
 
 export function CSVImportMapper() {
@@ -102,6 +110,7 @@ export function CSVImportMapper() {
   // Field mapping state
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
   const [uniqueKeyColumn, setUniqueKeyColumn] = useState<string>("");
+  const [overwriteExisting, setOverwriteExisting] = useState(true);
 
   // Import progress
   const [progress, setProgress] = useState<ImportProgress>({
@@ -389,6 +398,7 @@ export function CSVImportMapper() {
               })),
               uniqueKeyColumn,
               createTable: isCreatingNewTable && chunkIndex === 0, // Only create on first chunk
+              overwriteExisting, // Allow user to control if existing records are updated
             },
           });
 
@@ -400,6 +410,14 @@ export function CSVImportMapper() {
           totalInserted += data?.inserted || 0;
           totalUpdated += data?.updated || 0;
           totalSkipped += data?.skipped || 0;
+
+          // Collect detailed errors
+          if (data?.detailedErrors && data.detailedErrors.length > 0) {
+            setProgress((prev) => ({
+              ...prev,
+              detailedErrors: [...(prev.detailedErrors || []), ...data.detailedErrors],
+            }));
+          }
 
           if (data?.errors) {
             allErrors.push(...data.errors.slice(0, 5)); // Limit errors per chunk
@@ -624,6 +642,27 @@ export function CSVImportMapper() {
                 </div>
               )}
 
+              {/* Overwrite Existing Records Option */}
+              {(selectedTable || newTableName) && uniqueKeyColumn && (
+                <div className="flex items-center space-x-2 flex-shrink-0 p-3 bg-muted/30 rounded-lg">
+                  <Checkbox
+                    id="overwrite"
+                    checked={overwriteExisting}
+                    onCheckedChange={(checked) => setOverwriteExisting(checked as boolean)}
+                  />
+                  <div className="flex flex-col">
+                    <Label htmlFor="overwrite" className="cursor-pointer font-medium">
+                      Overwrite existing records
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {overwriteExisting
+                        ? "Will update existing records with matching unique keys"
+                        : "Will only insert new records, skip existing ones"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Warning for unmapped columns */}
               {(selectedTable || newTableName) && !isCreatingNewTable && fieldMappings.some(m => m.isNew && m.enabled) && (
                 <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex-shrink-0">
@@ -821,7 +860,7 @@ export function CSVImportMapper() {
                   Successfully processed {progress.total.toLocaleString()} records
                 </p>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap justify-center">
                 <Badge variant="outline" className="text-sm px-3 py-1">
                   <Plus className="h-3 w-3 mr-1" />
                   {progress.inserted} inserted
@@ -837,6 +876,39 @@ export function CSVImportMapper() {
                   </Badge>
                 )}
               </div>
+
+              {/* Detailed Errors Section */}
+              {progress.detailedErrors && progress.detailedErrors.length > 0 && (
+                <div className="w-full mt-6 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span>Skipped Records Details ({progress.detailedErrors.length} records)</span>
+                  </div>
+                  <ScrollArea className="h-[300px] w-full border rounded-md">
+                    <div className="p-4 space-y-2">
+                      {progress.detailedErrors.map((error, idx) => (
+                        <div key={idx} className="p-3 bg-muted/50 rounded border-l-2 border-amber-500 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono text-muted-foreground">Row {error.rowNumber}</span>
+                            <Badge variant="outline" className="text-xs">Skipped</Badge>
+                          </div>
+                          <p className="text-sm">{error.reason}</p>
+                          {error.record && (
+                            <details className="text-xs">
+                              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                View record data
+                              </summary>
+                              <pre className="mt-2 p-2 bg-background rounded text-xs overflow-x-auto">
+                                {JSON.stringify(error.record, null, 2)}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           )}
         </div>

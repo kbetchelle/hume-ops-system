@@ -132,8 +132,11 @@ export function CSVImportMapper() {
       if (!selectedTable || isCreatingNewTable) return [];
       
       // Infer columns from a sample query
-      const { data: sampleData, error: sampleError } = await supabase
-        .from(selectedTable as any)
+      // Dynamic table name requires bypassing type checking since table names
+      // are determined at runtime, not compile time
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sampleData, error: sampleError } = await (supabase as any)
+        .from(selectedTable)
         .select("*")
         .limit(1);
       

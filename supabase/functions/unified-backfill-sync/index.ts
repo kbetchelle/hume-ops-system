@@ -488,10 +488,13 @@ async function fetchFromApi(
     logger.info('Using skip-based pagination from records_processed', { skip: job.records_processed });
   }
 
-  logger.info(`Fetching from: ${url}`, {
+  // CRITICAL: Log full pagination state for debugging
+  logger.info(`Fetching batch - URL: ${url}`, {
     paginationStyle: config.paginationStyle,
     useDev: config.useDev,
-    cursor: job.batch_cursor ? 'present' : 'none'
+    batchNumber: job.total_batches_completed + 1,
+    currentCursor: job.batch_cursor ? job.batch_cursor.substring(0, 50) : 'NONE (first batch)',
+    recordsProcessedSoFar: job.records_processed
   });
   
   const fetchResult = await fetchWithRetry(url, { headers });
@@ -571,6 +574,15 @@ async function fetchFromApi(
 
   // Extract pagination cursor using config-driven field name
   let nextCursor: string | null = null;
+  
+  // ENHANCED LOGGING: Log all pagination fields to understand structure
+  logger.info('Pagination extraction starting', {
+    hasPagination: !!data.pagination,
+    paginationObject: data.pagination ? JSON.stringify(data.pagination).substring(0, 200) : 'none',
+    configCursorField: config.paginationCursorField,
+    topLevelCursor: data.cursor || data.next_cursor || data.start_after || 'none'
+  });
+  
   if (data.pagination) {
     // Primary: Use the configured pagination cursor field
     nextCursor = data.pagination[config.paginationCursorField] ||
@@ -581,10 +593,21 @@ async function fetchFromApi(
       data.pagination.start_after ||
       data.pagination.nextStartAfterId ||
       null;
+      
+    logger.info('Cursor extracted from pagination object', {
+      extractedCursor: nextCursor ? `${nextCursor.substring(0, 50)}...` : 'null',
+      hasMore: data.pagination.hasMore,
+      has_more: data.pagination.has_more
+    });
   }
   // Also check top-level cursor fields
   if (!nextCursor) {
     nextCursor = data.cursor || data.next_cursor || data.start_after || null;
+    if (nextCursor) {
+      logger.info('Cursor extracted from top-level field', {
+        extractedCursor: nextCursor.substring(0, 50)
+      });
+    }
   }
 
   // For page-based pagination, calculate next page
@@ -628,13 +651,20 @@ async function fetchFromApi(
     logger.info('Received partial batch - sync complete', { recordsFetched: records.length });
   }
 
+  // Extract primary IDs from records to detect duplicates across batches
+  const recordIds = records.map(r => String(r[config.primaryIdField] || r.id || r.client_id || 'unknown')).slice(0, 10);
+  
   logger.info('Fetch complete', {
     recordCount: records.length,
     matchedFormat,
+    sampleRecordIds: recordIds,
+    firstRecordId: records[0] ? String(records[0][config.primaryIdField] || records[0].id) : 'none',
+    lastRecordId: records[records.length - 1] ? String(records[records.length - 1][config.primaryIdField] || records[records.length - 1].id) : 'none',
     pagination: {
       isBatchFull,
       paginationHasMore,
       cursorPresent,
+      extractedCursor: effectiveCursor ? effectiveCursor.substring(0, 50) : 'null',
       usingOffset: !cursorPresent && hasMore,
       hasMoreDecision: hasMore
     }
@@ -753,16 +783,42 @@ async function upsertToTargetWithRetry(
   // First, check which records already exist to track new vs updated
   const uniqueKeys = records.map(r => String(r[uniqueKey])).filter(Boolean);
   
+  // Log sample of unique keys to verify they're correct
+  logger.info('Checking for existing records', {
+    table,
+    uniqueKey,
+    totalRecords: records.length,
+    uniqueKeysCount: uniqueKeys.length,
+    sampleKeys: uniqueKeys.slice(0, 5),
+    lastKeys: uniqueKeys.slice(-3)
+  });
+  
   let existingCount = 0;
   if (uniqueKeys.length > 0) {
-    const { count, error: countError } = await supabase
-      .from(table)
-      .select('*', { count: 'exact', head: true })
-      .in(uniqueKey, uniqueKeys);
-    
-    if (!countError && count !== null) {
-      existingCount = count;
+    // Split into chunks of 100 to avoid PostgreSQL IN clause limits
+    const chunkSize = 100;
+    for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
+      const chunk = uniqueKeys.slice(i, i + chunkSize);
+      const { count, error: countError } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true })
+        .in(uniqueKey, chunk);
+      
+      if (countError) {
+        logger.warn('Error counting existing records', {
+          error: countError.message,
+          chunk: i / chunkSize,
+          chunkSize: chunk.length
+        });
+      } else if (count !== null) {
+        existingCount += count;
+      }
     }
+    
+    logger.info('Existing records count complete', {
+      existingCount,
+      newRecords: records.length - existingCount
+    });
   }
 
   // First try batch upsert (faster)

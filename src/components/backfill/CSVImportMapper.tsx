@@ -284,25 +284,54 @@ export function CSVImportMapper() {
     if (!tableColumns || tableColumns.length === 0) return;
 
     const tableColumnNames = tableColumns.map((col) => col.column_name);
+    const usedDbColumns = new Set<string>(); // Track which DB columns are already mapped
 
     setFieldMappings((prev) =>
       prev.map((mapping) => {
         // Try to find a matching table column
         const normalizedCsvCol = normalizeColumnName(mapping.csvColumn);
-        const matchingColumn = tableColumns.find(
-          (col) =>
-            col.column_name === mapping.dbColumn ||
-            col.column_name === normalizedCsvCol ||
-            col.column_name.includes(normalizedCsvCol) ||
-            normalizedCsvCol.includes(col.column_name)
+        
+        // Priority 1: Exact match (case-insensitive)
+        let matchingColumn = tableColumns.find(
+          (col) => col.column_name.toLowerCase() === normalizedCsvCol.toLowerCase()
         );
+        
+        // Priority 2: Current dbColumn is valid and not used yet
+        if (!matchingColumn && tableColumnNames.includes(mapping.dbColumn) && !usedDbColumns.has(mapping.dbColumn)) {
+          matchingColumn = tableColumns.find((col) => col.column_name === mapping.dbColumn);
+        }
+        
+        // Priority 3: Fuzzy match - but avoid partial matches that could cause collisions
+        if (!matchingColumn) {
+          matchingColumn = tableColumns.find((col) => {
+            // Avoid fuzzy matching if it would cause collisions
+            // e.g., "client_id" shouldn't match "id"
+            const colName = col.column_name.toLowerCase();
+            const csvName = normalizedCsvCol.toLowerCase();
+            
+            // Only match if one contains the other AND they're similar in length
+            if (colName.includes(csvName) && csvName.length > 2 && csvName.length >= colName.length * 0.6) {
+              return !usedDbColumns.has(col.column_name);
+            }
+            if (csvName.includes(colName) && colName.length > 2 && colName.length >= csvName.length * 0.6) {
+              return !usedDbColumns.has(col.column_name);
+            }
+            return false;
+          });
+        }
+
+        // Mark this DB column as used
+        const selectedDbColumn = matchingColumn?.column_name || mapping.dbColumn;
+        if (matchingColumn) {
+          usedDbColumns.add(selectedDbColumn);
+        }
 
         // If no match found, check if the current dbColumn exists in the table
-        const dbColumnExists = tableColumnNames.includes(mapping.dbColumn);
+        const dbColumnExists = tableColumnNames.includes(selectedDbColumn);
 
         return {
           ...mapping,
-          dbColumn: matchingColumn?.column_name || mapping.dbColumn,
+          dbColumn: selectedDbColumn,
           isNew: !matchingColumn && !dbColumnExists,
           // Auto-disable columns that don't exist in the table (for existing tables)
           enabled: matchingColumn || dbColumnExists ? mapping.enabled : false,

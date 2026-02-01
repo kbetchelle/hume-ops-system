@@ -51,6 +51,7 @@ import SlingUserManagement from "./pages/admin/SlingUserManagement";
 import SyncManagementPage from "./pages/admin/SyncManagementPage";
 import BackfillManagerPage from "./pages/admin/BackfillManagerPage";
 import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -366,6 +367,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
                   <BackfillManagerPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* User Management for Admins */}
+            <Route
+              path="/dashboard/user-management"
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <UserManagementPage />
                 </ProtectedRoute>
               }
             />

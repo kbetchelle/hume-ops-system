@@ -591,42 +591,75 @@ export type Database = {
       arketa_payments: {
         Row: {
           amount: number | null
+          amount_refunded: number | null
           client_id: string | null
           created_at: string | null
+          currency: string | null
+          description: string | null
           external_id: string
           id: string
+          location_name: string | null
+          net_sales: number | null
           notes: string | null
+          offering_name: string | null
           payment_date: string | null
           payment_type: string | null
+          promo_code: string | null
           raw_data: Json | null
+          source: string | null
           status: string | null
           synced_at: string | null
+          tax: number | null
+          transaction_fees: number | null
+          updated_at: string | null
         }
         Insert: {
           amount?: number | null
+          amount_refunded?: number | null
           client_id?: string | null
           created_at?: string | null
+          currency?: string | null
+          description?: string | null
           external_id: string
           id?: string
+          location_name?: string | null
+          net_sales?: number | null
           notes?: string | null
+          offering_name?: string | null
           payment_date?: string | null
           payment_type?: string | null
+          promo_code?: string | null
           raw_data?: Json | null
+          source?: string | null
           status?: string | null
           synced_at?: string | null
+          tax?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
         }
         Update: {
           amount?: number | null
+          amount_refunded?: number | null
           client_id?: string | null
           created_at?: string | null
+          currency?: string | null
+          description?: string | null
           external_id?: string
           id?: string
+          location_name?: string | null
+          net_sales?: number | null
           notes?: string | null
+          offering_name?: string | null
           payment_date?: string | null
           payment_type?: string | null
+          promo_code?: string | null
           raw_data?: Json | null
+          source?: string | null
           status?: string | null
           synced_at?: string | null
+          tax?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }

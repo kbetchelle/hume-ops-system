@@ -34,7 +34,7 @@ export default function ManagerDashboard() {
           ))}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           <Card 
             className="cursor-pointer hover:opacity-70 transition-opacity duration-300 border border-border"
             onClick={() => navigate("/dashboard/members")}

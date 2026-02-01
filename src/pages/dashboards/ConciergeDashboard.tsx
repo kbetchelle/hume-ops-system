@@ -7,7 +7,7 @@ import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
-import { ConciergeShiftReport } from "@/components/concierge/ConciergeShiftReport";
+import { ConciergeForm } from "@/components/concierge/ConciergeForm";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
@@ -58,7 +58,7 @@ export default function ConciergeDashboard() {
               Shift Report
             </h2>
             <div className="max-w-3xl">
-              <ConciergeShiftReport />
+              <ConciergeForm />
             </div>
           </div>
         );

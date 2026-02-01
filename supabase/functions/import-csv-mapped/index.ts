@@ -314,23 +314,80 @@ serve(async (req) => {
 
       // Upsert or insert based on overwriteExisting flag
       let upsertError, upsertData;
+      let usedRawSQL = false;
       
+      // TRY RAW SQL FIRST for upserts to bypass PostgREST cache (PGRST204 workaround)
       if (overwriteExisting) {
-        // Upsert: Insert new records or update existing ones
-        const result = await supabase
-          .from(targetTable)
-          .upsert(batch, { onConflict: uniqueKeyColumn })
-          .select();
-        upsertError = result.error;
-        upsertData = result.data;
-      } else {
-        // Insert only: Skip records that already exist
-        const result = await supabase
-          .from(targetTable)
-          .insert(batch)
-          .select();
-        upsertError = result.error;
-        upsertData = result.data;
+        try {
+          // Build column list
+          const columns = Object.keys(batch[0]);
+          const columnList = columns.map(c => `"${c}"`).join(", ");
+          
+          // Build VALUES for all records in batch
+          const valuesList = batch.map((record) => {
+            const values = columns.map(col => {
+              const val = record[col];
+              if (val === null || val === undefined) return "NULL";
+              if (typeof val === "string") return `'${val.replace(/'/g, "''")}'`; // Escape quotes
+              if (typeof val === "boolean") return val ? "true" : "false";
+              if (typeof val === "object") return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+              return String(val);
+            }).join(", ");
+            return `(${values})`;
+          }).join(",\n    ");
+          
+          // Build UPDATE SET clause (all columns except unique key)
+          const updateSet = columns
+            .filter(c => c !== uniqueKeyColumn)
+            .map(c => `"${c}" = EXCLUDED."${c}"`)
+            .join(", ");
+          
+          const rawSQL = `
+            INSERT INTO "${targetTable}" (${columnList})
+            VALUES ${valuesList}
+            ON CONFLICT ("${uniqueKeyColumn}") DO UPDATE SET ${updateSet};
+          `;
+          
+          console.log(`Batch ${batchNum}: Using raw SQL upsert to bypass PostgREST cache...`);
+          
+          // Execute via exec_sql RPC function (bypasses PostgREST schema cache)
+          const { data: sqlResult, error: sqlError } = await supabase.rpc("exec_sql", {
+            sql: rawSQL
+          });
+          
+          if (!sqlError) {
+            upsertData = sqlResult;
+            usedRawSQL = true;
+            console.log(`Batch ${batchNum}: Raw SQL succeeded - bypassed cache!`);
+          } else {
+            console.log(`Batch ${batchNum}: Raw SQL failed (${sqlError.message}), falling back to PostgREST`);
+            // Fall through to standard method below
+          }
+        } catch (sqlErr) {
+          console.log(`Batch ${batchNum}: Raw SQL exception (${sqlErr}), falling back to PostgREST`);
+          // Fall through to standard method below
+        }
+      }
+      
+      // Standard PostgREST method (fallback or if not overwriting)
+      if (!usedRawSQL) {
+        if (overwriteExisting) {
+          // Upsert: Insert new records or update existing ones
+          const result = await supabase
+            .from(targetTable)
+            .upsert(batch, { onConflict: uniqueKeyColumn })
+            .select();
+          upsertError = result.error;
+          upsertData = result.data;
+        } else {
+          // Insert only: Skip records that already exist
+          const result = await supabase
+            .from(targetTable)
+            .insert(batch)
+            .select();
+          upsertError = result.error;
+          upsertData = result.data;
+        }
       }
 
       if (upsertError) {

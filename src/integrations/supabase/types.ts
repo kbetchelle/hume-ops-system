@@ -3164,6 +3164,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      direct_upsert_reservation: {
+        Args: {
+          p_booking_id: string
+          p_class_name: string
+          p_class_time: string
+          p_client_email: string
+          p_client_id: string
+          p_data?: Json
+          p_external_id: string
+          p_first_name: string
+          p_last_name: string
+          p_location_name: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      exec_sql: { Args: { sql: string }; Returns: undefined }
       get_trainer_member_ids: {
         Args: { _trainer_id: string }
         Returns: string[]

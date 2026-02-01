@@ -84,8 +84,18 @@ interface SettingsGroup {
   items: SettingsSubItem[];
 }
 
-// Navigation items per role (excluding admin-only settings items)
+// Navigation items per role
 const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => {
+  // Admin-specific navigation structure
+  if (role === "admin") {
+    return [
+      { title: "Dashboard", url: "/dashboard", icon: Home },
+      { title: "Membership", url: "/dashboard/members", icon: Users },
+      { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
+      { title: "Reports", url: "/dashboard/reports", icon: FileText },
+    ];
+  }
+
   const baseItems: NavItem[] = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
   ];
@@ -124,13 +134,13 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Member Communications", 
       url: "/dashboard/member-communications", 
       icon: MessageSquare,
-      roles: ["admin", "manager", "concierge", "trainer"]
+      roles: ["manager", "concierge", "trainer"]
     },
     { 
       title: "Shift Report", 
       url: "/dashboard/shift-report", 
       icon: FileText,
-      roles: ["admin", "manager", "concierge"]
+      roles: ["manager", "concierge"]
     },
     { 
       title: "Reports", 
@@ -154,7 +164,7 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Admin", 
       url: "/dashboard/admin", 
       icon: Briefcase,
-      roles: ["admin"]
+      roles: []  // Empty - admin uses its own structure
     },
   ];
 
@@ -171,6 +181,12 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
 
   return [...baseItems, ...filteredItems];
 };
+
+// Manager Tools items for admin
+const managerToolsItems: SettingsSubItem[] = [
+  { title: "Checklists", url: "/dashboard/checklists", icon: ClipboardList },
+  { title: "Staff Announcements", url: "/dashboard/staff-announcements", icon: Bell },
+];
 
 // Settings menu structure for admin
 const settingsGroups: SettingsGroup[] = [
@@ -194,17 +210,12 @@ function SidebarNav() {
   const collapsed = state === "collapsed";
   const { activeRole } = useActiveRole();
   const { permissions } = usePermissions();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
 
   const navItems = getNavItems(activeRole, permissions);
   const isAdmin = activeRole === "admin";
 
-  // Check if any settings item is active
-  const isSettingsActive = location.pathname.startsWith("/dashboard/user-management") ||
-    location.pathname.startsWith("/dashboard/sync-management") ||
-    location.pathname.startsWith("/dashboard/backfill");
-  
+  // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/sync-management") ||
     location.pathname.startsWith("/dashboard/backfill");
 
@@ -248,6 +259,36 @@ function SidebarNav() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Manager Tools Section - Admin Only */}
+        {isAdmin && !collapsed && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
+              Manager Tools
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {managerToolsItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "hover:bg-muted/50"
+                        )}
+                        activeClassName="bg-muted text-foreground font-medium"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Settings Section - Admin Only */}
         {isAdmin && !collapsed && (
           <SidebarGroup>
@@ -256,26 +297,45 @@ function SidebarNav() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <Collapsible open={settingsOpen || isSettingsActive} onOpenChange={setSettingsOpen}>
+                {/* Direct Settings Items */}
+                {settingsDirectItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "hover:bg-muted/50"
+                        )}
+                        activeClassName="bg-muted text-foreground font-medium"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+
+                {/* Dev Tools Submenu */}
+                <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={setDevToolsOpen}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton className={cn(
                         "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors w-full",
                         "hover:bg-muted/50",
-                        isSettingsActive && "bg-muted text-foreground font-medium"
+                        isDevToolsActive && "bg-muted/70 text-foreground"
                       )}>
-                        <Settings className="h-4 w-4 shrink-0" />
-                        <span className="flex-1 text-left">Settings</span>
-                        <ChevronDown className={cn(
+                        <Wrench className="h-4 w-4 shrink-0" />
+                        <span className="flex-1 text-left">Dev Tools</span>
+                        <ChevronRight className={cn(
                           "h-3 w-3 transition-transform",
-                          (settingsOpen || isSettingsActive) && "rotate-180"
+                          (devToolsOpen || isDevToolsActive) && "rotate-90"
                         )} />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                   </SidebarMenuItem>
                   <CollapsibleContent>
-                    {/* Direct Settings Items */}
-                    {settingsDirectItems.map((item) => (
+                    {settingsGroups[0].items.map((item) => (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
                           <NavLink 
@@ -292,45 +352,6 @@ function SidebarNav() {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
-
-                    {/* Dev Tools Submenu */}
-                    <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={setDevToolsOpen}>
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton className={cn(
-                            "flex items-center gap-3 pl-8 pr-3 py-2 text-xs uppercase tracking-widest transition-colors w-full",
-                            "hover:bg-muted/50",
-                            isDevToolsActive && "bg-muted/70 text-foreground"
-                          )}>
-                            <Wrench className="h-4 w-4 shrink-0" />
-                            <span className="flex-1 text-left">Dev Tools</span>
-                            <ChevronRight className={cn(
-                              "h-3 w-3 transition-transform",
-                              (devToolsOpen || isDevToolsActive) && "rotate-90"
-                            )} />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                      </SidebarMenuItem>
-                      <CollapsibleContent>
-                        {settingsGroups[0].items.map((item) => (
-                          <SidebarMenuItem key={item.url}>
-                            <SidebarMenuButton asChild>
-                              <NavLink 
-                                to={item.url}
-                                className={cn(
-                                  "flex items-center gap-3 pl-12 pr-3 py-2 text-xs uppercase tracking-widest transition-colors",
-                                  "hover:bg-muted/50"
-                                )}
-                                activeClassName="bg-muted text-foreground font-medium"
-                              >
-                                <item.icon className="h-4 w-4 shrink-0" />
-                                <span>{item.title}</span>
-                              </NavLink>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </CollapsibleContent>
-                    </Collapsible>
                   </CollapsibleContent>
                 </Collapsible>
               </SidebarMenu>

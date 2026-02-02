@@ -2131,6 +2131,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarding_completed: boolean | null
+          sling_id: string | null
           updated_at: string
           user_id: string
         }
@@ -2141,6 +2142,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
+          sling_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2151,10 +2153,19 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
+          sling_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_sling_id_fkey"
+            columns: ["sling_id"]
+            isOneToOne: false
+            referencedRelation: "sling_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quick_links: {
         Row: {
@@ -3324,6 +3335,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_get_users_with_sling_info: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          is_auto_matched: boolean
+          sling_email: string
+          sling_id: string
+          sling_user_name: string
+          user_id: string
+        }[]
+      }
+      admin_link_user_to_sling: {
+        Args: { _sling_id: string; _user_id: string }
+        Returns: undefined
+      }
       admin_toggle_user_deactivation: {
         Args: { _deactivated: boolean; _target_user_id: string }
         Returns: undefined
@@ -3370,6 +3397,16 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_trainer: { Args: { _user_id: string }; Returns: boolean }
+      search_sling_users: {
+        Args: { _search: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          sling_user_id: number
+        }[]
+      }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]

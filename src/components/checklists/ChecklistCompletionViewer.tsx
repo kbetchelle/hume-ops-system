@@ -195,7 +195,7 @@ function ChecklistCompletionCard({ checklist, completions, getUserName, users }:
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id} className="border-b border-border/50">
-                    <td className="py-3 pr-4">{item.title}</td>
+                    <td className="py-3 pr-4">{item.task_description}</td>
                     {roleUsers.map((user) => {
                       const isCompleted = completions.some(
                         (c) => c.checklist_item_id === item.id && c.user_id === user.user_id

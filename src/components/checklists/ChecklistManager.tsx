@@ -264,7 +264,7 @@ function ChecklistItemsEditor({ checklistId }: ChecklistItemsEditorProps) {
     if (!newItemTitle.trim()) return;
     addItem.mutate({
       checklist_id: checklistId,
-      title: newItemTitle.trim(),
+      task_description: newItemTitle.trim(),
       sort_order: (items?.length || 0) * 10,
     }, {
       onSuccess: () => setNewItemTitle(""),
@@ -307,14 +307,14 @@ function ChecklistItemsEditor({ checklistId }: ChecklistItemsEditorProps) {
               <div className="flex-1">
                 {editingItem?.id === item.id ? (
                   <Input
-                    value={editingItem.title}
-                    onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                    value={editingItem.task_description || ""}
+                    onChange={(e) => setEditingItem({ ...editingItem, task_description: e.target.value })}
                     onBlur={() => {
-                      if (editingItem.title.trim()) {
+                      if (editingItem.task_description?.trim()) {
                         updateItem.mutate({
                           id: item.id,
                           checklist_id: checklistId,
-                          title: editingItem.title.trim(),
+                          task_description: editingItem.task_description.trim(),
                         });
                       }
                       setEditingItem(null);
@@ -331,7 +331,7 @@ function ChecklistItemsEditor({ checklistId }: ChecklistItemsEditorProps) {
                     className="text-sm cursor-pointer hover:underline"
                     onClick={() => setEditingItem(item)}
                   >
-                    {item.title}
+                    {item.task_description}
                   </span>
                 )}
               </div>

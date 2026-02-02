@@ -1195,12 +1195,8 @@ export type Database = {
       checklist_items: {
         Row: {
           category: string | null
-          checklist_id: string | null
-          class_trigger_minutes_after: number | null
           color: string | null
           created_at: string
-          description: string | null
-          due_time: string | null
           id: string
           is_class_triggered: boolean | null
           is_high_priority: boolean | null
@@ -1211,17 +1207,12 @@ export type Database = {
           task_type: string | null
           template_id: string | null
           time_hint: string | null
-          title: string | null
           updated_at: string
         }
         Insert: {
           category?: string | null
-          checklist_id?: string | null
-          class_trigger_minutes_after?: number | null
           color?: string | null
           created_at?: string
-          description?: string | null
-          due_time?: string | null
           id?: string
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
@@ -1232,17 +1223,12 @@ export type Database = {
           task_type?: string | null
           template_id?: string | null
           time_hint?: string | null
-          title?: string | null
           updated_at?: string
         }
         Update: {
           category?: string | null
-          checklist_id?: string | null
-          class_trigger_minutes_after?: number | null
           color?: string | null
           created_at?: string
-          description?: string | null
-          due_time?: string | null
           id?: string
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
@@ -1253,18 +1239,9 @@ export type Database = {
           task_type?: string | null
           template_id?: string | null
           time_hint?: string | null
-          title?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "checklist_items_checklist_id_fkey"
-            columns: ["checklist_id"]
-            isOneToOne: false
-            referencedRelation: "checklists"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       checklist_templates: {
         Row: {

@@ -135,7 +135,7 @@ export default function Signup() {
               <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest">
                 Already have an account?{" "}
                 <Link 
-                  to="/login" 
+                  to="/" 
                   className="text-foreground hover:opacity-70 transition-opacity duration-300"
                 >
                   Sign in

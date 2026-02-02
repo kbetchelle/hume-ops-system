@@ -486,7 +486,7 @@ function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
       toast.error("Failed to sign out");
     } else {
       toast.success("Signed out");
-      navigate("/login");
+      navigate("/");
     }
   };
 

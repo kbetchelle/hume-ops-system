@@ -27,7 +27,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // Not authenticated
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Authenticated but hasn't completed onboarding

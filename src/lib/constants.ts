@@ -5,7 +5,7 @@ export const APP_DESCRIPTION = "A modern React application";
 
 export const ROUTES = {
   HOME: "/",
-  LOGIN: "/login",
+  LOGIN: "/",
   SIGNUP: "/signup",
   DASHBOARD: "/dashboard",
 } as const;

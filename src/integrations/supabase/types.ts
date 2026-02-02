@@ -1127,6 +1127,39 @@ export type Database = {
         }
         Relationships: []
       }
+      celebratory_events: {
+        Row: {
+          created_at: string | null
+          event_date: string | null
+          event_type: string
+          id: string
+          member_name: string
+          reported_by: string | null
+          reported_date: string
+          shift_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_date?: string | null
+          event_type: string
+          id?: string
+          member_name: string
+          reported_by?: string | null
+          reported_date: string
+          shift_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_date?: string | null
+          event_type?: string
+          id?: string
+          member_name?: string
+          reported_by?: string | null
+          reported_date?: string
+          shift_type?: string | null
+        }
+        Relationships: []
+      }
       checklist_completions: {
         Row: {
           checklist_item_id: string
@@ -1463,21 +1496,60 @@ export type Database = {
         }
         Relationships: []
       }
+      concierge_drafts: {
+        Row: {
+          created_at: string | null
+          form_data: Json
+          id: string
+          last_updated_by: string | null
+          last_updated_by_session: string | null
+          report_date: string
+          shift_time: string
+          updated_at: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string | null
+          form_data?: Json
+          id?: string
+          last_updated_by?: string | null
+          last_updated_by_session?: string | null
+          report_date: string
+          shift_time: string
+          updated_at?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string | null
+          form_data?: Json
+          id?: string
+          last_updated_by?: string | null
+          last_updated_by_session?: string | null
+          report_date?: string
+          shift_time?: string
+          updated_at?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       daily_report_history: {
         Row: {
           arketa_payments: Json | null
           arketa_reservations: Json | null
           busiest_areas: string | null
           celebratory_events: Json | null
+          celebratory_events_na: boolean | null
           created_at: string
           facility_issues: Json | null
           future_shift_notes: Json | null
+          future_shift_notes_na: boolean | null
           id: string
           management_notes: string | null
           member_feedback: Json | null
           membership_requests: Json | null
           report_date: string
           scheduled_tours: Json | null
+          screenshot: string | null
           shift_type: string
           sling_shift_data: Json | null
           staff_name: string | null
@@ -1485,6 +1557,7 @@ export type Database = {
           status: string | null
           submitted_at: string | null
           system_issues: Json | null
+          system_issues_na: boolean | null
           toast_sales: Json | null
           total_class_attendance: number | null
           total_revenue: number | null
@@ -1497,15 +1570,18 @@ export type Database = {
           arketa_reservations?: Json | null
           busiest_areas?: string | null
           celebratory_events?: Json | null
+          celebratory_events_na?: boolean | null
           created_at?: string
           facility_issues?: Json | null
           future_shift_notes?: Json | null
+          future_shift_notes_na?: boolean | null
           id?: string
           management_notes?: string | null
           member_feedback?: Json | null
           membership_requests?: Json | null
           report_date: string
           scheduled_tours?: Json | null
+          screenshot?: string | null
           shift_type: string
           sling_shift_data?: Json | null
           staff_name?: string | null
@@ -1513,6 +1589,7 @@ export type Database = {
           status?: string | null
           submitted_at?: string | null
           system_issues?: Json | null
+          system_issues_na?: boolean | null
           toast_sales?: Json | null
           total_class_attendance?: number | null
           total_revenue?: number | null
@@ -1525,15 +1602,18 @@ export type Database = {
           arketa_reservations?: Json | null
           busiest_areas?: string | null
           celebratory_events?: Json | null
+          celebratory_events_na?: boolean | null
           created_at?: string
           facility_issues?: Json | null
           future_shift_notes?: Json | null
+          future_shift_notes_na?: boolean | null
           id?: string
           management_notes?: string | null
           member_feedback?: Json | null
           membership_requests?: Json | null
           report_date?: string
           scheduled_tours?: Json | null
+          screenshot?: string | null
           shift_type?: string
           sling_shift_data?: Json | null
           staff_name?: string | null
@@ -1541,6 +1621,7 @@ export type Database = {
           status?: string | null
           submitted_at?: string | null
           system_issues?: Json | null
+          system_issues_na?: boolean | null
           toast_sales?: Json | null
           total_class_attendance?: number | null
           total_revenue?: number | null
@@ -1797,6 +1878,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      facility_issues_tracker: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          photo_url: string | null
+          reported_by: string | null
+          reported_date: string
+          resolved_at: string | null
+          resolved_by: string | null
+          shift_type: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          photo_url?: string | null
+          reported_by?: string | null
+          reported_date: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          photo_url?: string | null
+          reported_by?: string | null
+          reported_date?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      foh_questions: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          issue_type: string
+          photo_url: string | null
+          reported_by: string | null
+          reported_date: string
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          shift_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          issue_type: string
+          photo_url?: string | null
+          reported_by?: string | null
+          reported_date: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          issue_type?: string
+          photo_url?: string | null
+          reported_by?: string | null
+          reported_date?: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       lost_and_found: {
         Row: {

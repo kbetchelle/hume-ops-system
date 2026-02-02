@@ -31,9 +31,9 @@ export default function ConciergeDashboard() {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
             <div className="lg:col-span-2 space-y-4">
+              <EmbeddedChecklist />
               <ClassScheduleView />
               <ShiftEventsMiniCalendar />
-              <EmbeddedChecklist />
             </div>
             <div className="space-y-4">
               <StaffSchedulePanel />

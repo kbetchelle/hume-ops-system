@@ -1,13 +1,14 @@
 // Stub for auto-submit functionality
-export function useAutoSubmitConcierge(config: {
-  formData: any;
-  reportDate: string;
-  shiftType: string;
-  onSubmitSuccess: () => void;
-}) {
+export function useAutoSubmitConcierge(
+  formData: any,
+  reportDate: string,
+  shiftType: string,
+  onSubmitSuccess: () => void,
+  isDirty: boolean
+) {
   return {
-    isAutoSubmitEnabled: false,
-    timeUntilSubmit: null,
+    willAutoSubmit: false,
+    timeUntilSubmitFormatted: null as string | null,
     cancelAutoSubmit: () => {},
   };
 }

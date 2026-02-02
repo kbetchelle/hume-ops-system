@@ -3,20 +3,20 @@ import { Button } from '@/components/ui/button';
 
 // Stub component for conflict resolution
 export function ConflictModal({
-  open,
-  onOpenChange,
-  conflictData,
-  onUseLocal,
-  onUseRemote,
+  isOpen,
+  onClose,
+  localData,
+  remoteData,
+  onResolve,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  conflictData: any;
-  onUseLocal: () => void;
-  onUseRemote: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  localData: any;
+  remoteData: any;
+  onResolve: (data: any) => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Conflicting Changes Detected</DialogTitle>
@@ -27,10 +27,16 @@ export function ConflictModal({
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onUseRemote}>
+          <Button variant="outline" onClick={() => {
+            onResolve(remoteData);
+            onClose();
+          }}>
             Use Remote Version
           </Button>
-          <Button onClick={onUseLocal}>
+          <Button onClick={() => {
+            onResolve(localData);
+            onClose();
+          }}>
             Keep My Changes
           </Button>
         </DialogFooter>

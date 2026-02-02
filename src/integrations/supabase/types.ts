@@ -1288,7 +1288,9 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          is_weekend: boolean | null
           role: Database["public"]["Enums"]["app_role"]
+          shift_type: string | null
           title: string
           updated_at: string
         }
@@ -1298,7 +1300,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_weekend?: boolean | null
           role: Database["public"]["Enums"]["app_role"]
+          shift_type?: string | null
           title: string
           updated_at?: string
         }
@@ -1308,7 +1312,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_weekend?: boolean | null
           role?: Database["public"]["Enums"]["app_role"]
+          shift_type?: string | null
           title?: string
           updated_at?: string
         }

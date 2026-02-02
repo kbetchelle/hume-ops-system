@@ -8,31 +8,27 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
-import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { MobileChecklistItem, ChecklistItemData } from "@/components/checklists/MobileChecklistItem";
 
-interface ChecklistTemplate {
+interface ChecklistRecord {
   id: string;
-  name: string;
+  title: string;
   role: string;
-  shift_type: string;
+  shift_type: string | null;
+  is_weekend: boolean | null;
   is_active: boolean;
 }
 
 interface ChecklistCompletion {
   id: string;
-  item_id: string;
-  template_id: string;
+  checklist_item_id: string;
+  user_id: string;
   completion_date: string;
-  completed_by_id: string;
-  completed_by: string;
   completed_at: string;
-  deleted_at: string | null;
-  completion_value?: string | null;
 }
 
 interface TimeGroup {
@@ -63,31 +59,30 @@ export function EmbeddedChecklist() {
       try {
         if (!user?.email) return;
         
-        // Get sling_user_id for current user
-        const { data: slingUser } = await supabase
+        const slingResult = await supabase
           .from('sling_users')
           .select('sling_user_id')
           .eq('email', user.email)
           .maybeSingle();
         
+        const slingUser = slingResult.data as { sling_user_id: number } | null;
         if (!slingUser) return;
         
-        // Get today's shift for this user
-        const { data: shift } = await supabase
+        const shiftResult = await (supabase
           .from('staff_shifts')
-          .select('shift_start, position')
+          .select('shift_start, position') as any)
           .eq('sling_user_id', slingUser.sling_user_id)
           .eq('schedule_date', today)
           .maybeSingle();
         
+        const shift = shiftResult.data as { shift_start: string; position: string } | null;
+        
         if (shift?.shift_start) {
-          // Determine shift type based on start time
           const startHour = new Date(shift.shift_start).getHours();
           let shiftType = 'AM';
           if (startHour >= 12) {
             shiftType = 'PM';
           }
-          
           setDetectedShift(shiftType);
         }
       } catch (error) {
@@ -107,64 +102,64 @@ export function EmbeddedChecklist() {
     },
   });
 
-  // Fetch the template for current shift and role
-  const { data: template, isLoading: templateLoading } = useQuery({
-    queryKey: ["checklist-templates", "concierge", detectedShift, isWeekend],
+  // Fetch the checklist for current shift and role using unified checklists table
+  const { data: checklist, isLoading: checklistLoading } = useQuery({
+    queryKey: ["checklists", "concierge", detectedShift, isWeekend],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ChecklistTemplate>("checklist_templates", {
-        filters: [
-          { type: "eq", column: "role", value: "concierge" },
-          { type: "eq", column: "shift_type", value: detectedShift },
-          { type: "eq", column: "is_active", value: true },
-        ],
-        limit: 1,
-      });
+      const { data, error } = await supabase
+        .from('checklists')
+        .select('id, title, role, shift_type, is_weekend, is_active')
+        .eq('role', 'concierge')
+        .eq('shift_type', detectedShift)
+        .eq('is_weekend', isWeekend)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      
       if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      return data as ChecklistRecord | null;
     },
     enabled: !!detectedShift,
   });
 
-  // Fetch items for the template with new metadata fields
+  // Fetch items for the checklist
   const { data: items, isLoading: itemsLoading } = useQuery({
-    queryKey: ["checklist-template-items", template?.id],
+    queryKey: ["checklist-items", checklist?.id],
     queryFn: async () => {
-      if (!template) return [];
-      const { data, error } = await selectFrom<ChecklistItemData>("checklist_template_items", {
-        filters: [{ type: "eq", column: "template_id", value: template.id }],
-        order: { column: "sort_order", ascending: true },
-      });
+      if (!checklist) return [];
+      const { data, error } = await supabase
+        .from('checklist_items')
+        .select('*')
+        .eq('template_id', checklist.id)
+        .order('sort_order', { ascending: true });
+      
       if (error) throw error;
-      return data || [];
+      return (data || []) as ChecklistItemData[];
     },
-    enabled: !!template,
+    enabled: !!checklist,
   });
 
-  // Fetch today's completions (excluding soft-deleted)
+  // Fetch today's completions
   const { data: completions, isLoading: completionsLoading } = useQuery({
-    queryKey: ["checklist-template-completions", template?.id, today],
+    queryKey: ["checklist-completions", checklist?.id, today, userData?.id],
     queryFn: async () => {
-      if (!template) return [];
-      const { data, error } = await selectFrom<ChecklistCompletion>(
-        "checklist_template_completions",
-        {
-          filters: [
-            { type: "eq", column: "template_id", value: template.id },
-            { type: "eq", column: "completion_date", value: today },
-            { type: "is", column: "deleted_at", value: null },
-          ],
-        }
-      );
+      if (!checklist || !userData?.id) return [];
+      const { data, error } = await supabase
+        .from('checklist_completions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('completion_date', today);
+      
       if (error) throw error;
-      return data || [];
+      return (data || []) as ChecklistCompletion[];
     },
-    enabled: !!template,
+    enabled: !!checklist && !!userData?.id,
   });
 
-  // Map of item_id to completion data
+  // Map of checklist_item_id to completion data
   const completionMap = useMemo(() => {
     const map = new Map<string, ChecklistCompletion>();
-    completions?.forEach((c) => map.set(c.item_id, c));
+    completions?.forEach((c) => map.set(c.checklist_item_id, c));
     return map;
   }, [completions]);
 
@@ -229,39 +224,37 @@ export function EmbeddedChecklist() {
     mutationFn: async ({
       itemId,
       isCompleted,
-      value,
     }: {
       itemId: string;
       isCompleted: boolean;
-      value?: string;
     }) => {
-      if (!userData?.id || !template) throw new Error("Not authenticated or no template");
+      if (!userData?.id) throw new Error("Not authenticated");
 
       if (isCompleted) {
-        // Soft delete: set deleted_at
-        await updateTable(
-          "checklist_template_completions",
-          { deleted_at: new Date().toISOString() },
-          [eq("item_id", itemId), eq("completion_date", today)]
-        );
+        // Remove completion
+        await supabase
+          .from('checklist_completions')
+          .delete()
+          .eq('checklist_item_id', itemId)
+          .eq('user_id', userData.id)
+          .eq('completion_date', today);
       } else {
-        // Insert or update completion
-        await insertInto("checklist_template_completions", {
-          item_id: itemId,
-          template_id: template.id,
-          completion_date: today,
-          completed_by_id: userData.id,
-          completed_by: userData.email || userData.id,
-          completion_value: value || null,
-        });
+        // Add completion
+        await supabase
+          .from('checklist_completions')
+          .insert({
+            checklist_item_id: itemId,
+            user_id: userData.id,
+            completion_date: today,
+          });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checklist-template-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["checklist-completions"] });
     },
   });
 
-  const isLoading = templateLoading || itemsLoading || completionsLoading;
+  const isLoading = checklistLoading || itemsLoading || completionsLoading;
 
   const completedCount = completionMap.size;
   const totalCount = items?.length || 0;
@@ -270,10 +263,6 @@ export function EmbeddedChecklist() {
   const handleToggle = (itemId: string) => {
     const isCompleted = completionMap.has(itemId);
     toggleMutation.mutate({ itemId, isCompleted });
-  };
-
-  const handleUpdate = (itemId: string, value: string) => {
-    toggleMutation.mutate({ itemId, isCompleted: false, value });
   };
 
   const toggleGroup = (timeHint: string) => {
@@ -313,9 +302,9 @@ export function EmbeddedChecklist() {
               </div>
             ))}
           </div>
-        ) : !template ? (
+        ) : !checklist ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
-            No checklist template for {detectedShift} shift
+            No checklist for {detectedShift} shift {isWeekend ? "(Weekend)" : "(Weekday)"}
           </p>
         ) : !items || items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
@@ -375,9 +364,7 @@ export function EmbeddedChecklist() {
                             key={item.id}
                             item={item}
                             isCompleted={isCompleted}
-                            completionValue={completion?.completion_value}
                             onToggle={() => handleToggle(item.id)}
-                            onUpdate={(value) => handleUpdate(item.id, value)}
                             disabled={toggleMutation.isPending}
                           />
                         );

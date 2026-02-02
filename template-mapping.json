@@ -1,0 +1,717 @@
+{
+  "92f77f28-e8fd-4cb0-91da-750ce8b57ed1": {
+    "template_id": "92f77f28-e8fd-4cb0-91da-750ce8b57ed1",
+    "item_count": 50,
+    "category": "",
+    "sample_tasks": [
+      "6 AM \u2013 7 AM",
+      "Submit opener checklist & review daily notes",
+      "Open Cardio Room Curtains",
+      "Walkthrough",
+      "Tidy Stretch Area 2 & surrounding equipment"
+    ],
+    "task_types": [
+      "checkbox",
+      "multiple_choice",
+      "photo",
+      "short_entry",
+      "signature"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "1:00 PM - 2:00 PM",
+      "5:30 AM - 6:00 AM",
+      "6:00 AM - 7:00 AM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "red"
+    ],
+    "has_priority": false
+  },
+  "f6d03214-8486-4339-a5bc-97535d2fa0ee": {
+    "template_id": "f6d03214-8486-4339-a5bc-97535d2fa0ee",
+    "item_count": 37,
+    "category": "",
+    "sample_tasks": [
+      "Check Men's Spa Water & restock cups, roll towels, check for",
+      "Reset Sauna timer in men's spa",
+      "Check Women's Spa Water & restock cups, roll towels, check f",
+      "Reset Sauna timer in women's spa",
+      "Walkthrough - Tidy Stretch Area 2 & surrounding equipment"
+    ],
+    "task_types": [
+      "checkbox",
+      "multiple_choice",
+      "photo",
+      "short_entry",
+      "signature",
+      "yes_no"
+    ],
+    "time_hints": [
+      "1:30 PM - 2:00 PM",
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:00 PM",
+      "4:00 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:00 PM",
+      "7:00 PM - 8:00 PM",
+      "8:00 PM - 9:00 PM"
+    ],
+    "colors": [
+      "blue",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": false
+  },
+  "55c2e572-0853-4d29-99e4-5b8a5686a61a": {
+    "template_id": "55c2e572-0853-4d29-99e4-5b8a5686a61a",
+    "item_count": 32,
+    "category": "",
+    "sample_tasks": [
+      "7:00 AM: submit opener checklist & review daily notes",
+      "Put out IV sign",
+      "Review appointments, classes, and events for the day",
+      "Walkthrough",
+      "Tidy Stretch Areas & surrounding equipment"
+    ],
+    "task_types": [
+      "checkbox",
+      "employee",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "red"
+    ],
+    "has_priority": false
+  },
+  "36b5dc1d-67a7-4a10-9740-a2ac7395f3d6": {
+    "template_id": "36b5dc1d-67a7-4a10-9740-a2ac7395f3d6",
+    "item_count": 27,
+    "category": "",
+    "sample_tasks": [
+      "Review Weekly Updates & Daily Notes",
+      "Review Upcoming Appointments, Classes, and Timed Tasks",
+      "Check Men's spa: showers, amenities, towels (restock when ne",
+      "Reset Sauna timer in men's spa",
+      "Walkthrough"
+    ],
+    "task_types": [
+      "checkbox",
+      "photo",
+      "short_entry",
+      "signature"
+    ],
+    "time_hints": [
+      "1:00 PM - 2:00 PM",
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:00 PM",
+      "4:00 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "red"
+    ],
+    "has_priority": false
+  },
+  "a2222222-2222-2222-2222-222222222222": {
+    "template_id": "a2222222-2222-2222-2222-222222222222",
+    "item_count": 29,
+    "category": "Closing",
+    "sample_tasks": [
+      "Check that stretch area boxes are tidy",
+      "Cardio Room & Men's Spa: close curtains",
+      "Dump men's spa water and rinse out jug",
+      "Full stock of towels in cardio room",
+      "Check that all towels (rolled and folded) are fully stocked "
+    ],
+    "task_types": [
+      "checkbox",
+      "photo"
+    ],
+    "time_hints": [],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "red"
+    ],
+    "has_priority": true
+  },
+  "a1111111-1111-1111-1111-111111111111": {
+    "template_id": "a1111111-1111-1111-1111-111111111111",
+    "item_count": 14,
+    "category": "Opening",
+    "sample_tasks": [
+      "Unlock & Open Patio Doors",
+      "Walk Through All Floors to Ensure Tidiness",
+      "5:40 AM: Turn on Ground Floor Studio Heat & set both Thermos",
+      "5:45 AM - Check Men's Sauna is On",
+      "5:45 AM - Check Women's Sauna is On"
+    ],
+    "task_types": [
+      "checkbox",
+      "photo",
+      "short_entry"
+    ],
+    "time_hints": [],
+    "colors": [
+      "blue",
+      "red"
+    ],
+    "has_priority": false
+  },
+  "a3333333-3333-3333-3333-333333333333": {
+    "template_id": "a3333333-3333-3333-3333-333333333333",
+    "item_count": 14,
+    "category": "Opening",
+    "sample_tasks": [
+      "Walk Through All Floors to Ensure Tidiness",
+      "Unlock & Open Patio Doors",
+      "6:40 AM - Turn on Ground Floor Studio Heat & set both Thermo",
+      "6:45 AM - Check Men's Sauna is On",
+      "6:45 AM - Check Women's Sauna is On"
+    ],
+    "task_types": [
+      "checkbox",
+      "photo",
+      "short_entry"
+    ],
+    "time_hints": [],
+    "colors": [
+      "blue",
+      "red"
+    ],
+    "has_priority": false
+  },
+  "a4444444-4444-4444-4444-444444444444": {
+    "template_id": "a4444444-4444-4444-4444-444444444444",
+    "item_count": 29,
+    "category": "Closing",
+    "sample_tasks": [
+      "Cardio Room & Men's Spa: close curtains",
+      "Dump men's spa water and rinse out jug",
+      "Full stock of towels in cardio room",
+      "Check that all towels (rolled and folded) are fully stocked ",
+      "Check that men's vanity is fully stocked-- note if otherwise"
+    ],
+    "task_types": [
+      "checkbox",
+      "photo"
+    ],
+    "time_hints": [],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "red"
+    ],
+    "has_priority": true
+  },
+  "439b53bd-d394-4b05-8564-69b65c96c1c7": {
+    "template_id": "439b53bd-d394-4b05-8564-69b65c96c1c7",
+    "item_count": 62,
+    "category": "Opening",
+    "sample_tasks": [
+      "OPENING CHECKLIST:",
+      "DAILY TASKS - To be completed throughout shift",
+      "CLOSING CHECKLIST",
+      "Proof Entire Cafe",
+      "Clock In ON TIME"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "header",
+      "multiple_choice",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "7:00 AM - 8:00 AM"
+    ],
+    "colors": [
+      "red"
+    ],
+    "has_priority": true
+  },
+  "a8f354c8-9c53-4c00-8988-d1eb81ab545b": {
+    "template_id": "a8f354c8-9c53-4c00-8988-d1eb81ab545b",
+    "item_count": 46,
+    "category": "",
+    "sample_tasks": [
+      "Restock medium towels on main gym floor.",
+      "Restock towels as needed in spa.",
+      "Wipe down vanity counters & restock as needed.",
+      "Cold plunge: clean debris, ensure water is clear/cold/jets w",
+      "Refill toilet paper, napkins, and water cups."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "multiple_choice",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:00 PM",
+      "4:00 PM - 5:00 PM",
+      "4:20 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:00 PM",
+      "7:00 PM - 8:30 PM",
+      "8:30 PM - 10:00 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "c5ed7f6f-3b22-4a59-bf70-7cf06e528b1a": {
+    "template_id": "c5ed7f6f-3b22-4a59-bf70-7cf06e528b1a",
+    "item_count": 41,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 10:30 AM. No exceptions. Please s",
+      "Pick up Walkie-Talkie & locker key",
+      "Close steam room and sauna doors. Turn on sauna.",
+      "Collect mop heads, black towels, and all towel sizes; place ",
+      "Ensure enough yoga & small towels in ground floor studio."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "multiple_choice",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "1:00 PM - 2:00 PM",
+      "5:30 AM - 6:15 AM",
+      "6:15 AM - 7:00 AM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "a8ae8176-624e-499f-910f-5136194f68b7": {
+    "template_id": "a8ae8176-624e-499f-910f-5136194f68b7",
+    "item_count": 28,
+    "category": "",
+    "sample_tasks": [
+      "Pick up walkie talkie",
+      "Review Class Schedule to Determine Turnover Times",
+      "Begin laundry",
+      "If needed, fold laundry leftover from the morning",
+      "Vacuum mezzanine & wet mop private recovery room"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "multiple_choice"
+    ],
+    "time_hints": [
+      "4:30 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:00 PM",
+      "7:00 PM - 8:00 PM",
+      "8:00 PM - 9:30 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "f169c325-e872-4d68-b957-7b35ac3f9add": {
+    "template_id": "f169c325-e872-4d68-b957-7b35ac3f9add",
+    "item_count": 29,
+    "category": "",
+    "sample_tasks": [
+      "Pick up walkie talkie",
+      "Review Class Schedule to Determine Turnover Times",
+      "Begin laundry",
+      "If needed, fold laundry leftover from the morning",
+      "Vacuum mezzanine & wet mop private recovery room"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "multiple_choice"
+    ],
+    "time_hints": [
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:00 PM",
+      "4:00 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:30 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "203b8aff-35a3-4091-b3ab-34d4c7b917a1": {
+    "template_id": "203b8aff-35a3-4091-b3ab-34d4c7b917a1",
+    "item_count": 34,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 6 PM. No exceptions. Please sign ",
+      "Pick up Walkie-Talkie & locker key",
+      "Begin laundry - wash 1 load of new yoga towels",
+      "Restock medium towels in main gym floor.",
+      "Restock towels as needed in spa."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "1:00 PM - 2:00 PM",
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:30 PM",
+      "4:20 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 8:00 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "4a32322b-2d85-467d-b0c1-bea7267d060e": {
+    "template_id": "4a32322b-2d85-467d-b0c1-bea7267d060e",
+    "item_count": 37,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 6 PM. No exceptions. Please sign ",
+      "Pick up Walkie-Talkie",
+      "Cold plunge: clean debris, ensure water is clear/cold, jets ",
+      "Restock towels in cardio room.",
+      "Restock towels as needed in spa."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "1:00 PM - 2:00 PM",
+      "2:00 PM - 3:00 PM",
+      "4:00 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:00 PM",
+      "6:30 PM - 8:00 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "e961c03d-6dca-426b-ab2a-87505f6cfaf6": {
+    "template_id": "e961c03d-6dca-426b-ab2a-87505f6cfaf6",
+    "item_count": 35,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 10:20 AM. No exceptions. Please s",
+      "Pick up Walkie-Talkie",
+      "5:30: turn on sauna.",
+      "Close steam room and sauna doors.",
+      "Collect mop heads, black cleaning towels, all towel sizes fr"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature",
+      "yes_no"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 2:00 PM",
+      "5:30 AM - 6:30 AM",
+      "6:30 AM - 7:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "a0a505be-f800-4fc4-87f9-d3603061705b": {
+    "template_id": "a0a505be-f800-4fc4-87f9-d3603061705b",
+    "item_count": 41,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 5 PM. No exceptions. Please sign ",
+      "Pick up Walkie-Talkie & locker key",
+      "Cold plunge: clean debris, ensure water is clear/cold, jets ",
+      "Restock towels in cardio room.",
+      "Restock towels as needed in spa."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "2:00 PM - 3:00 PM",
+      "3:00 PM - 4:00 PM",
+      "4:00 PM - 5:00 PM",
+      "5:00 PM - 6:00 PM",
+      "6:00 PM - 7:00 PM",
+      "6:30 PM - 8:00 PM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "11514e89-ab6e-4bdc-812c-a61f430f0e1f": {
+    "template_id": "11514e89-ab6e-4bdc-812c-a61f430f0e1f",
+    "item_count": 32,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 11 AM. No exceptions. Please sign",
+      "Pick up Walkie-Talkie",
+      "Review Class Schedule to Determine Turnover Times",
+      "Take dirty towels from the garage down to the basement & res",
+      "Start Laundry"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "signature"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "1:00 PM - 2:00 PM",
+      "6:30 AM - 7:00 AM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "ecfbdc24-b68c-4647-b23f-16474e2e198f": {
+    "template_id": "ecfbdc24-b68c-4647-b23f-16474e2e198f",
+    "item_count": 30,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 10:20 AM. No exceptions. Please s",
+      "Pick up Walkie-Talkie & locker key",
+      "Close steam room and sauna doors. Turn on sauna.",
+      "Collect mop heads, black cleaning towels, all towel sizes fr",
+      "Ensure enough yoga & small towels in ground floor studio."
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "6:30 AM - 7:00 AM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "orange",
+      "purple",
+      "red"
+    ],
+    "has_priority": true
+  },
+  "cdd9e53a-e618-4000-8a1e-dfd3413592be": {
+    "template_id": "cdd9e53a-e618-4000-8a1e-dfd3413592be",
+    "item_count": 25,
+    "category": "",
+    "sample_tasks": [
+      "Pick up walkie talkie",
+      "Review Class Schedule to Determine Turnover Times",
+      "Take dirty towels from the garage down to the basement",
+      "Start Laundry",
+      "Class Turnover, if applicable"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "1:00 PM - 2:15 PM",
+      "8:30 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  },
+  "a7c8bdda-a06e-4a65-bf58-a90fa673ae53": {
+    "template_id": "a7c8bdda-a06e-4a65-bf58-a90fa673ae53",
+    "item_count": 30,
+    "category": "",
+    "sample_tasks": [
+      "Break MUST be taken BEFORE 11 AM. No exceptions. Please sign",
+      "Pick up Walkie-Talkie",
+      "6:30: turn on sauna.",
+      "Close steam room and sauna doors.",
+      "Collect mop heads, black cleaning towels, all towel sizes fr"
+    ],
+    "task_types": [
+      "checkbox",
+      "free_response",
+      "photo",
+      "signature",
+      "yes_no"
+    ],
+    "time_hints": [
+      "10:00 AM - 11:00 AM",
+      "11:00 AM - 12:00 PM",
+      "12:00 PM - 1:00 PM",
+      "6:30 AM - 7:00 AM",
+      "7:00 AM - 8:00 AM",
+      "8:00 AM - 9:00 AM",
+      "9:00 AM - 10:00 AM",
+      "End of Shift"
+    ],
+    "colors": [
+      "blue",
+      "gray",
+      "green",
+      "orange",
+      "purple",
+      "red",
+      "yellow"
+    ],
+    "has_priority": true
+  }
+}

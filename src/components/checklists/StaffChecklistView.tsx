@@ -194,11 +194,8 @@ function TodayChecklistCard({ checklist, userId, completions }: TodayChecklistCa
                     "text-sm",
                     isCompleted && "line-through text-muted-foreground"
                   )}>
-                    {item.title}
+                    {item.task_description}
                   </span>
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-                  )}
                 </div>
                 {isCompleted && (
                   <Check className="h-4 w-4 text-green-500" />

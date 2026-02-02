@@ -18,9 +18,16 @@ export interface Checklist {
 
 export interface ChecklistItem {
   id: string;
-  checklist_id: string;
-  title: string;
-  description: string | null;
+  template_id: string | null;
+  task_description: string | null;
+  is_class_triggered: boolean | null;
+  task_type: string | null;
+  label_spanish: string | null;
+  required: boolean | null;
+  time_hint: string | null;
+  category: string | null;
+  color: string | null;
+  is_high_priority: boolean | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -74,22 +81,22 @@ export function useChecklistsForRoles(roles: AppRole[]) {
   });
 }
 
-// Fetch items for a checklist
-export function useChecklistItems(checklistId: string | null) {
+// Fetch items for a checklist (by template_id)
+export function useChecklistItems(templateId: string | null) {
   return useQuery({
-    queryKey: ["checklist-items", checklistId],
+    queryKey: ["checklist-items", templateId],
     queryFn: async () => {
-      if (!checklistId) return [];
+      if (!templateId) return [];
       const { data, error } = await supabase
         .from("checklist_items")
         .select("*")
-        .eq("checklist_id", checklistId)
+        .eq("template_id", templateId)
         .order("sort_order");
 
       if (error) throw error;
       return data as ChecklistItem[];
     },
-    enabled: !!checklistId,
+    enabled: !!templateId,
   });
 }
 
@@ -241,13 +248,12 @@ export function useAddChecklistItem() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: { checklist_id: string; title: string; description?: string; sort_order: number }) => {
+    mutationFn: async (data: { checklist_id: string; task_description: string; sort_order: number }) => {
       const { data: result, error } = await supabase
         .from("checklist_items")
         .insert({
-          checklist_id: data.checklist_id,
-          title: data.title,
-          description: data.description || null,
+          template_id: null,
+          task_description: data.task_description,
           sort_order: data.sort_order,
         })
         .select()
@@ -271,12 +277,11 @@ export function useUpdateChecklistItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; checklist_id: string; title?: string; description?: string; sort_order?: number }) => {
+    mutationFn: async (data: { id: string; checklist_id: string; task_description?: string; sort_order?: number }) => {
       const { error } = await supabase
         .from("checklist_items")
         .update({
-          ...(data.title !== undefined && { title: data.title }),
-          ...(data.description !== undefined && { description: data.description }),
+          ...(data.task_description !== undefined && { task_description: data.task_description }),
           ...(data.sort_order !== undefined && { sort_order: data.sort_order }),
         })
         .eq("id", data.id);

@@ -121,9 +121,9 @@ export function getRoleDashboardPath(role: AppRole): string {
     manager: '/dashboard/manager',
     concierge: '/dashboard/concierge',
     trainer: '/dashboard/trainer',
-    female_spa_attendant: '/dashboard/spa',
-    male_spa_attendant: '/dashboard/spa',
-    floater: '/dashboard/floater',
+    female_spa_attendant: '/dashboard/my-checklists',
+    male_spa_attendant: '/dashboard/my-checklists',
+    floater: '/dashboard/my-checklists',
   };
   
   return paths[role];

@@ -12,6 +12,8 @@ import {
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
+import { useAuthContext } from "@/features/auth/AuthProvider";
+import { useUserProfile } from "@/hooks/useUserRoles";
 import {
   Sidebar,
   SidebarContent,
@@ -61,6 +63,13 @@ export function ConciergeSidebar({
   onViewChange,
   unreadCount = 0,
 }: ConciergeSidebarProps) {
+  const { user } = useAuthContext();
+  const { data: profile } = useUserProfile(user?.id);
+
+  const getFirstName = (fullName: string | null | undefined) => {
+    if (!fullName) return "there";
+    return fullName.split(" ")[0];
+  };
   const sections: NavSection[] = [
     {
       title: "Main",
@@ -143,9 +152,12 @@ export function ConciergeSidebar({
         ))}
       </SidebarContent>
       
-      {/* Role Switcher at bottom of sidebar */}
-      <div className="p-3 border-t border-border">
+      {/* Role Switcher and User Greeting at bottom of sidebar */}
+      <div className="p-3 border-t border-border space-y-2">
         <RoleSwitcher />
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground px-1">
+          Hi, {getFirstName(profile?.full_name)}
+        </p>
       </div>
     </Sidebar>
   );

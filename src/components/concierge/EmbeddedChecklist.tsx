@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, getDay } from "date-fns";
-import { CheckSquare, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronRight, Clock, WifiOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -13,22 +13,32 @@ import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { MobileChecklistItem, ChecklistItemData } from "@/components/checklists/MobileChecklistItem";
+import { saveCompletionOffline, getPendingCompletions, markCompletionSynced } from "@/lib/offlineDb";
+import { ChecklistComments } from "@/components/checklists/ChecklistComments";
 
-interface ChecklistRecord {
+interface ChecklistTemplate {
   id: string;
   title: string;
-  role: string;
-  shift_type: string | null;
-  is_weekend: boolean | null;
+  department: string;
+  position: string | null;
+  shift_time: string;
   is_active: boolean;
 }
 
 interface ChecklistCompletion {
   id: string;
-  checklist_item_id: string;
-  user_id: string;
+  item_id: string;
+  template_id: string;
   completion_date: string;
-  completed_at: string;
+  shift_time: string;
+  completed_at: string | null;
+  completed_by: string | null;
+  completed_by_id: string | null;
+  photo_url: string | null;
+  note_text: string | null;
+  signature_data: string | null;
+  submitted_at: string | null;
+  deleted_at: string | null;
 }
 
 interface TimeGroup {
@@ -46,6 +56,21 @@ export function EmbeddedChecklist() {
   const currentHour = new Date().getHours();
   const [detectedShift, setDetectedShift] = useState<string>(currentShift);
   const [isWeekend, setIsWeekend] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Detect if today is weekend (0 = Sunday, 6 = Saturday)
   useEffect(() => {
@@ -102,27 +127,27 @@ export function EmbeddedChecklist() {
     },
   });
 
-  // Fetch the checklist for current shift and role using unified checklists table
+  // Fetch the checklist template for current shift using new schema
   const { data: checklist, isLoading: checklistLoading } = useQuery({
-    queryKey: ["checklists", "concierge", detectedShift, isWeekend],
+    queryKey: ["checklist-templates", "Concierge", detectedShift],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('checklists')
-        .select('id, title, role, shift_type, is_weekend, is_active')
-        .eq('role', 'concierge')
-        .eq('shift_type', detectedShift)
-        .eq('is_weekend', isWeekend)
+        .from('checklist_templates')
+        .select('id, title, department, position, shift_time, is_active')
+        .eq('department', 'Concierge')
+        .eq('shift_time', detectedShift)
+        .is('position', null) // Concierge has no specific position
         .eq('is_active', true)
         .limit(1)
         .maybeSingle();
       
       if (error) throw error;
-      return data as ChecklistRecord | null;
+      return data as ChecklistTemplate | null;
     },
     enabled: !!detectedShift,
   });
 
-  // Fetch items for the checklist
+  // Fetch items for the checklist template
   const { data: items, isLoading: itemsLoading } = useQuery({
     queryKey: ["checklist-items", checklist?.id],
     queryFn: async () => {
@@ -139,16 +164,17 @@ export function EmbeddedChecklist() {
     enabled: !!checklist,
   });
 
-  // Fetch today's completions
+  // Fetch today's completions for this shift
   const { data: completions, isLoading: completionsLoading } = useQuery({
-    queryKey: ["checklist-completions", checklist?.id, today, userData?.id],
+    queryKey: ["checklist-completions", checklist?.id, today, detectedShift, userData?.id],
     queryFn: async () => {
       if (!checklist || !userData?.id) return [];
       const { data, error } = await supabase
         .from('checklist_completions')
         .select('*')
-        .eq('user_id', userData.id)
-        .eq('completion_date', today);
+        .eq('completion_date', today)
+        .eq('shift_time', detectedShift)
+        .is('deleted_at', null); // Only get non-deleted completions
       
       if (error) throw error;
       return (data || []) as ChecklistCompletion[];
@@ -156,10 +182,10 @@ export function EmbeddedChecklist() {
     enabled: !!checklist && !!userData?.id,
   });
 
-  // Map of checklist_item_id to completion data
+  // Map of item_id to completion data
   const completionMap = useMemo(() => {
     const map = new Map<string, ChecklistCompletion>();
-    completions?.forEach((c) => map.set(c.checklist_item_id, c));
+    completions?.forEach((c) => map.set(c.item_id, c));
     return map;
   }, [completions]);
 
@@ -219,37 +245,197 @@ export function EmbeddedChecklist() {
     }
   }, [defaultExpandedGroup]);
 
+  // Check if shift has been submitted
+  const { data: shiftSubmission } = useQuery({
+    queryKey: ["shift-submission", today, detectedShift],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('checklist_shift_submissions')
+        .select('*')
+        .eq('completion_date', today)
+        .eq('shift_time', detectedShift)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const hasBeenSubmitted = !!shiftSubmission;
+
   // Toggle completion mutation
   const toggleMutation = useMutation({
     mutationFn: async ({
       itemId,
       isCompleted,
+      value,
     }: {
       itemId: string;
       isCompleted: boolean;
+      value?: string;
     }) => {
-      if (!userData?.id) throw new Error("Not authenticated");
+      if (!userData?.id || !checklist) throw new Error("Not authenticated");
 
-      if (isCompleted) {
-        // Remove completion
-        await supabase
-          .from('checklist_completions')
-          .delete()
-          .eq('checklist_item_id', itemId)
-          .eq('user_id', userData.id)
-          .eq('completion_date', today);
+      const completionData = {
+        item_id: itemId,
+        template_id: checklist.id,
+        completion_date: today,
+        shift_time: detectedShift,
+        completed_by_id: userData.id,
+        completed_by: userData.email || userData.id,
+        completed_at: isCompleted ? null : new Date().toISOString(),
+        note_text: value || null,
+      };
+
+      // Try online first
+      if (isOnline) {
+        if (isCompleted) {
+          // Soft delete completion
+          await supabase
+            .from('checklist_completions')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('item_id', itemId)
+            .eq('completion_date', today)
+            .eq('shift_time', detectedShift);
+        } else {
+          // Add/update completion
+          await supabase
+            .from('checklist_completions')
+            .upsert(completionData, {
+              onConflict: 'item_id,completion_date,shift_time'
+            });
+        }
       } else {
-        // Add completion
-        await supabase
-          .from('checklist_completions')
-          .insert({
-            checklist_item_id: itemId,
-            user_id: userData.id,
-            completion_date: today,
-          });
+        // Save to IndexedDB when offline
+        await saveCompletionOffline({
+          id: crypto.randomUUID(),
+          ...completionData,
+          completed_at: completionData.completed_at || new Date().toISOString(),
+          pending_sync: true,
+          created_offline_at: new Date().toISOString(),
+        });
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-completions"] });
+    },
+  });
+
+  // Sync pending completions when coming back online
+  useEffect(() => {
+    const syncOfflineCompletions = async () => {
+      if (!isOnline || !userData?.id || !checklist) return;
+
+      console.log('[EmbeddedChecklist] Syncing offline completions...');
+      const pending = await getPendingCompletions();
+
+      if (pending.length === 0) {
+        console.log('[EmbeddedChecklist] No pending completions to sync');
+        return;
+      }
+
+      console.log(`[EmbeddedChecklist] Syncing ${pending.length} completions`);
+
+      for (const completion of pending) {
+        try {
+          // Upload photo if exists (convert base64 to blob)
+          let photoUrl = completion.note_text;
+          if (completion.photo_base64) {
+            const response = await fetch(completion.photo_base64);
+            const blob = await response.blob();
+            
+            // Upload photo using same logic as PhotoTask
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const fileName = `${completion.id}_photo.jpg`;
+            const filePath = `checklist/${year}/${month}/${day}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('checklist-photos')
+              .upload(filePath, blob, { upsert: true });
+
+            if (!uploadError) {
+              const { data } = supabase.storage
+                .from('checklist-photos')
+                .getPublicUrl(filePath);
+              photoUrl = data.publicUrl;
+            }
+          }
+
+          // Upsert to Supabase
+          await supabase
+            .from('checklist_completions')
+            .upsert({
+              item_id: completion.item_id,
+              template_id: checklist.id,
+              completion_date: completion.completion_date,
+              shift_time: completion.shift_time,
+              completed_by_id: completion.completed_by_id,
+              completed_by: completion.completed_by,
+              completed_at: completion.completed_at,
+              note_text: photoUrl,
+              signature_data: completion.signature_data,
+            }, {
+              onConflict: 'item_id,completion_date,shift_time'
+            });
+
+          await markCompletionSynced(completion.id);
+          console.log('[EmbeddedChecklist] Synced completion:', completion.id);
+        } catch (error) {
+          console.error('[EmbeddedChecklist] Failed to sync completion:', error);
+        }
+      }
+
+      // Refresh completions after sync
+      queryClient.invalidateQueries({ queryKey: ["checklist-completions"] });
+      console.log('[EmbeddedChecklist] Sync complete');
+    };
+
+    if (isOnline) {
+      syncOfflineCompletions();
+    }
+  }, [isOnline, checklist, userData, queryClient]);
+
+  // Submit shift mutation
+  const submitShiftMutation = useMutation({
+    mutationFn: async (notes?: string) => {
+      if (!userData?.id || !checklist) throw new Error("Not authenticated");
+
+      const totalTasks = items?.length || 0;
+      const completedTasks = completionMap.size;
+
+      // 1. Upsert shift submission record using new schema
+      const { error: submissionError } = await supabase
+        .from('checklist_shift_submissions')
+        .upsert({
+          completion_date: today,
+          shift_time: detectedShift,
+          department: checklist.department,
+          position: checklist.position,
+          submitted_by: userData.email || 'Unknown',
+          submitted_by_id: userData.id,
+          submitted_at: new Date().toISOString(),
+          total_tasks: totalTasks,
+          completed_tasks: completedTasks,
+          notes: notes || null,
+        }, {
+          onConflict: 'completion_date,shift_time,department,position'
+        });
+
+      if (submissionError) throw submissionError;
+
+      // 2. Mark all completions as submitted
+      const { error: updateError } = await supabase
+        .from('checklist_completions')
+        .update({ submitted_at: new Date().toISOString() })
+        .eq('completion_date', today)
+        .eq('shift_time', detectedShift)
+        .is('submitted_at', null);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shift-submission"] });
       queryClient.invalidateQueries({ queryKey: ["checklist-completions"] });
     },
   });
@@ -263,6 +449,10 @@ export function EmbeddedChecklist() {
   const handleToggle = (itemId: string) => {
     const isCompleted = completionMap.has(itemId);
     toggleMutation.mutate({ itemId, isCompleted });
+  };
+
+  const handleUpdate = (itemId: string, value: string) => {
+    toggleMutation.mutate({ itemId, isCompleted: false, value });
   };
 
   const toggleGroup = (timeHint: string) => {
@@ -285,9 +475,31 @@ export function EmbeddedChecklist() {
             <CheckSquare className="h-5 w-5" />
             {detectedShift} Shift Checklist {isWeekend && "(Weekend)"}
           </CardTitle>
-          <Badge variant="outline" className="text-xs">
-            {completedCount}/{totalCount} complete
-          </Badge>
+          <div className="flex items-center gap-2">
+            {!isOnline && (
+              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                <WifiOff className="h-3 w-3 mr-1" />
+                Offline
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs">
+              {completedCount}/{totalCount} complete
+            </Badge>
+            {hasBeenSubmitted ? (
+              <Badge variant="secondary" className="text-xs">
+                ✓ Submitted
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => submitShiftMutation.mutate()}
+                disabled={submitShiftMutation.isPending || !checklist || !isOnline}
+                className="h-7 text-xs"
+              >
+                Submit Shift
+              </Button>
+            )}
+          </div>
         </div>
         <Progress value={progressPercentage} className="h-2 mt-3" />
       </CardHeader>
@@ -304,7 +516,7 @@ export function EmbeddedChecklist() {
           </div>
         ) : !checklist ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
-            No checklist for {detectedShift} shift {isWeekend ? "(Weekend)" : "(Weekday)"}
+            No checklist template for {detectedShift} shift
           </p>
         ) : !items || items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
@@ -364,7 +576,9 @@ export function EmbeddedChecklist() {
                             key={item.id}
                             item={item}
                             isCompleted={isCompleted}
+                            completionValue={completion?.note_text || completion?.photo_url}
                             onToggle={() => handleToggle(item.id)}
+                            onUpdate={(value) => handleUpdate(item.id, value)}
                             disabled={toggleMutation.isPending}
                           />
                         );
@@ -374,6 +588,17 @@ export function EmbeddedChecklist() {
                 </Collapsible>
               );
             })}
+          </div>
+        )}
+
+        {/* Shift-level comments */}
+        {checklist && !isLoading && (
+          <div className="mt-6 pt-6 border-t px-4 pb-4">
+            <ChecklistComments
+              templateId={checklist.id}
+              completionDate={today}
+              shiftTime={detectedShift}
+            />
           </div>
         )}
       </CardContent>

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   CheckboxTask,
   YesNoTask,
@@ -42,11 +43,16 @@ export function MobileChecklistItem({
   onUpdate,
   disabled,
 }: MobileChecklistItemProps) {
+  const { t } = useLanguage();
+  
+  // Get translated task label
+  const taskLabel = t(item.task_description, item.label_spanish);
+  
   // Header type is non-interactive
   if (item.task_type === "header") {
     return (
       <div className="py-3 border-b">
-        <HeaderTask>{item.task_description}</HeaderTask>
+        <HeaderTask>{taskLabel}</HeaderTask>
       </div>
     );
   }
@@ -125,7 +131,7 @@ export function MobileChecklistItem({
                 isCompleted && "line-through text-muted-foreground"
               )}
             >
-              {item.task_description}
+              {taskLabel}
             </p>
             
             {/* Priority indicator */}

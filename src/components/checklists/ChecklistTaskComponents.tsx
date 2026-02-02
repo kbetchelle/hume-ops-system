@@ -105,14 +105,22 @@ export function PhotoTask({
 
     setUploading(true);
     try {
-      // Upload to Supabase storage
+      // Generate unique completion ID for this photo
+      const completionId = crypto.randomUUID();
+      
+      // Create date-based path structure: checklist/{year}/{month}/{day}/{completion_id}_photo.jpg
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      
       const fileExt = file.name.split(".").pop();
-      const fileName = `${itemId}-${Date.now()}.${fileExt}`;
-      const filePath = `checklist-photos/${fileName}`;
+      const fileName = `${completionId}_photo.${fileExt}`;
+      const filePath = `checklist/${year}/${month}/${day}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("checklist-photos")
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 

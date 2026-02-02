@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ActiveRoleProvider } from "@/hooks/useActiveRole";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 // Public pages
 import NotFound from "./pages/NotFound";
@@ -66,10 +67,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ActiveRoleProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Login />} />
@@ -385,7 +387,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
+          </TooltipProvider>
+        </LanguageProvider>
       </ActiveRoleProvider>
     </AuthProvider>
   </QueryClientProvider>

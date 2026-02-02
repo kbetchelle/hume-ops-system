@@ -16,17 +16,29 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { csvContent, clearExisting } = await req.json();
+    const { csvContent, csvUrl, clearExisting } = await req.json();
 
-    if (!csvContent) {
+    let csvData = csvContent;
+    
+    // If URL provided, fetch the CSV
+    if (csvUrl && !csvContent) {
+      console.log("Fetching CSV from URL:", csvUrl);
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV: ${response.status}`);
+      }
+      csvData = await response.text();
+    }
+
+    if (!csvData) {
       return new Response(
-        JSON.stringify({ error: "CSV content is required" }),
+        JSON.stringify({ error: "CSV content or URL is required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
     // Parse CSV (semicolon-delimited)
-    const lines = csvContent.split("\n").filter((line: string) => line.trim());
+    const lines = csvData.split("\n").filter((line: string) => line.trim());
     const headers = lines[0].split(";").map((h: string) => h.trim());
     
     console.log("Headers:", headers);

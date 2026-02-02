@@ -124,7 +124,8 @@ export function ConciergeForm() {
         .maybeSingle();
       
       if (draft) {
-        setFormData({ ...draft.form_data, _sessionId: sessionId });
+        const loadedFormData = draft.form_data as unknown as FormDataType;
+        setFormData({ ...loadedFormData, _sessionId: sessionId });
         setLocalVersion(draft.version);
         setLastSaved(new Date(draft.updated_at));
       } else {
@@ -159,11 +160,11 @@ export function ConciergeForm() {
       // Get today's shift for this user
       const today = new Date().toISOString().split('T')[0];
       const { data: shift } = await supabase
-        .from('staff_shifts')
+        .from('staff_shifts' as any)
         .select('shift_start, position')
         .eq('sling_user_id', slingUser.sling_user_id)
         .eq('schedule_date', today)
-        .maybeSingle();
+        .maybeSingle() as { data: { shift_start: string; position: string } | null };
       
       if (shift?.shift_start) {
         // Determine shift type based on start time
@@ -252,7 +253,7 @@ export function ConciergeForm() {
       const draftData = {
         report_date: reportDate,
         shift_time: shiftType,
-        form_data: formData,
+        form_data: formData as unknown as Record<string, unknown>,
         last_updated_by: user?.email || null,
         last_updated_by_session: sessionId,
       };
@@ -260,7 +261,7 @@ export function ConciergeForm() {
       if (isOnline) {
         const { data, error } = await supabase
           .from('concierge_drafts')
-          .upsert(draftData, {
+          .upsert(draftData as any, {
             onConflict: 'report_date,shift_time',
           })
           .select()

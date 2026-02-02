@@ -26,15 +26,17 @@ export interface Tour {
 }
 
 export interface MembershipCancelRequest {
-  memberName: string;
-  reason: string;
-  followupCompleted: boolean;
+  name: string;
+  email: string;
+  membershipType: string;
+  requestType: 'cancel' | 'hold' | 'pause';
+  endDate: string;
 }
 
 export interface FutureNote {
-  shiftType: string;
+  targetDate: string;
+  targetShift: string;
   note: string;
-  priority: 'low' | 'medium' | 'high';
 }
 
 export interface FormDataType {
@@ -53,6 +55,7 @@ export interface FormDataType {
   managementNotes: string;
   futureShiftNotesNA: boolean;
   futureNotes: FutureNote[];
+  [key: string]: any; // Allow additional dynamic properties
 }
 
 export interface ConciergeDraft {

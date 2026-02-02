@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 
 // Stub component for offline status banner
 export function OfflineBanner({ 
-  isOnline, 
+  isOnline = false, 
   queueSize,
   onRetry 
 }: { 
-  isOnline: boolean;
+  isOnline?: boolean;
   queueSize: number;
   onRetry: () => void;
 }) {

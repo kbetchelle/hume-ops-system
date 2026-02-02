@@ -6,7 +6,7 @@ export function useBroadcastSync(config: {
   onRemoteUpdate?: (data: any) => void;
 }) {
   return {
-    broadcastUpdate: () => {},
-    broadcastSaved: () => {},
+    broadcastUpdate: (formData: any) => Promise.resolve(),
+    broadcastSaved: () => Promise.resolve(),
   };
 }

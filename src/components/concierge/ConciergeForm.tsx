@@ -56,6 +56,11 @@ export function ConciergeForm() {
   // Debounced form data for auto-save
   const [debouncedFormData] = useDebounce(formData, 1500);
   
+  // Fetch user's shift from staff_shifts on mount
+  useEffect(() => {
+    fetchUserShift();
+  }, [user?.email]);
+  
   // Load existing draft or report
   useEffect(() => {
     loadDraft();
@@ -135,6 +140,48 @@ export function ConciergeForm() {
         description: 'Please refresh the page',
         variant: 'destructive',
       });
+    }
+  }
+  
+  async function fetchUserShift() {
+    try {
+      if (!user?.email) return;
+      
+      // Get sling_user_id for current user
+      const { data: slingUser } = await supabase
+        .from('sling_users')
+        .select('sling_user_id')
+        .eq('email', user.email)
+        .maybeSingle();
+      
+      if (!slingUser) return;
+      
+      // Get today's shift for this user
+      const today = new Date().toISOString().split('T')[0];
+      const { data: shift } = await supabase
+        .from('staff_shifts')
+        .select('shift_start, position')
+        .eq('sling_user_id', slingUser.sling_user_id)
+        .eq('schedule_date', today)
+        .maybeSingle();
+      
+      if (shift?.shift_start) {
+        // Determine shift type based on start time
+        const startHour = new Date(shift.shift_start).getHours();
+        let shiftType = 'morning';
+        if (startHour >= 12 && startHour < 17) {
+          shiftType = 'afternoon';
+        } else if (startHour >= 17) {
+          shiftType = 'evening';
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          shiftTime: shiftType,
+        }));
+      }
+    } catch (error) {
+      console.error('[ConciergeForm] Failed to fetch user shift:', error);
     }
   }
   
@@ -259,7 +306,7 @@ export function ConciergeForm() {
       const { data, error } = await supabase.functions.invoke('submit-concierge-report', {
         body: {
           reportDate,
-          shiftTime,
+          shiftTime: shiftType,
           formData,
         },
       });

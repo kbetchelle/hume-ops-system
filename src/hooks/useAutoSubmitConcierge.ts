@@ -1,10 +1,10 @@
 // Stub for auto-submit functionality
 export function useAutoSubmitConcierge(
-  formData: any,
   reportDate: string,
   shiftType: string,
-  onSubmitSuccess: () => void,
-  isDirty: boolean
+  formData: any,
+  handleSubmit: () => void,
+  isSubmitted: boolean
 ) {
   return {
     willAutoSubmit: false,

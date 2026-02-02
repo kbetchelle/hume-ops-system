@@ -4,7 +4,7 @@ export function useOfflineQueue() {
     isOnline: true,
     queueSize: 0,
     queuedOperations: [],
-    addToQueue: () => {},
+    addToQueue: (operation: string, data: any) => Promise.resolve(),
     processQueue: async () => {},
   };
 }

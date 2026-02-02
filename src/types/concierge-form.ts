@@ -55,7 +55,7 @@ export interface FormDataType {
   managementNotes: string;
   futureShiftNotesNA: boolean;
   futureNotes: FutureNote[];
-  [key: string]: any; // Allow additional dynamic properties
+  _sessionId?: string; // Optional session tracking ID
 }
 
 export interface ConciergeDraft {

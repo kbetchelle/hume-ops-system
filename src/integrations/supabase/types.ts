@@ -1194,30 +1194,66 @@ export type Database = {
       }
       checklist_items: {
         Row: {
-          checklist_id: string
+          category: string | null
+          checklist_id: string | null
+          class_trigger_minutes_after: number | null
+          color: string | null
           created_at: string
           description: string | null
+          due_time: string | null
           id: string
+          is_class_triggered: boolean | null
+          is_high_priority: boolean | null
+          label_spanish: string | null
+          required: boolean | null
           sort_order: number
-          title: string
+          task_description: string | null
+          task_type: string | null
+          template_id: string | null
+          time_hint: string | null
+          title: string | null
           updated_at: string
         }
         Insert: {
-          checklist_id: string
+          category?: string | null
+          checklist_id?: string | null
+          class_trigger_minutes_after?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
+          due_time?: string | null
           id?: string
+          is_class_triggered?: boolean | null
+          is_high_priority?: boolean | null
+          label_spanish?: string | null
+          required?: boolean | null
           sort_order?: number
-          title: string
+          task_description?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          time_hint?: string | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
-          checklist_id?: string
+          category?: string | null
+          checklist_id?: string | null
+          class_trigger_minutes_after?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
+          due_time?: string | null
           id?: string
+          is_class_triggered?: boolean | null
+          is_high_priority?: boolean | null
+          label_spanish?: string | null
+          required?: boolean | null
           sort_order?: number
-          title?: string
+          task_description?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          time_hint?: string | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: [

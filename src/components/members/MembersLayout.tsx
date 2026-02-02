@@ -79,7 +79,6 @@ function RoleSwitcher() {
                 activeRole === userRole.role && "bg-muted"
               )}
             >
-              <span className="mr-2">{roleInfo?.icon}</span>
               {getRoleLabel(userRole.role)}
             </DropdownMenuItem>
           );

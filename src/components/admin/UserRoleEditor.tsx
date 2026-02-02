@@ -76,7 +76,7 @@ export function UserRoleEditor({
               />
               <div className="flex-1">
                 <p className="text-[10px] uppercase tracking-widest">
-                  {role.icon} {role.label}
+                  {role.label}
                 </p>
                 <p className="text-[10px] text-muted-foreground tracking-wide mt-1">
                   {role.description}

@@ -7,13 +7,19 @@ export function ConflictModal({
   onClose,
   localData,
   remoteData,
-  onResolve,
+  localVersion,
+  remoteVersion,
+  onAcceptRemote,
+  onKeepLocal,
 }: {
   isOpen: boolean;
   onClose: () => void;
   localData: any;
   remoteData: any;
-  onResolve: (data: any) => void;
+  localVersion?: number;
+  remoteVersion?: number;
+  onAcceptRemote: () => void;
+  onKeepLocal: () => void;
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -25,18 +31,17 @@ export function ConflictModal({
           <p className="text-sm text-muted-foreground">
             Another user has made changes to this form. Choose which version to keep.
           </p>
+          {localVersion && remoteVersion && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Local version: {localVersion} | Remote version: {remoteVersion}
+            </p>
+          )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => {
-            onResolve(remoteData);
-            onClose();
-          }}>
+          <Button variant="outline" onClick={onAcceptRemote}>
             Use Remote Version
           </Button>
-          <Button onClick={() => {
-            onResolve(localData);
-            onClose();
-          }}>
+          <Button onClick={onKeepLocal}>
             Keep My Changes
           </Button>
         </DialogFooter>

@@ -1160,34 +1160,136 @@ export type Database = {
         }
         Relationships: []
       }
-      checklist_completions: {
+      checklist_comments: {
         Row: {
-          checklist_item_id: string
-          completed_at: string
+          comment_text: string
           completion_date: string
+          completion_id: string | null
+          created_at: string | null
           id: string
-          user_id: string
+          is_private: boolean | null
+          item_id: string | null
+          shift_time: string
+          staff_id: string | null
+          staff_name: string
+          template_id: string | null
         }
         Insert: {
-          checklist_item_id: string
-          completed_at?: string
-          completion_date?: string
+          comment_text: string
+          completion_date: string
+          completion_id?: string | null
+          created_at?: string | null
           id?: string
-          user_id: string
+          is_private?: boolean | null
+          item_id?: string | null
+          shift_time: string
+          staff_id?: string | null
+          staff_name: string
+          template_id?: string | null
         }
         Update: {
-          checklist_item_id?: string
-          completed_at?: string
+          comment_text?: string
           completion_date?: string
+          completion_id?: string | null
+          created_at?: string | null
           id?: string
-          user_id?: string
+          is_private?: boolean | null
+          item_id?: string | null
+          shift_time?: string
+          staff_id?: string | null
+          staff_name?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_comments_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_comments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_comments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_completions: {
+        Row: {
+          completed_at: string
+          completed_by: string | null
+          completed_by_id: string
+          completion_date: string
+          deleted_at: string | null
+          id: string
+          item_id: string
+          note_text: string | null
+          photo_url: string | null
+          shift_time: string | null
+          signature_data: string | null
+          submitted_at: string | null
+          template_id: string | null
+        }
+        Insert: {
+          completed_at?: string
+          completed_by?: string | null
+          completed_by_id: string
+          completion_date?: string
+          deleted_at?: string | null
+          id?: string
+          item_id: string
+          note_text?: string | null
+          photo_url?: string | null
+          shift_time?: string | null
+          signature_data?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          completed_at?: string
+          completed_by?: string | null
+          completed_by_id?: string
+          completion_date?: string
+          deleted_at?: string | null
+          id?: string
+          item_id?: string
+          note_text?: string | null
+          photo_url?: string | null
+          shift_time?: string | null
+          signature_data?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "checklist_completions_checklist_item_id_fkey"
-            columns: ["checklist_item_id"]
+            columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1251,33 +1353,81 @@ export type Database = {
           },
         ]
       }
+      checklist_shift_submissions: {
+        Row: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          id: string
+          notes: string | null
+          position: string | null
+          shift_time: string
+          submitted_at: string
+          submitted_by: string
+          submitted_by_id: string | null
+          total_tasks: number
+        }
+        Insert: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time: string
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_id?: string | null
+          total_tasks: number
+        }
+        Update: {
+          completed_tasks?: number
+          completion_date?: string
+          department?: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time?: string
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_id?: string | null
+          total_tasks?: number
+        }
+        Relationships: []
+      }
       checklist_templates: {
         Row: {
           created_at: string | null
           created_by: string | null
+          department: string | null
           id: string
           is_active: boolean | null
           name: string
-          role: string
-          shift_type: string
+          position: string | null
+          role: string | null
+          shift_time: string
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          department?: string | null
           id?: string
           is_active?: boolean | null
           name: string
-          role: string
-          shift_type: string
+          position?: string | null
+          role?: string | null
+          shift_time: string
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          department?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
-          role?: string
-          shift_type?: string
+          position?: string | null
+          role?: string | null
+          shift_time?: string
         }
         Relationships: []
       }
@@ -2911,6 +3061,36 @@ export type Database = {
           },
         ]
       }
+      storage_deletion_queue: {
+        Row: {
+          bucket_name: string
+          created_at: string
+          error_message: string | null
+          file_path: string
+          id: string
+          processed_at: string | null
+          scheduled_at: string
+        }
+        Insert: {
+          bucket_name: string
+          created_at?: string
+          error_message?: string | null
+          file_path: string
+          id?: string
+          processed_at?: string | null
+          scheduled_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          created_at?: string
+          error_message?: string | null
+          file_path?: string
+          id?: string
+          processed_at?: string | null
+          scheduled_at?: string
+        }
+        Relationships: []
+      }
       sync_metrics: {
         Row: {
           completed_at: string | null
@@ -3306,6 +3486,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      cleanup_old_completions: { Args: never; Returns: undefined }
       direct_upsert_reservation: {
         Args: {
           p_booking_id: string

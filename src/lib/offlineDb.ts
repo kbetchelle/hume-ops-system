@@ -1,4 +1,4 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, IDBPDatabase } from 'idb';
 
 interface OfflineCompletion {
   id: string;
@@ -16,22 +16,12 @@ interface OfflineCompletion {
   created_offline_at: string;
 }
 
-interface ConciergeOfflineDB extends DBSchema {
-  completions: {
-    key: string;
-    value: OfflineCompletion;
-    indexes: { 
-      'by-pending': boolean; 
-      'by-date': string;
-    };
-  };
-}
-
-let dbPromise: Promise<IDBPDatabase<ConciergeOfflineDB>> | null = null;
+// Use a simpler approach without strict DBSchema typing
+let dbPromise: Promise<IDBPDatabase> | null = null;
 
 export async function getOfflineDb() {
   if (!dbPromise) {
-    dbPromise = openDB<ConciergeOfflineDB>('concierge_offline_db', 1, {
+    dbPromise = openDB('concierge_offline_db', 1, {
       upgrade(db) {
         const store = db.createObjectStore('completions', { keyPath: 'id' });
         store.createIndex('by-pending', 'pending_sync');
@@ -49,7 +39,8 @@ export async function saveCompletionOffline(completion: OfflineCompletion) {
 
 export async function getPendingCompletions(): Promise<OfflineCompletion[]> {
   const db = await getOfflineDb();
-  return db.getAllFromIndex('completions', 'by-pending', true);
+  const all = await db.getAll('completions');
+  return all.filter((c: OfflineCompletion) => c.pending_sync === true);
 }
 
 export async function markCompletionSynced(id: string) {
@@ -65,8 +56,8 @@ export async function clearSyncedCompletions() {
   const db = await getOfflineDb();
   const allCompletions = await db.getAll('completions');
   const syncedIds = allCompletions
-    .filter(c => !c.pending_sync)
-    .map(c => c.id);
+    .filter((c: OfflineCompletion) => !c.pending_sync)
+    .map((c: OfflineCompletion) => c.id);
   
   for (const id of syncedIds) {
     await db.delete('completions', id);

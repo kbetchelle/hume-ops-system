@@ -44,8 +44,8 @@ export function ChecklistComments({
   const { data: comments, isLoading } = useQuery({
     queryKey: ['checklist-comments', templateId, itemId, completionId, completionDate, shiftTime],
     queryFn: async () => {
-      let query = supabase
-        .from('checklist_comments')
+      let query = (supabase
+        .from('checklist_comments') as any)
         .select('*')
         .eq('completion_date', completionDate)
         .eq('shift_time', shiftTime)
@@ -65,7 +65,7 @@ export function ChecklistComments({
     mutationFn: async () => {
       if (!user || !newComment.trim()) return;
 
-      const { error } = await supabase.from('checklist_comments').insert({
+      const { error } = await (supabase.from('checklist_comments') as any).insert({
         template_id: templateId || null,
         item_id: itemId || null,
         completion_id: completionId || null,

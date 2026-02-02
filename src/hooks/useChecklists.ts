@@ -35,10 +35,18 @@ export interface ChecklistItem {
 
 export interface ChecklistCompletion {
   id: string;
-  checklist_item_id: string;
-  user_id: string;
+  item_id: string;
+  template_id: string | null;
   completion_date: string;
+  shift_time: string | null;
   completed_at: string;
+  completed_by: string | null;
+  completed_by_id: string;
+  photo_url: string | null;
+  note_text: string | null;
+  signature_data: string | null;
+  submitted_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface ChecklistWithItems extends Checklist {
@@ -108,14 +116,15 @@ export function useTodayCompletions(userId: string | null) {
     queryKey: ["completions", "today", userId],
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await supabase
-        .from("checklist_completions")
+      const { data, error } = await (supabase
+        .from("checklist_completions") as any)
         .select("*")
-        .eq("user_id", userId)
-        .eq("completion_date", today);
+        .eq("completed_by_id", userId)
+        .eq("completion_date", today)
+        .is("deleted_at", null);
 
       if (error) throw error;
-      return data as ChecklistCompletion[];
+      return (data || []) as ChecklistCompletion[];
     },
     enabled: !!userId,
   });
@@ -126,13 +135,14 @@ export function useCompletionsForDate(date: string) {
   return useQuery({
     queryKey: ["completions", "date", date],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_completions")
+      const { data, error } = await (supabase
+        .from("checklist_completions") as any)
         .select("*")
-        .eq("completion_date", date);
+        .eq("completion_date", date)
+        .is("deleted_at", null);
 
       if (error) throw error;
-      return data as ChecklistCompletion[];
+      return (data || []) as ChecklistCompletion[];
     },
   });
 }
@@ -146,15 +156,16 @@ export function useCompletionHistory(userId: string | null, days: number = 7) {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
       
-      const { data, error } = await supabase
-        .from("checklist_completions")
+      const { data, error } = await (supabase
+        .from("checklist_completions") as any)
         .select("*")
-        .eq("user_id", userId)
+        .eq("completed_by_id", userId)
         .gte("completion_date", startDate.toISOString().split("T")[0])
+        .is("deleted_at", null)
         .order("completion_date", { ascending: false });
 
       if (error) throw error;
-      return data as ChecklistCompletion[];
+      return (data || []) as ChecklistCompletion[];
     },
     enabled: !!userId,
   });
@@ -324,19 +335,20 @@ export function useToggleCompletion() {
 
       if (data.is_completed) {
         // Add completion
-        const { error } = await supabase.from("checklist_completions").insert({
-          checklist_item_id: data.item_id,
-          user_id: data.user_id,
+        const { error } = await (supabase.from("checklist_completions") as any).insert({
+          item_id: data.item_id,
+          completed_by_id: data.user_id,
           completion_date: today,
+          completed_at: new Date().toISOString(),
         });
         if (error) throw error;
       } else {
-        // Remove completion
-        const { error } = await supabase
-          .from("checklist_completions")
-          .delete()
-          .eq("checklist_item_id", data.item_id)
-          .eq("user_id", data.user_id)
+        // Remove completion (soft delete)
+        const { error } = await (supabase
+          .from("checklist_completions") as any)
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("item_id", data.item_id)
+          .eq("completed_by_id", data.user_id)
           .eq("completion_date", today);
         if (error) throw error;
       }

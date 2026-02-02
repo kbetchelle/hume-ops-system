@@ -1,50 +1,43 @@
-# Arketa Backfill Pagination Fix - RESOLVED ✅
 
-## Summary
+# Add Password Visibility Toggle to Login Page
 
-Fixed the backfill sync to properly paginate through all 11k+ Arketa clients using **offset-based pagination**.
+## Overview
+Add an eye icon button to the password input field on the login page (/) that allows users to toggle password visibility between hidden (dots) and visible (plain text).
 
-## Root Cause
+## What Will Be Done
 
-The Arketa `/clients` endpoint returns `hasMore: true` but provides NO `nextCursor`. The previous fix tried to use the last record's ID as a synthetic cursor, but the API doesn't support cursor-based pagination for this endpoint - it was returning the same 400 records each time.
+### Add Password Visibility Toggle
+- Add a new state variable `showPassword` to track visibility
+- Import the `Eye` and `EyeOff` icons from lucide-react
+- Wrap the password input in a relative container
+- Add a clickable icon button positioned at the right side of the input
+- Toggle the input type between "password" and "text" based on state
 
-## Solution (2026-01-30)
+## Implementation
 
-### Offset-Based Pagination
+### Changes to src/pages/auth/Login.tsx
 
-When no cursor is provided by the API, we now use the `skip` parameter:
+1. **Add state for password visibility**
+   ```typescript
+   const [showPassword, setShowPassword] = useState(false);
+   ```
 
-```typescript
-// If no cursor available, use offset-based pagination
-if (job.records_processed > 0) {
-  const offset = job.records_processed;
-  url += `&skip=${offset}`;
-}
-```
+2. **Import eye icons**
+   ```typescript
+   import { Loader2, Eye, EyeOff } from "lucide-react";
+   ```
 
-### Pagination Logic
+3. **Update password field with toggle button**
+   - Wrap input in a `div` with `relative` positioning
+   - Change input type dynamically: `type={showPassword ? "text" : "password"}`
+   - Add an icon button that toggles the state
+   - Use `Eye` icon when password is hidden, `EyeOff` when visible
 
-1. If API returns a `nextCursor` → use cursor-based pagination
-2. If no cursor but `hasMore: true` and full batch → use offset (skip=records_processed)
-3. If batch size < 400 → sync complete
+### Visual Design
+- Icon positioned at the right edge of the input field
+- Subtle opacity with hover effect for better UX
+- Maintains the existing minimalist aesthetic
+- Icon sized appropriately (h-4 w-4) to match the input styling
 
-## Verification Steps
-
-1. Create a new clients backfill job
-2. Monitor logs for "Using offset-based pagination"
-3. Each batch should skip records_processed records
-4. Job should continue until all ~11k records synced
-
-## Files Modified
-
-- `supabase/functions/unified-backfill-sync/index.ts` - Offset-based pagination
-
-## Endpoint Pagination Support
-
-| Endpoint | Pagination Method | Notes |
-|----------|-------------------|-------|
-| `/clients` | Offset (skip) | No cursor support |
-| `/classes` | Cursor + date range | Full native support |
-| `/reservations` | Cursor + date range | Full native support |
-| `/purchases` | Cursor + date range | Full native support |
-| `/staff` | Offset (skip) | Uses dev API endpoint |
+### Files to Modify
+- `src/pages/auth/Login.tsx`

@@ -5,29 +5,15 @@
 -- ============================================================================
 
 -- ============================================================================
--- 1. UPDATE checklist_templates TABLE
+-- 1. UPDATE checklists TABLE
 -- ============================================================================
 
--- Rename checklists to checklist_templates if needed
-DO $$ 
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables 
-    WHERE table_name = 'checklists'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.tables 
-    WHERE table_name = 'checklist_templates'
-  ) THEN
-    ALTER TABLE checklists RENAME TO checklist_templates;
-  END IF;
-END $$;
-
--- Add new columns
-ALTER TABLE checklist_templates ADD COLUMN IF NOT EXISTS department TEXT;
-ALTER TABLE checklist_templates ADD COLUMN IF NOT EXISTS position TEXT;
+-- Add new columns to checklists table
+ALTER TABLE checklists ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE checklists ADD COLUMN IF NOT EXISTS position TEXT;
 
 -- Migrate data: map role to department
-UPDATE checklist_templates SET department = 
+UPDATE checklists SET department = 
   CASE 
     WHEN role IN ('concierge') THEN 'Concierge'
     WHEN role IN ('floater') THEN 'FOH'
@@ -37,7 +23,7 @@ UPDATE checklist_templates SET department =
 WHERE department IS NULL;
 
 -- Set position for specific roles
-UPDATE checklist_templates SET position = 
+UPDATE checklists SET position = 
   CASE 
     WHEN role = 'male_spa_attendant' THEN 'Male Spa Attendant'
     WHEN role = 'female_spa_attendant' THEN 'Female Spa Attendant'
@@ -51,30 +37,83 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'checklist_templates' AND column_name = 'shift_type'
+    WHERE table_name = 'checklists' AND column_name = 'shift_type'
   ) THEN
-    ALTER TABLE checklist_templates RENAME COLUMN shift_type TO shift_time;
+    ALTER TABLE checklists RENAME COLUMN shift_type TO shift_time;
   END IF;
 END $$;
 
--- Drop old constraint if exists
-ALTER TABLE checklist_templates DROP CONSTRAINT IF EXISTS checklist_templates_role_shift_type_key;
+-- Drop old constraints if they exist
+ALTER TABLE checklists DROP CONSTRAINT IF EXISTS checklist_templates_role_shift_type_key;
+ALTER TABLE checklists DROP CONSTRAINT IF EXISTS checklists_role_shift_type_key;
 
 -- Add new unique constraint
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint 
-    WHERE conname = 'checklist_templates_dept_shift_pos_key'
+    WHERE conname = 'checklists_dept_shift_pos_key'
   ) THEN
-    ALTER TABLE checklist_templates ADD CONSTRAINT checklist_templates_dept_shift_pos_key 
+    ALTER TABLE checklists ADD CONSTRAINT checklists_dept_shift_pos_key 
       UNIQUE(department, shift_time, position);
   END IF;
 END $$;
 
 -- Mark role column as deprecated (keep for backward compatibility)
-ALTER TABLE checklist_templates ALTER COLUMN role DROP NOT NULL;
-COMMENT ON COLUMN checklist_templates.role IS 'DEPRECATED: Use department and position instead';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'checklists' AND column_name = 'role'
+  ) THEN
+    ALTER TABLE checklists ALTER COLUMN role DROP NOT NULL;
+  END IF;
+END $$;
+
+COMMENT ON COLUMN checklists.role IS 'DEPRECATED: Use department and position instead';
+
+-- ============================================================================
+-- 1.5 UPDATE checklist_items TABLE (ensure proper reference column)
+-- ============================================================================
+
+-- Ensure checklist_items has correct foreign key column
+-- If it has checklist_id, keep it (references checklists)
+-- If it has template_id, rename it to checklist_id for consistency
+DO $$ 
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'checklist_items' AND column_name = 'template_id'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'checklist_items' AND column_name = 'checklist_id'
+  ) THEN
+    ALTER TABLE checklist_items RENAME COLUMN template_id TO checklist_id;
+  END IF;
+END $$;
+
+-- Add checklist_id column if it doesn't exist at all
+ALTER TABLE checklist_items ADD COLUMN IF NOT EXISTS checklist_id UUID;
+
+-- Ensure FK constraint exists for checklist_items -> checklists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'checklist_items') THEN
+    -- Drop old FK if exists
+    ALTER TABLE checklist_items DROP CONSTRAINT IF EXISTS checklist_items_template_id_fkey;
+    ALTER TABLE checklist_items DROP CONSTRAINT IF EXISTS checklist_items_checklist_id_fkey;
+    
+    -- Add new FK
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint 
+      WHERE conname = 'checklist_items_checklist_id_fkey'
+    ) THEN
+      ALTER TABLE checklist_items 
+        ADD CONSTRAINT checklist_items_checklist_id_fkey 
+        FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE;
+    END IF;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- 2. UPDATE checklist_completions TABLE
@@ -111,8 +150,22 @@ BEGIN
   END IF;
 END $$;
 
--- Add template_id column if not exists
-ALTER TABLE checklist_completions ADD COLUMN IF NOT EXISTS template_id UUID;
+-- Rename template_id to checklist_id for consistency
+DO $$ 
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'checklist_completions' AND column_name = 'template_id'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'checklist_completions' AND column_name = 'checklist_id'
+  ) THEN
+    ALTER TABLE checklist_completions RENAME COLUMN template_id TO checklist_id;
+  END IF;
+END $$;
+
+-- Add checklist_id column if not exists
+ALTER TABLE checklist_completions ADD COLUMN IF NOT EXISTS checklist_id UUID;
 
 -- Add completed_by column if not exists
 ALTER TABLE checklist_completions ADD COLUMN IF NOT EXISTS completed_by TEXT;
@@ -163,15 +216,19 @@ END $$;
 -- Add foreign key constraints if they don't exist
 DO $$
 BEGIN
-  -- FK to checklist_templates (if table exists)
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'checklist_templates') THEN
+  -- Drop old FK constraints
+  ALTER TABLE checklist_completions DROP CONSTRAINT IF EXISTS checklist_completions_template_id_fkey;
+  ALTER TABLE checklist_completions DROP CONSTRAINT IF EXISTS checklist_completions_checklist_id_fkey;
+  
+  -- FK to checklists (checklist_id references the checklist)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'checklists') THEN
     IF NOT EXISTS (
       SELECT 1 FROM pg_constraint 
-      WHERE conname = 'checklist_completions_template_id_fkey'
+      WHERE conname = 'checklist_completions_checklist_id_fkey'
     ) THEN
       ALTER TABLE checklist_completions 
-        ADD CONSTRAINT checklist_completions_template_id_fkey 
-        FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE CASCADE;
+        ADD CONSTRAINT checklist_completions_checklist_id_fkey 
+        FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE;
     END IF;
   END IF;
   
@@ -189,7 +246,7 @@ BEGIN
 END $$;
 
 -- Add indexes for performance
-CREATE INDEX IF NOT EXISTS idx_completions_template ON checklist_completions(template_id);
+CREATE INDEX IF NOT EXISTS idx_completions_checklist ON checklist_completions(checklist_id);
 CREATE INDEX IF NOT EXISTS idx_completions_item ON checklist_completions(item_id);
 CREATE INDEX IF NOT EXISTS idx_completions_submitted ON checklist_completions(submitted_at);
 CREATE INDEX IF NOT EXISTS idx_completions_shift ON checklist_completions(shift_time);
@@ -202,7 +259,7 @@ CREATE INDEX IF NOT EXISTS idx_completions_deleted ON checklist_completions(dele
 
 CREATE TABLE IF NOT EXISTS checklist_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id UUID REFERENCES checklist_templates(id) ON DELETE CASCADE,
+  checklist_id UUID REFERENCES checklists(id) ON DELETE CASCADE,
   item_id UUID REFERENCES checklist_items(id) ON DELETE CASCADE,
   completion_id UUID REFERENCES checklist_completions(id) ON DELETE CASCADE,
   comment_text TEXT NOT NULL,
@@ -213,11 +270,11 @@ CREATE TABLE IF NOT EXISTS checklist_comments (
   completion_date DATE NOT NULL,
   shift_time TEXT NOT NULL,
   CONSTRAINT checklist_comments_target_check 
-    CHECK (template_id IS NOT NULL OR item_id IS NOT NULL OR completion_id IS NOT NULL)
+    CHECK (checklist_id IS NOT NULL OR item_id IS NOT NULL OR completion_id IS NOT NULL)
 );
 
 -- Add indexes
-CREATE INDEX IF NOT EXISTS idx_comments_template ON checklist_comments(template_id, completion_date);
+CREATE INDEX IF NOT EXISTS idx_comments_checklist ON checklist_comments(checklist_id, completion_date);
 CREATE INDEX IF NOT EXISTS idx_comments_item ON checklist_comments(item_id, completion_date);
 CREATE INDEX IF NOT EXISTS idx_comments_completion ON checklist_comments(completion_id);
 CREATE INDEX IF NOT EXISTS idx_comments_shift ON checklist_comments(completion_date, shift_time);
@@ -350,8 +407,8 @@ $$ LANGUAGE plpgsql;
 COMMENT ON TABLE checklist_comments IS 'Comments on checklist shifts, items, or specific completions';
 COMMENT ON TABLE checklist_shift_submissions IS 'Records of manual and automatic shift submissions';
 COMMENT ON TABLE storage_deletion_queue IS 'Queue for scheduled deletion of storage files (14-day retention)';
-COMMENT ON COLUMN checklist_templates.department IS 'Department: FOH, BOH, or Concierge';
-COMMENT ON COLUMN checklist_templates.position IS 'Specific position within department (e.g., Floater, Male Spa Attendant)';
+COMMENT ON COLUMN checklists.department IS 'Department: FOH, BOH, or Concierge';
+COMMENT ON COLUMN checklists.position IS 'Specific position within department (e.g., Floater, Male Spa Attendant)';
 COMMENT ON COLUMN checklist_completions.shift_time IS 'Shift time: AM or PM';
 COMMENT ON COLUMN checklist_completions.photo_url IS 'Public URL to uploaded photo in storage';
 COMMENT ON COLUMN checklist_completions.note_text IS 'Text note or comment for completion';

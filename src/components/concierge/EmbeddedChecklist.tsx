@@ -16,9 +16,9 @@ import { MobileChecklistItem, ChecklistItemData } from "@/components/checklists/
 import { saveCompletionOffline, getPendingCompletions, markCompletionSynced } from "@/lib/offlineDb";
 import { ChecklistComments } from "@/components/checklists/ChecklistComments";
 
-interface ChecklistTemplate {
+interface Checklist {
   id: string;
-  name: string;
+  title: string;
   department: string | null;
   position: string | null;
   shift_time: string;
@@ -28,7 +28,7 @@ interface ChecklistTemplate {
 interface ChecklistCompletion {
   id: string;
   item_id: string;
-  template_id: string;
+  checklist_id: string;
   completion_date: string;
   shift_time: string;
   completed_at: string | null;
@@ -127,13 +127,13 @@ export function EmbeddedChecklist() {
     },
   });
 
-  // Fetch the checklist template for current shift using new schema
+  // Fetch the checklist for current shift using new schema
   const { data: checklist, isLoading: checklistLoading } = useQuery({
-    queryKey: ["checklist-templates", "Concierge", detectedShift],
+    queryKey: ["checklists", "Concierge", detectedShift],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from('checklist_templates') as any)
-        .select('id, name, department, position, shift_time, is_active')
+      const { data, error } = await supabase
+        .from('checklists')
+        .select('id, title, department, position, shift_time, is_active')
         .eq('department', 'Concierge')
         .eq('shift_time', detectedShift)
         .is('position', null) // Concierge has no specific position
@@ -142,20 +142,20 @@ export function EmbeddedChecklist() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as ChecklistTemplate | null;
+      return data as Checklist | null;
     },
     enabled: !!detectedShift,
   });
 
-  // Fetch items for the checklist template
+  // Fetch items for the checklist
   const { data: items, isLoading: itemsLoading } = useQuery({
     queryKey: ["checklist-items", checklist?.id],
     queryFn: async () => {
       if (!checklist) return [];
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('checklist_items')
         .select('*')
-        .eq('template_id', checklist.id)
+        .eq('checklist_id', checklist.id)
         .order('sort_order', { ascending: true });
       
       if (error) throw error;
@@ -276,7 +276,7 @@ export function EmbeddedChecklist() {
 
       const completionData = {
         item_id: itemId,
-        template_id: checklist.id,
+        checklist_id: checklist.id,
         completion_date: today,
         shift_time: detectedShift,
         completed_by_id: userData.id,
@@ -367,7 +367,7 @@ export function EmbeddedChecklist() {
             .from('checklist_completions')
             .upsert({
               item_id: completion.item_id,
-              template_id: checklist.id,
+              checklist_id: checklist.id,
               completion_date: completion.completion_date,
               shift_time: completion.shift_time,
               completed_by_id: completion.completed_by_id,
@@ -516,7 +516,7 @@ export function EmbeddedChecklist() {
           </div>
         ) : !checklist ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
-            No checklist template for {detectedShift} shift
+            No checklist for {detectedShift} shift
           </p>
         ) : !items || items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
@@ -595,7 +595,7 @@ export function EmbeddedChecklist() {
         {checklist && !isLoading && (
           <div className="mt-6 pt-6 border-t px-4 pb-4">
             <ChecklistComments
-              templateId={checklist.id}
+              checklistId={checklist.id}
               completionDate={today}
               shiftTime={detectedShift}
             />

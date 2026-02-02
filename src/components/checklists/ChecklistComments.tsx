@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ChecklistCommentsProps {
-  templateId?: string;
+  checklistId?: string;
   itemId?: string;
   completionId?: string;
   completionDate: string;
@@ -17,7 +17,7 @@ interface ChecklistCommentsProps {
 
 interface Comment {
   id: string;
-  template_id: string | null;
+  checklist_id: string | null;
   item_id: string | null;
   completion_id: string | null;
   comment_text: string;
@@ -30,7 +30,7 @@ interface Comment {
 }
 
 export function ChecklistComments({
-  templateId,
+  checklistId,
   itemId,
   completionId,
   completionDate,
@@ -42,16 +42,16 @@ export function ChecklistComments({
   const [isPrivate, setIsPrivate] = useState(false);
 
   const { data: comments, isLoading } = useQuery({
-    queryKey: ['checklist-comments', templateId, itemId, completionId, completionDate, shiftTime],
+    queryKey: ['checklist-comments', checklistId, itemId, completionId, completionDate, shiftTime],
     queryFn: async () => {
-      let query = (supabase
-        .from('checklist_comments') as any)
+      let query = supabase
+        .from('checklist_comments')
         .select('*')
         .eq('completion_date', completionDate)
         .eq('shift_time', shiftTime)
         .order('created_at', { ascending: false });
 
-      if (templateId) query = query.eq('template_id', templateId);
+      if (checklistId) query = query.eq('checklist_id', checklistId);
       if (itemId) query = query.eq('item_id', itemId);
       if (completionId) query = query.eq('completion_id', completionId);
 
@@ -65,8 +65,8 @@ export function ChecklistComments({
     mutationFn: async () => {
       if (!user || !newComment.trim()) return;
 
-      const { error } = await (supabase.from('checklist_comments') as any).insert({
-        template_id: templateId || null,
+      const { error } = await supabase.from('checklist_comments').insert({
+        checklist_id: checklistId || null,
         item_id: itemId || null,
         completion_id: completionId || null,
         comment_text: newComment,

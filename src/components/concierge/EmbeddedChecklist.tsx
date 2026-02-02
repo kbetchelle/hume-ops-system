@@ -18,8 +18,8 @@ import { ChecklistComments } from "@/components/checklists/ChecklistComments";
 
 interface ChecklistTemplate {
   id: string;
-  title: string;
-  department: string;
+  name: string;
+  department: string | null;
   position: string | null;
   shift_time: string;
   is_active: boolean;
@@ -131,9 +131,9 @@ export function EmbeddedChecklist() {
   const { data: checklist, isLoading: checklistLoading } = useQuery({
     queryKey: ["checklist-templates", "Concierge", detectedShift],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('checklist_templates')
-        .select('id, title, department, position, shift_time, is_active')
+      const { data, error } = await (supabase
+        .from('checklist_templates') as any)
+        .select('id, name, department, position, shift_time, is_active')
         .eq('department', 'Concierge')
         .eq('shift_time', detectedShift)
         .is('position', null) // Concierge has no specific position
@@ -492,7 +492,7 @@ export function EmbeddedChecklist() {
             ) : (
               <Button
                 size="sm"
-                onClick={() => submitShiftMutation.mutate()}
+                onClick={() => submitShiftMutation.mutate(undefined)}
                 disabled={submitShiftMutation.isPending || !checklist || !isOnline}
                 className="h-7 text-xs"
               >

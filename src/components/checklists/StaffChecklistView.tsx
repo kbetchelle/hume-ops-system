@@ -131,7 +131,7 @@ function TodayChecklistCard({ checklist, userId, completions }: TodayChecklistCa
   const toggleCompletion = useToggleCompletion();
 
   const completedCount = items?.filter((item) =>
-    completions.some((c) => c.checklist_item_id === item.id)
+    completions.some((c) => c.item_id === item.id)
   ).length || 0;
 
   const totalCount = items?.length || 0;
@@ -174,7 +174,7 @@ function TodayChecklistCard({ checklist, userId, completions }: TodayChecklistCa
       <CardContent>
         <div className="space-y-3">
           {items?.map((item) => {
-            const isCompleted = completions.some((c) => c.checklist_item_id === item.id);
+            const isCompleted = completions.some((c) => c.item_id === item.id);
             return (
               <div
                 key={item.id}
@@ -274,7 +274,7 @@ function HistoryRow({ checklist, dates, completions }: HistoryRowProps) {
       {dates.map((date) => {
         const dayCompletions = completions.filter((c) => c.completion_date === date);
         const completedCount = items.filter((item) =>
-          dayCompletions.some((c) => c.checklist_item_id === item.id)
+          dayCompletions.some((c) => c.item_id === item.id)
         ).length;
 
         return (

@@ -24,6 +24,7 @@ export interface ChecklistItemData {
   is_high_priority?: boolean;
   required?: boolean;
   sort_order: number;
+  label_spanish?: string | null;
 }
 
 interface MobileChecklistItemProps {

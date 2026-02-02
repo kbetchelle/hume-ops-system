@@ -140,7 +140,7 @@ export function ChecklistCompletionViewer() {
 
 interface ChecklistCompletionCardProps {
   checklist: Checklist;
-  completions: { checklist_item_id: string; user_id: string }[];
+  completions: { item_id: string; completed_by_id: string }[];
   getUserName: (userId: string) => string;
   users: { user_id: string; roles: AppRole[] }[];
 }
@@ -198,7 +198,7 @@ function ChecklistCompletionCard({ checklist, completions, getUserName, users }:
                     <td className="py-3 pr-4">{item.task_description}</td>
                     {roleUsers.map((user) => {
                       const isCompleted = completions.some(
-                        (c) => c.checklist_item_id === item.id && c.user_id === user.user_id
+                        (c) => c.item_id === item.id && c.completed_by_id === user.user_id
                       );
                       return (
                         <td key={user.user_id} className="text-center py-3 px-2">

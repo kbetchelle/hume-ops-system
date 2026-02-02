@@ -100,7 +100,7 @@ function MembersHeader({ title }: { title: string }) {
       toast.error("Failed to sign out");
     } else {
       toast.success("Signed out");
-      navigate("/login");
+      navigate("/");
     }
   };
 

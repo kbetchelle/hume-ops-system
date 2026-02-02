@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
+import { selectFrom, insertInto, deleteFrom, eq } from "@/lib/dataApi";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -23,19 +23,20 @@ interface ChecklistTemplate {
 interface ChecklistItem {
   id: string;
   template_id: string;
-  item_text: string;
+  task_description: string | null;
   sort_order: number;
-  is_required: boolean;
+  required: boolean | null;
+  category: string | null;
+  time_hint: string | null;
+  is_high_priority: boolean | null;
 }
 
 interface ChecklistCompletion {
   id: string;
-  item_id: string;
-  template_id: string;
+  checklist_item_id: string;
+  user_id: string;
   completion_date: string;
-  completed_by_id: string;
   completed_at: string;
-  deleted_at: string | null;
 }
 
 export function EmbeddedChecklist() {
@@ -71,10 +72,10 @@ export function EmbeddedChecklist() {
 
   // Fetch items for the template
   const { data: items, isLoading: itemsLoading } = useQuery({
-    queryKey: ["checklist-template-items", template?.id],
+    queryKey: ["checklist-items", template?.id],
     queryFn: async () => {
       if (!template) return [];
-      const { data, error } = await selectFrom<ChecklistItem>("checklist_template_items", {
+      const { data, error } = await selectFrom<ChecklistItem>("checklist_items", {
         filters: [{ type: "eq", column: "template_id", value: template.id }],
         order: { column: "sort_order", ascending: true },
       });
@@ -84,30 +85,29 @@ export function EmbeddedChecklist() {
     enabled: !!template,
   });
 
-  // Fetch today's completions (excluding soft-deleted)
+  // Fetch today's completions
   const { data: completions, isLoading: completionsLoading } = useQuery({
-    queryKey: ["checklist-template-completions", template?.id, today],
+    queryKey: ["checklist-completions", template?.id, today],
     queryFn: async () => {
-      if (!template) return [];
+      if (!template || !userData?.id) return [];
       const { data, error } = await selectFrom<ChecklistCompletion>(
-        "checklist_template_completions",
+        "checklist_completions",
         {
           filters: [
-            { type: "eq", column: "template_id", value: template.id },
+            { type: "eq", column: "user_id", value: userData.id },
             { type: "eq", column: "completion_date", value: today },
-            { type: "is", column: "deleted_at", value: null },
           ],
         }
       );
       if (error) throw error;
       return data || [];
     },
-    enabled: !!template,
+    enabled: !!template && !!userData?.id,
   });
 
   // Set of completed item IDs for quick lookup
   const completedItemIds = useMemo(() => {
-    return new Set(completions?.map((c) => c.item_id) || []);
+    return new Set(completions?.map((c) => c.checklist_item_id) || []);
   }, [completions]);
 
   // Toggle completion mutation
@@ -116,27 +116,26 @@ export function EmbeddedChecklist() {
       if (!userData?.id || !template) throw new Error("Not authenticated or no template");
 
       if (isCompleted) {
-        // Soft delete: set deleted_at
-        await updateTable(
-          "checklist_template_completions",
-          { deleted_at: new Date().toISOString() },
+        // Delete completion
+        await deleteFrom(
+          "checklist_completions",
           [
-            eq("item_id", itemId),
+            eq("checklist_item_id", itemId),
+            eq("user_id", userData.id),
             eq("completion_date", today),
           ]
         );
       } else {
         // Insert new completion
-        await insertInto("checklist_template_completions", {
-          item_id: itemId,
-          template_id: template.id,
+        await insertInto("checklist_completions", {
+          checklist_item_id: itemId,
+          user_id: userData.id,
           completion_date: today,
-          completed_by_id: userData.id,
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checklist-template-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["checklist-completions"] });
     },
   });
 
@@ -216,9 +215,9 @@ export function EmbeddedChecklist() {
                     isChecked && "line-through text-muted-foreground"
                   )}
                 >
-                  {item.item_text}
+                  {item.task_description || "Untitled task"}
                 </span>
-                {item.is_required && !isChecked && (
+                {item.required && !isChecked && (
                   <span className="text-[10px] uppercase tracking-wider text-destructive">
                     Required
                   </span>

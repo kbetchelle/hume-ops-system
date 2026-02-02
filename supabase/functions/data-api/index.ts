@@ -53,8 +53,6 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   // Backfill tables
   'backfill_jobs': { management: ['select', 'insert', 'update', 'delete'] },
   'checklist_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
-  'checklist_template_items': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
-  'checklist_template_completions': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
 };
 
 function normalizeRole(role: string | undefined): string {

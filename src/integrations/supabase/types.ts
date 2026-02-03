@@ -2558,6 +2558,10 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_outdated: boolean | null
+          marked_outdated_at: string | null
+          marked_outdated_by: string | null
+          marked_outdated_by_name: string | null
           tags: string[] | null
           title: string
         }
@@ -2567,6 +2571,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_outdated?: boolean | null
+          marked_outdated_at?: string | null
+          marked_outdated_by?: string | null
+          marked_outdated_by_name?: string | null
           tags?: string[] | null
           title: string
         }
@@ -2576,6 +2584,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_outdated?: boolean | null
+          marked_outdated_at?: string | null
+          marked_outdated_by?: string | null
+          marked_outdated_by_name?: string | null
           tags?: string[] | null
           title?: string
         }
@@ -3482,6 +3494,44 @@ export type Database = {
           severity?: string | null
         }
         Relationships: []
+      }
+      template_outdated_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          marked_by_name: string
+          marked_by_user_id: string
+          read_at: string | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          marked_by_name: string
+          marked_by_user_id: string
+          read_at?: string | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          marked_by_name?: string
+          marked_by_user_id?: string
+          read_at?: string | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_outdated_notifications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "response_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       toast_staging: {
         Row: {

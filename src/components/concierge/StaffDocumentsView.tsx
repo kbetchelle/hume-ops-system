@@ -254,7 +254,7 @@ export function StaffDocumentsView() {
 
   if (loading) {
     return (
-      <Card className="rounded-none border">
+      <Card className="rounded-none border flex flex-col flex-1 min-h-0">
         <CardHeader className="pb-3">
           <Skeleton className="h-4 w-28" />
         </CardHeader>

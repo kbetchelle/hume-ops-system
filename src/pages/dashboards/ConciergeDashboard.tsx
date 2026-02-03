@@ -122,11 +122,11 @@ export default function ConciergeDashboard() {
         );
       case "documents":
         return (
-          <div className="p-6 md:p-8">
+          <div className="p-6 md:p-8 flex flex-col h-full">
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
               Documents
             </h2>
-            <div className="max-w-3xl">
+            <div className="flex-1 flex flex-col min-h-0">
               <StaffDocumentsView />
             </div>
           </div>

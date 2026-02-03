@@ -19,18 +19,6 @@ export interface SyncSchedule {
   updated_at: string;
 }
 
-export interface ApiEndpoint {
-  id: string;
-  api_name: string;
-  endpoint_type: string;
-  base_url: string;
-  endpoint_path: string;
-  max_date_range_days: number | null;
-  rate_limit_per_min: number | null;
-  is_active: boolean;
-  created_at: string;
-}
-
 // Fetch all sync schedules
 export function useSyncSchedules() {
   return useQuery({
@@ -45,22 +33,6 @@ export function useSyncSchedules() {
       return data as SyncSchedule[];
     },
     refetchInterval: 30000, // Refresh every 30 seconds
-  });
-}
-
-// Fetch API endpoints
-export function useApiEndpoints() {
-  return useQuery({
-    queryKey: ["apiEndpoints"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("api_endpoints")
-        .select("*")
-        .order("api_name", { ascending: true });
-
-      if (error) throw error;
-      return data as ApiEndpoint[];
-    },
   });
 }
 
@@ -137,56 +109,6 @@ export function useRunSync() {
       });
     },
   });
-}
-
-// Run all enabled syncs
-export function useRunAllSyncs() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("scheduled-sync-runner", {
-        body: { run_all: true },
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
-      toast({
-        title: "Syncs Completed",
-        description: `Ran ${data.syncsRun} syncs: ${data.successCount} succeeded, ${data.failedCount} failed.`,
-        variant: data.failedCount > 0 ? "destructive" : "default",
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to run all syncs:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to trigger all syncs.",
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-// Helper to format sync type display name
-// Now uses display_name from database, with fallback
-export function formatSyncType(syncType: string, displayName?: string): string {
-  if (displayName) return displayName;
-  
-  // Fallback for older code paths
-  const names: Record<string, string> = {
-    arketa_clients: "Arketa Clients",
-    arketa_classes: "Arketa Classes",
-    arketa_reservations: "Arketa Reservations",
-    arketa_payments: "Arketa Payments",
-    arketa_instructors: "Arketa Instructors",
-    sling_users: "Sling Users",
-    sling_shifts: "Sling Shifts",
-  };
-  return names[syncType] || syncType;
 }
 
 // Helper to get interval options

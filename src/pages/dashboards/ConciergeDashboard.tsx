@@ -17,6 +17,7 @@ import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
 import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
+import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklistUpdated";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");

@@ -422,6 +422,7 @@ function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
       female_spa_attendant: "/dashboard/spa",
       male_spa_attendant: "/dashboard/spa",
       floater: "/dashboard/floater",
+      cafe: "/dashboard/cafe",
     };
     navigate(paths[role]);
     toast.success(`Switched to ${getRoleLabel(role)} view`);
@@ -555,6 +556,13 @@ function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem 
+          onClick={() => setShowBugReport(true)}
+          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+        >
+          <Bug className="mr-2 h-3 w-3" />
+          Report a Bug
+        </DropdownMenuItem>
+        <DropdownMenuItem 
           onClick={handleSignOut} 
           className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
         >
@@ -563,6 +571,10 @@ function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    
+    <>
+      <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
+    </>
   );
 }
 

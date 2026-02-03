@@ -8,7 +8,6 @@ import { useToggleBoHCompletion } from '@/hooks/checklists/useBoHChecklists';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import SignatureCanvas from 'react-signature-canvas';
 
 interface BoHChecklistItemProps {
   item: any;
@@ -29,8 +28,7 @@ export function BoHChecklistItem({
   const { t } = useLanguage();
   const toggleCompletion = useToggleBoHCompletion();
   const [textValue, setTextValue] = useState(completion?.note_text || '');
-  const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [signatureText, setSignatureText] = useState(completion?.signature_data || '');
 
   const isCompleted = !!completion?.completed_at;
   const taskLabel = t(item.task_description, item.label_spanish);
@@ -76,10 +74,9 @@ export function BoHChecklistItem({
   };
 
   const handleSaveSignature = () => {
-    if (!sigCanvas) return;
-    const signatureData = sigCanvas.toDataURL();
-    handleToggle(undefined, undefined, signatureData);
-    setShowSignaturePad(false);
+    if (!signatureText.trim()) return;
+    handleToggle(undefined, undefined, signatureText);
+    setSignatureText('');
   };
 
   // Header type - just displays text
@@ -154,7 +151,7 @@ export function BoHChecklistItem({
     );
   }
 
-  // Signature type
+  // Signature type - text-based for now
   if (item.task_type === 'signature') {
     return (
       <div className="p-3 border rounded-lg space-y-2">
@@ -168,39 +165,25 @@ export function BoHChecklistItem({
         )}
         {completion?.signature_data ? (
           <div className="space-y-2">
-            <img src={completion.signature_data} alt="Signature" className="max-w-xs border rounded" />
+            <div className="p-3 border rounded bg-muted">
+              <p className="font-signature text-2xl">{completion.signature_data}</p>
+            </div>
             <Button size="sm" variant="outline" onClick={() => handleToggle()}>
               Clear Signature
             </Button>
           </div>
-        ) : showSignaturePad ? (
-          <div className="space-y-2">
-            <div className="border rounded bg-white">
-              <SignatureCanvas
-                ref={(ref) => setSigCanvas(ref)}
-                canvasProps={{
-                  width: 400,
-                  height: 200,
-                  className: 'signature-canvas',
-                }}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveSignature}>
-                Save Signature
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => sigCanvas?.clear()}>
-                Clear
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowSignaturePad(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
         ) : (
-          <Button size="sm" onClick={() => setShowSignaturePad(true)}>
-            Add Signature
-          </Button>
+          <div className="space-y-2">
+            <Input
+              value={signatureText}
+              onChange={(e) => setSignatureText(e.target.value)}
+              placeholder="Type your full name to sign..."
+              className="font-signature text-xl"
+            />
+            <Button size="sm" onClick={handleSaveSignature} disabled={!signatureText.trim()}>
+              Save Signature
+            </Button>
+          </div>
         )}
       </div>
     );

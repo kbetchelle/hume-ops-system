@@ -47,6 +47,7 @@ function RoleSwitcher() {
       trainer: "/dashboard/trainer",
       female_spa_attendant: "/dashboard/spa",
       male_spa_attendant: "/dashboard/spa",
+      cafe: "/dashboard/cafe",
       floater: "/dashboard/floater",
     };
     navigate(paths[role]);

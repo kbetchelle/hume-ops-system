@@ -22,7 +22,8 @@ interface BoHChecklistWithItems {
 
 export function BoHChecklistView() {
   const { user } = useAuth();
-  const { roles } = useUserRoles();
+  const { data: userRolesData } = useUserRoles(user?.id);
+  const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
   

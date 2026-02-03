@@ -6,7 +6,6 @@ import {
   Users,
   FileCode,
   Link,
-  BookOpen,
   Package,
   FolderOpen,
   HelpCircle,
@@ -35,7 +34,6 @@ export type ConciergeView =
   | "whos-working"
   | "templates"
   | "quick-links"
-  | "knowledge-base"
   | "lost-found"
   | "documents"
   | "policies-qa";
@@ -95,7 +93,6 @@ export function ConciergeSidebar({
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
         { id: "quick-links", label: "Quick Links", icon: Link },
-        { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen },
         { id: "lost-found", label: "Lost & Found", icon: Package },
       ],
     },

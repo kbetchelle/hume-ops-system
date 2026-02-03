@@ -458,16 +458,6 @@ export default function ApiSyncingPage() {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="manual-sync"
-                checked={manualSyncEnabled}
-                onCheckedChange={setManualSyncEnabled}
-              />
-              <Label htmlFor="manual-sync" className="text-sm">
-                Manual Sync
-              </Label>
-            </div>
             <Button
               variant="outline"
               size="sm"
@@ -516,16 +506,28 @@ export default function ApiSyncingPage() {
 
         {/* Tabs for Overview and History */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="overview" className="gap-2">
-              <Clock className="h-4 w-4" />
-              API Sync Overview
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Sync Log History
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between">
+            <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsTrigger value="overview" className="gap-2">
+                <Clock className="h-4 w-4" />
+                API Sync Overview
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Sync Log History
+              </TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="manual-sync"
+                checked={manualSyncEnabled}
+                onCheckedChange={setManualSyncEnabled}
+              />
+              <Label htmlFor="manual-sync" className="text-sm">
+                Manual Sync
+              </Label>
+            </div>
+          </div>
 
           <TabsContent value="overview">
             <Card className="border border-border rounded-none">

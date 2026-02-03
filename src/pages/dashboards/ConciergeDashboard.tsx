@@ -36,9 +36,6 @@ export default function ConciergeDashboard() {
               <ClassScheduleView />
               <ShiftEventsMiniCalendar />
             </div>
-            <div className="space-y-4">
-              <StaffSchedulePanel />
-            </div>
           </div>
         );
       case "whos-working":

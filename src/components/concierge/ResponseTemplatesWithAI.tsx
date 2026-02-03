@@ -497,7 +497,7 @@ export function ResponseTemplatesWithAI() {
   const { user } = useAuth();
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   
-  // Any authenticated user can edit templates
+  // Any authenticated user can edit templates, reorder, and manage categories
   const canEdit = !!user;
   // Only admins/managers can delete or toggle active status
   const isAdminOrManager = activeRole === "admin" || activeRole === "manager";
@@ -977,7 +977,7 @@ export function ResponseTemplatesWithAI() {
           </CardTitle>
           {canEdit && (
             <div className="flex items-center gap-2">
-              {editMode && isAdminOrManager && (
+              {editMode && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -998,7 +998,7 @@ export function ResponseTemplatesWithAI() {
                   Template
                 </Button>
               )}
-              {editMode && isAdminOrManager && (
+              {editMode && (
                 reorderMode ? (
                   <Button
                     size="sm"
@@ -1080,7 +1080,7 @@ export function ResponseTemplatesWithAI() {
                   <p className="text-xs text-muted-foreground text-center py-8">
                     {canEdit && editMode ? "No templates yet. Click Add to create one." : "No templates found"}
                   </p>
-                ) : editMode && isAdminOrManager ? (
+                ) : editMode ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}

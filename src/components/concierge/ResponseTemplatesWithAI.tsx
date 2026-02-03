@@ -573,9 +573,10 @@ export function ResponseTemplatesWithAI() {
                                   </div>
                                 )}
                                 
-                                <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
-                                  {template.content}
-                                </p>
+                                <div 
+                                  className="text-xs text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+                                  dangerouslySetInnerHTML={{ __html: template.content }}
+                                />
                               </div>
                             ))}
                           </div>
@@ -629,9 +630,10 @@ export function ResponseTemplatesWithAI() {
                       )}
                     </Button>
                   </div>
-                  <p className="text-xs mt-3 whitespace-pre-wrap border-t pt-3">
-                    {suggestedTemplate.content}
-                  </p>
+                  <div 
+                    className="text-xs mt-3 border-t pt-3 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+                    dangerouslySetInnerHTML={{ __html: suggestedTemplate.content }}
+                  />
                 </div>
               )}
             </TabsContent>

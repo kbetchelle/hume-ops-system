@@ -14,6 +14,7 @@ export const DEPARTMENT_GROUPS = {
   floaters: { label: "All Floaters", roles: ["floater"] },
   trainers: { label: "All Trainers", roles: ["trainer"] },
   management: { label: "Management", roles: ["manager", "admin"] },
+  cafe: { label: "All Cafe", roles: ["cafe"] },
 } as const;
 
 export type DepartmentKey = keyof typeof DEPARTMENT_GROUPS;

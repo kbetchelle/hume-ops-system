@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -8,43 +9,46 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  useChecklists,
-  useChecklistItems,
-  useCompletionsForDate,
-  type Checklist,
-} from "@/hooks/useChecklists";
+import { supabase } from "@/integrations/supabase/client";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-const CHECKLIST_ROLES: AppRole[] = ["concierge", "female_spa_attendant", "male_spa_attendant", "floater"];
-
-function getRoleLabel(role: AppRole): string {
-  switch (role) {
-    case "concierge": return "Concierge";
-    case "female_spa_attendant": return "Female Spa Attendant";
-    case "male_spa_attendant": return "Male Spa Attendant";
-    case "floater": return "Floater";
-    default: return role;
-  }
-}
+type RoleType = 'concierge' | 'boh' | 'cafe';
 
 export function ChecklistCompletionViewer() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedRole, setSelectedRole] = useState<AppRole | "all">("all");
-  const [selectedChecklist, setSelectedChecklist] = useState<string | "all">("all");
+  const [selectedRole, setSelectedRole] = useState<RoleType>('concierge');
+  const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>('AM');
 
   const dateString = format(selectedDate, "yyyy-MM-dd");
-  const { data: checklists } = useChecklists();
-  const { data: completions, isLoading: completionsLoading } = useCompletionsForDate(dateString);
   const { data: users } = useAdminUsers();
 
-  // Filter checklists by role
-  const filteredChecklists = checklists?.filter(
-    (c) => selectedRole === "all" || c.role === selectedRole
-  );
+  // Query checklists based on selected role
+  const { data: checklists } = useQuery({
+    queryKey: [`${selectedRole}-checklists`],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(`${selectedRole}_checklists`)
+        .select('*')
+        .eq('is_active', true)
+        .order('title');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Query completions based on selected role
+  const { data: completions, isLoading: completionsLoading } = useQuery({
+    queryKey: [`${selectedRole}-completions`, dateString, shiftTime],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(`${selectedRole}_completions`)
+        .select('*')
+        .eq('completion_date', dateString)
+        .eq('shift_time', shiftTime);
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Get user info by id
   const getUserName = (userId: string): string => {
@@ -80,55 +84,49 @@ export function ChecklistCompletionViewer() {
           </PopoverContent>
         </Popover>
 
-        <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole | "all")}>
+        <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as RoleType)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            {CHECKLIST_ROLES.map((role) => (
-              <SelectItem key={role} value={role}>
-                {getRoleLabel(role)}
-              </SelectItem>
-            ))}
+            <SelectItem value="concierge">Concierge</SelectItem>
+            <SelectItem value="boh">Back of House</SelectItem>
+            <SelectItem value="cafe">Cafe</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={selectedChecklist} onValueChange={setSelectedChecklist}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by checklist" />
+        <Select value={shiftTime} onValueChange={(v) => setShiftTime(v as 'AM' | 'PM')}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Checklists</SelectItem>
-            {filteredChecklists?.map((checklist) => (
-              <SelectItem key={checklist.id} value={checklist.id}>
-                {checklist.title}
-              </SelectItem>
-            ))}
+            <SelectItem value="AM">AM Shift</SelectItem>
+            <SelectItem value="PM">PM Shift</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Completion Grid */}
+      {/* Completion Summary */}
       {completionsLoading ? (
         <div className="text-sm text-muted-foreground">Loading completions...</div>
       ) : (
         <div className="space-y-4">
-          {filteredChecklists?.filter(
-            (c) => selectedChecklist === "all" || c.id === selectedChecklist
-          ).map((checklist) => (
-            <ChecklistCompletionCard
+          {checklists?.map((checklist) => (
+            <RoleChecklistCompletionCard
               key={checklist.id}
               checklist={checklist}
               completions={completions || []}
+              dateString={dateString}
+              shiftTime={shiftTime}
+              roleType={selectedRole}
               getUserName={getUserName}
               users={users || []}
             />
           ))}
-          {(!filteredChecklists || filteredChecklists.length === 0) && (
+          {(!checklists || checklists.length === 0) && (
             <Card className="border border-border">
               <CardContent className="py-12 text-center">
-                <p className="text-sm text-muted-foreground">No checklists found for the selected filters.</p>
+                <p className="text-sm text-muted-foreground">No checklists found for the selected role.</p>
               </CardContent>
             </Card>
           )}
@@ -138,18 +136,52 @@ export function ChecklistCompletionViewer() {
   );
 }
 
-interface ChecklistCompletionCardProps {
-  checklist: Checklist;
-  completions: { item_id: string; completed_by_id: string }[];
+interface RoleChecklistCompletionCardProps {
+  checklist: any;
+  completions: any[];
+  dateString: string;
+  shiftTime: string;
+  roleType: RoleType;
   getUserName: (userId: string) => string;
-  users: { user_id: string; roles: AppRole[] }[];
+  users: any[];
 }
 
-function ChecklistCompletionCard({ checklist, completions, getUserName, users }: ChecklistCompletionCardProps) {
-  const { data: items } = useChecklistItems(checklist.id);
+function RoleChecklistCompletionCard({ 
+  checklist, 
+  completions, 
+  dateString, 
+  shiftTime, 
+  roleType,
+  getUserName,
+  users,
+}: RoleChecklistCompletionCardProps) {
+  // Query items for this checklist
+  const { data: items } = useQuery({
+    queryKey: [`${roleType}-checklist-items`, checklist.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(`${roleType}_checklist_items`)
+        .select('*')
+        .eq('checklist_id', checklist.id)
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  // Get users who have this role
-  const roleUsers = users.filter((u) => u.roles?.includes(checklist.role));
+  // Get users with relevant roles
+  const roleUsers = users.filter((u) => {
+    if (roleType === 'concierge') {
+      return u.roles?.includes('concierge');
+    } else if (roleType === 'boh') {
+      return u.roles?.some((r: string) => 
+        ['floater', 'male_spa_attendant', 'female_spa_attendant'].includes(r)
+      );
+    } else if (roleType === 'cafe') {
+      return u.roles?.includes('cafe');
+    }
+    return false;
+  });
 
   if (!items || items.length === 0) {
     return null;
@@ -161,7 +193,7 @@ function ChecklistCompletionCard({ checklist, completions, getUserName, users }:
         <CardTitle className="flex items-center gap-2">
           {checklist.title}
           <Badge variant="outline" className="ml-2">
-            {getRoleLabel(checklist.role)}
+            {roleType === 'boh' ? 'Back of House' : roleType.charAt(0).toUpperCase() + roleType.slice(1)}
           </Badge>
         </CardTitle>
         {checklist.description && (

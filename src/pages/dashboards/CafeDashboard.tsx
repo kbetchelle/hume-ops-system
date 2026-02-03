@@ -1,0 +1,34 @@
+import { useNavigate } from "react-router-dom";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageSquare } from "lucide-react";
+import { CafeChecklistView } from "@/components/checklists/cafe/CafeChecklistView";
+
+export default function CafeDashboard() {
+  const navigate = useNavigate();
+  
+  return (
+    <DashboardLayout title="Cafe Dashboard">
+      <div className="space-y-6">
+        {/* Today's Checklist */}
+        <CafeChecklistView />
+
+        {/* Communications Card */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card 
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => navigate("/dashboard/communications")}
+          >
+            <CardHeader>
+              <MessageSquare className="h-8 w-8 mb-2 text-primary" />
+              <CardTitle>Communications</CardTitle>
+              <CardDescription>
+                View announcements and updates
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}

@@ -25,6 +25,7 @@ import ConciergeDashboard from "./pages/dashboards/ConciergeDashboard";
 import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
 import SpaDashboard from "./pages/dashboards/SpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
+import CafeDashboard from "./pages/dashboards/CafeDashboard";
 import MembersPage from "./pages/dashboards/MembersPage";
 
 // Member sub-pages
@@ -144,6 +145,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "floater"]}>
                   <FloaterDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/cafe"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "cafe"]}>
+                  <CafeDashboard />
                 </ProtectedRoute>
               }
             />

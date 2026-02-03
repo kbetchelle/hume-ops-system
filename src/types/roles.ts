@@ -6,7 +6,8 @@ export type AppRole =
   | 'trainer' 
   | 'female_spa_attendant' 
   | 'male_spa_attendant' 
-  | 'floater';
+  | 'floater'
+  | 'cafe';
 
 export interface RoleInfo {
   value: AppRole;
@@ -57,6 +58,12 @@ export const ROLES: RoleInfo[] = [
     label: 'Floater',
     description: 'Cross-department support',
     icon: '🔄',
+  },
+  {
+    value: 'cafe',
+    label: 'Cafe',
+    description: 'Cafe operations and service',
+    icon: '☕',
   },
 ];
 

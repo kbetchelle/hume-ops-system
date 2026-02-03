@@ -6,7 +6,7 @@ import { ConciergeBottomNav } from "@/components/concierge/ConciergeBottomNav";
 import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
-import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
+import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
 import { ConciergeShiftReport } from "@/components/concierge/ConciergeShiftReport";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
@@ -188,7 +188,7 @@ export default function ConciergeDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
             <div className="space-y-4">
               <ShiftEventsMiniCalendar />
-              <EmbeddedChecklist />
+              <ConciergeChecklistView />
             </div>
             <div>
               <WhosWorkingView />

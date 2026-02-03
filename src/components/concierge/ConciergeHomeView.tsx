@@ -2,7 +2,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { WhosWorkingView } from "./WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "./ShiftEventsMiniCalendar";
-import { EmbeddedChecklist } from "./EmbeddedChecklist";
+import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
 import type { ConciergeView } from "./ConciergeSidebar";
 
 interface ConciergeHomeViewProps {
@@ -93,7 +93,7 @@ export function ConciergeHomeView({ onNavigate }: ConciergeHomeViewProps) {
 
         {/* Sidebar Widgets - 1 column on large screens */}
         <div className="space-y-6">
-          <EmbeddedChecklist />
+          <ConciergeChecklistView />
           <ShiftEventsMiniCalendar />
           <WhosWorkingView />
         </div>

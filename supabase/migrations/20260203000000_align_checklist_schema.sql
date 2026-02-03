@@ -16,13 +16,13 @@ ALTER TABLE checklists ADD COLUMN IF NOT EXISTS position TEXT;
 UPDATE checklists SET department = 
   CASE 
     WHEN role IN ('concierge') THEN 'Concierge'
-    WHEN role IN ('floater') THEN 'FOH'
-    WHEN role IN ('male_spa_attendant', 'female_spa_attendant') THEN 'BOH'
+    WHEN role IN ('floater', 'male_spa_attendant', 'female_spa_attendant') THEN 'BOH'
+    WHEN role IN ('cafe') THEN 'Cafe'
     ELSE 'FOH'
   END
 WHERE department IS NULL;
 
--- Set position for specific roles
+-- Set position for specific roles within BOH
 UPDATE checklists SET position = 
   CASE 
     WHEN role = 'male_spa_attendant' THEN 'Male Spa Attendant'
@@ -46,16 +46,36 @@ END $$;
 -- Drop old constraints if they exist
 ALTER TABLE checklists DROP CONSTRAINT IF EXISTS checklist_templates_role_shift_type_key;
 ALTER TABLE checklists DROP CONSTRAINT IF EXISTS checklists_role_shift_type_key;
+ALTER TABLE checklists DROP CONSTRAINT IF EXISTS checklists_dept_shift_pos_key;
 
--- Add new unique constraint
+-- Remove duplicate checklists before adding unique constraint
+-- Keep the oldest checklist (earliest created_at) for each unique combination
+DO $$
+DECLARE
+  duplicate_count INTEGER;
+BEGIN
+  -- Delete duplicates, keeping only the row with the minimum id for each combination
+  DELETE FROM checklists a
+  USING checklists b
+  WHERE a.id > b.id
+    AND COALESCE(a.department, '') = COALESCE(b.department, '')
+    AND COALESCE(a.shift_time, '') = COALESCE(b.shift_time, '')
+    AND COALESCE(a.position, '') = COALESCE(b.position, '')
+    AND COALESCE(a.is_weekend, false) = COALESCE(b.is_weekend, false);
+  
+  GET DIAGNOSTICS duplicate_count = ROW_COUNT;
+  RAISE NOTICE 'Removed % duplicate checklist(s)', duplicate_count;
+END $$;
+
+-- Add new unique constraint (includes is_weekend to distinguish weekday/weekend checklists)
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint 
-    WHERE conname = 'checklists_dept_shift_pos_key'
+    WHERE conname = 'checklists_dept_shift_pos_weekend_key'
   ) THEN
-    ALTER TABLE checklists ADD CONSTRAINT checklists_dept_shift_pos_key 
-      UNIQUE(department, shift_time, position);
+    ALTER TABLE checklists ADD CONSTRAINT checklists_dept_shift_pos_weekend_key 
+      UNIQUE(department, shift_time, position, is_weekend);
   END IF;
 END $$;
 

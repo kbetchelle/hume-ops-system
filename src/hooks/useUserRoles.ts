@@ -104,6 +104,7 @@ export function getPrimaryRole(roles: UserRole[]): AppRole | null {
     'female_spa_attendant',
     'male_spa_attendant',
     'floater',
+    'cafe',
   ];
   
   for (const role of priority) {
@@ -124,6 +125,7 @@ export function getRoleDashboardPath(role: AppRole): string {
     female_spa_attendant: '/dashboard/my-checklists',
     male_spa_attendant: '/dashboard/my-checklists',
     floater: '/dashboard/my-checklists',
+    cafe: '/dashboard/cafe',
   };
   
   return paths[role];

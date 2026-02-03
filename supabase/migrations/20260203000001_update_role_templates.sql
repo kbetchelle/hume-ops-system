@@ -12,13 +12,13 @@ SET
 WHERE role = 'concierge'
   AND (department IS NULL OR department != 'Concierge');
 
--- Floater (FOH department, Floater position)
+-- Floater (BOH department, Floater position)
 UPDATE checklists 
 SET 
-  department = 'FOH', 
+  department = 'BOH', 
   position = 'Floater'
 WHERE role = 'floater'
-  AND (department IS NULL OR department != 'FOH' OR position != 'Floater');
+  AND (department IS NULL OR department != 'BOH' OR position != 'Floater');
 
 -- Male Spa Attendant (BOH department, specific position)
 UPDATE checklists 
@@ -36,6 +36,14 @@ SET
 WHERE role = 'female_spa_attendant'
   AND (department IS NULL OR department != 'BOH' OR position != 'Female Spa Attendant');
 
+-- Cafe (Cafe department, no specific position)
+UPDATE checklists 
+SET 
+  department = 'Cafe', 
+  position = NULL
+WHERE role = 'cafe'
+  AND (department IS NULL OR department != 'Cafe');
+
 -- ============================================================================
 -- Verify Migration
 -- ============================================================================
@@ -47,17 +55,20 @@ DECLARE
   floater_count INTEGER;
   male_spa_count INTEGER;
   female_spa_count INTEGER;
+  cafe_count INTEGER;
 BEGIN
   SELECT COUNT(*) INTO concierge_count FROM checklists WHERE department = 'Concierge';
-  SELECT COUNT(*) INTO floater_count FROM checklists WHERE department = 'FOH' AND position = 'Floater';
+  SELECT COUNT(*) INTO floater_count FROM checklists WHERE department = 'BOH' AND position = 'Floater';
   SELECT COUNT(*) INTO male_spa_count FROM checklists WHERE department = 'BOH' AND position = 'Male Spa Attendant';
   SELECT COUNT(*) INTO female_spa_count FROM checklists WHERE department = 'BOH' AND position = 'Female Spa Attendant';
+  SELECT COUNT(*) INTO cafe_count FROM checklists WHERE department = 'Cafe';
   
   RAISE NOTICE 'Checklist Migration Summary:';
   RAISE NOTICE '  Concierge checklists: %', concierge_count;
-  RAISE NOTICE '  Floater checklists: %', floater_count;
-  RAISE NOTICE '  Male Spa Attendant checklists: %', male_spa_count;
-  RAISE NOTICE '  Female Spa Attendant checklists: %', female_spa_count;
+  RAISE NOTICE '  Floater checklists (BOH): %', floater_count;
+  RAISE NOTICE '  Male Spa Attendant checklists (BOH): %', male_spa_count;
+  RAISE NOTICE '  Female Spa Attendant checklists (BOH): %', female_spa_count;
+  RAISE NOTICE '  Cafe checklists: %', cafe_count;
 END $$;
 
 -- ============================================================================

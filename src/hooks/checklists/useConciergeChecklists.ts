@@ -184,7 +184,7 @@ export function useCreateConciergeChecklist() {
     mutationFn: async (checklist: Partial<ConciergeChecklist>) => {
       const { data, error } = await supabase
         .from('concierge_checklists')
-        .insert(checklist)
+        .insert([checklist] as any)
         .select()
         .single();
       if (error) throw error;
@@ -237,10 +237,10 @@ export function useCreateConciergeItem() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (item: Partial<ConciergeChecklistItem>) => {
+    mutationFn: async (item: Partial<ConciergeChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('concierge_checklist_items')
-        .insert(item)
+        .insert([item] as any)
         .select()
         .single();
       if (error) throw error;

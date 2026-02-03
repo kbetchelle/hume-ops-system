@@ -184,7 +184,7 @@ export function useCreateCafeChecklist() {
     mutationFn: async (checklist: Partial<CafeChecklist>) => {
       const { data, error } = await supabase
         .from('cafe_checklists')
-        .insert(checklist)
+        .insert([checklist] as any)
         .select()
         .single();
       if (error) throw error;
@@ -237,10 +237,10 @@ export function useCreateCafeItem() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (item: Partial<CafeChecklistItem>) => {
+    mutationFn: async (item: Partial<CafeChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('cafe_checklist_items')
-        .insert(item)
+        .insert([item] as any)
         .select()
         .single();
       if (error) throw error;

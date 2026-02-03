@@ -1,12 +1,14 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useAuthContext } from "@/features/auth/AuthProvider";
 import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
 import { BoHChecklistView } from "@/components/checklists/boh/BoHChecklistView";
 import { CafeChecklistView } from "@/components/checklists/cafe/CafeChecklistView";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function MyChecklistsPage() {
-  const { roles } = useUserRoles();
+  const { user } = useAuthContext();
+  const { data: roles = [] } = useUserRoles(user?.id);
   
   // Determine which view to show based on user role
   const isConcierge = roles.some(r => r.role === 'concierge');

@@ -69,7 +69,7 @@ export function CafeChecklistView() {
   const totalCount = checklist?.cafe_checklist_items?.length || 0;
 
   // Group items by category
-  const groupedItems = checklist?.cafe_checklist_items?.reduce((acc, item) => {
+  const groupedItems = checklist?.cafe_checklist_items?.reduce((acc: Record<string, any[]>, item: any) => {
     const category = item.category || 'Uncategorized';
     if (!acc[category]) acc[category] = [];
     acc[category].push(item);
@@ -140,9 +140,9 @@ export function CafeChecklistView() {
           {groupedItems && Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} className="space-y-2">
               <h3 className="font-semibold text-lg border-b pb-2">{category}</h3>
-              {items
-                .sort((a, b) => a.sort_order - b.sort_order)
-                .map((item) => (
+              {(items as any[])
+                .sort((a: any, b: any) => a.sort_order - b.sort_order)
+                .map((item: any) => (
                   <CafeChecklistItem
                     key={item.id}
                     item={item}

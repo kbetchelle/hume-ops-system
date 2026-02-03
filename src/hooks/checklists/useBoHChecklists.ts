@@ -187,7 +187,7 @@ export function useCreateBoHChecklist() {
     mutationFn: async (checklist: Partial<BoHChecklist>) => {
       const { data, error } = await supabase
         .from('boh_checklists')
-        .insert(checklist)
+        .insert([checklist] as any)
         .select()
         .single();
       if (error) throw error;
@@ -240,10 +240,10 @@ export function useCreateBoHItem() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (item: Partial<BoHChecklistItem>) => {
+    mutationFn: async (item: Partial<BoHChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('boh_checklist_items')
-        .insert(item)
+        .insert([item] as any)
         .select()
         .single();
       if (error) throw error;

@@ -236,7 +236,7 @@ function TemplateList({
           )}
           
           <div 
-            className="text-xs text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+            className="text-sm text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
             dangerouslySetInnerHTML={{ __html: template.content }}
           />
         </div>

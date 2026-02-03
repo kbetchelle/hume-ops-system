@@ -22,9 +22,9 @@ export function ConciergeHeader() {
 
   return (
     <header className="h-14 border-b border-border bg-background flex items-center justify-between px-4 md:px-6">
-      {/* Logo */}
+      {/* Logo - 75% larger (h-6 -> h-10.5, using h-11 for Tailwind) */}
       <div className="flex items-center gap-4">
-        <img src={humeLogo} alt="HUME" className="h-6" />
+        <img src={humeLogo} alt="HUME" className="h-11" />
       </div>
 
       {/* Right side actions */}

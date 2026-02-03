@@ -713,6 +713,7 @@ export type Database = {
       }
       arketa_reservations: {
         Row: {
+          booking_id: string
           checked_in: boolean | null
           checked_in_at: string | null
           class_id: string
@@ -720,13 +721,13 @@ export type Database = {
           client_id: string | null
           client_name: string | null
           created_at: string | null
-          external_id: string
           id: string
           raw_data: Json | null
           status: string | null
           synced_at: string | null
         }
         Insert: {
+          booking_id: string
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_id: string
@@ -734,13 +735,13 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
-          external_id: string
           id?: string
           raw_data?: Json | null
           status?: string | null
           synced_at?: string | null
         }
         Update: {
+          booking_id?: string
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_id?: string
@@ -748,7 +749,6 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
-          external_id?: string
           id?: string
           raw_data?: Json | null
           status?: string | null

@@ -45,7 +45,6 @@ import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
   arketa_clients: { stagingTable: "arketa_clients_staging", targetTable: "arketa_clients" },
-  arketa_classes: { stagingTable: "arketa_classes_staging", targetTable: "arketa_classes" },
   arketa_reservations: { stagingTable: "arketa_reservations_staging", targetTable: "arketa_reservations" },
   arketa_payments: { stagingTable: "arketa_payments_staging", targetTable: "arketa_payments" },
   arketa_instructors: { stagingTable: "arketa_instructors_staging", targetTable: "arketa_instructors" },

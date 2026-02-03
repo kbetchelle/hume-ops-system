@@ -512,13 +512,13 @@ export function ResponseTemplatesWithAI() {
                                           >
                                             <AlertTriangle className="h-3 w-3" />
                                           </Button>
-                                        ) : isAdminOrManager && (
+                                        ) : (
                                           <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => handleClearOutdated(template)}
                                             className="h-8 rounded-none text-green-600"
-                                            title="Clear outdated status"
+                                            title="Undo outdated status"
                                           >
                                             <Check className="h-3 w-3" />
                                           </Button>

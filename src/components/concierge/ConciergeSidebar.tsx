@@ -93,7 +93,6 @@ export function ConciergeSidebar({
     {
       title: "Resources",
       items: [
-        { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "templates", label: "Response Templates", icon: FileCode },
         { id: "quick-links", label: "Quick Links", icon: Link },
         { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen },
@@ -103,6 +102,7 @@ export function ConciergeSidebar({
     {
       title: "Reference",
       items: [
+        { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "documents", label: "Documents", icon: FolderOpen },
         { id: "policies-qa", label: "Policies & Q&A", icon: HelpCircle },
       ],

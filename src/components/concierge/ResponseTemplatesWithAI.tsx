@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import {
   Select,
   SelectContent,
@@ -945,11 +946,11 @@ export function ResponseTemplatesWithAI() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Content *</Label>
-              <Textarea
+              <RichTextEditor
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                onChange={(content) => setFormData({ ...formData, content })}
                 placeholder="Template content..."
-                className="rounded-none text-xs min-h-[200px]"
+                minHeight="200px"
               />
             </div>
             <div className="space-y-2">

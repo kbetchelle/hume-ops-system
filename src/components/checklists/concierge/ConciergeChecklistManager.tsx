@@ -144,7 +144,7 @@ export function ConciergeChecklistManager() {
 
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
-          <Card key={checklist.id} className={!checklist.is_active ? 'opacity-60' : ''}>
+          <Card key={checklist.id} className={`border ${!checklist.is_active ? 'opacity-60' : ''}`}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex-1">

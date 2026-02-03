@@ -610,11 +610,11 @@ function DashboardHeader({ title }: { title: string }) {
           {title}
         </h1>
 
-        {/* Logo aligned to the right - 75% larger (h-7 -> h-12) */}
+        {/* Logo aligned to the right - 75% larger with vertical padding */}
         <img 
           src={humeLogo} 
           alt="Hume" 
-          className="h-12 w-auto cursor-pointer hover:opacity-70 transition-opacity"
+          className="h-12 w-auto cursor-pointer hover:opacity-70 transition-opacity py-[15px]"
           onClick={() => navigate("/dashboard")}
         />
       </div>

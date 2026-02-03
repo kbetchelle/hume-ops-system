@@ -605,7 +605,7 @@ function DashboardHeader({ title }: { title: string }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <div className="flex h-14 items-center justify-between px-4 md:px-6">
+      <div className="flex h-20 items-center justify-between px-4 md:px-6">
         <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
           {title}
         </h1>

@@ -14,10 +14,7 @@ interface ActiveRoleContextType {
 
 const ActiveRoleContext = createContext<ActiveRoleContextType | undefined>(undefined);
 
-export function ActiveRoleProvider({ children, ...props }: { children: ReactNode }) {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useActiveRole.tsx:17',message:'ActiveRoleProvider render with props',data:{hasRef:!!props.ref,propsKeys:Object.keys(props)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
+export function ActiveRoleProvider({ children }: { children: ReactNode }) {
   // Use useAuth directly instead of useAuthContext to avoid context dependency issues during HMR
   const { user } = useAuth();
   const { data: userRoles, isLoading } = useUserRoles(user?.id);

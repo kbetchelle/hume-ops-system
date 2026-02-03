@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -480,6 +481,7 @@ function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const { user, signOut } = useAuthContext();
   const { data: profile } = useUserProfile(user?.id);
+  const [showBugReport, setShowBugReport] = useState(false);
 
   const handleSignOut = async () => {
     const { error } = await signOut();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,13 +29,30 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle } from "lucide-react";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical } from "lucide-react";
 import { toast } from "sonner";
-import { selectFrom, insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ResponseTemplate {
   id: string;
@@ -48,6 +65,10 @@ interface ResponseTemplate {
   marked_outdated_by: string | null;
   marked_outdated_by_name: string | null;
   marked_outdated_at: string | null;
+  category_order: number;
+  updated_at: string | null;
+  updated_by: string | null;
+  updated_by_name: string | null;
   created_at: string;
 }
 
@@ -67,6 +88,232 @@ const CATEGORIES = [
   "Non-Member Inquiries",
   "Tours",
 ];
+
+// TemplateList component for rendering templates within a category
+interface TemplateListProps {
+  templates: ResponseTemplate[];
+  editMode: boolean;
+  canEdit: boolean;
+  isAdminOrManager: boolean;
+  copiedId: string | null;
+  handleCopy: (template: ResponseTemplate) => void;
+  handleOpenDialog: (template: ResponseTemplate) => void;
+  handleMarkOutdated: (template: ResponseTemplate) => void;
+  handleClearOutdated: (template: ResponseTemplate) => void;
+  handleToggleActive: (template: ResponseTemplate) => void;
+  handleDelete: (template: ResponseTemplate) => void;
+}
+
+function TemplateList({
+  templates,
+  editMode,
+  canEdit,
+  isAdminOrManager,
+  copiedId,
+  handleCopy,
+  handleOpenDialog,
+  handleMarkOutdated,
+  handleClearOutdated,
+  handleToggleActive,
+  handleDelete,
+}: TemplateListProps) {
+  return (
+    <div className="space-y-3 pt-2">
+      {templates.map((template) => (
+        <div
+          key={template.id}
+          className={`border p-3 transition-colors ${
+            template.is_outdated 
+              ? "border-warning bg-warning/10" 
+              : template.is_active 
+                ? "hover:bg-muted/50" 
+                : "opacity-50 bg-muted/20"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs font-medium">{template.title}</h4>
+                {!template.is_active && (
+                  <Badge variant="secondary" className="rounded-none text-xs">
+                    Inactive
+                  </Badge>
+                )}
+                {template.is_outdated && (
+                  <Badge variant="outline" className="rounded-none text-xs border-warning text-warning">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Outdated
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {template.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="text-[10px] rounded-none"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {editMode && canEdit ? (
+                <>
+                  {!template.is_outdated ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMarkOutdated(template)}
+                      className="h-8 rounded-none text-warning"
+                      title="Mark as outdated"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleClearOutdated(template)}
+                      className="h-8 rounded-none text-primary"
+                      title="Undo outdated status"
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {isAdminOrManager && (
+                    <Switch
+                      checked={template.is_active}
+                      onCheckedChange={() => handleToggleActive(template)}
+                    />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenDialog(template)}
+                    className="h-8 rounded-none"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  {isAdminOrManager && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(template)}
+                      className="h-8 rounded-none text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(template)}
+                  className="h-8 rounded-none"
+                >
+                  {copiedId === template.id ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Outdated warning message */}
+          {template.is_outdated && template.marked_outdated_by_name && template.marked_outdated_at && (
+            <div className="mt-2 p-2 bg-warning/10 border border-warning/30 text-xs text-warning-foreground">
+              <AlertTriangle className="h-3 w-3 inline mr-1" />
+              Marked out of date by {template.marked_outdated_by_name} on {format(new Date(template.marked_outdated_at), "MMM d, yyyy")}
+            </div>
+          )}
+          
+          <div 
+            className="text-xs text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+            dangerouslySetInnerHTML={{ __html: template.content }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// SortableCategoryItem component for drag-and-drop category reordering
+interface SortableCategoryItemProps extends Omit<TemplateListProps, 'templates'> {
+  category: string;
+  categoryTemplates: ResponseTemplate[];
+}
+
+function SortableCategoryItem({
+  category,
+  categoryTemplates,
+  editMode,
+  canEdit,
+  isAdminOrManager,
+  copiedId,
+  handleCopy,
+  handleOpenDialog,
+  handleMarkOutdated,
+  handleClearOutdated,
+  handleToggleActive,
+  handleDelete,
+}: SortableCategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <AccordionItem value={category} className="border-b">
+        <div className="flex items-center">
+          <button
+            className="p-2 cursor-grab hover:bg-muted/50 touch-none"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3 flex-1">
+            {category}
+            <span className="ml-2 text-xs text-muted-foreground font-normal">
+              ({categoryTemplates.length})
+            </span>
+          </AccordionTrigger>
+        </div>
+        <AccordionContent>
+          <TemplateList 
+            templates={categoryTemplates}
+            editMode={editMode}
+            canEdit={canEdit}
+            isAdminOrManager={isAdminOrManager}
+            copiedId={copiedId}
+            handleCopy={handleCopy}
+            handleOpenDialog={handleOpenDialog}
+            handleMarkOutdated={handleMarkOutdated}
+            handleClearOutdated={handleClearOutdated}
+            handleToggleActive={handleToggleActive}
+            handleDelete={handleDelete}
+          />
+        </AccordionContent>
+      </AccordionItem>
+    </div>
+  );
+}
 
 export function ResponseTemplatesWithAI() {
   const [templates, setTemplates] = useState<ResponseTemplate[]>([]);
@@ -89,11 +336,20 @@ export function ResponseTemplatesWithAI() {
 
   const { activeRole } = useActiveRole();
   const { user } = useAuth();
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   
   // Any authenticated user can edit templates
   const canEdit = !!user;
   // Only admins/managers can delete or toggle active status
   const isAdminOrManager = activeRole === "admin" || activeRole === "manager";
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchTemplates();
@@ -104,7 +360,7 @@ export function ResponseTemplatesWithAI() {
     // Fetch active templates for users
     const { data, error } = await selectFrom<ResponseTemplate>("response_templates", {
       filters: [eq("is_active", true)],
-      order: { column: "category", ascending: true },
+      order: [{ column: "category_order", ascending: true }, { column: "category", ascending: true }],
     });
 
     if (!error && data) {
@@ -113,10 +369,21 @@ export function ResponseTemplatesWithAI() {
 
     // Fetch all templates for editing mode
     const { data: allData } = await selectFrom<ResponseTemplate>("response_templates", {
-      order: { column: "category", ascending: true },
+      order: [{ column: "category_order", ascending: true }, { column: "category", ascending: true }],
     });
     if (allData) {
       setAllTemplates(allData);
+      // Build category order from templates
+      const orderedCats: string[] = [];
+      const catOrderMap = new Map<string, number>();
+      allData.forEach((t) => {
+        if (!catOrderMap.has(t.category)) {
+          catOrderMap.set(t.category, t.category_order || 0);
+        }
+      });
+      const sortedCats = [...catOrderMap.entries()].sort((a, b) => a[1] - b[1]);
+      sortedCats.forEach(([cat]) => orderedCats.push(cat));
+      setCategoryOrder(orderedCats);
     }
 
     setLoading(false);
@@ -124,8 +391,16 @@ export function ResponseTemplatesWithAI() {
 
   const categories = useMemo(() => {
     const cats = [...new Set(templates.map((t) => t.category))];
-    return cats.sort();
-  }, [templates]);
+    // Sort by category_order
+    return cats.sort((a, b) => {
+      const orderA = categoryOrder.indexOf(a);
+      const orderB = categoryOrder.indexOf(b);
+      if (orderA === -1 && orderB === -1) return a.localeCompare(b);
+      if (orderA === -1) return 1;
+      if (orderB === -1) return -1;
+      return orderA - orderB;
+    });
+  }, [templates, categoryOrder]);
 
   const filteredTemplates = useMemo(() => {
     const source = editMode ? allTemplates : templates;
@@ -152,6 +427,49 @@ export function ResponseTemplatesWithAI() {
     });
     return groups;
   }, [filteredTemplates]);
+
+  // Get ordered category list for display
+  const orderedCategoryList = useMemo(() => {
+    const cats = Object.keys(groupedTemplates);
+    return cats.sort((a, b) => {
+      const orderA = categoryOrder.indexOf(a);
+      const orderB = categoryOrder.indexOf(b);
+      if (orderA === -1 && orderB === -1) return a.localeCompare(b);
+      if (orderA === -1) return 1;
+      if (orderB === -1) return -1;
+      return orderA - orderB;
+    });
+  }, [groupedTemplates, categoryOrder]);
+
+  // Handle drag end for category reordering
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    const oldIndex = orderedCategoryList.indexOf(active.id as string);
+    const newIndex = orderedCategoryList.indexOf(over.id as string);
+    
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    const newOrder = arrayMove(orderedCategoryList, oldIndex, newIndex);
+    setCategoryOrder(newOrder);
+    
+    // Update all templates with new category_order values
+    const updates: Promise<unknown>[] = [];
+    newOrder.forEach((cat, index) => {
+      const templatesInCat = allTemplates.filter(t => t.category === cat);
+      const templateIds = templatesInCat.map(t => t.id);
+      if (templateIds.length > 0) {
+        updates.push(
+          updateTable("response_templates", { category_order: index }, [inArray("id", templateIds)])
+        );
+      }
+    });
+    
+    await Promise.all(updates);
+    toast.success("Category order updated");
+  }, [orderedCategoryList, allTemplates]);
 
   const handleCopy = async (template: ResponseTemplate) => {
     await navigator.clipboard.writeText(template.content);
@@ -229,6 +547,17 @@ export function ResponseTemplatesWithAI() {
       .map((t) => t.trim().toLowerCase())
       .filter((t) => t.length > 0);
 
+    // Get user's profile for updated_by_name
+    let updatedByName: string | null = null;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", user.id)
+        .single();
+      updatedByName = profile?.full_name || profile?.email || null;
+    }
+
     if (editingTemplate) {
       const { error } = await updateTable(
         "response_templates",
@@ -237,6 +566,8 @@ export function ResponseTemplatesWithAI() {
           title: formData.title,
           content: formData.content,
           tags: tagsArray,
+          updated_by: user?.id || null,
+          updated_by_name: updatedByName,
         },
         [eq("id", editingTemplate.id)]
       );
@@ -255,6 +586,8 @@ export function ResponseTemplatesWithAI() {
         content: formData.content,
         tags: tagsArray,
         is_active: true,
+        updated_by: user?.id || null,
+        updated_by_name: updatedByName,
       });
 
       if (error) {
@@ -448,141 +781,72 @@ export function ResponseTemplatesWithAI() {
                   <p className="text-xs text-muted-foreground text-center py-8">
                     {canEdit && editMode ? "No templates yet. Click Add to create one." : "No templates found"}
                   </p>
+                ) : editMode && isAdminOrManager ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={orderedCategoryList}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <Accordion type="single" collapsible className="w-full">
+                        {orderedCategoryList.map((category) => {
+                          const categoryTemplates = groupedTemplates[category];
+                          if (!categoryTemplates) return null;
+                          return (
+                            <SortableCategoryItem
+                              key={category}
+                              category={category}
+                              categoryTemplates={categoryTemplates}
+                              editMode={editMode}
+                              canEdit={canEdit}
+                              isAdminOrManager={isAdminOrManager}
+                              copiedId={copiedId}
+                              handleCopy={handleCopy}
+                              handleOpenDialog={handleOpenDialog}
+                              handleMarkOutdated={handleMarkOutdated}
+                              handleClearOutdated={handleClearOutdated}
+                              handleToggleActive={handleToggleActive}
+                              handleDelete={handleDelete}
+                            />
+                          );
+                        })}
+                      </Accordion>
+                    </SortableContext>
+                  </DndContext>
                 ) : (
                   <Accordion type="single" collapsible className="w-full">
-                    {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
-                      <AccordionItem key={category} value={category} className="border-b">
-                        <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
-                          {category}
-                          <Badge variant="secondary" className="ml-2 rounded-none text-xs">
-                            {categoryTemplates.length}
-                          </Badge>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-3 pt-2">
-                            {categoryTemplates.map((template) => (
-                              <div
-                                key={template.id}
-                                className={`border p-3 transition-colors ${
-                                  template.is_outdated 
-                                    ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20" 
-                                    : template.is_active 
-                                      ? "hover:bg-muted/50" 
-                                      : "opacity-50 bg-muted/20"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="text-xs font-medium">{template.title}</h4>
-                                      {!template.is_active && (
-                                        <Badge variant="secondary" className="rounded-none text-xs">
-                                          Inactive
-                                        </Badge>
-                                      )}
-                                      {template.is_outdated && (
-                                        <Badge variant="outline" className="rounded-none text-xs border-amber-500 text-amber-600">
-                                          <AlertTriangle className="h-3 w-3 mr-1" />
-                                          Outdated
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex gap-1 mt-1 flex-wrap">
-                                      {template.tags.map((tag) => (
-                                        <Badge
-                                          key={tag}
-                                          variant="outline"
-                                          className="text-[10px] rounded-none"
-                                        >
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {editMode && canEdit ? (
-                                      <>
-                                        {!template.is_outdated ? (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleMarkOutdated(template)}
-                                            className="h-8 rounded-none text-amber-600"
-                                            title="Mark as outdated"
-                                          >
-                                            <AlertTriangle className="h-3 w-3" />
-                                          </Button>
-                                        ) : (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleClearOutdated(template)}
-                                            className="h-8 rounded-none text-green-600"
-                                            title="Undo outdated status"
-                                          >
-                                            <Check className="h-3 w-3" />
-                                          </Button>
-                                        )}
-                                        {isAdminOrManager && (
-                                          <Switch
-                                            checked={template.is_active}
-                                            onCheckedChange={() => handleToggleActive(template)}
-                                          />
-                                        )}
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleOpenDialog(template)}
-                                          className="h-8 rounded-none"
-                                        >
-                                          <Pencil className="h-3 w-3" />
-                                        </Button>
-                                        {isAdminOrManager && (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(template)}
-                                            className="h-8 rounded-none text-destructive"
-                                          >
-                                            <Trash2 className="h-3 w-3" />
-                                          </Button>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleCopy(template)}
-                                        className="h-8 rounded-none"
-                                      >
-                                        {copiedId === template.id ? (
-                                          <Check className="h-3 w-3" />
-                                        ) : (
-                                          <Copy className="h-3 w-3" />
-                                        )}
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                {/* Outdated warning message */}
-                                {template.is_outdated && template.marked_outdated_by_name && template.marked_outdated_at && (
-                                  <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-200">
-                                    <AlertTriangle className="h-3 w-3 inline mr-1" />
-                                    Marked out of date by {template.marked_outdated_by_name} on {format(new Date(template.marked_outdated_at), "MMM d, yyyy")}
-                                  </div>
-                                )}
-                                
-                                <div 
-                                  className="text-xs text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
-                                  dangerouslySetInnerHTML={{ __html: template.content }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
+                    {orderedCategoryList.map((category) => {
+                      const categoryTemplates = groupedTemplates[category];
+                      if (!categoryTemplates) return null;
+                      return (
+                        <AccordionItem key={category} value={category} className="border-b">
+                          <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
+                            {category}
+                            <span className="ml-2 text-xs text-muted-foreground font-normal">
+                              ({categoryTemplates.length})
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <TemplateList 
+                              templates={categoryTemplates}
+                              editMode={editMode}
+                              canEdit={canEdit}
+                              isAdminOrManager={isAdminOrManager}
+                              copiedId={copiedId}
+                              handleCopy={handleCopy}
+                              handleOpenDialog={handleOpenDialog}
+                              handleMarkOutdated={handleMarkOutdated}
+                              handleClearOutdated={handleClearOutdated}
+                              handleToggleActive={handleToggleActive}
+                              handleDelete={handleDelete}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
                   </Accordion>
                 )}
               </ScrollArea>

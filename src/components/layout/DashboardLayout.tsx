@@ -214,8 +214,18 @@ function SidebarNav() {
   const { permissions } = usePermissions();
   const [devToolsOpen, setDevToolsOpen] = useState(false);
 
-  const navItems = getNavItems(activeRole, permissions);
-  const isAdminOrManager = activeRole === "admin" || activeRole === "manager";
+  // Determine the effective role based on URL path for proper navigation rendering
+  // This ensures admin/manager dashboards always show the correct nav even if activeRole hasn't updated
+  const getEffectiveRole = (): AppRole | null => {
+    const path = location.pathname;
+    if (path.startsWith("/dashboard/admin")) return "admin";
+    if (path.startsWith("/dashboard/manager")) return "manager";
+    return activeRole;
+  };
+  
+  const effectiveRole = getEffectiveRole();
+  const navItems = getNavItems(effectiveRole, permissions);
+  const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager";
 
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/sync-management") ||

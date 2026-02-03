@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus } from "lucide-react";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -92,10 +92,61 @@ const CATEGORIES = [
   "Tours",
 ];
 
+// SortableTemplateItem for drag-and-drop template reordering within a category
+function SortableTemplateItem({ template }: { template: ResponseTemplate }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: template.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`border p-3 flex items-center gap-3 ${
+        template.is_outdated
+          ? "border-warning bg-warning/10"
+          : template.is_active
+            ? "bg-background"
+            : "opacity-50 bg-muted/20"
+      }`}
+    >
+      <button
+        className="p-1 cursor-grab hover:bg-muted/50 touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+      <div className="flex-1">
+        <h4 className="text-xs font-medium">{template.title}</h4>
+        {template.is_outdated && (
+          <Badge variant="outline" className="rounded-none text-xs border-warning text-warning mt-1">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Outdated
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // TemplateList component for rendering templates within a category
 interface TemplateListProps {
   templates: ResponseTemplate[];
   editMode: boolean;
+  reorderMode: boolean;
   canEdit: boolean;
   isAdminOrManager: boolean;
   copiedId: string | null;
@@ -105,11 +156,14 @@ interface TemplateListProps {
   handleClearOutdated: (template: ResponseTemplate) => void;
   handleToggleActive: (template: ResponseTemplate) => void;
   handleDelete: (template: ResponseTemplate) => void;
+  onTemplateReorder?: (category: string, templateIds: string[]) => void;
+  category?: string;
 }
 
 function TemplateList({
   templates,
   editMode,
+  reorderMode,
   canEdit,
   isAdminOrManager,
   copiedId,
@@ -119,7 +173,50 @@ function TemplateList({
   handleClearOutdated,
   handleToggleActive,
   handleDelete,
+  onTemplateReorder,
+  category,
 }: TemplateListProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const templateIds = templates.map(t => t.id);
+
+  const handleTemplateDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onTemplateReorder || !category) return;
+
+    const oldIndex = templateIds.indexOf(active.id as string);
+    const newIndex = templateIds.indexOf(over.id as string);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = arrayMove(templateIds, oldIndex, newIndex);
+      onTemplateReorder(category, newOrder);
+    }
+  };
+
+  if (reorderMode && onTemplateReorder && category) {
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleTemplateDragEnd}
+        modifiers={[restrictToVerticalAxis]}
+      >
+        <SortableContext items={templateIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3 pt-2">
+            {templates.map((template) => (
+              <SortableTemplateItem key={template.id} template={template} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
   return (
     <div className="space-y-3 pt-2">
       {templates.map((template) => (
@@ -256,6 +353,7 @@ function SortableCategoryItem({
   category,
   categoryTemplates,
   editMode,
+  reorderMode,
   canEdit,
   isAdminOrManager,
   copiedId,
@@ -266,6 +364,7 @@ function SortableCategoryItem({
   handleToggleActive,
   handleDelete,
   onRenameCategory,
+  onTemplateReorder,
 }: SortableCategoryItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(category);
@@ -306,7 +405,7 @@ function SortableCategoryItem({
     <div ref={setNodeRef} style={style}>
       <AccordionItem value={category} className="border-b">
         <div className="flex items-center">
-          {editMode && isAdminOrManager && (
+          {reorderMode && isAdminOrManager && (
             <button
               className="p-2 cursor-grab hover:bg-muted/50 touch-none"
               {...attributes}
@@ -352,6 +451,7 @@ function SortableCategoryItem({
           <TemplateList 
             templates={categoryTemplates}
             editMode={editMode}
+            reorderMode={reorderMode}
             canEdit={canEdit}
             isAdminOrManager={isAdminOrManager}
             copiedId={copiedId}
@@ -361,6 +461,8 @@ function SortableCategoryItem({
             handleClearOutdated={handleClearOutdated}
             handleToggleActive={handleToggleActive}
             handleDelete={handleDelete}
+            onTemplateReorder={onTemplateReorder}
+            category={category}
           />
         </AccordionContent>
       </AccordionItem>
@@ -378,10 +480,12 @@ export function ResponseTemplatesWithAI() {
   const [suggestedTemplate, setSuggestedTemplate] = useState<ResponseTemplate | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<ResponseTemplate | null>(null);
+  const [templateOrder, setTemplateOrder] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     category: "",
     title: "",
@@ -532,6 +636,38 @@ export function ResponseTemplatesWithAI() {
     await Promise.all(updates);
     toast.success("Category order updated");
   }, [orderedCategoryList, allTemplates]);
+
+  // Handle template reordering within a category
+  const handleTemplateReorder = useCallback(async (category: string, newTemplateIds: string[]) => {
+    // Update local state for immediate feedback
+    setTemplateOrder(prev => ({
+      ...prev,
+      [category]: newTemplateIds,
+    }));
+    
+    // Note: Template order is visual only during reorder mode
+    // We'll persist when exiting reorder mode
+  }, []);
+
+  // Persist template order when exiting reorder mode
+  const handleExitReorderMode = useCallback(async () => {
+    // Persist category order
+    const categoryUpdates: Promise<unknown>[] = [];
+    categoryOrder.forEach((cat, index) => {
+      const templatesInCat = allTemplates.filter(t => t.category === cat);
+      const templateIds = templatesInCat.map(t => t.id);
+      if (templateIds.length > 0) {
+        categoryUpdates.push(
+          updateTable("response_templates", { category_order: index }, [inArray("id", templateIds)])
+        );
+      }
+    });
+    
+    await Promise.all(categoryUpdates);
+    setReorderMode(false);
+    toast.success("Order saved");
+    fetchTemplates();
+  }, [categoryOrder, allTemplates]);
 
   // Handle category rename
   const handleRenameCategory = useCallback(async (oldName: string, newName: string) => {
@@ -862,11 +998,38 @@ export function ResponseTemplatesWithAI() {
                   Template
                 </Button>
               )}
+              {editMode && isAdminOrManager && (
+                reorderMode ? (
+                  <Button
+                    size="sm"
+                    className="rounded-none h-8"
+                    onClick={handleExitReorderMode}
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    Done Reorder
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-none h-8"
+                    onClick={() => setReorderMode(true)}
+                  >
+                    <ArrowUpDown className="h-3 w-3 mr-1" />
+                    Reorder
+                  </Button>
+                )
+              )}
               <Button
                 variant={editMode ? "default" : "outline"}
                 size="sm"
                 className="rounded-none h-8"
-                onClick={() => setEditMode(!editMode)}
+                onClick={() => {
+                  if (editMode && reorderMode) {
+                    handleExitReorderMode();
+                  }
+                  setEditMode(!editMode);
+                }}
               >
                 <Settings className="h-3 w-3 mr-1" />
                 {editMode ? "Done" : "Edit"}
@@ -938,6 +1101,7 @@ export function ResponseTemplatesWithAI() {
                               category={category}
                               categoryTemplates={categoryTemplates}
                               editMode={editMode}
+                              reorderMode={reorderMode}
                               canEdit={canEdit}
                               isAdminOrManager={isAdminOrManager}
                               copiedId={copiedId}
@@ -948,6 +1112,7 @@ export function ResponseTemplatesWithAI() {
                               handleToggleActive={handleToggleActive}
                               handleDelete={handleDelete}
                               onRenameCategory={handleRenameCategory}
+                              onTemplateReorder={handleTemplateReorder}
                             />
                           );
                         })}
@@ -973,6 +1138,7 @@ export function ResponseTemplatesWithAI() {
                             <TemplateList 
                               templates={categoryTemplates}
                               editMode={editMode}
+                              reorderMode={false}
                               canEdit={canEdit}
                               isAdminOrManager={isAdminOrManager}
                               copiedId={copiedId}

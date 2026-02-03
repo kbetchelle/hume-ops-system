@@ -197,6 +197,7 @@ const settingsGroups: SettingsGroup[] = [
     icon: Wrench,
     items: [
       { title: "API Syncing", url: "/dashboard/api-syncing", icon: RefreshCw },
+      { title: "Sync Management", url: "/dashboard/sync-management", icon: RefreshCw },
       { title: "Backfill Manager", url: "/dashboard/backfill", icon: Database },
     ]
   }
@@ -228,7 +229,8 @@ function SidebarNav() {
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager";
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") ||
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/sync-management") ||
+    location.pathname.startsWith("/dashboard/backfill") ||
     location.pathname.startsWith("/dashboard/api-syncing");
 
   return (

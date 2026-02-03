@@ -405,7 +405,7 @@ function SortableCategoryItem({
     <div ref={setNodeRef} style={style}>
       <AccordionItem value={category} className="border-b">
         <div className="flex items-center">
-          {reorderMode && isAdminOrManager && (
+          {reorderMode && (
             <button
               className="p-2 cursor-grab hover:bg-muted/50 touch-none"
               {...attributes}
@@ -414,7 +414,7 @@ function SortableCategoryItem({
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
-          {isEditing && isAdminOrManager ? (
+          {isEditing ? (
             <div className="flex items-center gap-2 py-2 flex-1">
               <Input
                 value={editedName}
@@ -433,7 +433,7 @@ function SortableCategoryItem({
                 </span>
                 <span>{category}</span>
               </div>
-              {editMode && isAdminOrManager && (
+              {editMode && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1031,8 +1031,17 @@ export function ResponseTemplatesWithAI() {
                   setEditMode(!editMode);
                 }}
               >
-                <Settings className="h-3 w-3 mr-1" />
-                {editMode ? "Done" : "Edit"}
+                {editMode ? (
+                  <>
+                    <Check className="h-3 w-3 mr-1" />
+                    Done
+                  </>
+                ) : (
+                  <>
+                    <Settings className="h-3 w-3 mr-1" />
+                    Edit
+                  </>
+                )}
               </Button>
             </div>
           )}

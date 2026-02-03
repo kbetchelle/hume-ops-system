@@ -2554,6 +2554,7 @@ export type Database = {
       response_templates: {
         Row: {
           category: string
+          category_order: number | null
           content: string
           created_at: string | null
           id: string
@@ -2564,9 +2565,13 @@ export type Database = {
           marked_outdated_by_name: string | null
           tags: string[] | null
           title: string
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_name: string | null
         }
         Insert: {
           category: string
+          category_order?: number | null
           content: string
           created_at?: string | null
           id?: string
@@ -2577,9 +2582,13 @@ export type Database = {
           marked_outdated_by_name?: string | null
           tags?: string[] | null
           title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_name?: string | null
         }
         Update: {
           category?: string
+          category_order?: number | null
           content?: string
           created_at?: string | null
           id?: string
@@ -2590,6 +2599,9 @@ export type Database = {
           marked_outdated_by_name?: string | null
           tags?: string[] | null
           title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_name?: string | null
         }
         Relationships: []
       }

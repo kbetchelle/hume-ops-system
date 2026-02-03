@@ -46,7 +46,8 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'staff_qa': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   'staff_notifications': { management: ['select', 'insert', 'update'], concierge: ['select', 'update'], staff: ['select', 'update'] },
   // Phase 3 tables
-  'response_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'response_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
+  'template_outdated_notifications': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   'quick_links': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
   'staff_documents': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },

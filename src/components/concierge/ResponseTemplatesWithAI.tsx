@@ -963,10 +963,10 @@ export function ResponseTemplatesWithAI() {
                         <AccordionItem key={category} value={category} className="border-b">
                           <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
                             <div className="flex items-center gap-2">
+                              <span>{category}</span>
                               <span className="text-xs text-muted-foreground font-normal">
                                 ({categoryTemplates.length})
                               </span>
-                              <span>{category}</span>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent>

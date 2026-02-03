@@ -21,15 +21,15 @@ export interface ArketaClass {
 
 export interface ArketaReservation {
   id: string;
-  external_id: string;
+  booking_id: string;
   class_id: string;
   client_id: string | null;
   client_name: string | null;
   client_email: string | null;
   status: string | null;
-  checked_in: boolean;
+  checked_in: boolean | null;
   checked_in_at: string | null;
-  synced_at: string;
+  synced_at: string | null;
 }
 
 export interface ArketaPayment {

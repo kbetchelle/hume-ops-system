@@ -21,10 +21,10 @@ export function ConciergeHeader() {
   };
 
   return (
-    <header className="border-b border-border bg-background flex items-center justify-between px-4 md:px-6">
-      {/* Logo - 100% larger with 15px margin */}
+    <header className="h-20 border-b border-border bg-background flex items-center justify-between px-4 md:px-6">
+      {/* Logo - 75% larger with vertical padding */}
       <div className="flex items-center gap-4">
-        <img src={humeLogo} alt="HUME" className="h-[88px] my-[15px]" />
+        <img src={humeLogo} alt="HUME" className="h-11 py-[15px]" />
       </div>
 
       {/* Right side actions */}

@@ -614,7 +614,7 @@ function DashboardHeader({ title }: { title: string }) {
         <img 
           src={humeLogo} 
           alt="Hume" 
-          className="h-12 w-auto cursor-pointer hover:opacity-70 transition-opacity py-[15px]"
+          className="h-[50px] w-auto cursor-pointer hover:opacity-70 transition-opacity my-[12px]"
           onClick={() => navigate("/dashboard")}
         />
       </div>

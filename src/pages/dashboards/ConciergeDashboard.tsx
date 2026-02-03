@@ -34,7 +34,6 @@ export default function ConciergeDashboard() {
             <div className="lg:col-span-2 space-y-4">
               <EmbeddedChecklist />
               <ClassScheduleView />
-              <ShiftEventsMiniCalendar />
             </div>
           </div>
         );

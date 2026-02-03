@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Search,
@@ -27,9 +30,15 @@ import {
   Download,
   Eye,
   Calendar,
+  Upload,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
-import { selectFrom, eq } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthContext } from "@/features/auth/AuthProvider";
+import { useActiveRole } from "@/hooks/useActiveRole";
+import { toast } from "sonner";
 
 interface StaffDocument {
   id: string;
@@ -42,6 +51,7 @@ interface StaffDocument {
   target_roles: string[];
   is_active: boolean;
   uploaded_by: string | null;
+  uploaded_by_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,11 +65,26 @@ const CATEGORIES = [
 ];
 
 export function StaffDocumentsView() {
+  const { user } = useAuthContext();
+  const { activeRole } = useActiveRole();
+  const canManage = activeRole === "admin" || activeRole === "manager";
+
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [previewDocument, setPreviewDocument] = useState<StaffDocument | null>(null);
+  
+  // Upload state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    title: "",
+    description: "",
+    category: "Reference",
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -67,13 +92,14 @@ export function StaffDocumentsView() {
 
   const fetchDocuments = async () => {
     setLoading(true);
-    const { data, error } = await selectFrom<StaffDocument>("staff_documents", {
-      filters: [eq("is_active", true)],
-      order: { column: "title", ascending: true },
-    });
+    const { data, error } = await supabase
+      .from("staff_documents")
+      .select("*")
+      .eq("is_active", true)
+      .order("title", { ascending: true });
 
     if (!error && data) {
-      setDocuments(data);
+      setDocuments(data as StaffDocument[]);
     }
     setLoading(false);
   };
@@ -117,7 +143,7 @@ export function StaffDocumentsView() {
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "—";
+    if (!bytes || bytes === 0) return "—";
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -131,6 +157,99 @@ export function StaffDocumentsView() {
 
   const handleDownload = (doc: StaffDocument) => {
     window.open(doc.file_url, "_blank");
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!uploadForm.title) {
+        setUploadForm(prev => ({ ...prev, title: file.name.replace(/\.[^/.]+$/, "") }));
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !uploadForm.title || !user) return;
+
+    setUploading(true);
+    try {
+      // Upload file to storage
+      const fileExt = selectedFile.name.split(".").pop();
+      const filePath = `${user.id}/${Date.now()}-${uploadForm.title.replace(/\s+/g, "_")}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("staff-documents")
+        .upload(filePath, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("staff-documents")
+        .getPublicUrl(filePath);
+
+      // Create document record
+      const { error: insertError } = await supabase
+        .from("staff_documents")
+        .insert({
+          title: uploadForm.title,
+          description: uploadForm.description || null,
+          category: uploadForm.category,
+          file_url: urlData.publicUrl,
+          file_type: selectedFile.type,
+          file_size: selectedFile.size,
+          uploaded_by_id: user.id,
+          is_active: true,
+        });
+
+      if (insertError) {
+        // Clean up uploaded file if insert fails
+        await supabase.storage.from("staff-documents").remove([filePath]);
+        throw insertError;
+      }
+
+      toast.success("Document uploaded successfully");
+      setUploadDialogOpen(false);
+      resetUploadForm();
+      fetchDocuments();
+    } catch (error: any) {
+      toast.error("Failed to upload document: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (doc: StaffDocument) => {
+    if (!confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = doc.file_url.split("/staff-documents/");
+      const filePath = urlParts[1];
+
+      if (filePath) {
+        await supabase.storage.from("staff-documents").remove([filePath]);
+      }
+
+      const { error } = await supabase
+        .from("staff_documents")
+        .delete()
+        .eq("id", doc.id);
+
+      if (error) throw error;
+
+      toast.success("Document deleted");
+      fetchDocuments();
+    } catch (error: any) {
+      toast.error("Failed to delete document: " + error.message);
+    }
+  };
+
+  const resetUploadForm = () => {
+    setUploadForm({ title: "", description: "", category: "Reference" });
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   if (loading) {
@@ -151,10 +270,21 @@ export function StaffDocumentsView() {
   return (
     <>
       <Card className="rounded-none border">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-sm uppercase tracking-wider font-normal">
             Staff Documents
           </CardTitle>
+          {canManage && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-none text-xs"
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              <Upload className="h-3 w-3 mr-1" />
+              Upload
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -237,6 +367,16 @@ export function StaffDocumentsView() {
                           >
                             <Download className="h-3 w-3" />
                           </Button>
+                          {canManage && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 rounded-none text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(doc)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -284,6 +424,103 @@ export function StaffDocumentsView() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        setUploadDialogOpen(open);
+        if (!open) resetUploadForm();
+      }}>
+        <DialogContent className="rounded-none">
+          <DialogHeader>
+            <DialogTitle className="text-sm uppercase tracking-wider font-normal">
+              Upload Document
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs uppercase tracking-wider">File</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelect}
+                className="mt-1 block w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-xs file:bg-muted file:text-foreground hover:file:bg-muted/80"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp"
+              />
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                </p>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider">Title</Label>
+              <Input
+                value={uploadForm.title}
+                onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
+                className="rounded-none text-xs mt-1"
+                placeholder="Document title"
+              />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider">Description</Label>
+              <Textarea
+                value={uploadForm.description}
+                onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
+                className="rounded-none text-xs mt-1 resize-none"
+                placeholder="Optional description"
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider">Category</Label>
+              <Select
+                value={uploadForm.category}
+                onValueChange={(val) => setUploadForm(prev => ({ ...prev, category: val }))}
+              >
+                <SelectTrigger className="rounded-none text-xs mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-xs">
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-none text-xs"
+              onClick={() => setUploadDialogOpen(false)}
+              disabled={uploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-none text-xs"
+              onClick={handleUpload}
+              disabled={uploading || !selectedFile || !uploadForm.title}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

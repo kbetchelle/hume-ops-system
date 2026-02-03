@@ -114,7 +114,7 @@ export function ConciergeSidebar({
       <SidebarContent className="pt-4 flex-1">
         {sections.map((section) => (
           <SidebarGroup key={section.title}>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] font-normal text-muted-foreground px-4 py-2">
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
               {section.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -128,14 +128,14 @@ export function ConciergeSidebar({
                       <SidebarMenuButton
                         onClick={() => onViewChange(item.id)}
                         className={`
-                          rounded-none px-4 py-2 h-auto
-                          text-xs tracking-wide
-                          transition-colors duration-200
+                          flex items-center gap-3 px-3 py-2
+                          text-xs uppercase tracking-widest
+                          transition-colors
                           hover:bg-muted/50
-                          ${isActive ? "bg-muted text-foreground" : "text-muted-foreground"}
+                          ${isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"}
                         `}
                       >
-                        <Icon className="h-4 w-4 mr-3" />
+                        <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                         {item.badge !== undefined && (
                           <SidebarMenuBadge className="ml-auto bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none">

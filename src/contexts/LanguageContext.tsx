@@ -10,10 +10,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children, ...props }: { children: ReactNode }) {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LanguageContext.tsx:13',message:'LanguageProvider render with props',data:{hasRef:!!props.ref,propsKeys:Object.keys(props)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     const stored = sessionStorage.getItem('staff_language');
     return (stored === 'es' ? 'es' : 'en') as Language;

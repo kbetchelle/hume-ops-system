@@ -88,8 +88,8 @@ interface SettingsGroup {
 
 // Navigation items per role
 const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => {
-  // Admin-specific navigation structure
-  if (role === "admin") {
+  // Admin and Manager share the same navigation structure
+  if (role === "admin" || role === "manager") {
     return [
       { title: "Dashboard", url: "/dashboard", icon: Home },
       { title: "Membership", url: "/dashboard/members", icon: Users },
@@ -215,7 +215,7 @@ function SidebarNav() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
 
   const navItems = getNavItems(activeRole, permissions);
-  const isAdmin = activeRole === "admin";
+  const isAdminOrManager = activeRole === "admin" || activeRole === "manager";
 
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/sync-management") ||
@@ -261,8 +261,8 @@ function SidebarNav() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Manager Tools Section - Admin Only */}
-        {isAdmin && !collapsed && (
+        {/* Manager Tools Section - Admin and Manager */}
+        {isAdminOrManager && !collapsed && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
               Manager Tools
@@ -291,8 +291,8 @@ function SidebarNav() {
           </SidebarGroup>
         )}
 
-        {/* Settings Section - Admin Only */}
-        {isAdmin && !collapsed && (
+        {/* Settings Section - Admin and Manager */}
+        {isAdminOrManager && !collapsed && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
               Settings
@@ -361,8 +361,8 @@ function SidebarNav() {
           </SidebarGroup>
         )}
 
-        {/* Collapsed Settings Icon for Admin */}
-        {isAdmin && collapsed && (
+        {/* Collapsed Settings Icon for Admin and Manager */}
+        {isAdminOrManager && collapsed && (
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>

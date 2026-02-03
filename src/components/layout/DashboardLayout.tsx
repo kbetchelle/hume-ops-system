@@ -400,7 +400,24 @@ function SidebarNav() {
 
 function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeRole, setActiveRole, availableRoles, getRoleLabel } = useActiveRole();
+
+  // Detect which role view is currently being displayed based on the URL path
+  const getCurrentViewRole = (): AppRole | null => {
+    const path = location.pathname;
+    if (path.includes("/dashboard/admin")) return "admin";
+    if (path.includes("/dashboard/manager")) return "manager";
+    if (path.includes("/dashboard/concierge")) return "concierge";
+    if (path.includes("/dashboard/trainer")) return "trainer";
+    if (path.includes("/dashboard/spa")) return "female_spa_attendant"; // or male_spa_attendant - same view
+    if (path.includes("/dashboard/floater")) return "floater";
+    if (path.includes("/dashboard/cafe")) return "cafe";
+    // For generic pages like /dashboard/reports, fall back to activeRole
+    return activeRole;
+  };
+
+  const currentViewRole = getCurrentViewRole();
 
   if (availableRoles.length <= 1) {
     if (collapsed) {
@@ -408,7 +425,7 @@ function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
     }
     return (
       <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
-        {activeRole ? getRoleLabel(activeRole) : "No Role"}
+        {currentViewRole ? getRoleLabel(currentViewRole) : "No Role"}
       </Badge>
     );
   }
@@ -445,7 +462,7 @@ function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
           {!collapsed && (
             <>
               <span className="text-[10px] uppercase tracking-widest">
-                {activeRole ? getRoleLabel(activeRole) : "Select Role"}
+                {currentViewRole ? getRoleLabel(currentViewRole) : "Select Role"}
               </span>
               <ChevronDown className="h-3 w-3" />
             </>
@@ -459,13 +476,16 @@ function RoleSwitcher({ collapsed = false }: { collapsed?: boolean }) {
         <DropdownMenuSeparator />
         {availableRoles.map((userRole) => {
           const roleInfo = ROLES.find(r => r.value === userRole.role);
+          const isCurrentView = currentViewRole === userRole.role || 
+            (currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant") ||
+            (currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant");
           return (
             <DropdownMenuItem
               key={userRole.id}
               onClick={() => handleRoleSwitch(userRole.role)}
               className={cn(
                 "text-[10px] uppercase tracking-widest cursor-pointer rounded-none",
-                activeRole === userRole.role && "bg-muted"
+                isCurrentView && "bg-muted"
               )}
             >
               {getRoleLabel(userRole.role)}

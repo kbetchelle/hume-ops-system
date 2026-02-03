@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
 import humeLogo from "@/assets/hume-logo.png";
@@ -28,12 +28,28 @@ interface MembersLayoutProps {
 
 function RoleSwitcher() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeRole, setActiveRole, availableRoles, getRoleLabel } = useActiveRole();
+
+  // Detect which role view is currently being displayed based on the URL path
+  const getCurrentViewRole = (): AppRole | null => {
+    const path = location.pathname;
+    if (path.includes("/dashboard/admin")) return "admin";
+    if (path.includes("/dashboard/manager")) return "manager";
+    if (path.includes("/dashboard/concierge")) return "concierge";
+    if (path.includes("/dashboard/trainer")) return "trainer";
+    if (path.includes("/dashboard/spa")) return "female_spa_attendant";
+    if (path.includes("/dashboard/floater")) return "floater";
+    if (path.includes("/dashboard/cafe")) return "cafe";
+    return activeRole;
+  };
+
+  const currentViewRole = getCurrentViewRole();
 
   if (availableRoles.length <= 1) {
     return (
       <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
-        {activeRole ? getRoleLabel(activeRole) : "No Role"}
+        {currentViewRole ? getRoleLabel(currentViewRole) : "No Role"}
       </Badge>
     );
   }
@@ -58,8 +74,9 @@ function RoleSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 gap-2">
+          <ArrowLeftRight className="h-4 w-4" />
           <span className="text-[10px] uppercase tracking-widest">
-            {activeRole ? getRoleLabel(activeRole) : "Select Role"}
+            {currentViewRole ? getRoleLabel(currentViewRole) : "Select Role"}
           </span>
           <ChevronDown className="h-3 w-3" />
         </Button>
@@ -70,14 +87,16 @@ function RoleSwitcher() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {availableRoles.map((userRole) => {
-          const roleInfo = ROLES.find(r => r.value === userRole.role);
+          const isCurrentView = currentViewRole === userRole.role || 
+            (currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant") ||
+            (currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant");
           return (
             <DropdownMenuItem
               key={userRole.id}
               onClick={() => handleRoleSwitch(userRole.role)}
               className={cn(
                 "text-[10px] uppercase tracking-widest cursor-pointer",
-                activeRole === userRole.role && "bg-muted"
+                isCurrentView && "bg-muted"
               )}
             >
               {getRoleLabel(userRole.role)}

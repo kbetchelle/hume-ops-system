@@ -18,7 +18,7 @@ interface ChecklistTemplate {
   id: string;
   name: string;
   role: string;
-  shift_type: string;
+  shift_time: string;
   is_active: boolean;
 }
 
@@ -63,7 +63,7 @@ export function EmbeddedChecklist() {
       const { data, error } = await selectFrom<ChecklistTemplate>("checklist_templates", {
         filters: [
           { type: "eq", column: "role", value: "concierge" },
-          { type: "eq", column: "shift_type", value: currentShift },
+          { type: "eq", column: "shift_time", value: currentShift },
           { type: "eq", column: "is_active", value: true },
         ],
         limit: 1,

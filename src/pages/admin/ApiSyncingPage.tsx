@@ -116,7 +116,7 @@ function formatNextSync(nextRunAt: string | null, intervalMinutes: number): stri
 }
 
 // API Sync Overview Table Component
-function SyncOverviewTable() {
+function SyncOverviewTable({ manualSyncEnabled }: { manualSyncEnabled: boolean }) {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
   const updateSchedule = useUpdateSyncSchedule();
   const runSync = useRunSync();
@@ -173,7 +173,6 @@ function SyncOverviewTable() {
           {schedules?.map((sync) => {
             const config = API_CONFIG[sync.sync_type] || { stagingTable: null, targetTable: "—" };
             const isHealthy = sync.last_status === "success" || sync.failure_count === 0;
-            const isRunning = runSync.isPending;
 
             return (
               <TableRow key={sync.id} className={sync.last_status === "failed" ? "bg-destructive/5" : ""}>
@@ -229,18 +228,22 @@ function SyncOverviewTable() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRunNow(sync.sync_type)}
-                    disabled={isRunning}
-                  >
-                    {isRunning ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
+                  {manualSyncEnabled ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRunNow(sync.sync_type)}
+                      disabled={runSync.isPending}
+                    >
+                      {runSync.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             );
@@ -437,6 +440,7 @@ function SyncLogHistoryTable() {
 
 export default function ApiSyncingPage() {
   const { data: schedules, isLoading, refetch } = useSyncSchedules();
+  const [manualSyncEnabled, setManualSyncEnabled] = useState(false);
   const healthyCount = schedules?.filter(s => s.last_status === "success").length || 0;
   const errorCount = schedules?.filter(s => s.last_status === "failed").length || 0;
 
@@ -453,15 +457,27 @@ export default function ApiSyncingPage() {
               Monitor and manage API data synchronization
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="manual-sync"
+                checked={manualSyncEnabled}
+                onCheckedChange={setManualSyncEnabled}
+              />
+              <Label htmlFor="manual-sync" className="text-sm">
+                Manual Sync
+              </Label>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -523,7 +539,7 @@ export default function ApiSyncingPage() {
                 </p>
               </CardHeader>
               <CardContent className="p-0">
-                <SyncOverviewTable />
+                <SyncOverviewTable manualSyncEnabled={manualSyncEnabled} />
               </CardContent>
             </Card>
           </TabsContent>

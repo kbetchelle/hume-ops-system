@@ -28,10 +28,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 interface ResponseTemplate {
   id: string;
@@ -40,6 +44,10 @@ interface ResponseTemplate {
   content: string;
   tags: string[];
   is_active: boolean;
+  is_outdated: boolean;
+  marked_outdated_by: string | null;
+  marked_outdated_by_name: string | null;
+  marked_outdated_at: string | null;
   created_at: string;
 }
 
@@ -51,6 +59,13 @@ const CATEGORIES = [
   "General",
   "Billing",
   "Classes",
+  "3rd Party Partners",
+  "Events & Collabs",
+  "Member Inquiries",
+  "Member Outreach",
+  "New Member Offers",
+  "Non-Member Inquiries",
+  "Tours",
 ];
 
 export function ResponseTemplatesWithAI() {
@@ -73,7 +88,12 @@ export function ResponseTemplatesWithAI() {
   });
 
   const { activeRole } = useActiveRole();
-  const canEdit = activeRole === "admin" || activeRole === "manager";
+  const { user } = useAuth();
+  
+  // Any authenticated user can edit templates
+  const canEdit = !!user;
+  // Only admins/managers can delete or toggle active status
+  const isAdminOrManager = activeRole === "admin" || activeRole === "manager";
 
   useEffect(() => {
     fetchTemplates();
@@ -91,7 +111,7 @@ export function ResponseTemplatesWithAI() {
       setTemplates(data);
     }
 
-    // Fetch all templates for admins/managers
+    // Fetch all templates for editing mode
     const { data: allData } = await selectFrom<ResponseTemplate>("response_templates", {
       order: { column: "category", ascending: true },
     });
@@ -274,13 +294,78 @@ export function ResponseTemplatesWithAI() {
     }
   };
 
+  const handleMarkOutdated = async (template: ResponseTemplate) => {
+    if (!user) return;
+    
+    // Get user's full name from profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("user_id", user.id)
+      .single();
+    
+    const staffName = profile?.full_name || profile?.email || "Unknown";
+    const now = new Date().toISOString();
+    
+    // Update template with outdated info
+    const { error: updateError } = await updateTable(
+      "response_templates",
+      {
+        is_outdated: true,
+        marked_outdated_by: user.id,
+        marked_outdated_by_name: staffName,
+        marked_outdated_at: now,
+      },
+      [eq("id", template.id)]
+    );
+
+    if (updateError) {
+      toast.error("Failed to mark template as outdated");
+      return;
+    }
+
+    // Create notification for managers
+    const { error: notifyError } = await insertInto("template_outdated_notifications", {
+      template_id: template.id,
+      marked_by_user_id: user.id,
+      marked_by_name: staffName,
+    });
+
+    if (notifyError) {
+      console.error("Failed to create notification:", notifyError);
+    }
+
+    toast.success("Template marked as outdated. Manager has been notified.");
+    fetchTemplates();
+  };
+
+  const handleClearOutdated = async (template: ResponseTemplate) => {
+    const { error } = await updateTable(
+      "response_templates",
+      {
+        is_outdated: false,
+        marked_outdated_by: null,
+        marked_outdated_by_name: null,
+        marked_outdated_at: null,
+      },
+      [eq("id", template.id)]
+    );
+
+    if (error) {
+      toast.error("Failed to clear outdated status");
+    } else {
+      toast.success("Outdated status cleared");
+      fetchTemplates();
+    }
+  };
+
   if (loading) {
     return (
-      <Card className="rounded-none border">
+      <Card className="rounded-none border flex-1 flex flex-col">
         <CardHeader className="pb-3">
           <Skeleton className="h-4 w-32" />
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 flex-1">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -291,7 +376,7 @@ export function ResponseTemplatesWithAI() {
 
   return (
     <>
-      <Card className="rounded-none border">
+      <Card className="rounded-none border flex-1 flex flex-col">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-sm uppercase tracking-wider font-normal">
             Response Templates
@@ -320,8 +405,8 @@ export function ResponseTemplatesWithAI() {
             </div>
           )}
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="browse" className="w-full">
+        <CardContent className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="browse" className="w-full flex-1 flex flex-col">
             <TabsList className="grid w-full grid-cols-2 rounded-none">
               <TabsTrigger value="browse" className="rounded-none text-xs">
                 Browse Templates
@@ -332,7 +417,7 @@ export function ResponseTemplatesWithAI() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="browse" className="mt-4 space-y-4">
+            <TabsContent value="browse" className="mt-4 space-y-4 flex-1 flex flex-col min-h-0">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -358,105 +443,151 @@ export function ResponseTemplatesWithAI() {
                 </Select>
               </div>
 
-              {Object.keys(groupedTemplates).length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-8">
-                  {canEdit && editMode ? "No templates yet. Click Add to create one." : "No templates found"}
-                </p>
-              ) : (
-                <Accordion type="single" collapsible className="w-full">
-                  {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
-                    <AccordionItem key={category} value={category} className="border-b">
-                      <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
-                        {category}
-                        <Badge variant="secondary" className="ml-2 rounded-none text-xs">
-                          {categoryTemplates.length}
-                        </Badge>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-3 pt-2">
-                          {categoryTemplates.map((template) => (
-                            <div
-                              key={template.id}
-                              className={`border p-3 transition-colors ${
-                                template.is_active ? "hover:bg-muted/50" : "opacity-50 bg-muted/20"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
+              <ScrollArea className="flex-1">
+                {Object.keys(groupedTemplates).length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-8">
+                    {canEdit && editMode ? "No templates yet. Click Add to create one." : "No templates found"}
+                  </p>
+                ) : (
+                  <Accordion type="single" collapsible className="w-full">
+                    {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
+                      <AccordionItem key={category} value={category} className="border-b">
+                        <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
+                          {category}
+                          <Badge variant="secondary" className="ml-2 rounded-none text-xs">
+                            {categoryTemplates.length}
+                          </Badge>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {categoryTemplates.map((template) => (
+                              <div
+                                key={template.id}
+                                className={`border p-3 transition-colors ${
+                                  template.is_outdated 
+                                    ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20" 
+                                    : template.is_active 
+                                      ? "hover:bg-muted/50" 
+                                      : "opacity-50 bg-muted/20"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="text-xs font-medium">{template.title}</h4>
+                                      {!template.is_active && (
+                                        <Badge variant="secondary" className="rounded-none text-xs">
+                                          Inactive
+                                        </Badge>
+                                      )}
+                                      {template.is_outdated && (
+                                        <Badge variant="outline" className="rounded-none text-xs border-amber-500 text-amber-600">
+                                          <AlertTriangle className="h-3 w-3 mr-1" />
+                                          Outdated
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-1 mt-1 flex-wrap">
+                                      {template.tags.map((tag) => (
+                                        <Badge
+                                          key={tag}
+                                          variant="outline"
+                                          className="text-[10px] rounded-none"
+                                        >
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
                                   <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-medium">{template.title}</h4>
-                                    {!template.is_active && (
-                                      <Badge variant="secondary" className="rounded-none text-xs">
-                                        Inactive
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex gap-1 mt-1 flex-wrap">
-                                    {template.tags.map((tag) => (
-                                      <Badge
-                                        key={tag}
-                                        variant="outline"
-                                        className="text-[10px] rounded-none"
-                                      >
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {editMode && canEdit ? (
-                                    <>
-                                      <Switch
-                                        checked={template.is_active}
-                                        onCheckedChange={() => handleToggleActive(template)}
-                                      />
+                                    {editMode && canEdit ? (
+                                      <>
+                                        {!template.is_outdated ? (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleMarkOutdated(template)}
+                                            className="h-8 rounded-none text-amber-600"
+                                            title="Mark as outdated"
+                                          >
+                                            <AlertTriangle className="h-3 w-3" />
+                                          </Button>
+                                        ) : isAdminOrManager && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleClearOutdated(template)}
+                                            className="h-8 rounded-none text-green-600"
+                                            title="Clear outdated status"
+                                          >
+                                            <Check className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                        {isAdminOrManager && (
+                                          <Switch
+                                            checked={template.is_active}
+                                            onCheckedChange={() => handleToggleActive(template)}
+                                          />
+                                        )}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleOpenDialog(template)}
+                                          className="h-8 rounded-none"
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                        {isAdminOrManager && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(template)}
+                                            className="h-8 rounded-none text-destructive"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </>
+                                    ) : (
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleOpenDialog(template)}
+                                        onClick={() => handleCopy(template)}
                                         className="h-8 rounded-none"
                                       >
-                                        <Pencil className="h-3 w-3" />
+                                        {copiedId === template.id ? (
+                                          <Check className="h-3 w-3" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
                                       </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(template)}
-                                        className="h-8 rounded-none text-destructive"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleCopy(template)}
-                                      className="h-8 rounded-none"
-                                    >
-                                      {copiedId === template.id ? (
-                                        <Check className="h-3 w-3" />
-                                      ) : (
-                                        <Copy className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
+                                
+                                {/* Outdated warning message */}
+                                {template.is_outdated && template.marked_outdated_by_name && template.marked_outdated_at && (
+                                  <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-200">
+                                    <AlertTriangle className="h-3 w-3 inline mr-1" />
+                                    Marked out of date by {template.marked_outdated_by_name} on {format(new Date(template.marked_outdated_at), "MMM d, yyyy")}
+                                  </div>
+                                )}
+                                
+                                <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
+                                  {template.content}
+                                </p>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
-                                {template.content}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
+              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="ai" className="mt-4 space-y-4">
+            <TabsContent value="ai" className="mt-4 space-y-4 flex-1">
               <div className="space-y-3">
                 <label className="text-xs text-muted-foreground">
                   Paste the member's inquiry below

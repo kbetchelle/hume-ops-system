@@ -506,73 +506,72 @@ function UserInfoDropdown({ collapsed = false }: { collapsed?: boolean }) {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className={cn(
-            "w-full justify-start gap-2 mt-2 rounded-none",
-            collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2"
-          )}
-        >
-          <User className="h-4 w-4 shrink-0" />
-          {!collapsed && (
-            <span className="text-[10px] uppercase tracking-widest truncate">
-              Hi, {getFirstName(profile?.full_name)}
-            </span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-56 rounded-none border-border bg-background z-50" 
-        align="start" 
-        side="top"
-      >
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-[10px] uppercase tracking-widest font-normal">
-              {profile?.full_name || "User"}
-            </p>
-            <p className="text-[10px] tracking-wide text-muted-foreground">
-              {user?.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-border" />
-        <DropdownMenuItem 
-          onClick={() => navigate("/profile")}
-          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-        >
-          <User className="mr-2 h-3 w-3" />
-          Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => navigate("/settings")}
-          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-        >
-          <Settings className="mr-2 h-3 w-3" />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-border" />
-        <DropdownMenuItem 
-          onClick={() => setShowBugReport(true)}
-          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-        >
-          <Bug className="mr-2 h-3 w-3" />
-          Report a Bug
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={handleSignOut} 
-          className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-        >
-          <LogOut className="mr-2 h-3 w-3" />
-          Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    
     <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className={cn(
+              "w-full justify-start gap-2 mt-2 rounded-none",
+              collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2"
+            )}
+          >
+            <User className="h-4 w-4 shrink-0" />
+            {!collapsed && (
+              <span className="text-[10px] uppercase tracking-widest truncate">
+                Hi, {getFirstName(profile?.full_name)}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          className="w-56 rounded-none border-border bg-background z-50" 
+          align="start" 
+          side="top"
+        >
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-[10px] uppercase tracking-widest font-normal">
+                {profile?.full_name || "User"}
+              </p>
+              <p className="text-[10px] tracking-wide text-muted-foreground">
+                {user?.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-border" />
+          <DropdownMenuItem 
+            onClick={() => navigate("/profile")}
+            className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+          >
+            <User className="mr-2 h-3 w-3" />
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => navigate("/settings")}
+            className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+          >
+            <Settings className="mr-2 h-3 w-3" />
+            Settings
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-border" />
+          <DropdownMenuItem 
+            onClick={() => setShowBugReport(true)}
+            className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+          >
+            <Bug className="mr-2 h-3 w-3" />
+            Report a Bug
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={handleSignOut} 
+            className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+          >
+            <LogOut className="mr-2 h-3 w-3" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
     </>
   );

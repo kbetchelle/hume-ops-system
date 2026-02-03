@@ -605,16 +605,16 @@ function DashboardHeader({ title }: { title: string }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <div className="flex h-20 items-center justify-between px-4 md:px-6">
-        <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
+      <div className="flex items-center justify-between px-4 md:px-6">
+        <h1 className="text-[27px] uppercase tracking-widest font-normal truncate">
           {title}
         </h1>
 
-        {/* Logo aligned to the right - 75% larger with vertical padding */}
+        {/* Logo aligned to the right - 100% larger with 15px margin */}
         <img 
           src={humeLogo} 
           alt="Hume" 
-          className="h-12 w-auto cursor-pointer hover:opacity-70 transition-opacity py-[15px]"
+          className="h-24 w-auto cursor-pointer hover:opacity-70 transition-opacity my-[15px]"
           onClick={() => navigate("/dashboard")}
         />
       </div>

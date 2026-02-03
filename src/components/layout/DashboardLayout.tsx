@@ -52,7 +52,8 @@ import {
   ArrowLeftRight,
   RefreshCw,
   Database,
-  Wrench
+  Wrench,
+  Bug
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";

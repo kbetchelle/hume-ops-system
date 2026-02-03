@@ -54,7 +54,8 @@ import {
   RefreshCw,
   Database,
   Wrench,
-  Bug
+  Bug,
+  FileCode2
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -197,6 +198,7 @@ const settingsGroups: SettingsGroup[] = [
     icon: Wrench,
     items: [
       { title: "API Syncing", url: "/dashboard/api-syncing", icon: RefreshCw },
+      { title: "API Data Mapping", url: "/dashboard/api-data-mapping", icon: FileCode2 },
       { title: "Backfill Manager", url: "/dashboard/backfill", icon: Database },
     ]
   }
@@ -229,7 +231,8 @@ function SidebarNav() {
 
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") ||
-    location.pathname.startsWith("/dashboard/api-syncing");
+    location.pathname.startsWith("/dashboard/api-syncing") ||
+    location.pathname.startsWith("/dashboard/api-data-mapping");
 
   return (
     <Sidebar 

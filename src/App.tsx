@@ -55,6 +55,7 @@ import BackfillManagerPage from "./pages/admin/BackfillManagerPage";
 import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
+import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -363,6 +364,16 @@ const App = () => (
               }
             />
 
+
+            {/* API Data Mapping for Admins */}
+            <Route
+              path="/dashboard/api-data-mapping"
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <ApiDataMappingPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Backfill Manager for Admins */}
             <Route

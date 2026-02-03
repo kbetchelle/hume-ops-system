@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical } from "lucide-react";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -45,7 +45,9 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
@@ -247,6 +249,7 @@ function TemplateList({
 interface SortableCategoryItemProps extends Omit<TemplateListProps, 'templates'> {
   category: string;
   categoryTemplates: ResponseTemplate[];
+  onRenameCategory: (oldName: string, newName: string) => void;
 }
 
 function SortableCategoryItem({
@@ -262,7 +265,11 @@ function SortableCategoryItem({
   handleClearOutdated,
   handleToggleActive,
   handleDelete,
+  onRenameCategory,
 }: SortableCategoryItemProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(category);
+
   const {
     attributes,
     listeners,
@@ -276,25 +283,70 @@ function SortableCategoryItem({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  const handleSaveRename = () => {
+    if (editedName.trim() && editedName !== category) {
+      onRenameCategory(category, editedName.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveRename();
+    } else if (e.key === "Escape") {
+      setEditedName(category);
+      setIsEditing(false);
+    }
   };
 
   return (
     <div ref={setNodeRef} style={style}>
       <AccordionItem value={category} className="border-b">
         <div className="flex items-center">
-          <button
-            className="p-2 cursor-grab hover:bg-muted/50 touch-none"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3 flex-1">
-            {category}
-            <span className="ml-2 text-xs text-muted-foreground font-normal">
-              ({categoryTemplates.length})
-            </span>
-          </AccordionTrigger>
+          {editMode && isAdminOrManager && (
+            <button
+              className="p-2 cursor-grab hover:bg-muted/50 touch-none"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+          {isEditing && isAdminOrManager ? (
+            <div className="flex items-center gap-2 py-2 flex-1">
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleSaveRename}
+                onKeyDown={handleKeyDown}
+                className="rounded-none text-xs uppercase tracking-wider h-8"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({categoryTemplates.length})
+                </span>
+                <span>{category}</span>
+              </div>
+              {editMode && isAdminOrManager && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  className="ml-2 p-1 hover:bg-muted/50"
+                >
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+              )}
+            </AccordionTrigger>
+          )}
         </div>
         <AccordionContent>
           <TemplateList 
@@ -327,6 +379,8 @@ export function ResponseTemplatesWithAI() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<ResponseTemplate | null>(null);
   const [formData, setFormData] = useState({
     category: "",
@@ -403,6 +457,13 @@ export function ResponseTemplatesWithAI() {
     });
   }, [templates, categoryOrder]);
 
+  // All available categories (merge hardcoded + database categories)
+  const allAvailableCategories = useMemo(() => {
+    const dbCategories = [...new Set(allTemplates.map(t => t.category))];
+    const merged = [...new Set([...CATEGORIES, ...dbCategories])];
+    return merged.sort((a, b) => a.localeCompare(b));
+  }, [allTemplates]);
+
   const filteredTemplates = useMemo(() => {
     const source = editMode ? allTemplates : templates;
     return source.filter((t) => {
@@ -471,6 +532,69 @@ export function ResponseTemplatesWithAI() {
     await Promise.all(updates);
     toast.success("Category order updated");
   }, [orderedCategoryList, allTemplates]);
+
+  // Handle category rename
+  const handleRenameCategory = useCallback(async (oldName: string, newName: string) => {
+    if (oldName === newName) return;
+    
+    // Update all templates in this category
+    const templatesInCat = allTemplates.filter(t => t.category === oldName);
+    const templateIds = templatesInCat.map(t => t.id);
+    
+    if (templateIds.length > 0) {
+      const { error } = await updateTable(
+        "response_templates",
+        { category: newName },
+        [inArray("id", templateIds)]
+      );
+      
+      if (error) {
+        toast.error("Failed to rename category");
+        return;
+      }
+    }
+    
+    // Update local category order
+    setCategoryOrder(prev => prev.map(c => c === oldName ? newName : c));
+    
+    toast.success("Category renamed");
+    fetchTemplates();
+  }, [allTemplates]);
+
+  // Handle creating a new category
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error("Please enter a category name");
+      return;
+    }
+    
+    // Check if category already exists
+    const existingCategories = [...new Set(allTemplates.map(t => t.category.toLowerCase()))];
+    if (existingCategories.includes(newCategoryName.trim().toLowerCase())) {
+      toast.error("Category already exists");
+      return;
+    }
+    
+    // Create a placeholder template in the new category
+    const { error } = await insertInto("response_templates", {
+      category: newCategoryName.trim(),
+      title: "New Template",
+      content: "Add your template content here...",
+      tags: [],
+      is_active: true,
+      category_order: categoryOrder.length,
+    });
+    
+    if (error) {
+      toast.error("Failed to create category");
+      return;
+    }
+    
+    toast.success("Category created");
+    setNewCategoryName("");
+    setIsCategoryDialogOpen(false);
+    fetchTemplates();
+  };
 
   const handleCopy = async (template: ResponseTemplate) => {
     await navigator.clipboard.writeText(template.content);
@@ -717,6 +841,17 @@ export function ResponseTemplatesWithAI() {
           </CardTitle>
           {canEdit && (
             <div className="flex items-center gap-2">
+              {editMode && isAdminOrManager && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-none h-8"
+                  onClick={() => setIsCategoryDialogOpen(true)}
+                >
+                  <FolderPlus className="h-3 w-3 mr-1" />
+                  Category
+                </Button>
+              )}
               {editMode && (
                 <Button
                   size="sm"
@@ -724,7 +859,7 @@ export function ResponseTemplatesWithAI() {
                   onClick={() => handleOpenDialog()}
                 >
                   <Plus className="h-3 w-3 mr-1" />
-                  Add
+                  Template
                 </Button>
               )}
               <Button
@@ -787,6 +922,7 @@ export function ResponseTemplatesWithAI() {
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
+                    modifiers={[restrictToVerticalAxis]}
                   >
                     <SortableContext
                       items={orderedCategoryList}
@@ -811,6 +947,7 @@ export function ResponseTemplatesWithAI() {
                               handleClearOutdated={handleClearOutdated}
                               handleToggleActive={handleToggleActive}
                               handleDelete={handleDelete}
+                              onRenameCategory={handleRenameCategory}
                             />
                           );
                         })}
@@ -825,10 +962,12 @@ export function ResponseTemplatesWithAI() {
                       return (
                         <AccordionItem key={category} value={category} className="border-b">
                           <AccordionTrigger className="text-xs uppercase tracking-wider hover:no-underline py-3">
-                            {category}
-                            <span className="ml-2 text-xs text-muted-foreground font-normal">
-                              ({categoryTemplates.length})
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground font-normal">
+                                ({categoryTemplates.length})
+                              </span>
+                              <span>{category}</span>
+                            </div>
                           </AccordionTrigger>
                           <AccordionContent>
                             <TemplateList 
@@ -925,8 +1064,8 @@ export function ResponseTemplatesWithAI() {
                   <SelectTrigger className="rounded-none text-xs">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    {CATEGORIES.map((cat) => (
+                  <SelectContent className="rounded-none max-h-[300px]">
+                    {allAvailableCategories.map((cat) => (
                       <SelectItem key={cat} value={cat} className="text-xs">
                         {cat}
                       </SelectItem>
@@ -973,6 +1112,47 @@ export function ResponseTemplatesWithAI() {
             </Button>
             <Button onClick={handleSave} className="rounded-none">
               {editingTemplate ? "Save Changes" : "Create Template"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Category Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm uppercase tracking-wider font-normal">
+              Add New Category
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Category Name *</Label>
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="e.g., Special Offers"
+                className="rounded-none text-xs"
+                onKeyDown={(e) => e.key === "Enter" && handleCreateCategory()}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                A placeholder template will be created in this category.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNewCategoryName("");
+                setIsCategoryDialogOpen(false);
+              }}
+              className="rounded-none"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCategory} className="rounded-none">
+              Create Category
             </Button>
           </DialogFooter>
         </DialogContent>

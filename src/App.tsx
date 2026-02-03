@@ -54,6 +54,7 @@ import SyncManagementPage from "./pages/admin/SyncManagementPage";
 import BackfillManagerPage from "./pages/admin/BackfillManagerPage";
 import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -388,6 +389,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
                   <UserManagementPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* API Syncing for Admin/Manager */}
+            <Route
+              path="/dashboard/api-syncing"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <ApiSyncingPage />
                 </ProtectedRoute>
               }
             />

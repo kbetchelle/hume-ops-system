@@ -218,9 +218,9 @@ Deno.serve(async (req) => {
           break;
         }
 
-        // Safety limit
+        // Safety limit: 1,000 events
         if (allEvents.length >= 1000) {
-          logger.warn('Reached safety limit of 1000 events');
+          logger.warn('Reached safety limit of 1,000 events');
           break;
         }
       } catch (error) {

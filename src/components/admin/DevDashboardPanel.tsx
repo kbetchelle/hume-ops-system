@@ -236,16 +236,6 @@ export function DevDashboardPanel() {
             </CardHeader>
             <CardContent className="flex-1 overflow-auto" onClick={e => e.stopPropagation()}>
               <div className="space-y-0">
-                {/* Header row */}
-                <div className="flex items-center py-2 border-b border-border">
-                  <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                    ​
-                  </div>
-                  <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
-                    Status
-                  </div>
-                </div>
-
                 {/* Page rows - grouped by role */}
                 {(() => {
                 const sortedPages = pages?.slice().sort((a, b) => {

@@ -33,7 +33,7 @@ export function DevNotesModal({
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-sm">Latest Edits in Ops System Application</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-[15px]">
+        <div className="flex-1 overflow-y-auto p-[25px]">
           <RichTextEditor
             value={noteContent}
             onChange={onNoteChange}

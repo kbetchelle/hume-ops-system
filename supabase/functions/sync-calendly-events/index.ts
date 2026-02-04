@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const CALENDLY_ACCESS_TOKEN = Deno.env.get('CALENDLY_ACCESS_TOKEN');
+    const CALENDLY_ACCESS_TOKEN = Deno.env.get('CALENDLY_API_KEY');
     const CALENDLY_ORGANIZATION_URI = Deno.env.get('CALENDLY_ORGANIZATION_URI');
 
     if (!CALENDLY_ACCESS_TOKEN || !CALENDLY_ORGANIZATION_URI) {

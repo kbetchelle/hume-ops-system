@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+// Note: Switch and Label still used in SyncLogHistoryTable for error filter
 import {
   Select,
   SelectContent,
@@ -51,7 +52,7 @@ const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: str
   arketa_subscriptions: { stagingTable: "arketa_subscriptions_staging", targetTable: "arketa_subscriptions" },
   sling_users: { stagingTable: "sling_users_staging", targetTable: "sling_users" },
   sling_shifts: { stagingTable: "sling_shifts_staging", targetTable: "staff_shifts" },
-  toast: { stagingTable: "toast_staging", targetTable: "daily_reports" },
+  toast_sales: { stagingTable: null, targetTable: "toast_sales" },
 };
 
 function StatusBadge({ status, isHealthy }: { status: string | boolean | null; isHealthy?: boolean }) {
@@ -116,11 +117,12 @@ function formatNextSync(nextRunAt: string | null, intervalMinutes: number): stri
 }
 
 // API Sync Overview Table Component
-function SyncOverviewTable({ manualSyncEnabled }: { manualSyncEnabled: boolean }) {
+function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
   const updateSchedule = useUpdateSyncSchedule();
   const runSync = useRunSync();
   const intervalOptions = getIntervalOptions();
+  const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
 
   const handleIntervalChange = (id: string, value: string) => {
     updateSchedule.mutate({
@@ -129,8 +131,13 @@ function SyncOverviewTable({ manualSyncEnabled }: { manualSyncEnabled: boolean }
     });
   };
 
-  const handleRunNow = (syncType: string) => {
-    runSync.mutate(syncType);
+  const handleRunNow = async (syncType: string) => {
+    setRunningSyncType(syncType);
+    try {
+      await runSync.mutateAsync(syncType);
+    } finally {
+      setRunningSyncType(null);
+    }
   };
 
   if (isLoading) {
@@ -228,22 +235,25 @@ function SyncOverviewTable({ manualSyncEnabled }: { manualSyncEnabled: boolean }
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {manualSyncEnabled ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRunNow(sync.sync_type)}
-                      disabled={runSync.isPending}
-                    >
-                      {runSync.isPending ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRunNow(sync.sync_type)}
+                    disabled={runningSyncType !== null}
+                    className="gap-1"
+                  >
+                    {runningSyncType === sync.sync_type ? (
+                      <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
+                        <span className="text-xs">Syncing...</span>
+                      </>
+                    ) : (
+                      <>
                         <Play className="h-4 w-4" />
-                      )}
-                    </Button>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">—</span>
-                  )}
+                        <span className="text-xs">Sync Now</span>
+                      </>
+                    )}
+                  </Button>
                 </TableCell>
               </TableRow>
             );
@@ -440,7 +450,6 @@ function SyncLogHistoryTable() {
 
 export default function ApiSyncingPage() {
   const { data: schedules, isLoading, refetch } = useSyncSchedules();
-  const [manualSyncEnabled, setManualSyncEnabled] = useState(false);
   const healthyCount = schedules?.filter(s => s.last_status === "success").length || 0;
   const errorCount = schedules?.filter(s => s.last_status === "failed").length || 0;
 
@@ -457,27 +466,15 @@ export default function ApiSyncingPage() {
               Monitor and manage API data synchronization
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="manual-sync"
-                checked={manualSyncEnabled}
-                onCheckedChange={setManualSyncEnabled}
-              />
-              <Label htmlFor="manual-sync" className="text-sm">
-                Manual Sync
-              </Label>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -539,7 +536,7 @@ export default function ApiSyncingPage() {
                 </p>
               </CardHeader>
               <CardContent className="p-0">
-                <SyncOverviewTable manualSyncEnabled={manualSyncEnabled} />
+                <SyncOverviewTable />
               </CardContent>
             </Card>
           </TabsContent>

@@ -185,7 +185,7 @@ export function DevDashboardPanel() {
           <Card className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-xs">BUILD STATUS</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit" onClick={e => {
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit bg-transparent hover:bg-transparent" onClick={e => {
               e.stopPropagation();
               setStatusModalOpen(true);
             }}>

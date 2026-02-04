@@ -80,7 +80,7 @@ function ModalPageRow({
   };
   return <div className="flex items-center py-3 border-b border-border last:border-b-0 gap-4">
       {/* Page Title */}
-      <div className="flex-1 text-sm min-w-0 truncate pl-2 text-primary mx-[10px]">
+      <div className="flex-1 text-sm min-w-0 truncate pl-2 text-primary mx-[20px]">
         {page.page_title}
       </div>
 
@@ -135,7 +135,7 @@ export function BuildStatusModal({
           {/* Header row */}
           <div className="flex items-center py-2 border-b border-border gap-4 sticky top-0 bg-background z-10">
             <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium pl-2">
-              Page
+              ​
             </div>
             <div className="w-36 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               Status

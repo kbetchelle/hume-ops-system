@@ -85,13 +85,13 @@ function ModalPageRow({
       </div>
 
       {/* Status Column */}
-      <div className="w-36">
+      <div className="w-36 flex justify-end">
         <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)}>
-          <SelectTrigger className={`h-8 text-xs border-0 bg-transparent shadow-none ${getStatusColor(page.status)}`}>
+          <SelectTrigger className={`h-8 text-sm border-0 bg-transparent shadow-none justify-end ${getStatusColor(page.status)}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-xs ${getStatusColor(option.value)}`}>
+            {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-sm ${getStatusColor(option.value)}`}>
                 {option.label}
               </SelectItem>)}
           </SelectContent>

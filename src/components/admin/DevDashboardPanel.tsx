@@ -52,7 +52,6 @@ function PageRow({
 }: PageRowProps) {
   const [isHoveredStatus, setIsHoveredStatus] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-
   return <div className="flex items-center py-2 border-b border-border last:border-b-0">
       {/* Page Title */}
       <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2 pl-2">
@@ -91,7 +90,6 @@ export function DevDashboardPanel() {
   const updatePageStatus = useUpdatePageStatus();
   const updateDevNotes = useUpdateDevNotes();
   const updatePageRole = useUpdatePageRole();
-  
   const [noteContent, setNoteContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
@@ -166,7 +164,7 @@ export function DevDashboardPanel() {
               e.stopPropagation();
               setNotesModalOpen(true);
             }}>
-                <Maximize2 className="h-3.5 w-3.5" />
+                <Maximize2 className="h-3.5 w-3.5 text-primary bg-primary" />
               </Button>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0" onClick={e => e.stopPropagation()}>

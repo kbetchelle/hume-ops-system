@@ -14,6 +14,26 @@ interface ArketaPayment {
   type?: string;
   status?: string;
   notes?: string;
+  description?: string;
+  // Additional fields for complete sync
+  currency?: string;
+  amount_refunded?: number;
+  refundedAmount?: number;
+  source?: string;
+  payment_source?: string;
+  location?: { name?: string; id?: string };
+  location_name?: string;
+  offering?: { name?: string; id?: string };
+  offering_name?: string;
+  item_name?: string;
+  promo_code?: string;
+  coupon_code?: string;
+  net_sales?: number;
+  netAmount?: number;
+  transaction_fees?: number;
+  fees?: number;
+  tax?: number;
+  tax_amount?: number;
 }
 
 interface SyncRequest {
@@ -131,6 +151,17 @@ Deno.serve(async (req) => {
                 status: payment.status || 'completed',
                 payment_date: paymentDate,
                 notes: payment.notes || null,
+                // Additional fields
+                description: payment.description || payment.notes || null,
+                currency: payment.currency || 'USD',
+                amount_refunded: payment.amount_refunded || payment.refundedAmount || 0,
+                source: payment.source || payment.payment_source || null,
+                location_name: payment.location?.name || payment.location_name || null,
+                offering_name: payment.offering?.name || payment.offering_name || payment.item_name || null,
+                promo_code: payment.promo_code || payment.coupon_code || null,
+                net_sales: payment.net_sales || payment.netAmount || amount,
+                transaction_fees: payment.transaction_fees || payment.fees || 0,
+                tax: payment.tax || payment.tax_amount || 0,
                 raw_data: payment,
                 synced_at: new Date().toISOString(),
               }, {

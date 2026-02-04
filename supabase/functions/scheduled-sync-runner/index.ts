@@ -248,6 +248,9 @@ async function runSync(
     requestBody = { action: 'sync-users' };
   } else if (syncType === 'sling_shifts') {
     requestBody = { action: 'sync-shifts' };
+  } else if (syncType === 'toast_sales') {
+    // Sync last 1 day of sales data
+    requestBody = { days_back: 1 };
   }
 
   // Call the appropriate edge function
@@ -278,6 +281,8 @@ async function runSync(
     || data.reservations?.length 
     || data.payments?.length 
     || data.instructors?.length 
+    || data.subscriptions?.length
+    || data.syncedDates?.length  // Toast sales
     || 0;
 
   return {

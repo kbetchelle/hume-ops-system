@@ -22,6 +22,7 @@ interface SlingUser {
   active?: boolean;
   position?: { id: number; name: string };
   createdAt?: string;
+  created_at?: string;
 }
 
 interface SlingShift {
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
                     position_id: user.position?.id || null,
                     position_name: user.position?.name || null,
                     positions: user.position?.name ? [user.position.name] : [],
+                    sling_created_at: user.createdAt || user.created_at || null,
                     raw_data: user,
                     last_synced_at: new Date().toISOString(),
                   }, {
@@ -394,6 +396,7 @@ Deno.serve(async (req) => {
               sling_shift_id: numericShiftId,
               external_id: rawShiftId,
               user_name: userName,
+              staff_name: userName, // Also populate staff_name for compatibility
               position: shift.position?.name || null,
               shift_start: shift.dtstart,
               shift_end: shift.dtend,

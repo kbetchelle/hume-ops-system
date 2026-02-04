@@ -137,6 +137,28 @@ function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps)
           {page.page_title}
         </div>
 
+        {/* Role Column */}
+        <div 
+          className="w-20 text-right pr-2"
+          onDoubleClick={handleRoleDoubleClick}
+        >
+          {isEditingRole ? (
+            <input
+              ref={roleInputRef}
+              type="text"
+              value={roleValue}
+              onChange={(e) => setRoleValue(e.target.value)}
+              onBlur={handleRoleBlur}
+              onKeyDown={handleRoleKeyDown}
+              className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary"
+            />
+          ) : (
+            <span className="text-[10px] text-muted-foreground cursor-text">
+              {page.role_category || "—"}
+            </span>
+          )}
+        </div>
+
         {/* Status Column */}
         <div 
           className="w-28 flex justify-end"
@@ -172,28 +194,6 @@ function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps)
           ) : (
             <span className={`text-[10px] cursor-pointer ${getStatusColor(page.status)}`}>
               {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
-            </span>
-          )}
-        </div>
-
-        {/* Role Column */}
-        <div 
-          className="w-20 text-right pl-2"
-          onDoubleClick={handleRoleDoubleClick}
-        >
-          {isEditingRole ? (
-            <input
-              ref={roleInputRef}
-              type="text"
-              value={roleValue}
-              onChange={(e) => setRoleValue(e.target.value)}
-              onBlur={handleRoleBlur}
-              onKeyDown={handleRoleKeyDown}
-              className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary"
-            />
-          ) : (
-            <span className="text-[10px] text-muted-foreground cursor-text">
-              {page.role_category || "—"}
             </span>
           )}
         </div>
@@ -345,16 +345,23 @@ export function DevDashboardPanel() {
                 <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                   Page
                 </div>
+                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pr-2">
+                  Role
+                </div>
                 <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
                   Status
                 </div>
-                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pl-2">
-                  Role
-                </div>
               </div>
 
-              {/* Page rows */}
-              {pages?.map((page) => (
+              {/* Page rows - sorted by role */}
+              {pages
+                ?.slice()
+                .sort((a, b) => {
+                  const roleA = a.role_category || "zzz";
+                  const roleB = b.role_category || "zzz";
+                  return roleA.localeCompare(roleB);
+                })
+                .map((page) => (
                 <PageRow
                   key={page.id}
                   page={page}

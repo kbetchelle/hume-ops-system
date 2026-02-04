@@ -13,7 +13,7 @@ import { useAutoSubmitConcierge } from "@/hooks/useAutoSubmitConcierge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MobileChecklistItem, ChecklistItemData } from "@/components/checklists/MobileChecklistItem";
-import { ChecklistComments } from "@/components/checklists/ChecklistComments";
+
 import {
   saveCompletionOffline,
   getPendingCompletions,
@@ -564,17 +564,6 @@ export function EmbeddedChecklist() {
           </p>
         ) : (
           <>
-            {/* Shift-level Comments */}
-            {checklist && (
-              <div className="border-b p-4">
-                <ChecklistComments
-                  checklistId={checklist.id}
-                  completionDate={today}
-                  shiftTime={currentShift}
-                  departmentTable="concierge"
-                />
-              </div>
-            )}
 
             <div className="space-y-0">
             {timeGroups.map((group) => {

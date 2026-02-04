@@ -158,14 +158,8 @@ export function DevDashboardPanel() {
         {/* Left panel - Dev Notes (7/12 width) */}
         <div className="w-7/12 flex flex-col">
           <Card ref={noteCardRef} className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setNotesModalOpen(true)}>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit" onClick={e => {
-              e.stopPropagation();
-              setNotesModalOpen(true);
-            }}>
-                <Maximize2 className="h-3.5 w-3.5 text-primary bg-primary" />
-              </Button>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0" onClick={e => e.stopPropagation()}>
               {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary border px-[10px] py-[6px] cursor-text" dangerouslySetInnerHTML={{

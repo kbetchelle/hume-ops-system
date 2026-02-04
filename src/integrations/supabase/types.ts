@@ -3548,6 +3548,39 @@ export type Database = {
           },
         ]
       }
+      toast_sales: {
+        Row: {
+          business_date: string
+          cafe_sales: number | null
+          created_at: string | null
+          gross_sales: number | null
+          id: string
+          net_sales: number | null
+          raw_data: Json | null
+          sync_batch_id: string | null
+        }
+        Insert: {
+          business_date: string
+          cafe_sales?: number | null
+          created_at?: string | null
+          gross_sales?: number | null
+          id?: string
+          net_sales?: number | null
+          raw_data?: Json | null
+          sync_batch_id?: string | null
+        }
+        Update: {
+          business_date?: string
+          cafe_sales?: number | null
+          created_at?: string | null
+          gross_sales?: number | null
+          id?: string
+          net_sales?: number | null
+          raw_data?: Json | null
+          sync_batch_id?: string | null
+        }
+        Relationships: []
+      }
       toast_staging: {
         Row: {
           business_date: string

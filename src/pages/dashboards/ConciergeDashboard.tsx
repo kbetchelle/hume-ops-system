@@ -18,6 +18,7 @@ import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
+import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
@@ -32,6 +33,7 @@ export default function ConciergeDashboard() {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
             <div className="lg:col-span-2 space-y-4">
+              <UpcomingTodayCard />
               <EmbeddedChecklist />
               <ClassScheduleView />
             </div>

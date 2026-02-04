@@ -56,6 +56,7 @@ import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
+import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -340,6 +341,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <AnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Master Calendar for Managers */}
+            <Route
+              path="/dashboard/master-calendar"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <MasterCalendarPage />
                 </ProtectedRoute>
               }
             />

@@ -2108,6 +2108,54 @@ export type Database = {
         }
         Relationships: []
       }
+      dev_notes: {
+        Row: {
+          content: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      dev_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          status: Database["public"]["Enums"]["dev_task_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["dev_task_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["dev_task_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -2473,6 +2521,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_dev_status: {
+        Row: {
+          created_at: string
+          id: string
+          page_path: string
+          page_title: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_path: string
+          page_title: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_path?: string
+          page_title?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3912,6 +3987,11 @@ export type Database = {
         | "male_spa_attendant"
         | "floater"
         | "cafe"
+      dev_task_status:
+        | "not_started"
+        | "in_progress"
+        | "finishing_touches"
+        | "completed"
       membership_tier: "basic" | "standard" | "premium" | "vip"
     }
     CompositeTypes: {
@@ -4049,6 +4129,12 @@ export const Constants = {
         "male_spa_attendant",
         "floater",
         "cafe",
+      ],
+      dev_task_status: [
+        "not_started",
+        "in_progress",
+        "finishing_touches",
+        "completed",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
     },

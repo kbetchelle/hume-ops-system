@@ -353,23 +353,40 @@ export function DevDashboardPanel() {
                 </div>
               </div>
 
-              {/* Page rows - sorted by role */}
-              {pages
-                ?.slice()
-                .sort((a, b) => {
+              {/* Page rows - grouped by role */}
+              {(() => {
+                const sortedPages = pages?.slice().sort((a, b) => {
                   const roleA = a.role_category || "zzz";
                   const roleB = b.role_category || "zzz";
                   return roleA.localeCompare(roleB);
-                })
-                .map((page) => (
-                <PageRow
-                  key={page.id}
-                  page={page}
-                  onStatusChange={handleStatusChange}
-                  onRoleChange={handleRoleChange}
-                  onDelete={handleDelete}
-                />
-              ))}
+                }) || [];
+                
+                let currentRole: string | null = null;
+                
+                return sortedPages.map((page) => {
+                  const showDivider = page.role_category !== currentRole;
+                  currentRole = page.role_category;
+                  
+                  return (
+                    <div key={page.id}>
+                      {showDivider && (
+                        <div className="flex items-center gap-2 pt-4 pb-2 first:pt-0">
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
+                            {page.role_category || "Uncategorized"}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                      )}
+                      <PageRow
+                        page={page}
+                        onStatusChange={handleStatusChange}
+                        onRoleChange={handleRoleChange}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </CardContent>
         </Card>

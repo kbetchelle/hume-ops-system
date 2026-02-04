@@ -4,6 +4,7 @@ import { ConciergeChecklistManager } from "@/components/checklists/concierge/Con
 import { BoHChecklistManager } from "@/components/checklists/boh/BoHChecklistManager";
 import { CafeChecklistManager } from "@/components/checklists/cafe/CafeChecklistManager";
 import { ChecklistCompletionViewer } from "@/components/checklists/ChecklistCompletionViewer";
+import { AssignChecklistsTab } from "@/components/checklists/AssignChecklistsTab";
 
 export default function ChecklistsManagementPage() {
   return (
@@ -30,6 +31,12 @@ export default function ChecklistsManagementPage() {
               Cafe
             </TabsTrigger>
             <TabsTrigger
+              value="assign"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
+            >
+              Assign Checklists
+            </TabsTrigger>
+            <TabsTrigger
               value="status"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
             >
@@ -44,6 +51,9 @@ export default function ChecklistsManagementPage() {
           </TabsContent>
           <TabsContent value="cafe" className="pt-8">
             <CafeChecklistManager />
+          </TabsContent>
+          <TabsContent value="assign" className="pt-8">
+            <AssignChecklistsTab />
           </TabsContent>
           <TabsContent value="status" className="pt-8">
             <ChecklistCompletionViewer />

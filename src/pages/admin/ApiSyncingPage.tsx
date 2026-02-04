@@ -452,11 +452,7 @@ function SyncLogHistoryTable() {
 }
 
 export default function ApiSyncingPage() {
-  const { data: schedules, isLoading, refetch } = useSyncSchedules();
-  // Only count enabled syncs for stats
-  const enabledSchedules = schedules?.filter(s => s.is_enabled) || [];
-  const healthyCount = enabledSchedules.filter(s => s.last_status === "success" || s.failure_count === 0).length;
-  const errorCount = enabledSchedules.filter(s => s.last_status === "failed").length;
+  const { isLoading, refetch } = useSyncSchedules();
 
   return (
     <DashboardLayout title="API Syncing">
@@ -480,40 +476,6 @@ export default function ApiSyncingPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border border-border rounded-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-                Total Endpoints
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-normal">{enabledSchedules.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-                Healthy
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-normal text-primary">{healthyCount}</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-                Errors
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-normal text-destructive">{errorCount}</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Tabs for Overview and History */}

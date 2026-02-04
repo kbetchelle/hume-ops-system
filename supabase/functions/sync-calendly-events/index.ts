@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 interface CalendlyEvent {
   uri: string;
@@ -143,13 +144,18 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const CALENDLY_ACCESS_TOKEN = Deno.env.get('CALENDLY_API_KEY');
-    const CALENDLY_ORGANIZATION_URI = Deno.env.get('CALENDLY_ORGANIZATION_URI');
+    let CALENDLY_ORGANIZATION_URI = Deno.env.get('CALENDLY_ORGANIZATION_URI');
 
     if (!CALENDLY_ACCESS_TOKEN || !CALENDLY_ORGANIZATION_URI) {
       return new Response(
         JSON.stringify({ error: 'Calendly API credentials not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Ensure organization URI is in full format
+    if (!CALENDLY_ORGANIZATION_URI.startsWith('https://')) {
+      CALENDLY_ORGANIZATION_URI = `https://api.calendly.com/organizations/${CALENDLY_ORGANIZATION_URI}`;
     }
 
     const logger = createSyncLogger('calendly_events');
@@ -362,6 +368,18 @@ Deno.serve(async (req) => {
       retryCount: Math.max(0, totalAttempts - 1),
     });
 
+    // Log to api_logs table for UI visibility
+    await logApiCall(supabase, {
+      apiName: 'calendly_events',
+      endpoint: '/scheduled_events',
+      syncSuccess: targetFailed === 0,
+      durationMs,
+      recordsProcessed: allEvents.length,
+      recordsInserted: targetInserted,
+      responseStatus: 200,
+      triggeredBy: 'scheduled',
+    });
+
     // Update sync status
     await supabase
       .from('api_sync_status')
@@ -386,9 +404,26 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
     const logger = createSyncLogger('calendly_events');
     logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    
+    // Log failure to api_logs
+    await logApiCall(supabase, {
+      apiName: 'calendly_events',
+      endpoint: '/scheduled_events',
+      syncSuccess: false,
+      durationMs: 0,
+      recordsProcessed: 0,
+      recordsInserted: 0,
+      errorMessage,
+      triggeredBy: 'scheduled',
+    });
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

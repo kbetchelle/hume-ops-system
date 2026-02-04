@@ -236,7 +236,7 @@ export function DevDashboardPanel() {
             <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
-            {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 px-[10px] py-[6px] border border-primary" /> : <div className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary py-[3px] mx-[2px] my-[4px] border" dangerouslySetInnerHTML={{
+            {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 py-[6px] border border-primary px-px mx-[10px]" /> : <div className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary py-[3px] mx-[2px] my-[4px] border" dangerouslySetInnerHTML={{
             __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
           }} />}
           </CardContent>

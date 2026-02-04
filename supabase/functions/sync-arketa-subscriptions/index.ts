@@ -45,6 +45,8 @@ interface SyncRequest {
   status?: string;
   limit?: number;
   cursor?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 // Transform subscription from API format to database format
@@ -101,8 +103,18 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({})) as SyncRequest;
     const limit = body.limit || 100;
     const statusFilter = body.status || 'active'; // Default to active subscriptions
+    
+    // Default: 7 days back to 7 days forward
+    const today = new Date();
+    const defaultStart = new Date(today);
+    defaultStart.setDate(defaultStart.getDate() - 7);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + 7);
+    
+    const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
+    const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
 
-    logger.info(`Syncing subscriptions (status: ${statusFilter}, limit: ${limit})`);
+    logger.info(`Syncing subscriptions (status: ${statusFilter}, limit: ${limit}, ${startDate} to ${endDate})`);
 
     // Try to get token via refresh flow, fall back to API key
     let headers: Record<string, string>;
@@ -124,7 +136,7 @@ Deno.serve(async (req) => {
     let hasMore = true;
 
     while (hasMore) {
-      let url = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/subscriptions?limit=${limit}`;
+      let url = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/subscriptions?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
       if (statusFilter) {
         url += `&status=${statusFilter}`;
       }

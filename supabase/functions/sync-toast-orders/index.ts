@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     
     // Default to today, or use provided dates
     const today = new Date().toISOString().split('T')[0];
-    const daysBack = body.days_back || 1;
+    const daysBack = body.days_back || 14; // Default to 14 days back
     
     const endDate = body.end_date || today;
     const startDateDefault = new Date();

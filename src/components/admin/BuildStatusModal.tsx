@@ -84,13 +84,6 @@ function ModalPageRow({
         {page.page_title}
       </div>
 
-      {/* Role Column */}
-      <div className="w-28" onDoubleClick={handleRoleDoubleClick}>
-        {isEditingRole ? <input ref={roleInputRef} type="text" value={roleValue} onChange={e => setRoleValue(e.target.value)} onBlur={handleRoleBlur} onKeyDown={handleRoleKeyDown} className="w-full text-xs text-right bg-transparent border-b border-primary outline-none caret-primary px-1" /> : <span className="text-xs text-muted-foreground cursor-text block text-right">
-            {page.role_category || "—"}
-          </span>}
-      </div>
-
       {/* Status Column */}
       <div className="w-36">
         <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)}>
@@ -143,9 +136,6 @@ export function BuildStatusModal({
           <div className="flex items-center py-2 border-b border-border gap-4 sticky top-0 bg-background z-10">
             <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium pl-2">
               Page
-            </div>
-            <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
-              Role
             </div>
             <div className="w-36 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               Status

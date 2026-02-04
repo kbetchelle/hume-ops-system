@@ -42,6 +42,20 @@ interface ConciergeChecklistItem {
   required: boolean;
 }
 
+interface ShiftSubmission {
+  id: string;
+  submitted_at: string;
+  submitted_by: string;
+  submitted_by_id: string;
+  completed_tasks: number;
+  total_tasks: number;
+  department: string;
+  department_table: string;
+  shift_time: string;
+  completion_date: string;
+  position: string | null;
+}
+
 interface ConciergeCompletion {
   id: string;
   item_id: string;
@@ -287,18 +301,18 @@ export function EmbeddedChecklist() {
   const { data: shiftSubmission, isLoading: submissionLoading } = useQuery({
     queryKey: ["shift-submission", "concierge", today, currentShift],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_shift_submissions")
+      const { data, error } = await (supabase
+        .from("checklist_shift_submissions" as any) as any)
         .select("*")
         .eq("department_table", "concierge")
         .eq("department", "Concierge")
         .eq("completion_date", today)
         .eq("shift_time", currentShift)
         .is("position", null)
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
+      if (error) throw error;
+      return data as ShiftSubmission | null;
     },
   });
 
@@ -307,8 +321,8 @@ export function EmbeddedChecklist() {
     mutationFn: async () => {
       if (!userData?.id) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("checklist_shift_submissions")
+      const { error } = await (supabase
+        .from("checklist_shift_submissions" as any) as any)
         .insert({
           department_table: "concierge",
           department: "Concierge",

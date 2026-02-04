@@ -84,7 +84,7 @@ function ModalPageRow({
       {/* Status Column */}
       <div className="w-36 flex justify-end">
         <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)}>
-          <SelectTrigger className={`h-8 text-[0.875em] border-0 bg-transparent shadow-none justify-end ${getStatusColor(page.status)}`}>
+          <SelectTrigger className={`h-8 text-[0.875em] border-0 bg-transparent shadow-none justify-end [&>svg]:hidden ${getStatusColor(page.status)}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -128,7 +128,6 @@ export function BuildStatusModal({
               ​
             </div>
             <div className="w-36 text-[0.625em] uppercase tracking-widest text-muted-foreground font-medium">
-              Status
             </div>
           </div>
 

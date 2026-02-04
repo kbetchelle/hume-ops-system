@@ -225,6 +225,6 @@ export function DevDashboardPanel() {
       {/* Modals */}
       <DevNotesModal open={notesModalOpen} onOpenChange={setNotesModalOpen} noteContent={noteContent} onNoteChange={setNoteContent} onSave={saveNotes} />
 
-      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} onDelete={() => {}} />
+      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} />
     </>;
 }

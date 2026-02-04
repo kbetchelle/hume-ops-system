@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
 import { PageStatus } from "@/hooks/useDevDashboard";
 const STATUS_OPTIONS: {
   value: PageStatus;
@@ -44,13 +43,11 @@ interface ModalPageRowProps {
   page: PageData;
   onStatusChange: (pageId: string, status: PageStatus) => void;
   onRoleChange: (pageId: string, role: string) => void;
-  onDelete: (pageId: string) => void;
 }
 function ModalPageRow({
   page,
   onStatusChange,
-  onRoleChange,
-  onDelete
+  onRoleChange
 }: ModalPageRowProps) {
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [roleValue, setRoleValue] = useState(page.role_category || "");
@@ -97,11 +94,6 @@ function ModalPageRow({
           </SelectContent>
         </Select>
       </div>
-
-      {/* Delete Button */}
-      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => onDelete(page.id)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
     </div>;
 }
 interface BuildStatusModalProps {
@@ -110,15 +102,13 @@ interface BuildStatusModalProps {
   pages: PageData[] | undefined;
   onStatusChange: (pageId: string, status: PageStatus) => void;
   onRoleChange: (pageId: string, role: string) => void;
-  onDelete: (pageId: string) => void;
 }
 export function BuildStatusModal({
   open,
   onOpenChange,
   pages,
   onStatusChange,
-  onRoleChange,
-  onDelete
+  onRoleChange
 }: BuildStatusModalProps) {
   const sortedPages = pages?.slice().sort((a, b) => {
     const roleA = a.role_category || "zzz";
@@ -140,7 +130,6 @@ export function BuildStatusModal({
             <div className="w-36 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               Status
             </div>
-            <div className="w-8" />
           </div>
 
           {/* Page rows - grouped by role */}
@@ -154,7 +143,7 @@ export function BuildStatusModal({
                     </span>
                     <div className="flex-1 h-[2px] bg-border/80" />
                   </div>}
-                <ModalPageRow page={page} onStatusChange={onStatusChange} onRoleChange={onRoleChange} onDelete={onDelete} />
+                <ModalPageRow page={page} onStatusChange={onStatusChange} onRoleChange={onRoleChange} />
               </div>;
         })}
         </div>

@@ -370,7 +370,7 @@ export function DevDashboardPanel() {
                   return (
                     <div key={page.id}>
                       {showDivider && (
-                        <div className="flex items-center gap-2 pt-4 pb-2 first:pt-0">
+                        <div className="flex items-center gap-2 pt-4 pb-2 first:pt-0 pl-2">
                           <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
                             {page.role_category || "Uncategorized"}
                           </span>

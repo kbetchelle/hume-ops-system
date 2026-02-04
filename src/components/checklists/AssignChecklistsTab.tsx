@@ -153,6 +153,18 @@ function BoHChecklistTable({ checklists, conflicts }: { checklists: BoHChecklist
   );
 }
 
+// Map checklist titles to their specific time ranges
+const CONCIERGE_TIME_RANGES: Record<string, string> = {
+  "Concierge - Weekday AM": "6am - 1:30pm",
+  "Concierge - Weekday PM": "1:30pm - 8pm",
+  "Concierge - Weekday Opening Checklist": "5am - 6am",
+  "Concierge - Weekday Closing Checklist": "8pm - 9pm",
+  "Concierge - Weekend AM": "7am - 1pm",
+  "Concierge - Weekend PM": "1pm - 6pm",
+  "Concierge - Weekend Opening Checklist": "6am - 7am",
+  "Concierge - Weekend Closing Checklist": "6pm - 7pm",
+};
+
 function ConciergeChecklistTable({ checklists, conflicts }: { checklists: ConciergeChecklist[]; conflicts: Map<string, boolean> }) {
   return (
     <Card className="border rounded-none">
@@ -166,7 +178,7 @@ function ConciergeChecklistTable({ checklists, conflicts }: { checklists: Concie
           <TableHeader>
             <TableRow className="border-b">
               <TableHead className="text-xs uppercase tracking-wider">Checklist</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider">Shift</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider">Time Range</TableHead>
               <TableHead className="text-xs uppercase tracking-wider">Schedule</TableHead>
             </TableRow>
           </TableHeader>
@@ -180,6 +192,7 @@ function ConciergeChecklistTable({ checklists, conflicts }: { checklists: Concie
             ) : (
               checklists.map((cl) => {
                 const hasConflict = conflicts.get(cl.id);
+                const timeRange = CONCIERGE_TIME_RANGES[cl.title] || cl.shift_time;
                 return (
                   <TableRow
                     key={cl.id}
@@ -202,7 +215,7 @@ function ConciergeChecklistTable({ checklists, conflicts }: { checklists: Concie
                             : "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                         )}
                       >
-                        {cl.shift_time}
+                        {timeRange}
                       </span>
                     </TableCell>
                     <TableCell>

@@ -52,12 +52,67 @@ interface TimeGroup {
   totalCount: number;
 }
 
+// Determine the current concierge checklist type based on time of day
+function getCurrentChecklistType(isWeekend: boolean): { title: string; shiftTime: "AM" | "PM" } {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  if (isWeekend) {
+    // Weekend schedule:
+    // Opening: 6am-7am (360-420)
+    // AM: 7am-1pm (420-780)
+    // PM: 1pm-6pm (780-1080)
+    // Closing: 6pm-7pm (1080-1140)
+    if (totalMinutes >= 360 && totalMinutes < 420) {
+      return { title: "Concierge - Weekend Opening Checklist", shiftTime: "AM" };
+    } else if (totalMinutes >= 420 && totalMinutes < 780) {
+      return { title: "Concierge - Weekend AM", shiftTime: "AM" };
+    } else if (totalMinutes >= 780 && totalMinutes < 1080) {
+      return { title: "Concierge - Weekend PM", shiftTime: "PM" };
+    } else if (totalMinutes >= 1080 && totalMinutes < 1140) {
+      return { title: "Concierge - Weekend Closing Checklist", shiftTime: "PM" };
+    } else if (totalMinutes < 360) {
+      // Before 6am - show opening checklist
+      return { title: "Concierge - Weekend Opening Checklist", shiftTime: "AM" };
+    } else {
+      // After 7pm - show closing checklist
+      return { title: "Concierge - Weekend Closing Checklist", shiftTime: "PM" };
+    }
+  } else {
+    // Weekday schedule:
+    // Opening: 5am-6am (300-360)
+    // AM: 6am-1:30pm (360-810)
+    // PM: 1:30pm-8pm (810-1200)
+    // Closing: 8pm-9pm (1200-1260)
+    if (totalMinutes >= 300 && totalMinutes < 360) {
+      return { title: "Concierge - Weekday Opening Checklist", shiftTime: "AM" };
+    } else if (totalMinutes >= 360 && totalMinutes < 810) {
+      return { title: "Concierge - Weekday AM", shiftTime: "AM" };
+    } else if (totalMinutes >= 810 && totalMinutes < 1200) {
+      return { title: "Concierge - Weekday PM", shiftTime: "PM" };
+    } else if (totalMinutes >= 1200 && totalMinutes < 1260) {
+      return { title: "Concierge - Weekday Closing Checklist", shiftTime: "PM" };
+    } else if (totalMinutes < 300) {
+      // Before 5am - show opening checklist
+      return { title: "Concierge - Weekday Opening Checklist", shiftTime: "AM" };
+    } else {
+      // After 9pm - show closing checklist
+      return { title: "Concierge - Weekday Closing Checklist", shiftTime: "PM" };
+    }
+  }
+}
+
 export function EmbeddedChecklist() {
   const { currentShift } = useCurrentShift();
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
   const currentHour = new Date().getHours();
   const isWeekend = [0, 6].includes(new Date().getDay());
+  
+  // Get the specific checklist based on time of day
+  const checklistType = getCurrentChecklistType(isWeekend);
 
   // Get current user
   const { data: userData } = useQuery({
@@ -68,15 +123,14 @@ export function EmbeddedChecklist() {
     },
   });
 
-  // Fetch the concierge checklist for current shift
+  // Fetch the concierge checklist for current time-based checklist
   const { data: checklist, isLoading: checklistLoading } = useQuery({
-    queryKey: ["concierge-checklists", currentShift, isWeekend],
+    queryKey: ["concierge-checklists", checklistType.title],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("concierge_checklists")
         .select("*")
-        .eq("shift_time", currentShift)
-        .eq("is_weekend", isWeekend)
+        .eq("title", checklistType.title)
         .eq("is_active", true)
         .limit(1)
         .single();
@@ -265,7 +319,7 @@ export function EmbeddedChecklist() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <CheckSquare className="h-5 w-5" />
-            {currentShift} Shift Checklist
+            {checklist?.title || checklistType.title}
           </CardTitle>
           <Badge variant="outline" className="text-xs">
             {completedCount}/{totalCount} complete
@@ -286,7 +340,7 @@ export function EmbeddedChecklist() {
           </div>
         ) : !checklist ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">
-            No checklist template for {currentShift} shift ({isWeekend ? "weekend" : "weekday"})
+            No checklist template found for "{checklistType.title}"
           </p>
         ) : !items || items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8 px-4">

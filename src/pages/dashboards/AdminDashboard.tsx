@@ -2,21 +2,21 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { DevDashboardPanel } from "@/components/admin/DevDashboardPanel";
-
 export default function AdminDashboard() {
-  const { user } = useAuthContext();
-  const { data: profile } = useUserProfile(user?.id);
-
+  const {
+    user
+  } = useAuthContext();
+  const {
+    data: profile
+  } = useUserProfile(user?.id);
   const getFirstName = (fullName: string | null | undefined) => {
     if (!fullName) return "there";
     return fullName.split(" ")[0];
   };
-
-  return (
-    <DashboardLayout title="Admin Dashboard">
-      <div className="flex flex-col h-full p-6 md:p-8">
+  return <DashboardLayout title="Admin Dashboard">
+      <div className="flex flex-col h-full p-6 md:p-8 my-0 py-[22px] text-warning-foreground">
         <div className="text-center mb-6">
-          <h2 className="text-sm uppercase tracking-[0.15em] font-normal text-muted-foreground">
+          <h2 className="text-sm uppercase tracking-[0.15em] font-normal text-primary">
             Welcome back, {getFirstName(profile?.full_name)}
           </h2>
         </div>
@@ -24,6 +24,5 @@ export default function AdminDashboard() {
           <DevDashboardPanel />
         </div>
       </div>
-    </DashboardLayout>
-  );
+    </DashboardLayout>;
 }

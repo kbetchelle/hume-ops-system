@@ -483,7 +483,7 @@ export function DashboardLayout({
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader title={title} />
-          <main className="flex-1 p-4 md:p-8 overflow-auto my-0 py-0">
+          <main className="flex-1 p-4 md:p-8 overflow-auto my-0 py-0 px-0">
             {children}
           </main>
         </div>

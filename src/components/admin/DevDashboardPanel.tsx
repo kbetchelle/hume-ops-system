@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { usePageStatuses, useUpdatePageStatus, useDevNotes, useUpdateDevNotes, useUpdatePageRole, useDeletePageStatus, PageStatus } from "@/hooks/useDevDashboard";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DevNotesModal } from "./DevNotesModal";
+import { BuildStatusModal } from "./BuildStatusModal";
+
 const STATUS_OPTIONS: {
   value: PageStatus;
   label: string;
@@ -166,6 +169,8 @@ export function DevDashboardPanel() {
   const deletePageStatus = useDeletePageStatus();
   const [noteContent, setNoteContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
   const noteCardRef = useRef<HTMLDivElement>(null);
   const hasLoadedNote = useRef(false);
 
@@ -200,14 +205,15 @@ export function DevDashboardPanel() {
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
   }, [isEditing, noteContent]);
-  const saveNotes = () => {
+  const saveNotes = useCallback(() => {
     if (noteContent !== devNote?.content) {
       updateDevNotes.mutate({
         content: noteContent
       });
     }
     setIsEditing(false);
-  };
+  }, [noteContent, devNote?.content, updateDevNotes]);
+
   const handleStatusChange = (pageId: string, newStatus: PageStatus) => {
     updatePageStatus.mutate({
       pageId,
@@ -228,67 +234,125 @@ export function DevDashboardPanel() {
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>;
   }
-  return <div className="flex gap-6 h-full">
-      {/* Left panel - Dev Notes (7/12 width) */}
-      <div className="w-7/12 flex flex-col">
-        <Card ref={noteCardRef} className="border flex flex-col flex-1 cursor-text" onClick={() => setIsEditing(true)}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col min-h-0">
-            {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary border px-[10px] py-[6px]" dangerouslySetInnerHTML={{
-            __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
-          }} />}
-          </CardContent>
-        </Card>
-      </div>
+  return (
+    <>
+      <div className="flex gap-6 h-full">
+        {/* Left panel - Dev Notes (7/12 width) */}
+        <div className="w-7/12 flex flex-col">
+          <Card 
+            ref={noteCardRef} 
+            className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" 
+            onClick={() => setNotesModalOpen(true)}
+          >
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setNotesModalOpen(true); }}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0" onClick={(e) => e.stopPropagation()}>
+              {isEditing ? (
+                <RichTextEditor 
+                  value={noteContent} 
+                  onChange={setNoteContent} 
+                  placeholder="Click to add notes..." 
+                  minHeight="100%" 
+                  className="flex-1 border border-primary" 
+                />
+              ) : (
+                <div 
+                  className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary border px-[10px] py-[6px] cursor-text" 
+                  dangerouslySetInnerHTML={{
+                    __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
+                  }} 
+                  onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Right panel - Page Status Tracker (5/12 width) */}
-      <div className="w-5/12 flex flex-col">
-        <Card className="border flex flex-col flex-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs">BUILD STATUS</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto">
-            <div className="space-y-0">
-              {/* Header row */}
-              <div className="flex items-center py-2 border-b border-border">
-                <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                  Page
+        {/* Right panel - Page Status Tracker (5/12 width) */}
+        <div className="w-5/12 flex flex-col">
+          <Card 
+            className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setStatusModalOpen(true)}
+          >
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs">BUILD STATUS</CardTitle>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setStatusModalOpen(true); }}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="space-y-0">
+                {/* Header row */}
+                <div className="flex items-center py-2 border-b border-border">
+                  <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    Page
+                  </div>
+                  <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pr-2">
+                    Role
+                  </div>
+                  <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
+                    Status
+                  </div>
                 </div>
-                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pr-2">
-                  Role
-                </div>
-                <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
-                  Status
-                </div>
+
+                {/* Page rows - grouped by role */}
+                {(() => {
+                  const sortedPages = pages?.slice().sort((a, b) => {
+                    const roleA = a.role_category || "zzz";
+                    const roleB = b.role_category || "zzz";
+                    return roleA.localeCompare(roleB);
+                  }) || [];
+                  let currentRole: string | null = null;
+                  return sortedPages.map(page => {
+                    const showDivider = page.role_category !== currentRole;
+                    currentRole = page.role_category;
+                    return (
+                      <div key={page.id}>
+                        {showDivider && (
+                          <div className="flex items-center gap-3 pt-5 pb-2 first:pt-0">
+                            <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                              {page.role_category || "Uncategorized"}
+                            </span>
+                            <div className="flex-1 h-[2px] bg-border/80" />
+                          </div>
+                        )}
+                        <PageRow 
+                          page={page} 
+                          onStatusChange={handleStatusChange} 
+                          onRoleChange={handleRoleChange} 
+                          onDelete={handleDelete} 
+                        />
+                      </div>
+                    );
+                  });
+                })()}
               </div>
-
-              {/* Page rows - grouped by role */}
-              {(() => {
-              const sortedPages = pages?.slice().sort((a, b) => {
-                const roleA = a.role_category || "zzz";
-                const roleB = b.role_category || "zzz";
-                return roleA.localeCompare(roleB);
-              }) || [];
-              let currentRole: string | null = null;
-              return sortedPages.map(page => {
-                const showDivider = page.role_category !== currentRole;
-                currentRole = page.role_category;
-                return <div key={page.id}>
-                      {showDivider && <div className="flex items-center gap-3 pt-5 pb-2 first:pt-0">
-                          <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-                            {page.role_category || "Uncategorized"}
-                          </span>
-                          <div className="flex-1 h-[2px] bg-border/80" />
-                        </div>}
-                      <PageRow page={page} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} onDelete={handleDelete} />
-                    </div>;
-              });
-            })()}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>;
+
+      {/* Modals */}
+      <DevNotesModal
+        open={notesModalOpen}
+        onOpenChange={setNotesModalOpen}
+        noteContent={noteContent}
+        onNoteChange={setNoteContent}
+        onSave={saveNotes}
+      />
+
+      <BuildStatusModal
+        open={statusModalOpen}
+        onOpenChange={setStatusModalOpen}
+        pages={pages}
+        onStatusChange={handleStatusChange}
+        onRoleChange={handleRoleChange}
+        onDelete={handleDelete}
+      />
+    </>
+  );
 }

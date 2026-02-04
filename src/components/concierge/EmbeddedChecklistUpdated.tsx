@@ -314,7 +314,7 @@ export function EmbeddedChecklist() {
   };
 
   return (
-    <Card className="w-full border-border">
+    <Card className="w-full border-2 border-border shadow-md bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">

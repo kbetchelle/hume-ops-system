@@ -77,18 +77,18 @@ function ModalPageRow({
   };
   return <div className="flex items-center py-3 border-b border-border last:border-b-0 gap-4">
       {/* Page Title */}
-      <div className="flex-1 text-sm min-w-0 truncate pl-2 text-primary mx-[20px]">
+      <div className="flex-1 text-[0.875em] min-w-0 truncate pl-2 text-primary mx-[20px]">
         {page.page_title}
       </div>
 
       {/* Status Column */}
       <div className="w-36 flex justify-end">
         <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)}>
-          <SelectTrigger className={`h-8 text-sm border-0 bg-transparent shadow-none justify-end ${getStatusColor(page.status)}`}>
+          <SelectTrigger className={`h-8 text-[0.875em] border-0 bg-transparent shadow-none justify-end ${getStatusColor(page.status)}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-sm ${getStatusColor(option.value)}`}>
+            {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-[0.875em] ${getStatusColor(option.value)}`}>
                 {option.label}
               </SelectItem>)}
           </SelectContent>
@@ -117,17 +117,17 @@ export function BuildStatusModal({
   }) || [];
   let currentRole: string | null = null;
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0 gap-0 rounded-none animate-in fade-in-0 zoom-in-95 duration-200">
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0 gap-0 rounded-none animate-in fade-in-0 zoom-in-95 duration-200 text-[1.4em]">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-sm">BUILD STATUS</DialogTitle>
+          <DialogTitle className="text-[0.875em]">BUILD STATUS</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-6">
           {/* Header row */}
           <div className="flex items-center py-2 border-b border-border gap-4 sticky top-0 bg-background z-10">
-            <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium pl-2">
+            <div className="flex-1 text-[0.625em] uppercase tracking-widest text-muted-foreground font-medium pl-2">
               ​
             </div>
-            <div className="w-36 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+            <div className="w-36 text-[0.625em] uppercase tracking-widest text-muted-foreground font-medium">
               Status
             </div>
           </div>
@@ -138,7 +138,7 @@ export function BuildStatusModal({
           currentRole = page.role_category;
           return <div key={page.id}>
                 {showDivider && <div className="flex items-center gap-3 pt-6 pb-2 first:pt-0">
-                    <span className="text-sm uppercase tracking-widest text-muted-foreground font-bold">
+                    <span className="text-[0.875em] uppercase tracking-widest text-muted-foreground font-bold">
                       {page.role_category || "Uncategorized"}
                     </span>
                     <div className="flex-1 h-[2px] bg-border/80" />

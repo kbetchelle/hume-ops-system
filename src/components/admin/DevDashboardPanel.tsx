@@ -258,7 +258,7 @@ export function DevDashboardPanel() {
                   const showDivider = page.role_category !== currentRole;
                   currentRole = page.role_category;
                   return <div key={page.id}>
-                        {showDivider && <div className="flex items-center gap-3 pt-5 pb-2 first:pt-0">
+                        {showDivider && <div className="flex items-center gap-3 pt-5 pb-2 first:pt-0 border-primary-foreground">
                             <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
                               {page.role_category || "Uncategorized"}
                             </span>

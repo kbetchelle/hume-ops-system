@@ -306,7 +306,7 @@ export function DevDashboardPanel() {
           onClick={() => setIsEditing(true)}
         >
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs">Notes from Dev</CardTitle>
+            <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
             {isEditing ? (

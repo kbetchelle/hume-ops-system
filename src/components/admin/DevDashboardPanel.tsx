@@ -137,6 +137,28 @@ function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps)
           {page.page_title}
         </div>
 
+        {/* Role Column */}
+        <div 
+          className="w-20 text-right pr-2"
+          onDoubleClick={handleRoleDoubleClick}
+        >
+          {isEditingRole ? (
+            <input
+              ref={roleInputRef}
+              type="text"
+              value={roleValue}
+              onChange={(e) => setRoleValue(e.target.value)}
+              onBlur={handleRoleBlur}
+              onKeyDown={handleRoleKeyDown}
+              className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary"
+            />
+          ) : (
+            <span className="text-[10px] text-muted-foreground cursor-text">
+              {page.role_category || "—"}
+            </span>
+          )}
+        </div>
+
         {/* Status Column */}
         <div 
           className="w-28 flex justify-end"
@@ -172,28 +194,6 @@ function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps)
           ) : (
             <span className={`text-[10px] cursor-pointer ${getStatusColor(page.status)}`}>
               {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
-            </span>
-          )}
-        </div>
-
-        {/* Role Column */}
-        <div 
-          className="w-20 text-right pl-2"
-          onDoubleClick={handleRoleDoubleClick}
-        >
-          {isEditingRole ? (
-            <input
-              ref={roleInputRef}
-              type="text"
-              value={roleValue}
-              onChange={(e) => setRoleValue(e.target.value)}
-              onBlur={handleRoleBlur}
-              onKeyDown={handleRoleKeyDown}
-              className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary"
-            />
-          ) : (
-            <span className="text-[10px] text-muted-foreground cursor-text">
-              {page.role_category || "—"}
             </span>
           )}
         </div>
@@ -306,7 +306,7 @@ export function DevDashboardPanel() {
           onClick={() => setIsEditing(true)}
         >
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs">Notes from Dev</CardTitle>
+            <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-0">
             {isEditing ? (
@@ -336,7 +336,7 @@ export function DevDashboardPanel() {
       <div className="w-5/12 flex flex-col">
         <Card className="border flex flex-col flex-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs">Page Development Status</CardTitle>
+            <CardTitle className="text-xs">BUILD STATUS</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto">
             <div className="space-y-0">
@@ -345,24 +345,48 @@ export function DevDashboardPanel() {
                 <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                   Page
                 </div>
+                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pr-2">
+                  Role
+                </div>
                 <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
                   Status
                 </div>
-                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pl-2">
-                  Role
-                </div>
               </div>
 
-              {/* Page rows */}
-              {pages?.map((page) => (
-                <PageRow
-                  key={page.id}
-                  page={page}
-                  onStatusChange={handleStatusChange}
-                  onRoleChange={handleRoleChange}
-                  onDelete={handleDelete}
-                />
-              ))}
+              {/* Page rows - grouped by role */}
+              {(() => {
+                const sortedPages = pages?.slice().sort((a, b) => {
+                  const roleA = a.role_category || "zzz";
+                  const roleB = b.role_category || "zzz";
+                  return roleA.localeCompare(roleB);
+                }) || [];
+                
+                let currentRole: string | null = null;
+                
+                return sortedPages.map((page) => {
+                  const showDivider = page.role_category !== currentRole;
+                  currentRole = page.role_category;
+                  
+                  return (
+                    <div key={page.id}>
+                      {showDivider && (
+                        <div className="flex items-center gap-2 pt-4 pb-2 first:pt-0">
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
+                            {page.role_category || "Uncategorized"}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                      )}
+                      <PageRow
+                        page={page}
+                        onStatusChange={handleStatusChange}
+                        onRoleChange={handleRoleChange}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </CardContent>
         </Card>

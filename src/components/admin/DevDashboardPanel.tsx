@@ -133,7 +133,7 @@ function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps)
         }`}
       >
         {/* Page Title */}
-        <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2">
+        <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2 pl-2">
           {page.page_title}
         </div>
 

@@ -336,7 +336,7 @@ export function DevDashboardPanel() {
       <div className="w-5/12 flex flex-col">
         <Card className="border flex flex-col flex-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs">Page Development Status</CardTitle>
+            <CardTitle className="text-xs">BUILD STATUS</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto">
             <div className="space-y-0">

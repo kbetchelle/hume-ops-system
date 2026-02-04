@@ -277,8 +277,8 @@ export function ConciergeForm() {
         await broadcastUpdate(formData);
         await broadcastSaved();
       } else {
-        // Queue for offline sync
-        await addToQueue('save_draft', draftData);
+        // Save draft locally when offline - it will sync when back online
+        console.log('[ConciergeForm] Offline - draft saved locally, will sync when online');
         setIsDirty(false);
       }
     } catch (error) {

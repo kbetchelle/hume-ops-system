@@ -46,47 +46,19 @@ interface PageRowProps {
     role_category: string | null;
   };
   onStatusChange: (pageId: string, status: PageStatus) => void;
-  onRoleChange: (pageId: string, role: string) => void;
   onDelete: (pageId: string) => void;
 }
 function PageRow({
   page,
   onStatusChange,
-  onRoleChange,
   onDelete
-}: PageRowProps) {
-  const [isEditingRole, setIsEditingRole] = useState(false);
-  const [roleValue, setRoleValue] = useState(page.role_category || "");
+}: Omit<PageRowProps, 'onRoleChange'>) {
   const [showDelete, setShowDelete] = useState(false);
   const [isHoveredStatus, setIsHoveredStatus] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const roleInputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
-  useEffect(() => {
-    if (isEditingRole && roleInputRef.current) {
-      roleInputRef.current.focus();
-    }
-  }, [isEditingRole]);
-  const handleRoleDoubleClick = () => {
-    setIsEditingRole(true);
-    setRoleValue(page.role_category || "");
-  };
-  const handleRoleBlur = () => {
-    if (roleValue !== page.role_category) {
-      onRoleChange(page.id, roleValue);
-    }
-    setIsEditingRole(false);
-  };
-  const handleRoleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRoleBlur();
-    } else if (e.key === "Escape") {
-      setRoleValue(page.role_category || "");
-      setIsEditingRole(false);
-    }
-  };
 
   // Handle wheel event for two-finger swipe detection
   const handleWheel = (e: React.WheelEvent) => {
@@ -119,28 +91,21 @@ function PageRow({
           {page.page_title}
         </div>
 
-        {/* Role Column */}
-        <div className="w-20 text-right pr-2" onDoubleClick={handleRoleDoubleClick}>
-          {isEditingRole ? <input ref={roleInputRef} type="text" value={roleValue} onChange={e => setRoleValue(e.target.value)} onBlur={handleRoleBlur} onKeyDown={handleRoleKeyDown} className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary" /> : <span className="text-[10px] text-muted-foreground cursor-text">
-              {page.role_category || "—"}
-            </span>}
-        </div>
-
         {/* Status Column */}
         <div className="w-28 flex justify-end" onMouseEnter={() => setIsHoveredStatus(true)} onMouseLeave={() => !isSelectOpen && setIsHoveredStatus(false)}>
           {isHoveredStatus || isSelectOpen ? <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)} onOpenChange={open => {
           setIsSelectOpen(open);
           if (!open) setIsHoveredStatus(false);
         }}>
-              <SelectTrigger className={`h-6 text-[10px] border-0 bg-transparent shadow-none p-0 w-auto gap-1 ${getStatusColor(page.status)}`}>
+              <SelectTrigger className={`h-6 text-xs border-0 bg-transparent shadow-none p-0 w-auto gap-1 ${getStatusColor(page.status)}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-xs ${getStatusColor(option.value)}`}>
+                {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-sm ${getStatusColor(option.value)}`}>
                     {option.label}
                   </SelectItem>)}
               </SelectContent>
-            </Select> : <span className={`text-[10px] cursor-pointer ${getStatusColor(page.status)}`}>
+            </Select> : <span className={`text-xs cursor-pointer ${getStatusColor(page.status)}`}>
               {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
             </span>}
         </div>
@@ -291,9 +256,6 @@ export function DevDashboardPanel() {
                   <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                     Page
                   </div>
-                  <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pr-2">
-                    Role
-                  </div>
                   <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
                     Status
                   </div>
@@ -323,7 +285,6 @@ export function DevDashboardPanel() {
                         <PageRow 
                           page={page} 
                           onStatusChange={handleStatusChange} 
-                          onRoleChange={handleRoleChange} 
                           onDelete={handleDelete} 
                         />
                       </div>

@@ -85,9 +85,12 @@ export function ChecklistComments({
   } = useQuery({
     queryKey: ["checklist-comments", checklistId, itemId, completionId, completionDate, shiftTime, departmentTable],
     queryFn: async () => {
-      let query = supabase.from("checklist_comments").select("*").eq("completion_date", completionDate).eq("shift_time", shiftTime).eq("department_table", departmentTable).order("created_at", {
-        ascending: false
-      });
+      let query = (supabase.from("checklist_comments" as any) as any)
+        .select("*")
+        .eq("completion_date", completionDate)
+        .eq("shift_time", shiftTime)
+        .eq("department_table", departmentTable)
+        .order("created_at", { ascending: false });
       if (completionId) {
         query = query.eq("completion_id", completionId);
       } else if (itemId) {
@@ -95,10 +98,7 @@ export function ChecklistComments({
       } else if (checklistId) {
         query = query.eq("checklist_id", checklistId);
       }
-      const {
-        data,
-        error
-      } = await query;
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as ChecklistComment[];
     }
@@ -108,9 +108,7 @@ export function ChecklistComments({
   const addCommentMutation = useMutation({
     mutationFn: async () => {
       if (!userData?.id || !commentText.trim()) return;
-      const {
-        error
-      } = await supabase.from("checklist_comments").insert({
+      const { error } = await (supabase.from("checklist_comments" as any) as any).insert({
         checklist_id: checklistId || null,
         item_id: itemId || null,
         completion_id: completionId || null,
@@ -137,9 +135,9 @@ export function ChecklistComments({
   // Delete comment mutation (managers/admins only)
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
-      const {
-        error
-      } = await supabase.from("checklist_comments").delete().eq("id", commentId);
+      const { error } = await (supabase.from("checklist_comments" as any) as any)
+        .delete()
+        .eq("id", commentId);
       if (error) throw error;
     },
     onSuccess: () => {

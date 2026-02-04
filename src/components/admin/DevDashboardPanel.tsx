@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { usePageStatuses, useUpdatePageStatus, useDevNotes, useUpdateDevNotes, useUpdatePageRole, useDeletePageStatus, PageStatus } from "@/hooks/useDevDashboard";
-import { Loader2, Trash2, Maximize2 } from "lucide-react";
+import { Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DevNotesModal } from "./DevNotesModal";
 import { BuildStatusModal } from "./BuildStatusModal";
@@ -45,76 +45,37 @@ interface PageRowProps {
     role_category: string | null;
   };
   onStatusChange: (pageId: string, status: PageStatus) => void;
-  onDelete: (pageId: string) => void;
 }
 function PageRow({
   page,
-  onStatusChange,
-  onDelete
-}: Omit<PageRowProps, 'onRoleChange'>) {
-  const [showDelete, setShowDelete] = useState(false);
+  onStatusChange
+}: PageRowProps) {
   const [isHoveredStatus, setIsHoveredStatus] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number>(0);
-  const touchStartY = useRef<number>(0);
 
-  // Handle wheel event for two-finger swipe detection
-  const handleWheel = (e: React.WheelEvent) => {
-    // Detect horizontal scroll (two-finger swipe on trackpad)
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && e.deltaX > 30) {
-      setShowDelete(true);
-    } else if (e.deltaX < -30) {
-      setShowDelete(false);
-    }
-  };
-
-  // Handle touch events for mobile swipe
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaX = touchStartX.current - e.changedTouches[0].clientX;
-    const deltaY = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
-    if (deltaX > 50 && deltaY < 30) {
-      setShowDelete(true);
-    } else if (deltaX < -50 && deltaY < 30) {
-      setShowDelete(false);
-    }
-  };
-  return <div ref={rowRef} className="flex items-center py-2 border-b border-border last:border-b-0 relative overflow-hidden" onWheel={handleWheel} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className={`flex items-center transition-transform duration-200 w-full ${showDelete ? "-translate-x-10" : "translate-x-0"}`}>
-        {/* Page Title */}
-        <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2 pl-2">
-          {page.page_title}
-        </div>
-
-        {/* Status Column */}
-        <div className="w-28 flex justify-end" onMouseEnter={() => setIsHoveredStatus(true)} onMouseLeave={() => !isSelectOpen && setIsHoveredStatus(false)}>
-          {isHoveredStatus || isSelectOpen ? <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)} onOpenChange={open => {
-          setIsSelectOpen(open);
-          if (!open) setIsHoveredStatus(false);
-        }}>
-              <SelectTrigger className={`h-6 text-xs border-0 bg-transparent shadow-none p-0 w-auto gap-1 ${getStatusColor(page.status)}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-sm ${getStatusColor(option.value)}`}>
-                    {option.label}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select> : <span className={`text-xs cursor-pointer ${getStatusColor(page.status)}`}>
-              {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
-            </span>}
-        </div>
+  return <div className="flex items-center py-2 border-b border-border last:border-b-0">
+      {/* Page Title */}
+      <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2 pl-2">
+        {page.page_title}
       </div>
 
-      {/* Delete Button */}
-      <div className={`absolute right-0 top-0 bottom-0 flex items-center transition-transform duration-200 ${showDelete ? "translate-x-0" : "translate-x-full"}`}>
-        <Button variant="destructive" size="sm" className="h-full rounded-none px-2" onClick={() => onDelete(page.id)}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+      {/* Status Column */}
+      <div className="w-28 flex justify-end" onMouseEnter={() => setIsHoveredStatus(true)} onMouseLeave={() => !isSelectOpen && setIsHoveredStatus(false)}>
+        {isHoveredStatus || isSelectOpen ? <Select value={page.status} onValueChange={(value: PageStatus) => onStatusChange(page.id, value)} onOpenChange={open => {
+        setIsSelectOpen(open);
+        if (!open) setIsHoveredStatus(false);
+      }}>
+            <SelectTrigger className={`h-6 text-xs border-0 bg-transparent shadow-none p-0 w-auto gap-1 ${getStatusColor(page.status)}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className={`text-sm ${getStatusColor(option.value)}`}>
+                  {option.label}
+                </SelectItem>)}
+            </SelectContent>
+          </Select> : <span className={`text-xs cursor-pointer ${getStatusColor(page.status)}`}>
+            {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
+          </span>}
       </div>
     </div>;
 }
@@ -130,7 +91,7 @@ export function DevDashboardPanel() {
   const updatePageStatus = useUpdatePageStatus();
   const updateDevNotes = useUpdateDevNotes();
   const updatePageRole = useUpdatePageRole();
-  const deletePageStatus = useDeletePageStatus();
+  
   const [noteContent, setNoteContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
@@ -188,9 +149,6 @@ export function DevDashboardPanel() {
       pageId,
       roleCategory
     });
-  };
-  const handleDelete = (pageId: string) => {
-    deletePageStatus.mutate(pageId);
   };
   if (pagesLoading || notesLoading) {
     return <div className="flex items-center justify-center h-64">
@@ -254,7 +212,7 @@ export function DevDashboardPanel() {
                             </span>
                             <div className="flex-1 h-[2px] bg-border/80" />
                           </div>}
-                        <PageRow page={page} onStatusChange={handleStatusChange} onDelete={handleDelete} />
+                        <PageRow page={page} onStatusChange={handleStatusChange} />
                       </div>;
                 });
               })()}
@@ -267,6 +225,6 @@ export function DevDashboardPanel() {
       {/* Modals */}
       <DevNotesModal open={notesModalOpen} onOpenChange={setNotesModalOpen} noteContent={noteContent} onNoteChange={setNoteContent} onSave={saveNotes} />
 
-      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} onDelete={handleDelete} />
+      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} onDelete={() => {}} />
     </>;
 }

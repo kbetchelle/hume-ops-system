@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +45,15 @@ export function RichTextEditor({
   const [linkUrl, setLinkUrl] = useState("");
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false);
+  const isInitializedRef = useRef(false);
+
+  // Set initial value only once on mount
+  useEffect(() => {
+    if (editorRef.current && !isInitializedRef.current) {
+      editorRef.current.innerHTML = value;
+      isInitializedRef.current = true;
+    }
+  }, [value]);
 
   // Execute formatting command
   const execCommand = useCallback((command: string, value?: string) => {
@@ -251,7 +260,6 @@ export function RichTextEditor({
         style={{ minHeight }}
         onInput={handleInput}
         onPaste={handlePaste}
-        dangerouslySetInnerHTML={{ __html: value }}
         data-placeholder={placeholder}
         suppressContentEditableWarning
       />

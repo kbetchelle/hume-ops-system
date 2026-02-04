@@ -47,7 +47,6 @@ import ShiftReportPage from "./pages/dashboards/ShiftReportPage";
 import ReportsPage from "./pages/dashboards/ReportsPage";
 import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
 import PublicPlanPage from "./pages/PublicPlanPage";
-import FacilityManagementPage from "./pages/dashboards/FacilityManagementPage";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 import SlingUserManagement from "./pages/admin/SlingUserManagement";
 
@@ -324,16 +323,6 @@ const App = () => (
 
             {/* Public Plan View (no auth required) */}
             <Route path="/plan/:shareSlug" element={<PublicPlanPage />} />
-
-            {/* Facility Management for Managers */}
-            <Route
-              path="/dashboard/facility"
-              element={
-                <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <FacilityManagementPage />
-                </ProtectedRoute>
-              }
-            />
 
             {/* Analytics Dashboard for Managers */}
             <Route

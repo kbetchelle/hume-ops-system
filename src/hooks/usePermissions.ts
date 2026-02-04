@@ -37,10 +37,6 @@ export const PERMISSIONS = {
   CREATE_REPORTS: "create_reports",
   MANAGE_REPORTS: "manage_reports",
   
-  // Facility
-  VIEW_FACILITY: "view_facility",
-  MANAGE_FACILITY: "manage_facility",
-  
   // Analytics
   VIEW_ANALYTICS: "view_analytics",
   
@@ -65,8 +61,6 @@ const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, string[]> = {
     PERMISSIONS.MANAGE_CHECKLISTS,
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.MANAGE_REPORTS,
-    PERMISSIONS.VIEW_FACILITY,
-    PERMISSIONS.MANAGE_FACILITY,
     PERMISSIONS.VIEW_ANALYTICS,
   ],
   concierge: [

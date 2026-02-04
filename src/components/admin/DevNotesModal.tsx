@@ -25,12 +25,12 @@ export function DevNotesModal({
     prevOpenRef.current = open;
   }, [open, onSave]);
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(56rem+40px)] h-[calc(80vh+40px)] flex flex-col p-0 gap-0 rounded-none animate-in fade-in-0 zoom-in-95 duration-200">
+      <DialogContent className="max-w-[calc(56rem+40px)] h-[calc(80vh+40px)] flex flex-col p-0 gap-0 rounded-none animate-in fade-in-0 zoom-in-95 duration-200 text-[1.4em]">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-sm">Latest Edits in Ops System Application</DialogTitle>
+          <DialogTitle className="text-[0.875em]">Latest Edits in Ops System Application</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-[25px] px-[50px]">
-          <RichTextEditor value={noteContent} onChange={onNoteChange} placeholder="Click to add notes..." minHeight="100%" className="h-full border border-primary" />
+          <RichTextEditor value={noteContent} onChange={onNoteChange} placeholder="Click to add notes..." minHeight="100%" className="h-full border border-primary text-[1em]" />
         </div>
       </DialogContent>
     </Dialog>;

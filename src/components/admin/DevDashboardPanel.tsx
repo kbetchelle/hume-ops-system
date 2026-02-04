@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { usePageStatuses, useUpdatePageStatus, useDevNotes, useUpdateDevNotes, useUpdatePageRole, useDeletePageStatus, PageStatus } from "@/hooks/useDevDashboard";
-import { Loader2, Maximize2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { DevNotesModal } from "./DevNotesModal";
 import { BuildStatusModal } from "./BuildStatusModal";
+import { useActiveRole } from "@/hooks/useActiveRole";
+
 const STATUS_OPTIONS: {
   value: PageStatus;
   label: string;
@@ -79,6 +80,9 @@ function PageRow({
     </div>;
 }
 export function DevDashboardPanel() {
+  const { activeRole } = useActiveRole();
+  const isAdmin = activeRole === 'admin';
+  
   const {
     data: pages,
     isLoading: pagesLoading
@@ -211,6 +215,6 @@ export function DevDashboardPanel() {
       {/* Modals */}
       <DevNotesModal open={notesModalOpen} onOpenChange={setNotesModalOpen} noteContent={noteContent} onNoteChange={setNoteContent} onSave={saveNotes} />
 
-      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} />
+      <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} isAdmin={isAdmin} />
     </>;
 }

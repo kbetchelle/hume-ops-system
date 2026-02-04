@@ -105,6 +105,64 @@ export function useDeletePageStatus() {
   });
 }
 
+// Create new page status record
+export function useCreatePageStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      pageTitle,
+      pagePath,
+      status,
+      roleCategory,
+    }: {
+      pageTitle: string;
+      pagePath: string;
+      status: PageStatus;
+      roleCategory: string;
+    }) => {
+      const { error } = await supabase
+        .from("page_dev_status")
+        .insert({
+          page_title: pageTitle,
+          page_path: pagePath,
+          status,
+          role_category: roleCategory,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+    },
+  });
+}
+
+// Update page title
+export function useUpdatePageTitle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      pageId,
+      pageTitle,
+    }: {
+      pageId: string;
+      pageTitle: string;
+    }) => {
+      const { error } = await supabase
+        .from("page_dev_status")
+        .update({ page_title: pageTitle })
+        .eq("id", pageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+    },
+  });
+}
+
 // Fetch dev notes (singleton)
 export function useDevNotes() {
   return useQuery({

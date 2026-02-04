@@ -177,7 +177,9 @@ function SyncOverviewTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {schedules?.map((sync) => {
+          {schedules
+            ?.filter((sync) => sync.is_enabled) // Only show enabled syncs
+            .map((sync) => {
             const config = API_CONFIG[sync.sync_type] || { stagingTable: null, targetTable: "—" };
             const isHealthy = sync.last_status === "success" || sync.failure_count === 0;
 
@@ -450,8 +452,10 @@ function SyncLogHistoryTable() {
 
 export default function ApiSyncingPage() {
   const { data: schedules, isLoading, refetch } = useSyncSchedules();
-  const healthyCount = schedules?.filter(s => s.last_status === "success").length || 0;
-  const errorCount = schedules?.filter(s => s.last_status === "failed").length || 0;
+  // Only count enabled syncs for stats
+  const enabledSchedules = schedules?.filter(s => s.is_enabled) || [];
+  const healthyCount = enabledSchedules.filter(s => s.last_status === "success" || s.failure_count === 0).length;
+  const errorCount = enabledSchedules.filter(s => s.last_status === "failed").length;
 
   return (
     <DashboardLayout title="API Syncing">
@@ -486,7 +490,7 @@ export default function ApiSyncingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-normal">{schedules?.length || 0}</p>
+              <p className="text-2xl font-normal">{enabledSchedules.length}</p>
             </CardContent>
           </Card>
           <Card className="border border-border rounded-none">

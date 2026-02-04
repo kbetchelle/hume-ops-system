@@ -58,6 +58,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Reports",
       url: "/dashboard/reports",
       icon: FileText
+    }, {
+      title: "Master Calendar",
+      url: "/dashboard/master-calendar",
+      icon: Calendar
     }];
   }
   const baseItems: NavItem[] = [{
@@ -109,11 +113,6 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     url: "/dashboard/analytics",
     icon: BarChart3,
     permission: PERMISSIONS.VIEW_ANALYTICS
-  }, {
-    title: "Facility",
-    url: "/dashboard/facility",
-    icon: Building,
-    permission: PERMISSIONS.VIEW_FACILITY
   }, {
     title: "Admin",
     url: "/dashboard/admin",

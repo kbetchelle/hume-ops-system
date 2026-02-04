@@ -211,7 +211,7 @@ export function DevDashboardPanel() {
           >
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setNotesModalOpen(true); }}>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit" onClick={(e) => { e.stopPropagation(); setNotesModalOpen(true); }}>
                 <Maximize2 className="h-3.5 w-3.5" />
               </Button>
             </CardHeader>
@@ -245,7 +245,7 @@ export function DevDashboardPanel() {
           >
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-xs">BUILD STATUS</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setStatusModalOpen(true); }}>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit" onClick={(e) => { e.stopPropagation(); setStatusModalOpen(true); }}>
                 <Maximize2 className="h-3.5 w-3.5" />
               </Button>
             </CardHeader>

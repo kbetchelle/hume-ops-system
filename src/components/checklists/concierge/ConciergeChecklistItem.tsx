@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToggleConciergeCompletion } from '@/hooks/checklists/useConciergeChecklists';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { SignaturePad } from '@/components/ui/SignaturePad';
+import { PhotoUpload } from '@/components/ui/PhotoUpload';
 
 interface ConciergeChecklistItemProps {
   item: any;
@@ -28,7 +29,6 @@ export function ConciergeChecklistItem({
   const { t } = useLanguage();
   const toggleCompletion = useToggleConciergeCompletion();
   const [textValue, setTextValue] = useState(completion?.note_text || '');
-  const [signatureText, setSignatureText] = useState(completion?.signature_data || '');
 
   const isCompleted = !!completion?.completed_at;
   const taskLabel = t(item.task_description, item.label_spanish);
@@ -50,33 +50,26 @@ export function ConciergeChecklistItem({
     });
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+
+  // Generate date-based storage path for photos
+  const getPhotoStoragePath = () => {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${completion?.id || crypto.randomUUID()}_photo.${fileExt}`;
-    const filePath = `checklist/${year}/${month}/${day}/${fileName}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('checklist-photos')
-      .upload(filePath, file, { upsert: true });
-      
-    if (uploadError) throw uploadError;
-    
-    const { data: { publicUrl } } = supabase.storage
-      .from('checklist-photos')
-      .getPublicUrl(filePath);
-      
-    await handleToggle(undefined, publicUrl);
+    return `checklist/${year}/${month}/${day}`;
   };
 
-  const handleSaveSignature = () => {
-    if (!signatureText.trim()) return;
-    handleToggle(undefined, undefined, signatureText);
-    setSignatureText('');
+  const handlePhotoSave = async (photoUrl: string) => {
+    setIsPhotoModalOpen(false);
+    await handleToggle(undefined, photoUrl);
+  };
+
+  const handleSignatureSave = async (signatureData: string) => {
+    setIsSignatureModalOpen(false);
+    await handleToggle(undefined, undefined, signatureData);
   };
 
   // Header type - just displays text
@@ -118,12 +111,20 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Photo type
+  // Photo type - with mobile-optimized modal and compression
   if (item.task_type === 'photo') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+        <PhotoUpload
+          isOpen={isPhotoModalOpen}
+          onSave={handlePhotoSave}
+          onCancel={() => setIsPhotoModalOpen(false)}
+          storagePath={getPhotoStoragePath()}
+          title={completion?.photo_url ? 'Retake Photo' : 'Take Photo'}
+        />
+        
         <div className="flex items-center gap-2">
-          <Camera className="h-4 w-4" />
+          <Camera className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
@@ -131,32 +132,62 @@ export function ConciergeChecklistItem({
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
         )}
         {completion?.photo_url ? (
-          <div className="space-y-2">
-            <img src={completion.photo_url} alt="Completion photo" className="max-w-xs rounded" />
-            <Button size="sm" variant="outline" onClick={() => handleToggle()}>
-              Remove Photo
-            </Button>
+          <div className="space-y-3">
+            <img 
+              src={completion.photo_url} 
+              alt="Completion photo" 
+              className="max-w-full sm:max-w-xs rounded-lg border"
+            />
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsPhotoModalOpen(true)}
+                className="min-h-[44px] min-w-[44px] gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                Retake
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => handleToggle()}
+                className="min-h-[44px]"
+              >
+                Remove
+              </Button>
+            </div>
           </div>
         ) : (
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handlePhotoUpload(file);
-            }}
-          />
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => setIsPhotoModalOpen(true)}
+            className="min-h-[44px] min-w-[44px] gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Take Photo
+          </Button>
         )}
       </div>
     );
   }
 
-  // Signature type - text-based for now
+  // Signature type - with canvas-based signature pad
   if (item.task_type === 'signature') {
+    const isImageSignature = completion?.signature_data?.startsWith('data:image/');
+    
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+        <SignaturePad
+          isOpen={isSignatureModalOpen}
+          onSave={handleSignatureSave}
+          onCancel={() => setIsSignatureModalOpen(false)}
+          title={completion?.signature_data ? 'Update Signature' : 'Sign Below'}
+        />
+        
         <div className="flex items-center gap-2">
-          <PenTool className="h-4 w-4" />
+          <PenTool className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
@@ -164,26 +195,50 @@ export function ConciergeChecklistItem({
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
         )}
         {completion?.signature_data ? (
-          <div className="space-y-2">
-            <div className="p-3 border rounded bg-muted">
-              <p className="font-signature text-2xl">{completion.signature_data}</p>
+          <div className="space-y-3">
+            {isImageSignature ? (
+              <div className="p-2 border rounded-lg bg-white inline-block">
+                <img
+                  src={completion.signature_data}
+                  alt="Signature"
+                  className="max-h-[80px] w-auto"
+                />
+              </div>
+            ) : (
+              <div className="p-3 border rounded-lg bg-muted/50">
+                <p className="font-signature text-2xl">{completion.signature_data}</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsSignatureModalOpen(true)}
+                className="min-h-[44px] min-w-[44px] gap-2"
+              >
+                <PenTool className="h-4 w-4" />
+                Re-sign
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => handleToggle()}
+                className="min-h-[44px]"
+              >
+                Clear
+              </Button>
             </div>
-            <Button size="sm" variant="outline" onClick={() => handleToggle()}>
-              Clear Signature
-            </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <Input
-              value={signatureText}
-              onChange={(e) => setSignatureText(e.target.value)}
-              placeholder="Type your full name to sign..."
-              className="font-signature text-xl"
-            />
-            <Button size="sm" onClick={handleSaveSignature} disabled={!signatureText.trim()}>
-              Save Signature
-            </Button>
-          </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => setIsSignatureModalOpen(true)}
+            className="min-h-[44px] min-w-[44px] gap-2"
+          >
+            <PenTool className="h-4 w-4" />
+            Sign
+          </Button>
         )}
       </div>
     );

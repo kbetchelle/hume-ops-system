@@ -1,0 +1,49 @@
+{
+  "name": "HUME Ops System",
+  "short_name": "HUME Ops",
+  "description": "HUME Operations Management System - Staff Checklists & Daily Operations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Concierge Checklist",
+      "short_name": "Concierge",
+      "description": "Open the Concierge daily checklist",
+      "url": "/checklist/concierge",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Back of House",
+      "short_name": "BOH",
+      "description": "Open the Back of House checklist",
+      "url": "/checklist/boh",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Cafe Checklist",
+      "short_name": "Cafe",
+      "description": "Open the Cafe checklist",
+      "url": "/checklist/cafe",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}

@@ -16,6 +16,8 @@ import {
 import { Camera, Upload, Pen, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { SignaturePad } from "@/components/ui/SignaturePad";
+import { PhotoUpload } from "@/components/ui/PhotoUpload";
 
 // Common props interface
 interface TaskComponentProps {
@@ -89,64 +91,38 @@ export function FreeResponseTask({
   );
 }
 
-// Photo Task - Camera/upload with thumbnail preview
+// Photo Task - Camera/upload with thumbnail preview and compression
 export function PhotoTask({
   itemId,
   completionValue,
   onUpdate,
   disabled,
 }: TaskComponentProps) {
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Generate date-based storage path
+  const getStoragePath = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `checklist/${year}/${month}/${day}`;
+  };
 
-    setUploading(true);
-    try {
-      // Generate unique completion ID for this photo
-      const completionId = crypto.randomUUID();
-      
-      // Create date-based path structure: checklist/{year}/{month}/{day}/{completion_id}_photo.jpg
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${completionId}_photo.${fileExt}`;
-      const filePath = `checklist/${year}/${month}/${day}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("checklist-photos")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data } = supabase.storage
-        .from("checklist-photos")
-        .getPublicUrl(filePath);
-
-      onUpdate?.(data.publicUrl);
-    } catch (error) {
-      console.error("Error uploading photo:", error);
-      alert("Failed to upload photo. Please try again.");
-    } finally {
-      setUploading(false);
-    }
+  const handlePhotoSave = (photoUrl: string) => {
+    onUpdate?.(photoUrl);
+    setIsPhotoModalOpen(false);
   };
 
   return (
     <div className="space-y-2">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
+      {/* Photo capture modal */}
+      <PhotoUpload
+        isOpen={isPhotoModalOpen}
+        onSave={handlePhotoSave}
+        onCancel={() => setIsPhotoModalOpen(false)}
+        storagePath={getStoragePath()}
+        title={completionValue ? "Retake Photo" : "Take Photo"}
       />
       
       <div className="flex gap-2">
@@ -154,12 +130,12 @@ export function PhotoTask({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
-          className="gap-2"
+          onClick={() => setIsPhotoModalOpen(true)}
+          disabled={disabled}
+          className="gap-2 min-h-[44px] min-w-[44px]"
         >
           <Camera className="h-4 w-4" />
-          {uploading ? "Uploading..." : completionValue ? "Retake Photo" : "Take Photo"}
+          {completionValue ? "Retake Photo" : "Take Photo"}
         </Button>
       </div>
 
@@ -176,80 +152,64 @@ export function PhotoTask({
   );
 }
 
-// Signature Task - Full signature capture
+// Signature Task - Full canvas-based signature capture
 export function SignatureTask({
   completionValue,
   onUpdate,
   disabled,
 }: TaskComponentProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempSignature, setTempSignature] = useState(completionValue || "");
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 
-  const handleSave = () => {
-    onUpdate?.(tempSignature);
-    setIsEditing(false);
+  const handleSignatureSave = (signatureData: string) => {
+    onUpdate?.(signatureData);
+    setIsSignatureModalOpen(false);
   };
 
-  const handleCancel = () => {
-    setTempSignature(completionValue || "");
-    setIsEditing(false);
-  };
-
-  if (!isEditing && completionValue) {
-    return (
-      <div className="space-y-2">
-        <div className="p-3 border rounded-lg bg-muted/50 font-signature text-lg">
-          {completionValue}
-        </div>
-        {!disabled && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="gap-2"
-          >
-            <Pen className="h-4 w-4" />
-            Update Signature
-          </Button>
-        )}
-      </div>
-    );
-  }
+  // Check if the value is a base64 image (canvas signature) or text (legacy)
+  const isImageSignature = completionValue?.startsWith("data:image/");
 
   return (
     <div className="space-y-2">
-      <Input
-        value={tempSignature}
-        onChange={(e) => setTempSignature(e.target.value)}
-        placeholder="Enter your full name"
-        disabled={disabled}
-        className="font-signature text-lg"
+      {/* Signature pad modal */}
+      <SignaturePad
+        isOpen={isSignatureModalOpen}
+        onSave={handleSignatureSave}
+        onCancel={() => setIsSignatureModalOpen(false)}
+        title={completionValue ? "Update Signature" : "Sign Below"}
       />
-      <div className="flex gap-2">
+
+      {/* Show existing signature */}
+      {completionValue && (
+        <div className="space-y-2">
+          {isImageSignature ? (
+            <div className="p-2 border rounded-lg bg-white inline-block">
+              <img
+                src={completionValue}
+                alt="Signature"
+                className="max-h-[100px] w-auto"
+              />
+            </div>
+          ) : (
+            <div className="p-3 border rounded-lg bg-muted/50 font-signature text-lg">
+              {completionValue}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sign/Update button */}
+      {!disabled && (
         <Button
           type="button"
+          variant="outline"
           size="sm"
-          onClick={handleSave}
-          disabled={!tempSignature.trim() || disabled}
-          className="gap-2"
+          onClick={() => setIsSignatureModalOpen(true)}
+          className="gap-2 min-h-[44px] min-w-[44px]"
         >
-          <Check className="h-4 w-4" />
-          Sign
+          <Pen className="h-4 w-4" />
+          {completionValue ? "Update Signature" : "Sign"}
         </Button>
-        {completionValue && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCancel}
-            className="gap-2"
-          >
-            <X className="h-4 w-4" />
-            Cancel
-          </Button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

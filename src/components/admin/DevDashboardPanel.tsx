@@ -175,14 +175,8 @@ export function DevDashboardPanel() {
         {/* Right panel - Page Status Tracker (5/12 width) */}
         <div className="w-5/12 flex flex-col">
           <Card className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xs">BUILD STATUS</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-inherit bg-transparent hover:bg-transparent" onClick={e => {
-              e.stopPropagation();
-              setStatusModalOpen(true);
-            }}>
-                <Maximize2 className="h-3.5 w-3.5" />
-              </Button>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto" onClick={e => e.stopPropagation()}>
               <div className="space-y-0">

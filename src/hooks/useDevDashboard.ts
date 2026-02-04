@@ -8,6 +8,7 @@ export interface PageDevStatus {
   page_path: string;
   page_title: string;
   status: PageStatus;
+  role_category: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +51,50 @@ export function useUpdatePageStatus() {
       const { error } = await supabase
         .from("page_dev_status")
         .update({ status })
+        .eq("id", pageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+    },
+  });
+}
+
+// Update page role category
+export function useUpdatePageRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      pageId,
+      roleCategory,
+    }: {
+      pageId: string;
+      roleCategory: string;
+    }) => {
+      const { error } = await supabase
+        .from("page_dev_status")
+        .update({ role_category: roleCategory })
+        .eq("id", pageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+    },
+  });
+}
+
+// Delete page status record
+export function useDeletePageStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (pageId: string) => {
+      const { error } = await supabase
+        .from("page_dev_status")
+        .delete()
         .eq("id", pageId);
 
       if (error) throw error;

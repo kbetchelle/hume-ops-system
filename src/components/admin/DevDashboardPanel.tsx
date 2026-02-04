@@ -13,9 +13,12 @@ import {
   useUpdatePageStatus,
   useDevNotes,
   useUpdateDevNotes,
+  useUpdatePageRole,
+  useDeletePageStatus,
   PageStatus,
 } from "@/hooks/useDevDashboard";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const STATUS_OPTIONS: { value: PageStatus; label: string }[] = [
   { value: "not_started", label: "Not Started" },
@@ -39,11 +42,189 @@ const getStatusColor = (status: PageStatus) => {
   }
 };
 
+interface PageRowProps {
+  page: {
+    id: string;
+    page_title: string;
+    status: PageStatus;
+    role_category: string | null;
+  };
+  onStatusChange: (pageId: string, status: PageStatus) => void;
+  onRoleChange: (pageId: string, role: string) => void;
+  onDelete: (pageId: string) => void;
+}
+
+function PageRow({ page, onStatusChange, onRoleChange, onDelete }: PageRowProps) {
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [roleValue, setRoleValue] = useState(page.role_category || "");
+  const [showDelete, setShowDelete] = useState(false);
+  const [isHoveredStatus, setIsHoveredStatus] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const roleInputRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+
+  useEffect(() => {
+    if (isEditingRole && roleInputRef.current) {
+      roleInputRef.current.focus();
+    }
+  }, [isEditingRole]);
+
+  const handleRoleDoubleClick = () => {
+    setIsEditingRole(true);
+    setRoleValue(page.role_category || "");
+  };
+
+  const handleRoleBlur = () => {
+    if (roleValue !== page.role_category) {
+      onRoleChange(page.id, roleValue);
+    }
+    setIsEditingRole(false);
+  };
+
+  const handleRoleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleRoleBlur();
+    } else if (e.key === "Escape") {
+      setRoleValue(page.role_category || "");
+      setIsEditingRole(false);
+    }
+  };
+
+  // Handle wheel event for two-finger swipe detection
+  const handleWheel = (e: React.WheelEvent) => {
+    // Detect horizontal scroll (two-finger swipe on trackpad)
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && e.deltaX > 30) {
+      setShowDelete(true);
+    } else if (e.deltaX < -30) {
+      setShowDelete(false);
+    }
+  };
+
+  // Handle touch events for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = touchStartX.current - e.changedTouches[0].clientX;
+    const deltaY = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
+    
+    if (deltaX > 50 && deltaY < 30) {
+      setShowDelete(true);
+    } else if (deltaX < -50 && deltaY < 30) {
+      setShowDelete(false);
+    }
+  };
+
+  return (
+    <div
+      ref={rowRef}
+      className="flex items-center py-2 border-b border-border last:border-b-0 relative overflow-hidden"
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div 
+        className={`flex items-center transition-transform duration-200 w-full ${
+          showDelete ? "-translate-x-10" : "translate-x-0"
+        }`}
+      >
+        {/* Page Title */}
+        <div className="flex-1 text-xs tracking-wide min-w-0 truncate pr-2">
+          {page.page_title}
+        </div>
+
+        {/* Status Column */}
+        <div 
+          className="w-28 flex justify-end"
+          onMouseEnter={() => setIsHoveredStatus(true)}
+          onMouseLeave={() => !isSelectOpen && setIsHoveredStatus(false)}
+        >
+          {isHoveredStatus || isSelectOpen ? (
+            <Select
+              value={page.status}
+              onValueChange={(value: PageStatus) => onStatusChange(page.id, value)}
+              onOpenChange={(open) => {
+                setIsSelectOpen(open);
+                if (!open) setIsHoveredStatus(false);
+              }}
+            >
+              <SelectTrigger
+                className={`h-6 text-[10px] border-0 bg-transparent shadow-none p-0 w-auto gap-1 ${getStatusColor(page.status)}`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className={`text-xs ${getStatusColor(option.value)}`}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className={`text-[10px] cursor-pointer ${getStatusColor(page.status)}`}>
+              {STATUS_OPTIONS.find(o => o.value === page.status)?.label}
+            </span>
+          )}
+        </div>
+
+        {/* Role Column */}
+        <div 
+          className="w-20 text-right pl-2"
+          onDoubleClick={handleRoleDoubleClick}
+        >
+          {isEditingRole ? (
+            <input
+              ref={roleInputRef}
+              type="text"
+              value={roleValue}
+              onChange={(e) => setRoleValue(e.target.value)}
+              onBlur={handleRoleBlur}
+              onKeyDown={handleRoleKeyDown}
+              className="w-full text-[10px] text-right bg-transparent border-none outline-none caret-primary"
+            />
+          ) : (
+            <span className="text-[10px] text-muted-foreground cursor-text">
+              {page.role_category || "—"}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Button */}
+      <div 
+        className={`absolute right-0 top-0 bottom-0 flex items-center transition-transform duration-200 ${
+          showDelete ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-full rounded-none px-2"
+          onClick={() => onDelete(page.id)}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DevDashboardPanel() {
   const { data: pages, isLoading: pagesLoading } = usePageStatuses();
   const { data: devNote, isLoading: notesLoading } = useDevNotes();
   const updatePageStatus = useUpdatePageStatus();
   const updateDevNotes = useUpdateDevNotes();
+  const updatePageRole = useUpdatePageRole();
+  const deletePageStatus = useDeletePageStatus();
 
   const [noteContent, setNoteContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -77,7 +258,6 @@ export function DevDashboardPanel() {
   // Handle keyboard save
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter" && !event.shiftKey) {
-      // Allow shift+enter for new lines
       saveNotes();
     }
   };
@@ -100,6 +280,14 @@ export function DevDashboardPanel() {
     updatePageStatus.mutate({ pageId, status: newStatus });
   };
 
+  const handleRoleChange = (pageId: string, roleCategory: string) => {
+    updatePageRole.mutate({ pageId, roleCategory });
+  };
+
+  const handleDelete = (pageId: string) => {
+    deletePageStatus.mutate(pageId);
+  };
+
   if (pagesLoading || notesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -110,8 +298,8 @@ export function DevDashboardPanel() {
 
   return (
     <div className="flex gap-6 h-full">
-      {/* Left panel - Dev Notes (3/4 width) */}
-      <div className="w-3/4 flex flex-col">
+      {/* Left panel - Dev Notes (7/12 width) */}
+      <div className="w-7/12 flex flex-col">
         <Card
           ref={noteCardRef}
           className="border flex flex-col flex-1 cursor-text"
@@ -144,8 +332,8 @@ export function DevDashboardPanel() {
         </Card>
       </div>
 
-      {/* Right panel - Page Status Tracker (1/4 width) */}
-      <div className="w-1/4 flex flex-col">
+      {/* Right panel - Page Status Tracker (5/12 width) */}
+      <div className="w-5/12 flex flex-col">
         <Card className="border flex flex-col flex-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs">Page Development Status</CardTitle>
@@ -157,48 +345,23 @@ export function DevDashboardPanel() {
                 <div className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                   Page
                 </div>
-                <div className="w-48 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                <div className="w-28 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right">
                   Status
+                </div>
+                <div className="w-20 text-[10px] uppercase tracking-widest text-muted-foreground font-medium text-right pl-2">
+                  Role
                 </div>
               </div>
 
               {/* Page rows */}
               {pages?.map((page) => (
-                <div
+                <PageRow
                   key={page.id}
-                  className="flex items-center py-3 border-b border-border last:border-b-0"
-                >
-                  <div className="flex-1 text-xs tracking-wide">
-                    {page.page_title}
-                  </div>
-                  <div className="w-48">
-                    <Select
-                      value={page.status}
-                      onValueChange={(value: PageStatus) =>
-                        handleStatusChange(page.id, value)
-                      }
-                    >
-                      <SelectTrigger
-                        className={`h-7 text-[10px] border-0 bg-transparent shadow-none ${getStatusColor(
-                          page.status
-                        )}`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            className={`text-xs ${getStatusColor(option.value)}`}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                  page={page}
+                  onStatusChange={handleStatusChange}
+                  onRoleChange={handleRoleChange}
+                  onDelete={handleDelete}
+                />
               ))}
             </div>
           </CardContent>

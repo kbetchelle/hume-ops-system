@@ -2528,6 +2528,7 @@ export type Database = {
           id: string
           page_path: string
           page_title: string
+          role_category: string | null
           status: string
           updated_at: string
         }
@@ -2536,6 +2537,7 @@ export type Database = {
           id?: string
           page_path: string
           page_title: string
+          role_category?: string | null
           status?: string
           updated_at?: string
         }
@@ -2544,6 +2546,7 @@ export type Database = {
           id?: string
           page_path?: string
           page_title?: string
+          role_category?: string | null
           status?: string
           updated_at?: string
         }

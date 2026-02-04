@@ -110,8 +110,8 @@ export function DevDashboardPanel() {
 
   return (
     <div className="flex gap-6 h-full">
-      {/* Left panel - Dev Notes (1/4 width) */}
-      <div className="w-1/4 flex flex-col">
+      {/* Left panel - Dev Notes (3/4 width) */}
+      <div className="w-3/4 flex flex-col">
         <Card
           ref={noteCardRef}
           className="border flex flex-col flex-1 cursor-text"
@@ -144,8 +144,8 @@ export function DevDashboardPanel() {
         </Card>
       </div>
 
-      {/* Right panel - Page Status Tracker (3/4 width) */}
-      <div className="w-3/4 flex flex-col">
+      {/* Right panel - Page Status Tracker (1/4 width) */}
+      <div className="w-1/4 flex flex-col">
         <Card className="border flex flex-col flex-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs">Page Development Status</CardTitle>

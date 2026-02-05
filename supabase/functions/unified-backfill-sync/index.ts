@@ -27,7 +27,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { getArketaToken, getArketaHeaders, ARKETA_URLS } from "../_shared/arketaAuth.ts";
 import { fetchWithRetry } from "../_shared/retry.ts";

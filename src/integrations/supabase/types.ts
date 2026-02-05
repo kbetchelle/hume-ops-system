@@ -2379,9 +2379,11 @@ export type Database = {
           found_by_name: string | null
           id: string
           location_found: string | null
-          member_requested: boolean
+          member_requested: boolean | null
           notes: string | null
-          object_category: Database["public"]["Enums"]["lost_and_found_category"] | null
+          object_category:
+            | Database["public"]["Enums"]["lost_and_found_category"]
+            | null
           photo_url: string | null
           status: string | null
         }
@@ -2395,9 +2397,11 @@ export type Database = {
           found_by_name?: string | null
           id?: string
           location_found?: string | null
-          member_requested?: boolean
+          member_requested?: boolean | null
           notes?: string | null
-          object_category?: Database["public"]["Enums"]["lost_and_found_category"] | null
+          object_category?:
+            | Database["public"]["Enums"]["lost_and_found_category"]
+            | null
           photo_url?: string | null
           status?: string | null
         }
@@ -2411,9 +2415,11 @@ export type Database = {
           found_by_name?: string | null
           id?: string
           location_found?: string | null
-          member_requested?: boolean
+          member_requested?: boolean | null
           notes?: string | null
-          object_category?: Database["public"]["Enums"]["lost_and_found_category"] | null
+          object_category?:
+            | Database["public"]["Enums"]["lost_and_found_category"]
+            | null
           photo_url?: string | null
           status?: string | null
         }
@@ -4159,6 +4165,11 @@ export type Database = {
         | "male_spa_attendant"
         | "floater"
         | "cafe"
+      dev_task_status:
+        | "not_started"
+        | "in_progress"
+        | "finishing_touches"
+        | "completed"
       lost_and_found_category:
         | "wallet"
         | "keys"
@@ -4168,11 +4179,6 @@ export type Database = {
         | "bag"
         | "water_bottle"
         | "other"
-      dev_task_status:
-        | "not_started"
-        | "in_progress"
-        | "finishing_touches"
-        | "completed"
       membership_tier: "basic" | "standard" | "premium" | "vip"
     }
     CompositeTypes: {
@@ -4311,6 +4317,12 @@ export const Constants = {
         "floater",
         "cafe",
       ],
+      dev_task_status: [
+        "not_started",
+        "in_progress",
+        "finishing_touches",
+        "completed",
+      ],
       lost_and_found_category: [
         "wallet",
         "keys",
@@ -4320,12 +4332,6 @@ export const Constants = {
         "bag",
         "water_bottle",
         "other",
-      ],
-      dev_task_status: [
-        "not_started",
-        "in_progress",
-        "finishing_touches",
-        "completed",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
     },

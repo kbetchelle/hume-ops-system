@@ -19,6 +19,7 @@ interface SlingUser {
   fname?: string;
   lname?: string;
   lastname?: string;
+  legalName?: string;
   email?: string;
   active?: boolean;
   position?: { id: number; name: string };
@@ -103,8 +104,8 @@ async function getGroups(authToken: string, orgId: string): Promise<any[]> {
 
 // Format name from Sling user object
 function formatUserName(user: SlingUser): string {
-  if (user.name) return user.name;
-  const first = user.fname || '';
+  // Sling returns 'name' as first name and 'lastname' as last name
+  const first = user.fname || user.name || user.legalName || '';
   const last = user.lname || user.lastname || '';
   return `${first} ${last}`.trim() || 'Unknown';
 }
@@ -255,7 +256,8 @@ Deno.serve(async (req) => {
         const syncedUsers = [];
 
         for (const user of users) {
-          const firstName = user.fname || '';
+          // Sling API returns 'name' for first name and 'lastname' for last name
+          const firstName = user.fname || user.name || user.legalName || '';
           const lastName = user.lname || user.lastname || '';
           const fullName = formatUserName(user);
           const email = user.email || null;

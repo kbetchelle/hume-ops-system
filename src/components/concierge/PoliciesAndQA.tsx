@@ -61,7 +61,7 @@ export function PoliciesAndQA() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDirectAnswers, setShowDirectAnswers] = useState(true);
   const [newQuestion, setNewQuestion] = useState({ question: '', context: '' });
-  const [qaFilter, setQaFilter] = useState<'all' | 'resolved' | 'pending'>('all');
+ const [qaFilter, setQaFilter] = useState<'resolved' | 'pending'>('pending');
 
   const { data: policies, isLoading: policiesLoading } = useQuery({
     queryKey: ['club-policies'],
@@ -308,14 +308,14 @@ export function PoliciesAndQA() {
 
             {/* Filters */}
             <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                {(['all', 'resolved', 'pending'] as const).map(filter => (
+              <div className="flex gap-2 flex-1">
+                {(['resolved', 'pending'] as const).map(filter => (
                   <Button
                     key={filter}
                     variant={qaFilter === filter ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setQaFilter(filter)}
-                    className="rounded-none text-[10px]"
+                    className="rounded-none text-[10px] flex-1"
                   >
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </Button>

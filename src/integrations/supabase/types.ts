@@ -1686,36 +1686,6 @@ export type Database = {
         }
         Relationships: []
       }
-      policy_categories: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          sort_order: number
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          sort_order?: number
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          sort_order?: number
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       concierge_checklist_items: {
         Row: {
           category: string | null
@@ -2579,6 +2549,36 @@ export type Database = {
           role_category?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      policy_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3451,21 +3451,21 @@ export type Database = {
       staff_qa_reads: {
         Row: {
           id: string
-          qa_id: string
-          user_id: string
-          read_at: string
+          qa_id: string | null
+          read_at: string | null
+          user_id: string | null
         }
         Insert: {
           id?: string
-          qa_id: string
-          user_id: string
-          read_at?: string
+          qa_id?: string | null
+          read_at?: string | null
+          user_id?: string | null
         }
         Update: {
           id?: string
-          qa_id?: string
-          user_id?: string
-          read_at?: string
+          qa_id?: string | null
+          read_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3473,13 +3473,6 @@ export type Database = {
             columns: ["qa_id"]
             isOneToOne: false
             referencedRelation: "staff_qa"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_qa_reads_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

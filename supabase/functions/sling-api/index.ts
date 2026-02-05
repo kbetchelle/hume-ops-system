@@ -411,7 +411,6 @@ Deno.serve(async (req) => {
               sling_shift_id: numericShiftId,
               external_id: rawShiftId,
               user_name: userName,
-              staff_name: userName, // Also populate staff_name for compatibility
               position: shift.position?.name || null,
               shift_start: shift.dtstart,
               shift_end: shift.dtend,

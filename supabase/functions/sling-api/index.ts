@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 const SLING_BASE_URL = 'https://api.getsling.com/v1';
 
@@ -242,6 +243,7 @@ Deno.serve(async (req) => {
       }
 
       case 'sync-users': {
+        const syncStartTime = Date.now();
         console.log('[Sling API] Starting user sync...');
         
         // Fetch users from Sling API with retry
@@ -336,6 +338,18 @@ Deno.serve(async (req) => {
             last_records_inserted: syncedUsers.length,
           }, { onConflict: 'api_name' });
 
+        // Log to api_logs for Sync Log History visibility
+        await logApiCall(supabase, {
+          apiName: 'sling_users',
+          endpoint: '/users',
+          syncSuccess: failedCount === 0,
+          durationMs: Date.now() - syncStartTime,
+          recordsProcessed: users.length,
+          recordsInserted: syncedUsers.length,
+          responseStatus: 200,
+          triggeredBy: 'manual',
+        });
+
         return new Response(
           JSON.stringify({
             success: true,
@@ -349,6 +363,7 @@ Deno.serve(async (req) => {
       }
 
       case 'sync-shifts': {
+        const shiftSyncStartTime = Date.now();
         const startDate = date || today;
         const endDate = date || today;
 
@@ -439,6 +454,18 @@ Deno.serve(async (req) => {
             failedCount++;
           }
         }
+
+        // Log to api_logs for Sync Log History visibility
+        await logApiCall(supabase, {
+          apiName: 'sling_shifts',
+          endpoint: '/reports/roster',
+          syncSuccess: failedCount === 0,
+          durationMs: Date.now() - shiftSyncStartTime,
+          recordsProcessed: roster.length,
+          recordsInserted: syncedShifts.length,
+          responseStatus: 200,
+          triggeredBy: 'manual',
+        });
 
         return new Response(
           JSON.stringify({

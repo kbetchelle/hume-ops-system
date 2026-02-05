@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from "../_shared/retry.ts";
+import { logApiCall } from "../_shared/apiLogger.ts";
 
 interface PartnerClient {
   id: string;
@@ -135,6 +136,7 @@ Deno.serve(async (req) => {
   let supabase: any;
   let syncLogId: string | null = null;
   let totalRetryAttempts = 0;
+  const startTime = Date.now();
 
   try {
     const ARKETA_PARTNER_ID = Deno.env.get("ARKETA_PARTNER_ID");
@@ -276,6 +278,18 @@ Deno.serve(async (req) => {
       retryAttempts: totalRetryAttempts,
     };
 
+    // Log to api_logs for Sync Log History visibility
+    await logApiCall(supabase, {
+      apiName: 'arketa_clients',
+      endpoint: '/clients',
+      syncSuccess: failedRecordIds.length === 0,
+      durationMs: Date.now() - startTime,
+      recordsProcessed: allClients.length,
+      recordsInserted: syncedCount,
+      responseStatus: 200,
+      triggeredBy: 'manual',
+    });
+
     return new Response(
       JSON.stringify(syncResult),
       {
@@ -297,6 +311,21 @@ Deno.serve(async (req) => {
           retry_attempts: totalRetryAttempts,
         })
         .eq("id", syncLogId);
+    }
+
+    // Log failure to api_logs
+    if (supabase) {
+      await logApiCall(supabase, {
+        apiName: 'arketa_clients',
+        endpoint: '/clients',
+        syncSuccess: false,
+        durationMs: Date.now() - startTime,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: errorMessage,
+        triggeredBy: 'manual',
+      });
     }
 
     return new Response(

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 interface DevNotesModalProps {
@@ -16,6 +17,23 @@ export function DevNotesModal({
   onSave
 }: DevNotesModalProps) {
   const prevOpenRef = useRef(open);
+
+  // Handle Cmd+Enter to save and close
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      onSave();
+      onOpenChange(false);
+    }
+  }, [onSave, onOpenChange]);
+
+  // Add keyboard listener when modal is open
+  useEffect(() => {
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [open, handleKeyDown]);
 
   // Save when closing
   useEffect(() => {

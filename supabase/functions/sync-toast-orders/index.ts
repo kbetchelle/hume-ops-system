@@ -27,9 +27,12 @@ interface SyncRequest {
 }
 
 interface ToastAuthResponse {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
+  token: {
+    tokenType: string;
+    accessToken: string;
+    expiresIn: number;
+  };
+  status: string;
 }
 
 // Authenticate with Toast API using OAuth
@@ -63,8 +66,8 @@ async function getToastToken(
   }
 
   const authData: ToastAuthResponse = await response.json();
-  console.log(`[Toast API] Authenticated after ${attempts} attempt(s)`);
-  return authData.accessToken;
+  console.log(`[Toast API] Authenticated after ${attempts} attempt(s), status: ${authData.status}`);
+  return authData.token.accessToken;
 }
 
 // Fetch sales data from Toast API
@@ -77,7 +80,9 @@ async function fetchToastSales(
 ): Promise<ToastSalesData[]> {
   // Toast uses different endpoints for different data
   // Try the orders bulk endpoint for sales data
-  const ordersUrl = `${TOAST_BASE_URL}/orders/v2/ordersBulk?startDate=${startDate}&endDate=${endDate}`;
+  const startParam = encodeURIComponent(`${startDate}T00:00:00.000+0000`);
+  const endParam = encodeURIComponent(`${endDate}T23:59:59.999+0000`);
+  const ordersUrl = `${TOAST_BASE_URL}/orders/v2/ordersBulk?startDate=${startParam}&endDate=${endParam}`;
   
   logger.info(`Fetching orders from ${startDate} to ${endDate}`);
   

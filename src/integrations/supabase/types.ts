@@ -1282,6 +1282,36 @@ export type Database = {
         }
         Relationships: []
       }
+      build_status: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          task: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          task: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          task?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cafe_checklist_items: {
         Row: {
           category: string | null

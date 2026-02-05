@@ -85,7 +85,7 @@ export default function ConciergeDashboard() {
       case "policies-qa":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
-            <div className="flex-1 flex flex-col min-h-0 max-w-3xl">
+            <div className="flex-1 flex flex-col min-h-0 w-full">
               <PoliciesAndQA />
             </div>
           </div>

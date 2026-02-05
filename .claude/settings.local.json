@@ -20,7 +20,8 @@
       "Bash(npm run build:*)",
       "Bash(npx vite build:*)",
       "Bash(npm install:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

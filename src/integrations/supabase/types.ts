@@ -3831,6 +3831,45 @@ export type Database = {
           },
         ]
       }
+      toast_backfill_state: {
+        Row: {
+          created_at: string | null
+          cursor_date: string
+          cursor_page: number
+          id: string
+          last_error: string | null
+          last_synced_at: string | null
+          status: string
+          total_days_synced: number | null
+          total_records_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          cursor_date?: string
+          cursor_page?: number
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          status?: string
+          total_days_synced?: number | null
+          total_records_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          cursor_date?: string
+          cursor_page?: number
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          status?: string
+          total_days_synced?: number | null
+          total_records_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       toast_sales: {
         Row: {
           business_date: string

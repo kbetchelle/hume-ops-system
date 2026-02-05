@@ -324,6 +324,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Clear staging table for this batch after successful transfer
+    try {
+      const { error: clearError } = await supabase
+        .from('toast_staging')
+        .delete()
+        .eq('sync_batch_id', batchId);
+
+      if (clearError) {
+        logger.warn('Failed to clear staging table', clearError);
+      } else {
+        logger.info(`Cleared staging table for batch ${batchId}`);
+      }
+    } catch (clearErr) {
+      logger.warn('Error clearing staging table', clearErr);
+    }
+
     // Log sync metrics
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {

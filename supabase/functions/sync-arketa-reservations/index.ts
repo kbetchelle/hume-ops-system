@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 // No MAX_PAGES limit - fetch all pages
 
@@ -259,6 +260,18 @@ Deno.serve(async (req) => {
         last_records_inserted: syncedReservations.length,
       }, { onConflict: 'api_name' });
 
+    // Log to api_logs for Sync Log History visibility
+    await logApiCall(supabase, {
+      apiName: 'arketa_reservations',
+      endpoint: '/reservations',
+      syncSuccess: failedCount === 0,
+      durationMs,
+      recordsProcessed: reservations.length,
+      recordsInserted: syncedReservations.length,
+      responseStatus: 200,
+      triggeredBy: 'manual',
+    });
+
     // Calculate summary stats
     const checkedInCount = syncedReservations.filter(r => r.checkedIn).length;
     const noShowCount = syncedReservations.filter(r => r.status === 'no_show').length;
@@ -286,6 +299,27 @@ Deno.serve(async (req) => {
     const logger = createSyncLogger('arketa_reservations');
     logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+
+    // Log failure to api_logs (need supabase client for this)
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await logApiCall(supabase, {
+        apiName: 'arketa_reservations',
+        endpoint: '/reservations',
+        syncSuccess: false,
+        durationMs: 0,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: errorMessage,
+        triggeredBy: 'manual',
+      });
+    } catch (logError) {
+      console.error('[sync-arketa-reservations] Failed to log error to api_logs:', logError);
+    }
+
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

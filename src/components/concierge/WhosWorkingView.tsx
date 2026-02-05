@@ -149,7 +149,7 @@ export function WhosWorkingView() {
   const groupedStaff = groupByPosition(staffWithStatus);
 
   return (
-    <Card className="rounded-none border border-border">
+    <Card className="rounded-none border border-border flex-1 w-full">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-normal tracking-wide">

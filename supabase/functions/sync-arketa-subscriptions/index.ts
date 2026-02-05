@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 interface ArketaSubscription {
   id?: string;
@@ -286,6 +287,26 @@ Deno.serve(async (req) => {
     const logger = createSyncLogger('arketa_subscriptions');
     logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await logApiCall(supabase, {
+        apiName: 'arketa_subscriptions',
+        endpoint: '/subscriptions',
+        syncSuccess: false,
+        durationMs: 0,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: errorMessage,
+        triggeredBy: 'manual',
+      });
+    } catch (logError) {
+      console.error('[sync-arketa-subscriptions] Failed to log error to api_logs:', logError);
+    }
+
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

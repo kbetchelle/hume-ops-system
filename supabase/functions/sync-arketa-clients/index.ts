@@ -33,6 +33,7 @@ interface PaginatedResponse {
 interface SyncResult {
   success: boolean;
   synced: number;
+  syncedCount?: number;
   total: number;
   failed: number;
   failedRecordIds: string[];
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
     const syncResult: SyncResult = {
       success: failedRecordIds.length === 0,
       synced: syncedCount,
+      syncedCount,
       total: allClients.length,
       failed: failedRecordIds.length,
       failedRecordIds,

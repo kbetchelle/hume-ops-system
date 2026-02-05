@@ -273,26 +273,42 @@ async function runSync(
     return { success: false, error: `Function call failed: ${response.status} - ${errorText}` };
   }
 
-  const data = await response.json();
-  
-  // Extract synced count from various response formats
-  const syncedCount = data.syncedCount 
-    || data.matchedCount 
-    || data.totalInserted 
-    || data.targetInserted  // Calendly events
-    || data.users?.length 
-    || data.classes?.length 
-    || data.reservations?.length 
-    || data.payments?.length 
-    || data.instructors?.length 
-    || data.subscriptions?.length
-    || data.syncedDates?.length  // Toast sales
-    || 0;
+  const bodyText = await response.text();
+  let data: Record<string, unknown>;
+  try {
+    data = bodyText ? (JSON.parse(bodyText) as Record<string, unknown>) : {};
+  } catch (parseError) {
+    const snippet = bodyText.length > 200 ? bodyText.slice(0, 200) + '...' : bodyText;
+    console.error(
+      `[runSync] Invalid JSON from ${functionName} (status ${response.status}):`,
+      parseError instanceof Error ? parseError.message : String(parseError),
+      snippet
+    );
+    return {
+      success: false,
+      error: 'Invalid JSON response from sync function',
+    };
+  }
+
+  // Extract synced count from various response formats (including data.synced for arketa_clients)
+  const syncedCount = (data.syncedCount as number | undefined)
+    ?? (data.synced as number | undefined)
+    ?? data.matchedCount
+    ?? data.totalInserted
+    ?? data.targetInserted  // Calendly events
+    ?? (data.users as unknown[] | undefined)?.length
+    ?? (data.classes as unknown[] | undefined)?.length
+    ?? (data.reservations as unknown[] | undefined)?.length
+    ?? (data.payments as unknown[] | undefined)?.length
+    ?? (data.instructors as unknown[] | undefined)?.length
+    ?? (data.subscriptions as unknown[] | undefined)?.length
+    ?? (data.syncedDates as unknown[] | undefined)?.length  // Toast sales
+    ?? 0;
 
   return {
     success: data.success !== false && !data.error,
-    syncedCount,
-    error: data.error,
+    syncedCount: Number(syncedCount),
+    error: data.error as string | undefined,
   };
 }
 

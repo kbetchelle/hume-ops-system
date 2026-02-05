@@ -60,6 +60,21 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## API syncing (Arketa)
+
+Manual sync for Arketa (clients, reservations, payments, subscriptions) is available from **Dev Tools → API Syncing**. It requires Supabase Edge Function secrets:
+
+- **`ARKETA_PARTNER_ID`** – required for all Arketa syncs
+- **`ARKETA_API_KEY`** – required for token refresh and as fallback auth
+
+Set these in the Supabase project under **Edge Functions → Secrets**. If either is missing, sync will fail with a credentials error.
+
+**Inspecting errors:**
+
+- **Toast** – After "Sync Now", the toast shows the error message from the sync or "Failed to trigger X sync" if the runner could not be invoked.
+- **Sync Log History** – On the API Syncing page, open the "Sync Log History" tab and filter by API (e.g. `arketa_clients`). Enable "Error alerts" to see failed runs; each row shows `error_message` and `response_status`.
+- **Supabase Dashboard** – Edge Function logs for `refresh-arketa-token`, `sync-arketa-clients`, `sync-arketa-reservations`, `sync-arketa-payments`, `sync-arketa-subscriptions`, and `scheduled-sync-runner` show the exact errors and API responses.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

@@ -713,7 +713,7 @@ export type Database = {
       }
       arketa_reservations: {
         Row: {
-          booking_id: string
+          booking_id: string | null
           canceled_at: string | null
           canceled_by: string | null
           checked_in: boolean | null
@@ -760,7 +760,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          booking_id: string
+          booking_id?: string | null
           canceled_at?: string | null
           canceled_by?: string | null
           checked_in?: boolean | null
@@ -807,7 +807,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          booking_id?: string
+          booking_id?: string | null
           canceled_at?: string | null
           canceled_by?: string | null
           checked_in?: boolean | null

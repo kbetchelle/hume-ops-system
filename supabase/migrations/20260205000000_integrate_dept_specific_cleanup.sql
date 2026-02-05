@@ -97,138 +97,147 @@ COMMENT ON FUNCTION cleanup_old_completions() IS
   'Soft-deletes completions older than 14 days and queues photos for deletion across all department tables';
 
 -- ============================================================================
--- 3. ADAPT UNIFIED checklist_comments TABLE FOR DEPARTMENT-SPECIFIC TABLES
+-- 3. ADAPT UNIFIED checklist_comments TABLE (only if table exists)
+--    Skip when 20260204000004 deprecate_old_checklist_tables has already run.
 -- ============================================================================
 
--- Add department_table column
-ALTER TABLE checklist_comments ADD COLUMN IF NOT EXISTS department_table TEXT;
-
--- Make foreign key columns nullable to allow flexible referencing
 DO $$
 BEGIN
-  -- Drop existing foreign key constraints
-  ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_checklist_id_fkey;
-  ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_item_id_fkey;
-  ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_completion_id_fkey;
-  
-  -- Make columns nullable
-  ALTER TABLE checklist_comments ALTER COLUMN checklist_id DROP NOT NULL;
-  ALTER TABLE checklist_comments ALTER COLUMN item_id DROP NOT NULL;
-  ALTER TABLE checklist_comments ALTER COLUMN completion_id DROP NOT NULL;
-  
-  -- Update constraint to require at least one reference OR department_table info
-  ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_target_check;
-  ALTER TABLE checklist_comments ADD CONSTRAINT checklist_comments_target_check
-    CHECK (
-      checklist_id IS NOT NULL OR 
-      item_id IS NOT NULL OR 
-      completion_id IS NOT NULL OR
-      department_table IS NOT NULL
-    );
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'checklist_comments') THEN
+    -- Add department_table column
+    ALTER TABLE checklist_comments ADD COLUMN IF NOT EXISTS department_table TEXT;
+
+    -- Drop existing foreign key constraints
+    ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_checklist_id_fkey;
+    ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_item_id_fkey;
+    ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_completion_id_fkey;
+
+    -- Make columns nullable
+    ALTER TABLE checklist_comments ALTER COLUMN checklist_id DROP NOT NULL;
+    ALTER TABLE checklist_comments ALTER COLUMN item_id DROP NOT NULL;
+    ALTER TABLE checklist_comments ALTER COLUMN completion_id DROP NOT NULL;
+
+    -- Update constraint to require at least one reference OR department_table info
+    ALTER TABLE checklist_comments DROP CONSTRAINT IF EXISTS checklist_comments_target_check;
+    ALTER TABLE checklist_comments ADD CONSTRAINT checklist_comments_target_check
+      CHECK (
+        checklist_id IS NOT NULL OR
+        item_id IS NOT NULL OR
+        completion_id IS NOT NULL OR
+        department_table IS NOT NULL
+      );
+
+    -- Add indexes for performance
+    CREATE INDEX IF NOT EXISTS idx_comments_dept_table ON checklist_comments(department_table, completion_date);
+    CREATE INDEX IF NOT EXISTS idx_comments_dept_shift ON checklist_comments(department_table, shift_time, completion_date);
+
+    -- Update RLS policies to work with department-specific comments
+    DROP POLICY IF EXISTS "Users can view non-private comments" ON checklist_comments;
+    CREATE POLICY "Users can view non-private comments"
+      ON checklist_comments FOR SELECT
+      USING (
+        NOT is_private
+        OR auth.uid() IN (
+          SELECT user_id FROM user_roles WHERE role IN ('manager', 'admin')
+        )
+      );
+
+    DROP POLICY IF EXISTS "Users can create comments" ON checklist_comments;
+    CREATE POLICY "Users can create comments"
+      ON checklist_comments FOR INSERT
+      WITH CHECK (
+        auth.uid() = staff_id AND
+        auth.uid() IN (
+          SELECT user_id FROM user_roles
+          WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
+        )
+      );
+
+    COMMENT ON COLUMN checklist_comments.department_table IS
+      'Department table source: concierge, boh, or cafe (for department-specific comments without completion_id)';
+  END IF;
 END $$;
 
--- Add indexes for performance
-CREATE INDEX IF NOT EXISTS idx_comments_dept_table ON checklist_comments(department_table, completion_date);
-CREATE INDEX IF NOT EXISTS idx_comments_dept_shift ON checklist_comments(department_table, shift_time, completion_date);
-
--- Update RLS policies to work with department-specific comments
-DROP POLICY IF EXISTS "Users can view non-private comments" ON checklist_comments;
-CREATE POLICY "Users can view non-private comments"
-  ON checklist_comments FOR SELECT
-  USING (
-    NOT is_private 
-    OR auth.uid() IN (
-      SELECT user_id FROM user_roles WHERE role IN ('manager', 'admin')
-    )
-  );
-
-DROP POLICY IF EXISTS "Users can create comments" ON checklist_comments;
-CREATE POLICY "Users can create comments"
-  ON checklist_comments FOR INSERT
-  WITH CHECK (
-    auth.uid() = staff_id AND
-    auth.uid() IN (
-      SELECT user_id FROM user_roles 
-      WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
-    )
-  );
-
-COMMENT ON COLUMN checklist_comments.department_table IS 
-  'Department table source: concierge, boh, or cafe (for department-specific comments without completion_id)';
-
 -- ============================================================================
--- 4. ADAPT UNIFIED checklist_shift_submissions TABLE
+-- 4. ADAPT UNIFIED checklist_shift_submissions TABLE (only if table exists)
 -- ============================================================================
 
--- Add department_table column for clarity
-ALTER TABLE checklist_shift_submissions ADD COLUMN IF NOT EXISTS department_table TEXT;
-
--- Add index
-CREATE INDEX IF NOT EXISTS idx_shift_submissions_dept_table ON checklist_shift_submissions(department_table, completion_date);
-
--- Update RLS policies to include all department roles
-DROP POLICY IF EXISTS "Users can view submissions" ON checklist_shift_submissions;
-CREATE POLICY "Users can view submissions"
-  ON checklist_shift_submissions FOR SELECT
-  USING (
-    auth.uid() IN (
-      SELECT user_id FROM user_roles 
-      WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
-    )
-  );
-
-DROP POLICY IF EXISTS "Users can create submissions" ON checklist_shift_submissions;
-CREATE POLICY "Users can create submissions"
-  ON checklist_shift_submissions FOR INSERT
-  WITH CHECK (
-    auth.uid() = submitted_by_id AND
-    auth.uid() IN (
-      SELECT user_id FROM user_roles 
-      WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
-    )
-  );
-
-COMMENT ON COLUMN checklist_shift_submissions.department_table IS 
-  'Department table source: concierge, boh, or cafe';
-
--- ============================================================================
--- 5. ADD HELPER FUNCTION FOR CHECKING SHIFT SUBMISSION STATUS
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION get_shift_submission_status(
-  p_department_table TEXT,
-  p_department TEXT,
-  p_position TEXT,
-  p_completion_date DATE,
-  p_shift_time TEXT
-)
-RETURNS TABLE (
-  is_submitted BOOLEAN,
-  submitted_at TIMESTAMPTZ,
-  submitted_by TEXT,
-  total_tasks INTEGER,
-  completed_tasks INTEGER
-) AS $$
+DO $$
 BEGIN
-  RETURN QUERY
-  SELECT 
-    TRUE as is_submitted,
-    css.submitted_at,
-    css.submitted_by,
-    css.total_tasks,
-    css.completed_tasks
-  FROM checklist_shift_submissions css
-  WHERE css.department_table = p_department_table
-    AND css.department = p_department
-    AND COALESCE(css.position, '') = COALESCE(p_position, '')
-    AND css.completion_date = p_completion_date
-    AND css.shift_time = p_shift_time
-  LIMIT 1;
-END;
-$$ LANGUAGE plpgsql;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'checklist_shift_submissions') THEN
+    ALTER TABLE checklist_shift_submissions ADD COLUMN IF NOT EXISTS department_table TEXT;
 
-COMMENT ON FUNCTION get_shift_submission_status IS 
-  'Helper function to check if a shift has been submitted';
+    CREATE INDEX IF NOT EXISTS idx_shift_submissions_dept_table ON checklist_shift_submissions(department_table, completion_date);
+
+    DROP POLICY IF EXISTS "Users can view submissions" ON checklist_shift_submissions;
+    CREATE POLICY "Users can view submissions"
+      ON checklist_shift_submissions FOR SELECT
+      USING (
+        auth.uid() IN (
+          SELECT user_id FROM user_roles
+          WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
+        )
+      );
+
+    DROP POLICY IF EXISTS "Users can create submissions" ON checklist_shift_submissions;
+    CREATE POLICY "Users can create submissions"
+      ON checklist_shift_submissions FOR INSERT
+      WITH CHECK (
+        auth.uid() = submitted_by_id AND
+        auth.uid() IN (
+          SELECT user_id FROM user_roles
+          WHERE role IN ('concierge', 'floater', 'male_spa_attendant', 'female_spa_attendant', 'cafe', 'manager', 'admin')
+        )
+      );
+
+    COMMENT ON COLUMN checklist_shift_submissions.department_table IS
+      'Department table source: concierge, boh, or cafe';
+  END IF;
+END $$;
+
+-- ============================================================================
+-- 5. ADD HELPER FUNCTION FOR CHECKING SHIFT SUBMISSION STATUS (only if table exists)
+-- ============================================================================
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'checklist_shift_submissions') THEN
+    CREATE OR REPLACE FUNCTION get_shift_submission_status(
+      p_department_table TEXT,
+      p_department TEXT,
+      p_position TEXT,
+      p_completion_date DATE,
+      p_shift_time TEXT
+    )
+    RETURNS TABLE (
+      is_submitted BOOLEAN,
+      submitted_at TIMESTAMPTZ,
+      submitted_by TEXT,
+      total_tasks INTEGER,
+      completed_tasks INTEGER
+    ) AS $fn$
+    BEGIN
+      RETURN QUERY
+      SELECT
+        TRUE as is_submitted,
+        css.submitted_at,
+        css.submitted_by,
+        css.total_tasks,
+        css.completed_tasks
+      FROM checklist_shift_submissions css
+      WHERE css.department_table = p_department_table
+        AND css.department = p_department
+        AND COALESCE(css.position, '') = COALESCE(p_position, '')
+        AND css.completion_date = p_completion_date
+        AND css.shift_time = p_shift_time
+      LIMIT 1;
+    END;
+    $fn$ LANGUAGE plpgsql;
+
+    COMMENT ON FUNCTION get_shift_submission_status IS
+      'Helper function to check if a shift has been submitted';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- 6. ADD COMMENTS TO DOCUMENT CHANGES

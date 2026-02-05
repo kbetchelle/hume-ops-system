@@ -190,7 +190,14 @@ function SyncOverviewTable() {
                   {sync.display_name}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={null} isHealthy={isHealthy} />
+                  <div className="space-y-1">
+                    <StatusBadge status={null} isHealthy={isHealthy} />
+                    {!isHealthy && sync.last_error && (
+                      <p className="text-xs text-destructive max-w-[220px] truncate" title={sync.last_error}>
+                        {sync.last_error}
+                      </p>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {sync.last_run_at ? (

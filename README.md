@@ -69,11 +69,17 @@ Manual sync for Arketa (clients, reservations, payments, subscriptions) is avail
 
 Set these in the Supabase project under **Edge Functions → Secrets**. If either is missing, sync will fail with a credentials error.
 
-**Inspecting errors:**
+**Toast API sync troubleshooting:**
+
+- Set Edge Function secrets: **`TOAST_CLIENT_ID`**, **`TOAST_CLIENT_SECRET`**, **`TOAST_RESTAURANT_GUID`** (Supabase → Edge Functions → Secrets). If any are missing, sync fails with "Toast API credentials not configured".
+- On the API Syncing overview, failed syncs show the **last error** under the status badge; hover for full text.
+- **Sync Log History** tab: filter by `toast_sales`, enable "Error alerts", and check `error_message` for auth/fetch failures (e.g. wrong GUID, rate limits, endpoint changes).
+
+**Inspecting errors (all APIs):**
 
 - **Toast** – After "Sync Now", the toast shows the error message from the sync or "Failed to trigger X sync" if the runner could not be invoked.
-- **Sync Log History** – On the API Syncing page, open the "Sync Log History" tab and filter by API (e.g. `arketa_clients`). Enable "Error alerts" to see failed runs; each row shows `error_message` and `response_status`.
-- **Supabase Dashboard** – Edge Function logs for `refresh-arketa-token`, `sync-arketa-clients`, `sync-arketa-reservations`, `sync-arketa-payments`, `sync-arketa-subscriptions`, and `scheduled-sync-runner` show the exact errors and API responses.
+- **Sync Log History** – On the API Syncing page, open the "Sync Log History" tab and filter by API (e.g. `arketa_clients`, `toast_sales`). Enable "Error alerts" to see failed runs; each row shows `error_message` and `response_status`.
+- **Supabase Dashboard** – Edge Function logs for `refresh-arketa-token`, `sync-arketa-clients`, `sync-arketa-reservations`, `sync-arketa-payments`, `sync-arketa-subscriptions`, `sync-toast-orders`, and `scheduled-sync-runner` show the exact errors and API responses.
 
 ## How can I deploy this project?
 

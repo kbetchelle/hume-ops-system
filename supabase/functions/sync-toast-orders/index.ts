@@ -2,8 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 // Toast API configuration
+// Troubleshooting: Check Manager → API Syncing → Sync Log History for error_message.
+// Common causes: missing TOAST_CLIENT_ID/TOAST_CLIENT_SECRET/TOAST_RESTAURANT_GUID in
+// Edge Function secrets; wrong restaurant GUID; Toast API rate limits or endpoint changes.
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 
 interface ToastSalesData {
@@ -148,8 +152,19 @@ Deno.serve(async (req) => {
     const TOAST_RESTAURANT_GUID = Deno.env.get('TOAST_RESTAURANT_GUID');
 
     if (!TOAST_CLIENT_ID || !TOAST_CLIENT_SECRET || !TOAST_RESTAURANT_GUID) {
+      const errMsg = 'Toast API credentials not configured. Set TOAST_CLIENT_ID, TOAST_CLIENT_SECRET, and TOAST_RESTAURANT_GUID in Edge Function secrets.';
+      await logApiCall(supabase, {
+        apiName: 'toast_sales',
+        endpoint: '/authentication/v1/authentication/login',
+        syncSuccess: false,
+        durationMs: 0,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        errorMessage: errMsg,
+        triggeredBy: 'manual',
+      });
       return new Response(
-        JSON.stringify({ error: 'Toast API credentials not configured' }),
+        JSON.stringify({ error: errMsg }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -178,12 +193,21 @@ Deno.serve(async (req) => {
     try {
       token = await getToastToken(TOAST_CLIENT_ID, TOAST_CLIENT_SECRET);
     } catch (authError) {
+      const details = authError instanceof Error ? authError.message : String(authError);
       logger.error('Toast authentication failed', authError);
+      await logApiCall(supabase, {
+        apiName: 'toast_sales',
+        endpoint: '/authentication/v1/authentication/login',
+        syncSuccess: false,
+        durationMs: Date.now() - startTime,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 401,
+        errorMessage: `Toast auth failed: ${details}`,
+        triggeredBy: 'manual',
+      });
       return new Response(
-        JSON.stringify({ 
-          error: 'Toast authentication failed',
-          details: authError instanceof Error ? authError.message : String(authError)
-        }),
+        JSON.stringify({ error: 'Toast authentication failed', details }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -193,12 +217,21 @@ Deno.serve(async (req) => {
     try {
       salesData = await fetchToastSales(token, TOAST_RESTAURANT_GUID, startDate, endDate, logger);
     } catch (fetchError) {
+      const details = fetchError instanceof Error ? fetchError.message : String(fetchError);
       logger.error('Toast fetch failed', fetchError);
+      await logApiCall(supabase, {
+        apiName: 'toast_sales',
+        endpoint: '/orders/v2/ordersBulk',
+        syncSuccess: false,
+        durationMs: Date.now() - startTime,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: `Toast fetch failed: ${details}`,
+        triggeredBy: 'manual',
+      });
       return new Response(
-        JSON.stringify({ 
-          error: 'Failed to fetch Toast sales data',
-          details: fetchError instanceof Error ? fetchError.message : String(fetchError)
-        }),
+        JSON.stringify({ error: 'Failed to fetch Toast sales data', details }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

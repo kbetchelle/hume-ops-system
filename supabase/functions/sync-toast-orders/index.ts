@@ -103,10 +103,13 @@ async function fetchToastSales(
   const ordersData = await response.json();
   logger.info(`Fetched orders data after ${attempts} attempt(s)`);
 
-  // Aggregate orders by business date
+  // Aggregate orders by business date (API returns array or { orders: [...] })
   const salesByDate = new Map<string, ToastSalesData>();
-
-  const orders = Array.isArray(ordersData) ? ordersData : ordersData.orders || [];
+  const rawOrders = Array.isArray(ordersData) ? ordersData : ordersData?.orders;
+  const orders = Array.isArray(rawOrders) ? rawOrders : [];
+  if (orders.length === 0 && ordersData != null && !Array.isArray(ordersData) && !ordersData?.orders) {
+    logger.warn('Unexpected orders response shape, using empty list', { keys: ordersData && typeof ordersData === 'object' ? Object.keys(ordersData) : [] });
+  }
   
   for (const order of orders) {
     const businessDate = order.businessDate || order.openedDate?.split('T')[0];
@@ -120,9 +123,9 @@ async function fetchToastSales(
       totalOrders: 0,
     };
 
-    // Aggregate sales
-    const orderTotal = order.totalAmount || order.amount || 0;
-    const orderNet = order.netAmount || orderTotal;
+    // Aggregate sales (coerce to number in case API returns strings)
+    const orderTotal = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+    const orderNet = Number(order.netAmount ?? orderTotal) || orderTotal;
     
     existing.netSales = (existing.netSales || 0) + orderNet;
     existing.grossSales = (existing.grossSales || 0) + orderTotal;

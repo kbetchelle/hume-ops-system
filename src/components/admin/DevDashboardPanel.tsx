@@ -122,7 +122,8 @@ export function DevDashboardPanel() {
 
   // Handle keyboard save
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
       saveNotes();
     }
   };
@@ -166,7 +167,7 @@ export function DevDashboardPanel() {
               <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0" onClick={e => e.stopPropagation()}>
-              {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-xs flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline border-primary border px-[10px] py-[6px] cursor-text" dangerouslySetInnerHTML={{
+              {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-base flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_*]:!text-[length:inherit] border-primary border px-[10px] py-[6px] cursor-text" dangerouslySetInnerHTML={{
               __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
             }} onClick={e => {
               e.stopPropagation();

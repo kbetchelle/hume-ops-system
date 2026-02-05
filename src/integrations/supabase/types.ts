@@ -714,45 +714,144 @@ export type Database = {
       arketa_reservations: {
         Row: {
           booking_id: string
+          canceled_at: string | null
+          canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_id: string
+          class_name: string | null
+          class_time: string | null
           client_email: string | null
           client_id: string | null
           client_name: string | null
+          coupon_code: string | null
           created_at: string | null
+          date_purchased: string | null
+          email_marketing_opt_in: boolean | null
+          estimated_gross_revenue: number | null
+          estimated_net_revenue: number | null
+          experience_type: string | null
+          external_id: string | null
+          first_name: string | null
+          gross_amount_paid: number | null
           id: string
+          instructor_name: string | null
+          last_name: string | null
+          late_cancel: boolean | null
+          location_address: string | null
+          location_name: string | null
+          milestone: string | null
+          net_amount_paid: number | null
+          offering_id: string | null
+          package_name: string | null
+          package_period_end: string | null
+          package_period_start: string | null
+          payment_id: string | null
+          payment_method: string | null
+          purchase_id: string | null
+          purchase_type: string | null
           raw_data: Json | null
+          reservation_id: string | null
+          reservation_type: string | null
+          service_id: string | null
           status: string | null
           synced_at: string | null
+          tags: string | null
+          updated_at: string | null
         }
         Insert: {
           booking_id: string
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_id: string
+          class_name?: string | null
+          class_time?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
+          coupon_code?: string | null
           created_at?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
+          external_id?: string | null
+          first_name?: string | null
+          gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
+          last_name?: string | null
+          late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: string | null
+          net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          service_id?: string | null
           status?: string | null
           synced_at?: string | null
+          tags?: string | null
+          updated_at?: string | null
         }
         Update: {
           booking_id?: string
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_id?: string
+          class_name?: string | null
+          class_time?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
+          coupon_code?: string | null
           created_at?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
+          external_id?: string | null
+          first_name?: string | null
+          gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
+          last_name?: string | null
+          late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: string | null
+          net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          service_id?: string | null
           status?: string | null
           synced_at?: string | null
+          tags?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

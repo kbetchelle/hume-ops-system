@@ -108,8 +108,13 @@ Deno.serve(async (req) => {
 
       if (purchasesResponse.ok) {
         const purchasesData = await purchasesResponse.json();
-        payments = Array.isArray(purchasesData) ? purchasesData : [];
-        logger.info(`Fetched ${payments.length} purchases after ${attempts} attempt(s)`);
+        // Arketa API returns data under 'items' key
+        const purchasesArray = purchasesData?.items || (Array.isArray(purchasesData) ? purchasesData : []);
+        payments = purchasesArray;
+        logger.info(`Fetched ${payments.length} purchases after ${attempts} attempt(s)`, { 
+          responseKeys: Object.keys(purchasesData || {}),
+          hasItems: !!purchasesData?.items 
+        });
       }
     } catch (error) {
       logger.error('Purchases endpoint failed', error);
@@ -127,9 +132,14 @@ Deno.serve(async (req) => {
 
       if (paymentsResponse.ok) {
         const paymentsData = await paymentsResponse.json();
-        if (Array.isArray(paymentsData)) {
-          logger.info(`Fetched ${paymentsData.length} additional payments after ${attempts} attempt(s)`);
-          payments = [...payments, ...paymentsData];
+        // Arketa API returns data under 'items' key
+        const paymentsArray = paymentsData?.items || (Array.isArray(paymentsData) ? paymentsData : []);
+        if (paymentsArray.length > 0) {
+          logger.info(`Fetched ${paymentsArray.length} additional payments after ${attempts} attempt(s)`, {
+            responseKeys: Object.keys(paymentsData || {}),
+            hasItems: !!paymentsData?.items
+          });
+          payments = [...payments, ...paymentsArray];
         }
       }
     } catch (error) {

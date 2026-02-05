@@ -205,23 +205,56 @@ Deno.serve(async (req) => {
 
     logger.info(`Fetched ${salesData.length} days of sales data`);
 
-    // Upsert to toast_sales table
+    // 1) Insert into toast_staging (CSV-aligned: business_date, net_sales, gross_sales, cafe_sales, raw_data, sync_batch_id)
+    // 2) Upsert from staging into toast_sales target table
     const syncedDates: string[] = [];
     let failedCount = 0;
     let totalNetSales = 0;
 
     for (const dayData of salesData) {
       try {
+        const stagingRow = {
+          business_date: dayData.businessDate,
+          net_sales: dayData.netSales || 0,
+          gross_sales: dayData.grossSales || 0,
+          cafe_sales: dayData.cafeSales ?? dayData.netSales ?? 0,
+          raw_data: dayData,
+          sync_batch_id: batchId,
+        };
+
+        const { result: stagingResult } = await withRetry(
+          async () => {
+            const { error } = await supabase
+              .from('toast_staging')
+              .upsert(stagingRow, {
+                onConflict: 'business_date,sync_batch_id',
+              });
+
+            if (error && !isRetryableSupabaseError(error)) {
+              throw error;
+            }
+            return { error };
+          },
+          { maxAttempts: 2 },
+          `insert toast_staging ${dayData.businessDate}`
+        );
+
+        if (stagingResult.error) {
+          logger.error(`Failed to stage ${dayData.businessDate}`, stagingResult.error);
+          failedCount++;
+          continue;
+        }
+
         const { result } = await withRetry(
           async () => {
             const { error } = await supabase
               .from('toast_sales')
               .upsert({
                 business_date: dayData.businessDate,
-                net_sales: dayData.netSales || 0,
-                gross_sales: dayData.grossSales || 0,
-                cafe_sales: dayData.cafeSales || dayData.netSales || 0,
-                raw_data: dayData,
+                net_sales: stagingRow.net_sales,
+                gross_sales: stagingRow.gross_sales,
+                cafe_sales: stagingRow.cafe_sales,
+                raw_data: stagingRow.raw_data,
                 sync_batch_id: batchId,
               }, {
                 onConflict: 'business_date',
@@ -237,7 +270,7 @@ Deno.serve(async (req) => {
         );
 
         if (result.error) {
-          logger.error(`Failed to upsert ${dayData.businessDate}`, result.error);
+          logger.error(`Failed to upsert target ${dayData.businessDate}`, result.error);
           failedCount++;
           continue;
         }
@@ -245,7 +278,7 @@ Deno.serve(async (req) => {
         totalNetSales += dayData.netSales || 0;
         syncedDates.push(dayData.businessDate);
       } catch (error) {
-        logger.error(`Error upserting ${dayData.businessDate}`, error);
+        logger.error(`Error syncing ${dayData.businessDate}`, error);
         failedCount++;
       }
     }

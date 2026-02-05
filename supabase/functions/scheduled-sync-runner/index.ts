@@ -148,7 +148,12 @@ Deno.serve(async (req) => {
 
       // Calculate next run time
       const nextRunAt = new Date();
-      nextRunAt.setMinutes(nextRunAt.getMinutes() + sync.interval_minutes);
+      if (sync.interval_minutes >= 1440) {
+        // Daily (or less frequent): preserve same time next day (e.g. 1am stays 1am)
+        nextRunAt.setDate(nextRunAt.getDate() + Math.floor(sync.interval_minutes / 1440));
+      } else {
+        nextRunAt.setMinutes(nextRunAt.getMinutes() + sync.interval_minutes);
+      }
 
       // Update sync schedule with result
       // Count timeouts toward failure count

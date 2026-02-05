@@ -52,7 +52,7 @@ const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: str
   arketa_subscriptions: { stagingTable: "arketa_subscriptions_staging", targetTable: "arketa_subscriptions" },
   sling_users: { stagingTable: "sling_users_staging", targetTable: "sling_users" },
   sling_shifts: { stagingTable: "sling_shifts_staging", targetTable: "staff_shifts" },
-  toast_sales: { stagingTable: null, targetTable: "toast_sales" },
+  toast_sales: { stagingTable: "toast_staging", targetTable: "toast_sales" },
   calendly_events: { stagingTable: "scheduled_tours_staging", targetTable: "scheduled_tours" },
 };
 

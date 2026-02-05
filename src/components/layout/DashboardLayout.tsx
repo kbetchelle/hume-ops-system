@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
 import humeLogo from "@/assets/hume-logo.png";
@@ -62,6 +62,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Master Calendar",
       url: "/dashboard/master-calendar",
       icon: Calendar
+    }, {
+      title: "Lost & Found",
+      url: "/dashboard/lost-and-found",
+      icon: Package
     }];
   }
   const baseItems: NavItem[] = [{
@@ -103,6 +107,11 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     url: "/dashboard/shift-report",
     icon: FileText,
     roles: ["manager", "concierge"]
+  }, {
+    title: "Lost & Found",
+    url: "/dashboard/lost-and-found",
+    icon: Package,
+    roles: ["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]
   }, {
     title: "Reports",
     url: "/dashboard/reports",

@@ -58,6 +58,7 @@ import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
+import LostAndFoundPage from "./pages/dashboards/LostAndFoundPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -299,6 +300,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge"]}>
                   <ShiftReportPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Lost & Found for Concierge and BoH */}
+            <Route
+              path="/dashboard/lost-and-found"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <LostAndFoundPage />
                 </ProtectedRoute>
               }
             />

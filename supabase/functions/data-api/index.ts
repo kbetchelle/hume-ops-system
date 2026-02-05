@@ -49,7 +49,8 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'response_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
   'template_outdated_notifications': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   'quick_links': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
-  'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
+  'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
+  'lost_and_found_member_requests': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
   'staff_documents': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   // Backfill tables
   'backfill_jobs': { management: ['select', 'insert', 'update', 'delete'] },

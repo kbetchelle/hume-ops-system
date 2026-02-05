@@ -2379,7 +2379,10 @@ export type Database = {
           found_by_name: string | null
           id: string
           location_found: string | null
+          member_requested: boolean
           notes: string | null
+          object_category: Database["public"]["Enums"]["lost_and_found_category"] | null
+          photo_url: string | null
           status: string | null
         }
         Insert: {
@@ -2392,7 +2395,10 @@ export type Database = {
           found_by_name?: string | null
           id?: string
           location_found?: string | null
+          member_requested?: boolean
           notes?: string | null
+          object_category?: Database["public"]["Enums"]["lost_and_found_category"] | null
+          photo_url?: string | null
           status?: string | null
         }
         Update: {
@@ -2405,10 +2411,63 @@ export type Database = {
           found_by_name?: string | null
           id?: string
           location_found?: string | null
+          member_requested?: boolean
           notes?: string | null
+          object_category?: Database["public"]["Enums"]["lost_and_found_category"] | null
+          photo_url?: string | null
           status?: string | null
         }
         Relationships: []
+      }
+      lost_and_found_member_requests: {
+        Row: {
+          created_at: string
+          created_by_id: string | null
+          date_inquired: string | null
+          description: string
+          id: string
+          matched_item_id: string | null
+          member_contact: string | null
+          member_name: string | null
+          notes: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_id?: string | null
+          date_inquired?: string | null
+          description: string
+          id?: string
+          matched_item_id?: string | null
+          member_contact?: string | null
+          member_name?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_id?: string | null
+          date_inquired?: string | null
+          description?: string
+          id?: string
+          matched_item_id?: string | null
+          member_contact?: string | null
+          member_name?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lost_and_found_member_requests_matched_item_id_fkey"
+            columns: ["matched_item_id"]
+            isOneToOne: false
+            referencedRelation: "lost_and_found"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_checkins: {
         Row: {
@@ -4100,6 +4159,15 @@ export type Database = {
         | "male_spa_attendant"
         | "floater"
         | "cafe"
+      lost_and_found_category:
+        | "wallet"
+        | "keys"
+        | "phone"
+        | "clothing"
+        | "jewelry"
+        | "bag"
+        | "water_bottle"
+        | "other"
       dev_task_status:
         | "not_started"
         | "in_progress"
@@ -4242,6 +4310,16 @@ export const Constants = {
         "male_spa_attendant",
         "floater",
         "cafe",
+      ],
+      lost_and_found_category: [
+        "wallet",
+        "keys",
+        "phone",
+        "clothing",
+        "jewelry",
+        "bag",
+        "water_bottle",
+        "other",
       ],
       dev_task_status: [
         "not_started",

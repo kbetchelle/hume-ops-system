@@ -180,7 +180,7 @@ export function PoliciesAndQA() {
   const pendingCount = (myQuestions || []).filter(q => !q.is_resolved).length;
 
   return (
-    <Card className="rounded-none border">
+    <Card className="rounded-none border flex flex-col flex-1 min-h-0">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider">
           <BookOpen className="h-4 w-4" />
@@ -188,7 +188,7 @@ export function PoliciesAndQA() {
         </CardTitle>
       </CardHeader>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'policies' | 'qa')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'policies' | 'qa')} className="flex flex-col flex-1 min-h-0">
         <div className="px-4">
           <TabsList className="w-full rounded-none">
             <TabsTrigger value="policies" className="flex-1 gap-2 rounded-none">
@@ -205,7 +205,7 @@ export function PoliciesAndQA() {
           </TabsList>
         </div>
 
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 flex-1 overflow-auto">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

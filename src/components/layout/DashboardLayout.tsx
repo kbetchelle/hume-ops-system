@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2 } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
 import humeLogo from "@/assets/hume-logo.png";
@@ -142,6 +142,14 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Staff Announcements",
   url: "/dashboard/staff-announcements",
   icon: Bell
+}, {
+  title: "Staff Q&A",
+  url: "/dashboard/staff-qa",
+  icon: HelpCircle
+}, {
+  title: "Policy Management",
+  url: "/dashboard/policies",
+  icon: BookOpen
 }];
 
 // Settings menu structure for admin

@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useSendNotification } from '@/hooks/useNotifications';
+import { useMarkQAAsRead, useQAReadStatus } from '@/hooks/useStaffQAReads';
 import { cn } from '@/lib/utils';
 
 interface QAEntry {
@@ -85,6 +86,10 @@ export function ManagerQAPanel() {
       return (data || []) as QAEntry[];
     },
   });
+
+  const qaIds = (qaEntries ?? []).map((q) => q.id);
+  const { data: readSet } = useQAReadStatus(qaIds);
+  const markAsRead = useMarkQAAsRead();
 
   // Fetch policies for linking
   const { data: policies } = useQuery({
@@ -242,17 +247,25 @@ export function ManagerQAPanel() {
                   {filteredEntries.map((qa) => {
                     const linkedPolicy = qa.linked_policy_id ? getLinkedPolicy(qa.linked_policy_id) : null;
 
+                    const isUnread = !qa.is_resolved && !readSet?.has(qa.id);
+
                     return (
                       <div
                         key={qa.id}
                         className={cn(
                           'p-4 border',
-                          !qa.is_resolved && 'bg-amber-500/5 border-amber-500/30'
+                          !qa.is_resolved && 'bg-amber-500/5 border-amber-500/30',
+                          isUnread && 'border-l-4 border-l-amber-500'
                         )}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex-1">
-                            <p className="text-sm font-medium">{qa.question}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{qa.question}</p>
+                              {isUnread && (
+                                <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" title="Unread" />
+                              )}
+                            </div>
                             {qa.context && (
                               <p className="text-xs text-muted-foreground mt-1 italic">
                                 Context: {qa.context}

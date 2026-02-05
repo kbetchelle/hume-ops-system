@@ -57,6 +57,7 @@ import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
+import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -361,6 +362,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <StaffQAPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Policy Management for Managers */}
+            <Route
+              path="/dashboard/policies"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <PolicyManagementPage />
                 </ProtectedRoute>
               }
             />

@@ -1686,6 +1686,36 @@ export type Database = {
         }
         Relationships: []
       }
+      policy_categories: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       concierge_checklist_items: {
         Row: {
           category: string | null
@@ -3414,6 +3444,42 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "staff_qa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_qa_reads: {
+        Row: {
+          id: string
+          qa_id: string
+          user_id: string
+          read_at: string
+        }
+        Insert: {
+          id?: string
+          qa_id: string
+          user_id: string
+          read_at?: string
+        }
+        Update: {
+          id?: string
+          qa_id?: string
+          user_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_qa_reads_qa_id_fkey"
+            columns: ["qa_id"]
+            isOneToOne: false
+            referencedRelation: "staff_qa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_qa_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

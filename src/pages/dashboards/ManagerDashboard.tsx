@@ -2,6 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { DevDashboardPanel } from "@/components/admin/DevDashboardPanel";
+import { UnreadQABanner } from "@/components/manager/UnreadQABanner";
 
 export default function ManagerDashboard() {
   const { user } = useAuthContext();
@@ -22,6 +23,7 @@ export default function ManagerDashboard() {
         </div>
 
         <div className="flex-1 min-h-0">
+          <UnreadQABanner className="mb-4" />
           <DevDashboardPanel />
         </div>
       </div>

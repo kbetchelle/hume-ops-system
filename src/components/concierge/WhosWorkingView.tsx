@@ -90,12 +90,37 @@ export function WhosWorkingView() {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("staff_shifts" as any) as any)
-        .select("id, user_name, position, shift_start, shift_end")
+        .select(`
+          id, 
+          user_name, 
+          position, 
+          shift_start, 
+          shift_end,
+          sling_user_id,
+          sling_users!staff_shifts_sling_user_id_fkey (
+            first_name,
+            last_name
+          )
+        `)
         .eq("shift_date", todayLA)
         .order("shift_start", { ascending: true });
 
       if (error) throw error;
-      return (data as StaffOnShift[]) || [];
+      
+      // Map to include full name from sling_users
+      return ((data || []) as any[]).map((shift) => {
+        const firstName = shift.sling_users?.first_name || '';
+        const lastName = shift.sling_users?.last_name || '';
+        const fullName = [firstName, lastName].filter(Boolean).join(' ') || shift.user_name || 'Unknown';
+        
+        return {
+          id: shift.id,
+          user_name: fullName,
+          position: shift.position,
+          shift_start: shift.shift_start,
+          shift_end: shift.shift_end,
+        } as StaffOnShift;
+      });
     },
     refetchInterval: 60000, // Refetch every 60 seconds
   });

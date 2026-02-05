@@ -14,7 +14,6 @@ import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
 import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplatesWithAI";
 import { QuickLinks } from "@/components/concierge/QuickLinks";
 import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
-import { StaffDocumentsView } from "@/components/concierge/StaffDocumentsView";
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
@@ -119,17 +118,6 @@ export default function ConciergeDashboard() {
             </h2>
             <div className="max-w-3xl">
               <LostAndFoundTab />
-            </div>
-          </div>
-        );
-      case "documents":
-        return (
-          <div className="p-6 md:p-8 flex flex-col h-full">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Documents
-            </h2>
-            <div className="flex-1 flex flex-col min-h-0">
-              <StaffDocumentsView />
             </div>
           </div>
         );

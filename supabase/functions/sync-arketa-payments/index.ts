@@ -67,10 +67,17 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const today = new Date().toISOString().split('T')[0];
-    const startDate = body.start_date || today;
-    const endDate = body.end_date || today;
-    const limit = body.limit || 500;
+    const today = new Date();
+    
+    // Default: 7 days back to 7 days forward
+    const defaultStart = new Date(today);
+    defaultStart.setDate(defaultStart.getDate() - 7);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + 7);
+    
+    const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
+    const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
+    // No limit parameter - fetch all records
 
     logger.info(`Syncing payments from ${startDate} to ${endDate}`);
 
@@ -89,7 +96,7 @@ Deno.serve(async (req) => {
     let totalAttempts = 0;
     
     // Try purchases endpoint first with retry
-    const purchasesUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
+    const purchasesUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases?start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: purchasesResponse, attempts } = await fetchWithRetry(purchasesUrl, {
@@ -108,7 +115,7 @@ Deno.serve(async (req) => {
     }
 
     // Also try payments endpoint and merge
-    const paymentsUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/payments?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
+    const paymentsUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/payments?start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: paymentsResponse, attempts } = await fetchWithRetry(paymentsUrl, {

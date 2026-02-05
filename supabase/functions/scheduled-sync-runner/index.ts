@@ -251,6 +251,9 @@ async function runSync(
   } else if (syncType === 'toast_sales') {
     // Sync last 1 day of sales data
     requestBody = { days_back: 1 };
+  } else if (syncType === 'calendly_events') {
+    // Sync 7 days past to 90 days future
+    requestBody = { limit: 100 };
   }
 
   // Call the appropriate edge function
@@ -276,6 +279,7 @@ async function runSync(
   const syncedCount = data.syncedCount 
     || data.matchedCount 
     || data.totalInserted 
+    || data.targetInserted  // Calendly events
     || data.users?.length 
     || data.classes?.length 
     || data.reservations?.length 

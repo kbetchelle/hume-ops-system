@@ -2755,6 +2755,57 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_tours_staging: {
+        Row: {
+          calendly_event_id: string
+          created_at: string | null
+          end_time: string | null
+          event_type: string | null
+          event_uri: string | null
+          id: string
+          invitee_email: string | null
+          invitee_name: string | null
+          invitee_phone: string | null
+          invitee_questions_answers: Json | null
+          raw_event_data: Json | null
+          raw_invitee_data: Json | null
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          calendly_event_id: string
+          created_at?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          event_uri?: string | null
+          id?: string
+          invitee_email?: string | null
+          invitee_name?: string | null
+          invitee_phone?: string | null
+          invitee_questions_answers?: Json | null
+          raw_event_data?: Json | null
+          raw_invitee_data?: Json | null
+          start_time: string
+          status?: string | null
+        }
+        Update: {
+          calendly_event_id?: string
+          created_at?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          event_uri?: string | null
+          id?: string
+          invitee_email?: string | null
+          invitee_name?: string | null
+          invitee_phone?: string | null
+          invitee_questions_answers?: Json | null
+          raw_event_data?: Json | null
+          raw_invitee_data?: Json | null
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       shift_reports: {
         Row: {
           facility_issues: string | null

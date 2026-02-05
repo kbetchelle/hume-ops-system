@@ -4,7 +4,7 @@ import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/
 import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 
-const MAX_PAGES = 100; // Safety limit to prevent infinite loops
+// No MAX_PAGES limit - fetch all pages
 
 interface ArketaReservation {
   id: string;
@@ -55,7 +55,7 @@ async function fetchAllReservations(
   let pageCount = 0;
   let totalAttempts = 0;
 
-  while (hasMore && pageCount < MAX_PAGES) {
+  while (hasMore) {
     pageCount++;
 
     let url: URL;
@@ -108,9 +108,7 @@ async function fetchAllReservations(
     }
   }
 
-  if (pageCount >= MAX_PAGES) {
-    logger?.warn(`Reached max page limit (${MAX_PAGES}), some records may be missing`);
-  }
+
 
   return { reservations: allReservations, totalAttempts, pagesProcessed: pageCount };
 }
@@ -140,9 +138,16 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const today = new Date().toISOString().split('T')[0];
-    const startDate = body.start_date || today;
-    const endDate = body.end_date || today;
+    const today = new Date();
+    
+    // Default: 7 days back to 7 days forward
+    const defaultStart = new Date(today);
+    defaultStart.setDate(defaultStart.getDate() - 7);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + 7);
+    
+    const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
+    const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
     const limit = body.limit || 500;
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);

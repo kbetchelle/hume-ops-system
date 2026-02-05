@@ -24,6 +24,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifyManagers, truncateForNotification } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 
 interface Policy {
@@ -55,6 +56,7 @@ export function PoliciesAndQA() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const notifyManagers = useNotifyManagers();
   const [activeTab, setActiveTab] = useState<'policies' | 'qa'>('policies');
   const [searchTerm, setSearchTerm] = useState('');
   const [showDirectAnswers, setShowDirectAnswers] = useState(true);
@@ -107,22 +109,36 @@ export function PoliciesAndQA() {
 
   const submitQuestion = useMutation({
     mutationFn: async () => {
+      const questionText = newQuestion.question;
+      const askerName = user?.user_metadata?.full_name || user?.email || 'Staff';
+
       const { error } = await supabase
         .from('staff_qa')
         .insert({
-          question: newQuestion.question,
+          question: questionText,
           context: newQuestion.context || null,
           asked_by_id: user?.id,
-          asked_by_name: user?.user_metadata?.full_name || user?.email || 'Staff',
+          asked_by_name: askerName,
           is_resolved: false,
           is_public: true,
         });
 
       if (error) throw error;
+
+      // Return data for onSuccess
+      return { questionText, askerName };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['staff-qa-public'] });
       queryClient.invalidateQueries({ queryKey: ['my-questions'] });
+
+      // Notify managers about the new question
+      notifyManagers.mutate({
+        type: 'qa_new_question',
+        title: 'New Staff Question',
+        body: `${data.askerName}: ${truncateForNotification(data.questionText, 80)}`,
+      });
+
       setNewQuestion({ question: '', context: '' });
       toast({
         title: 'Question Submitted',

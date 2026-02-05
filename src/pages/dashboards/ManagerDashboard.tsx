@@ -4,7 +4,7 @@ import { useUserProfile } from "@/hooks/useUserRoles";
 import { DevDashboardPanel } from "@/components/admin/DevDashboardPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, BarChart3, Settings } from "lucide-react";
+import { Calendar, Users, BarChart3, Settings, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
@@ -41,6 +41,12 @@ export default function ManagerDashboard() {
       description: "Manage facility operations",
       icon: Settings,
       href: "/dashboard/facility",
+    },
+    {
+      title: "Staff Q&A",
+      description: "Answer staff questions",
+      icon: HelpCircle,
+      href: "/dashboard/staff-qa",
     },
   ];
 

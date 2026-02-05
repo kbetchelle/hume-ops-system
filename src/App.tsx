@@ -57,6 +57,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
+import StaffQAPage from "./pages/manager/StaffQAPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -361,6 +362,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <StaffAnnouncementsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Staff Q&A for Managers */}
+            <Route
+              path="/dashboard/staff-qa"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <StaffQAPage />
                 </ProtectedRoute>
               }
             />

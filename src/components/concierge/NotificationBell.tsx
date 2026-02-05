@@ -30,6 +30,7 @@ interface Notification {
 
 const notificationIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   qa_answered: HelpCircle,
+  qa_new_question: HelpCircle,
   announcement: Megaphone,
   message: MessageSquare,
 };

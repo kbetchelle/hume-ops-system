@@ -1,0 +1,263 @@
+-- Import Historical Q&A Data
+-- Run this in the Supabase SQL Editor or any PostgreSQL client connected to your database
+-- This inserts 18 historical Q&A records into the staff_qa table
+
+INSERT INTO public.staff_qa (
+  id,
+  question,
+  answer,
+  is_resolved,
+  asked_by_name,
+  answered_by_name,
+  answer_type,
+  is_public,
+  created_at,
+  updated_at
+) VALUES
+(
+  'ca26171b-5dcc-46e2-9769-8a07320a1243',
+  'applied and are waiting to hear back',
+  'so we cannot guarantee a timeline. We hope to see them soon.',
+  true,
+  'Angela',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '8aab725f-d38a-4d9d-a377-e406f3e0d3b4',
+  'Ashley fell on the stairs - suggested to get some grippy tape or something like that. It was wet on rooftop which made stairs slippery. very dangerous! Luckily she is okay!',
+  'told to ben',
+  true,
+  'Dennis',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '879cfa51-028a-4aee-951a-a24cab84b15e',
+  'Cloe Daneshgar just got accepted as a member. She wants to start her membership Jan. 15th. She accidentally uploaded her work card to her account and got charged the annual. She is wondering if she could get a refund, and also switch monthly membership instead of annual (she just found out she might move later this year). I told her I will talk to the manager and that we need her new card on file before doing any refunds.',
+  'handled',
+  true,
+  'Angela',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '833b5294-9250-4a59-9d70-84628feddd3e',
+  'Can we get email template updates to explain to people that we are at capacity. Specifically for tours, people who want to apply, and application timeline inquiries',
+  'yes -- for now, just edit current template and say we have had overwhelming inbound requests and are letting in new members as spots become available, so we cannot guarantee a timeline. We hope to see them soon.',
+  true,
+  'Angela',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '5ba19ce4-263c-4357-b769-198515ee7347',
+  'Ice scooper for machine is broken can we get like a titanium one.',
+  'wil tell ben',
+  true,
+  'Dennis',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '6c5df462-53cf-4599-82f8-71001203146c',
+  'suggestion to get a scanner at the desk. each member gets a bar code in their app and scans when they walk in. too many people just running by',
+  'have requested this, but would need to be built into arketa',
+  true,
+  'Dustin',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  'aaa9d9ca-c7c4-4f00-8966-04523e6b2f2b',
+  'can we rethink uncovering the rooftop equipment? it''s pitch black, freezing and wet everywhere and now you''re asking us to walk and fold tarps on the rooftop ledge where there''s no railing. going to need gloves, headlamp and booties/new shoes',
+  'is it actually on the ledge? will discuss with richard tomorrow it''s pitch black with no lights and slippery. there''s also a lot more coverings now for every piece of equipment so it takes a while. the tarps are wet and ground on service roof is wet usually a puddle so clothes and shoes get dirty i''ve slipped if not wearing the proper shoes. sorry for being a bitch but i can''t be the only one there has to be a better way',
+  true,
+  'Dustin',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  'd12a3759-b98d-421b-9824-da18f2bf5409',
+  'ian Cahir said no one came to clean the yoga room after his 6:15 morning class',
+  'told to BOH',
+  true,
+  'Lydia',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '43b4c299-be63-444d-97e1-fdd37b78a21e',
+  'Anna Kellam and her husband (?? couldnt hear the name well on the phone), was wondering if there was a household package membership deal. i said i didn''t think so but will ask management',
+  'no',
+  true,
+  'Lydia',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '9d6581b7-1b4b-4621-9532-e2c8404ee2a8',
+  'Can everyone please use the lost and found tracker and put things in the lost & found??',
+  'we honestly need a new system',
+  true,
+  'Dustin & Kat',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:37:14.51215+00'
+),
+(
+  '7571b80d-5898-40f7-acb2-e742db9fca72',
+  'Seems like a LOT of people on the waitlist for membership have been receiving emails that they need to complete their application - but their info is all submitted. Arketa issue?',
+  'will send to Roger asap--have noticed this also',
+  true,
+  'Kat, Tommy',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-09 18:20:56.501974+00',
+  '2025-12-12 21:45:33.563074+00'
+),
+(
+  '4e040d39-2742-4597-bf23-3b1867e1a0d8',
+  'Cafe stools are moldy. Need custom hume stools :) photo in album',
+  'shown to Richard',
+  true,
+  'Dennis',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-04 00:46:41.547735+00'
+),
+(
+  'f2b389bd-802d-41e1-83ed-6f16f03d7d60',
+  'Could we please bring one of the large heaters on the high roof down to Carlos? It''s freezing in the morning and there are no outlets close to him to use an electric heater. There are 5 on the roof so plenty for classes',
+  'Ordering for him!!',
+  true,
+  'Angela/Hunter',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-11 21:33:41.412872+00',
+  '2025-12-12 21:44:50.455194+00'
+),
+(
+  '862d89c2-16cc-4e28-b098-d263af92a0fb',
+  'Member asked when our poster with December special classes and social events will be updated',
+  'Abbey is having it printed and up by end of week',
+  true,
+  'Angela',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-04 00:37:14.51215+00',
+  '2025-12-07 03:26:14.009745+00'
+),
+(
+  '45144107-c51f-4e39-850f-a4f70f55e10e',
+  'If a member brings a guest in the morning is the guest allowed to come back later in the day? I''m assuming a guest pass gives someone access to the facilities for the full day but just want to double check',
+  'I guess yes but they would need to be with member both times-- they can''t just come in and out all day.',
+  true,
+  'Angela/Hunter',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-11 21:33:41.175638+00',
+  '2025-12-17 16:44:20.819318+00'
+),
+(
+  '506d7f4f-a024-4f2f-ae45-56b42e947901',
+  'Seth Baum purchased 3 movie tickets for the event on Friday. I know members are allowed to bring one guest. Some have asked if they can bring two and have been told no. Can we have some clarification?',
+  'Seth''s gf (member) is also bringing a guest but both were booked under his name. Members can bring one guest - ideally we create a profile for the guest if they don''t have one already and make the purchase under their name.',
+  true,
+  'Dylan, Charlie',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-17 05:12:33.711557+00',
+  '2025-12-17 16:44:26.500484+00'
+),
+(
+  '9a187e0f-d918-48d9-90df-847e59dead94',
+  'Follow-up on the question about guests coming back to the studio. I actually thought once the guest was signed in with the member then it is treated the same as a day pass. Why wouldn''t it be?',
+  'Yes that''s fine',
+  true,
+  'management',
+  'Management',
+  'direct_answer',
+  true,
+  '2025-12-17 16:45:10.581759+00',
+  '2026-01-13 01:06:16.625712+00'
+),
+(
+  'c816d269-43b9-42ec-982a-2500b232db69',
+  'How do members sign up for private boxing? it''s not on the app',
+  'Will be on app very soon',
+  true,
+  'Dustin / Angela',
+  'management',
+  'direct_answer',
+  true,
+  '2025-12-10 21:21:35.098918+00',
+  '2025-12-15 23:11:19.237145+00'
+)
+ON CONFLICT (id) DO UPDATE SET
+  question = EXCLUDED.question,
+  answer = EXCLUDED.answer,
+  is_resolved = EXCLUDED.is_resolved,
+  asked_by_name = EXCLUDED.asked_by_name,
+  answered_by_name = EXCLUDED.answered_by_name,
+  answer_type = EXCLUDED.answer_type,
+  is_public = EXCLUDED.is_public,
+  updated_at = EXCLUDED.updated_at;
+
+-- Verify the import
+SELECT COUNT(*) as total_imported FROM public.staff_qa WHERE id IN (
+  'ca26171b-5dcc-46e2-9769-8a07320a1243',
+  '8aab725f-d38a-4d9d-a377-e406f3e0d3b4',
+  '879cfa51-028a-4aee-951a-a24cab84b15e',
+  '833b5294-9250-4a59-9d70-84628feddd3e',
+  '5ba19ce4-263c-4357-b769-198515ee7347',
+  '6c5df462-53cf-4599-82f8-71001203146c',
+  'aaa9d9ca-c7c4-4f00-8966-04523e6b2f2b',
+  'd12a3759-b98d-421b-9824-da18f2bf5409',
+  '43b4c299-be63-444d-97e1-fdd37b78a21e',
+  '9d6581b7-1b4b-4621-9532-e2c8404ee2a8',
+  '7571b80d-5898-40f7-acb2-e742db9fca72',
+  '4e040d39-2742-4597-bf23-3b1867e1a0d8',
+  'f2b389bd-802d-41e1-83ed-6f16f03d7d60',
+  '862d89c2-16cc-4e28-b098-d263af92a0fb',
+  '45144107-c51f-4e39-850f-a4f70f55e10e',
+  '506d7f4f-a024-4f2f-ae45-56b42e947901',
+  '9a187e0f-d918-48d9-90df-847e59dead94',
+  'c816d269-43b9-42ec-982a-2500b232db69'
+);

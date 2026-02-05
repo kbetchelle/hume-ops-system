@@ -8,7 +8,6 @@ import {
   FileCode,
   Link,
   Package,
-  FolderOpen,
   HelpCircle,
   User,
   Settings,
@@ -52,7 +51,6 @@ export type ConciergeView =
   | "templates"
   | "quick-links"
   | "lost-found"
-  | "documents"
   | "policies-qa";
 
 interface NavItem {
@@ -125,7 +123,6 @@ export function ConciergeSidebar({
       title: "Reference",
       items: [
         { id: "whos-working", label: "Who's Working", icon: Users },
-        { id: "documents", label: "Documents", icon: FolderOpen },
         { id: "policies-qa", label: "Policies & Q&A", icon: HelpCircle },
       ],
     },

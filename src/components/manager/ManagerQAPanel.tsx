@@ -66,7 +66,7 @@ export function ManagerQAPanel() {
   const queryClient = useQueryClient();
   const sendNotification = useSendNotification();
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'answered' | 'all'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'answered'>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState<QAEntry | null>(null);
   const [answerType, setAnswerType] = useState<'direct_answer' | 'policy_link'>('direct_answer');
@@ -215,9 +215,6 @@ export function ManagerQAPanel() {
               <TabsTrigger value="answered" className="flex-1 gap-2 rounded-none">
                 <CheckCircle2 className="h-4 w-4" />
                 Answered
-              </TabsTrigger>
-              <TabsTrigger value="all" className="flex-1 rounded-none">
-                All
               </TabsTrigger>
             </TabsList>
           </div>

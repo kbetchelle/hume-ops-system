@@ -1,22 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
+import { toZonedTime, format as formatTz } from "date-fns-tz";
 import { Users, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { selectFrom } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StaffOnShift {
   id: string;
-  staff_name: string;
+  user_name: string;
   position: string;
   shift_start: string;
   shift_end: string;
+}
+
+interface StaffWithStatus extends StaffOnShift {
   is_currently_working: boolean;
 }
 
 const POSITION_ORDER = ["Concierge", "Trainer", "Spa", "Cafe", "Other"];
+const LA_TIMEZONE = "America/Los_Angeles";
 
 const getInitials = (name: string): string => {
   if (!name) return "??";
@@ -35,8 +40,8 @@ const normalizePosition = (position: string | null): string => {
   return "Other";
 };
 
-const groupByPosition = (staff: StaffOnShift[]): Record<string, StaffOnShift[]> => {
-  const grouped: Record<string, StaffOnShift[]> = {};
+const groupByPosition = (staff: StaffWithStatus[]): Record<string, StaffWithStatus[]> => {
+  const grouped: Record<string, StaffWithStatus[]> = {};
   
   staff.forEach((person) => {
     const normalizedPosition = normalizePosition(person.position);
@@ -51,32 +56,58 @@ const groupByPosition = (staff: StaffOnShift[]): Record<string, StaffOnShift[]> 
 
 const formatTimeRange = (start: string, end: string): string => {
   try {
-    const startFormatted = format(parseISO(start), "h:mm a");
-    const endFormatted = format(parseISO(end), "h:mm a");
+    const startDate = parseISO(start);
+    const endDate = parseISO(end);
+    // Convert to LA timezone for display
+    const startLA = toZonedTime(startDate, LA_TIMEZONE);
+    const endLA = toZonedTime(endDate, LA_TIMEZONE);
+    const startFormatted = format(startLA, "h:mm a");
+    const endFormatted = format(endLA, "h:mm a");
     return `${startFormatted} - ${endFormatted}`;
   } catch {
     return "—";
   }
 };
 
+const isCurrentlyWorking = (shiftStart: string, shiftEnd: string): boolean => {
+  try {
+    const now = new Date();
+    const start = parseISO(shiftStart);
+    const end = parseISO(shiftEnd);
+    return now >= start && now <= end;
+  } catch {
+    return false;
+  }
+};
+
 export function WhosWorkingView() {
-  const today = format(new Date(), "yyyy-MM-dd");
+  // Get today's date in LA timezone
+  const nowLA = toZonedTime(new Date(), LA_TIMEZONE);
+  const todayLA = format(nowLA, "yyyy-MM-dd");
 
   const { data: staff, isLoading } = useQuery({
-    queryKey: ["daily-schedules", today],
+    queryKey: ["staff-shifts-today", todayLA],
     queryFn: async () => {
-      const { data, error } = await selectFrom<StaffOnShift>("daily_schedules", {
-        filters: [{ type: "eq", column: "schedule_date", value: today }],
-        order: { column: "shift_start", ascending: true },
-      });
+      const { data, error } = await (supabase
+        .from("staff_shifts" as any) as any)
+        .select("id, user_name, position, shift_start, shift_end")
+        .eq("shift_date", todayLA)
+        .order("shift_start", { ascending: true });
+
       if (error) throw error;
-      return data || [];
+      return (data as StaffOnShift[]) || [];
     },
     refetchInterval: 60000, // Refetch every 60 seconds
   });
 
-  const currentlyWorkingCount = staff?.filter((s) => s.is_currently_working).length || 0;
-  const groupedStaff = staff ? groupByPosition(staff) : {};
+  // Compute currently working status dynamically
+  const staffWithStatus = staff?.map((s) => ({
+    ...s,
+    is_currently_working: isCurrentlyWorking(s.shift_start, s.shift_end),
+  })) || [];
+
+  const currentlyWorkingCount = staffWithStatus.filter((s) => s.is_currently_working).length;
+  const groupedStaff = groupByPosition(staffWithStatus);
 
   return (
     <Card className="rounded-none border border-border">
@@ -133,13 +164,13 @@ export function WhosWorkingView() {
                     >
                       <Avatar className="h-8 w-8 rounded-none">
                         <AvatarFallback className="rounded-none text-[10px] bg-muted">
-                          {getInitials(person.staff_name)}
+                          {getInitials(person.user_name)}
                         </AvatarFallback>
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-normal truncate">
-                          {person.staff_name || "Unknown"}
+                          {person.user_name || "Unknown"}
                         </p>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3 w-3" />

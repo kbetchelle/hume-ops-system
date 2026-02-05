@@ -110,12 +110,12 @@ export function WhosWorkingView() {
       if (uniqueSlingUserIds.length > 0) {
         const { data: slingUsers } = await supabase
           .from("sling_users")
-          .select("id, first_name, last_name")
-          .in("id", uniqueSlingUserIds);
+          .select("sling_user_id, first_name, last_name")
+          .in("sling_user_id", uniqueSlingUserIds.map(id => parseInt(id, 10)));
         
         if (slingUsers) {
           slingUsersMap = Object.fromEntries(
-            slingUsers.map(u => [String(u.id), { first_name: u.first_name || '', last_name: u.last_name || '' }])
+            slingUsers.map(u => [String(u.sling_user_id), { first_name: u.first_name || '', last_name: u.last_name || '' }])
           );
         }
       }

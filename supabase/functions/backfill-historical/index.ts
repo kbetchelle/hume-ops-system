@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';
 import { withRetry, RetryableError } from '../_shared/retry.ts';

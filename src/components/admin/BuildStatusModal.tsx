@@ -11,31 +11,46 @@ const STATUS_OPTIONS: {
   value: PageStatus;
   label: string;
 }[] = [{
-  value: "not_started",
+  value: "Not Started",
   label: "Not Started"
 }, {
-  value: "in_progress",
+  value: "In Progress",
   label: "In Progress"
 }, {
-  value: "finishing_touches",
+  value: "Finishing Touches",
   label: "Finishing Touches"
 }, {
-  value: "completed",
-  label: "Completed"
+  value: "Complete",
+  label: "Complete"
+}, {
+  value: "Deprioritized",
+  label: "Deprioritized"
+}, {
+  value: "PHASE 2",
+  label: "Phase 2"
+}, {
+  value: "TBD",
+  label: "TBD"
 }];
 
 const getStatusColor = (status: PageStatus) => {
   switch (status) {
-    case "not_started":
+    case "Not Started":
       return "text-muted-foreground";
-    case "in_progress":
+    case "In Progress":
       return "text-yellow-600";
-    case "finishing_touches":
+    case "Finishing Touches":
       return "text-blue-600";
-    case "completed":
+    case "Complete":
       return "text-green-600";
+    case "Deprioritized":
+      return "text-orange-500";
+    case "PHASE 2":
+      return "text-purple-600";
+    case "TBD":
+      return "text-muted-foreground/70";
     default:
-      return "";
+      return "text-muted-foreground";
   }
 };
 
@@ -274,7 +289,8 @@ export function BuildStatusModal({
   const sortedPages = pages?.slice().sort((a, b) => {
     const roleA = a.role_category || "zzz";
     const roleB = b.role_category || "zzz";
-    return roleA.localeCompare(roleB);
+    if (roleA !== roleB) return roleA.localeCompare(roleB);
+    return (a.page_title || "").localeCompare(b.page_title || "");
   }) || [];
 
   // Get unique categories
@@ -298,7 +314,7 @@ export function BuildStatusModal({
     createPageStatus.mutate({
       pageTitle,
       pagePath: `/${pageTitle.toLowerCase().replace(/\s+/g, '-')}`,
-      status: "not_started",
+      status: "Not Started",
       roleCategory: roleCategory === "Uncategorized" ? "" : roleCategory,
     }, {
       onSuccess: () => {

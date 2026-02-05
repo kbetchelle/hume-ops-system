@@ -1,16 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type PageStatus = "not_started" | "in_progress" | "finishing_touches" | "completed";
+export type PageStatus = "Not Started" | "In Progress" | "Finishing Touches" | "Complete" | "Deprioritized" | "PHASE 2" | "TBD";
 
 export interface PageDevStatus {
   id: string;
-  page_path: string;
-  page_title: string;
+  category: string;
+  task: string;
   status: PageStatus;
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Compatibility aliases
+  page_title: string;
   role_category: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface DevNote {
@@ -23,15 +26,27 @@ export interface DevNote {
 // Fetch all page statuses
 export function usePageStatuses() {
   return useQuery({
-    queryKey: ["page-dev-status"],
+    queryKey: ["build-status"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("page_dev_status")
+        .from("build_status")
         .select("*")
-        .order("page_title", { ascending: true });
+        .order("category", { ascending: true })
+        .order("task", { ascending: true });
 
       if (error) throw error;
-      return data as PageDevStatus[];
+      // Map to expected interface
+      return data.map((item: any) => ({
+        id: item.id,
+        category: item.category,
+        task: item.task,
+        page_title: item.task,
+        status: item.status as PageStatus,
+        role_category: item.category,
+        notes: item.notes,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }));
     },
   });
 }
@@ -49,14 +64,14 @@ export function useUpdatePageStatus() {
       status: PageStatus;
     }) => {
       const { error } = await supabase
-        .from("page_dev_status")
+        .from("build_status")
         .update({ status })
         .eq("id", pageId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+      queryClient.invalidateQueries({ queryKey: ["build-status"] });
     },
   });
 }
@@ -74,14 +89,14 @@ export function useUpdatePageRole() {
       roleCategory: string;
     }) => {
       const { error } = await supabase
-        .from("page_dev_status")
-        .update({ role_category: roleCategory })
+        .from("build_status")
+        .update({ category: roleCategory })
         .eq("id", pageId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+      queryClient.invalidateQueries({ queryKey: ["build-status"] });
     },
   });
 }
@@ -93,14 +108,14 @@ export function useDeletePageStatus() {
   return useMutation({
     mutationFn: async (pageId: string) => {
       const { error } = await supabase
-        .from("page_dev_status")
+        .from("build_status")
         .delete()
         .eq("id", pageId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+      queryClient.invalidateQueries({ queryKey: ["build-status"] });
     },
   });
 }
@@ -122,18 +137,17 @@ export function useCreatePageStatus() {
       roleCategory: string;
     }) => {
       const { error } = await supabase
-        .from("page_dev_status")
+        .from("build_status")
         .insert({
-          page_title: pageTitle,
-          page_path: pagePath,
+          task: pageTitle,
           status,
-          role_category: roleCategory,
+          category: roleCategory,
         });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+      queryClient.invalidateQueries({ queryKey: ["build-status"] });
     },
   });
 }
@@ -151,14 +165,14 @@ export function useUpdatePageTitle() {
       pageTitle: string;
     }) => {
       const { error } = await supabase
-        .from("page_dev_status")
-        .update({ page_title: pageTitle })
+        .from("build_status")
+        .update({ task: pageTitle })
         .eq("id", pageId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["page-dev-status"] });
+      queryClient.invalidateQueries({ queryKey: ["build-status"] });
     },
   });
 }

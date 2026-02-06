@@ -544,11 +544,165 @@ async function executeSyncCycle(
   };
 }
 
+/**
+ * Fetch reservations via the classes endpoint.
+ * Arketa has no flat /reservations endpoint - reservations are nested under /classes/{classId}/reservations.
+ * Strategy: fetch classes for the date range, then fetch reservations for each class.
+ * Uses batch_cursor to track progress as "classIndex:classCursor" format.
+ */
+async function fetchReservationsViaClasses(
+  job: BackfillJob,
+  config: BackfillConfig,
+  logger: ReturnType<typeof createSyncLogger>
+): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
+  const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY") || Deno.env.get("PARTNER_API_KEY");
+  const partnerId = Deno.env.get("ARKETA_PARTNER_ID") || Deno.env.get("PARTNER_ID");
+
+  if (!ARKETA_API_KEY || !partnerId) {
+    throw new Error('Arketa API key and partner ID are required');
+  }
+
+  // Get auth headers (OAuth with API key fallback)
+  let headers: Record<string, string>;
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const token = await getArketaToken(supabaseUrl, serviceRoleKey);
+    headers = getArketaHeaders(token);
+    logger.info('Using OAuth token for reservations-via-classes');
+  } catch {
+    headers = { 'x-api-key': ARKETA_API_KEY, 'Content-Type': 'application/json' };
+    logger.info('Using API key fallback for reservations-via-classes');
+  }
+
+  const baseUrl = ARKETA_URLS.prod;
+
+  // Step 1: Fetch all classes for the date range
+  logger.info('Fetching classes for date range to get reservations', {
+    startDate: job.start_date,
+    endDate: job.end_date
+  });
+
+  const allClasses: Record<string, unknown>[] = [];
+  let classCursor: string | undefined;
+
+  do {
+    const classUrl = new URL(`${baseUrl}/${partnerId}/classes`);
+    classUrl.searchParams.set('limit', '400');
+    classUrl.searchParams.set('start_date', job.start_date);
+    classUrl.searchParams.set('end_date', job.end_date);
+    if (classCursor) classUrl.searchParams.set('cursor', classCursor);
+
+    const { response } = await fetchWithRetry(classUrl.toString(), { headers });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch classes: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+
+    const classData = await response.json();
+    const classes = Array.isArray(classData) ? classData :
+      (classData.items || classData.data || classData.classes || []);
+    allClasses.push(...classes);
+
+    classCursor = classData.pagination?.nextCursor;
+  } while (classCursor);
+
+  logger.info(`Found ${allClasses.length} classes for date range`);
+
+  if (allClasses.length === 0) {
+    return { records: [], nextCursor: null, hasMore: false };
+  }
+
+  // Step 2: Parse cursor to determine where we left off
+  // Cursor format: "classIdx" (index into the class list we start from)
+  let startClassIdx = 0;
+  if (job.batch_cursor) {
+    startClassIdx = parseInt(job.batch_cursor, 10) || 0;
+  }
+
+  // Step 3: Fetch reservations for each class starting from where we left off
+  const allReservations: Record<string, unknown>[] = [];
+  const BATCH_LIMIT = 400; // Max reservations per batch
+  let classIdx = startClassIdx;
+
+  for (; classIdx < allClasses.length; classIdx++) {
+    const cls = allClasses[classIdx];
+    const classId = String(cls.id);
+
+    const resUrl = new URL(`${baseUrl}/${partnerId}/classes/${classId}/reservations`);
+
+    let fetchResponse: Response;
+    try {
+      const result = await fetchWithRetry(resUrl.toString(), { headers });
+      fetchResponse = result.response;
+    } catch (fetchErr) {
+      logger.warn(`Failed to fetch reservations for class ${classId}, skipping`, {
+        error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+      });
+      continue;
+    }
+
+    if (!fetchResponse.ok) {
+      if (fetchResponse.status === 404) {
+        // Class may have been deleted - skip
+        continue;
+      }
+      logger.warn(`Error fetching reservations for class ${classId}: ${fetchResponse.status}`);
+      continue;
+    }
+
+    const resData = await fetchResponse.json();
+    const reservations: Record<string, unknown>[] = Array.isArray(resData) ? resData :
+      (resData.items || resData.data || resData.reservations || resData.bookings || []);
+
+    // Enrich each reservation with class info
+    for (const res of reservations) {
+      if (!res.class_id && !res.classId) {
+        res.class_id = classId;
+      }
+      allReservations.push(res);
+    }
+
+    // If we've accumulated enough records, return a batch
+    if (allReservations.length >= BATCH_LIMIT) {
+      logger.info(`Batch limit reached at class index ${classIdx}`, {
+        reservationCount: allReservations.length,
+        classesProcessed: classIdx - startClassIdx + 1,
+        totalClasses: allClasses.length
+      });
+
+      return {
+        records: allReservations,
+        nextCursor: String(classIdx + 1), // Resume from next class
+        hasMore: classIdx + 1 < allClasses.length
+      };
+    }
+  }
+
+  // All classes processed
+  logger.info(`All classes processed`, {
+    reservationCount: allReservations.length,
+    totalClasses: allClasses.length
+  });
+
+  return {
+    records: allReservations,
+    nextCursor: null,
+    hasMore: false
+  };
+}
+
 async function fetchFromApi(
   job: BackfillJob,
   config: BackfillConfig,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
+  // SPECIAL CASE: Arketa reservations require fetching via classes
+  // The flat /reservations endpoint doesn't exist - must use /classes/{class_id}/reservations
+  if (job.api_source === 'arketa' && job.data_type === 'reservations') {
+    return fetchReservationsViaClasses(job, config, logger);
+  }
   const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY") || Deno.env.get("PARTNER_API_KEY");
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID") || Deno.env.get("PARTNER_ID");
   

@@ -4,11 +4,22 @@ const STATIC_CACHE_NAME = 'hume-ops-static-v1';
 const DYNAMIC_CACHE_NAME = 'hume-ops-dynamic-v1';
 
 // Static assets to cache immediately (app shell)
-const STATIC_ASSETS = [
+const STATIC_ASSETS_BASE = [
   '/',
   '/manifest.json',
   // Note: Vite-generated assets will be automatically cached via precache
 ];
+
+// On Lovable host, /manifest.json redirects to auth-bridge and causes CORS; skip caching it
+function getStaticAssets() {
+  try {
+    var origin = self.location && self.location.origin ? self.location.origin : '';
+    if (origin.indexOf('lovableproject.com') !== -1 || origin.indexOf('lovable.app') !== -1) {
+      return STATIC_ASSETS_BASE.filter(function (url) { return url !== '/manifest.json'; });
+    }
+  } catch (e) {}
+  return STATIC_ASSETS_BASE;
+}
 
 // API routes to cache dynamically
 const API_CACHE_PATTERNS = [
@@ -20,12 +31,13 @@ const API_CACHE_PATTERNS = [
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
-  
+  var toCache = getStaticAssets();
+
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
         console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        return cache.addAll(toCache);
       })
       .then(() => {
         // Skip waiting to activate immediately

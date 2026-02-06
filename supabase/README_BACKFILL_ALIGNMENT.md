@@ -13,6 +13,8 @@ supabase functions deploy sync-from-staging
 
 If either function is missing or deployed to a different project, you can get a **404** when starting the backfill. The UI will show the error; if the body includes `error_message` (e.g. "Job not found" or a PostgREST code), the function ran but could not find the job row (e.g. app and functions use different projects).
 
+**Lovable preview:** If the app is deployed or previewed on Lovable, ensure the **Supabase project** configured in that environment (e.g. Lovable’s env vars) is the same project you deploy these functions to. Deploy with `supabase link` pointing at that project, then run the deploy command above. If the preview uses a different Supabase URL, 404 will persist until functions are deployed to that project.
+
 ## Architecture in hume-ops
 
 - **Select Dates (reservations / payments):** UI → `backfill-historical` edge function.

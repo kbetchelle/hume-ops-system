@@ -140,32 +140,49 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
 
 // Sync Arketa reservations for a single date with pagination; writes to staging (then sync-from-staging -> history)
 async function syncArketaReservations(supabase: any, date: string, syncBatchId?: string): Promise<number> {
+  const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  // Use shared auth helper to get a valid Bearer token (OAuth or API key fallback)
-  const { getArketaToken, getArketaHeaders, buildArketaUrl } = await import('../_shared/arketaAuth.ts');
-  const token = await getArketaToken(SUPABASE_URL!, SERVICE_ROLE_KEY!);
+  // Use OAuth token with API key fallback (matches working sync-arketa-reservations pattern)
+  let headers: Record<string, string>;
+  try {
+    const { getArketaToken, getArketaHeaders } = await import('../_shared/arketaAuth.ts');
+    const token = await getArketaToken(SUPABASE_URL!, SERVICE_ROLE_KEY!);
+    headers = getArketaHeaders(token);
+    console.log('[backfill-reservations] Using OAuth token');
+  } catch (tokenError) {
+    console.log('[backfill-reservations] OAuth failed, using API key fallback:', tokenError);
+    headers = {
+      'x-api-key': ARKETA_API_KEY!,
+      'Content-Type': 'application/json',
+    };
+  }
 
   let allReservations: any[] = [];
   let nextCursor: string | undefined;
 
   do {
-    let url = buildArketaUrl(ARKETA_PARTNER_ID!, `reservations?limit=400&start_date=${date}&end_date=${date}`, false);
-    if (nextCursor) url += `&cursor=${nextCursor}`;
+    // Use URL class for proper query param encoding (matches working sync-arketa-reservations)
+    const url = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations`);
+    url.searchParams.set('limit', '400');
+    url.searchParams.set('start_date', date);
+    url.searchParams.set('end_date', date);
+    if (nextCursor) url.searchParams.set('cursor', nextCursor);
 
-    // #region agent log
-    if (!nextCursor) console.log(JSON.stringify({ _debug: true, hypothesisId: 'D_E', location: 'syncArketaReservations', message: 'Arketa URL for date', date, url: url.replace(/\/[^/]+\/[^/]+\/[^/]+$/, '/***/reservations?...') }));
-    // #endregion
+    console.log(`[backfill-reservations] Fetching: ${url.toString()}`);
 
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: getArketaHeaders(token),
+      headers,
     });
 
     if (!response.ok) {
       const status = response.status;
+      const errorText = await response.text().catch(() => '');
+      console.error(`[backfill-reservations] API error ${status}: ${errorText.substring(0, 200)}`);
       if (status === 429 || status >= 500) {
         throw new RetryableError(`Arketa API error: ${status}`, status);
       }
@@ -175,8 +192,9 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
     const responseData = await response.json();
     const reservations = Array.isArray(responseData) 
       ? responseData 
-      : (responseData.reservations || responseData.data || []);
+      : (responseData.items || responseData.data || responseData.reservations || []);
     allReservations.push(...reservations);
+    console.log(`[backfill-reservations] Fetched ${reservations.length} reservations for ${date}`);
 
     nextCursor = responseData.pagination?.nextCursor;
   } while (nextCursor);

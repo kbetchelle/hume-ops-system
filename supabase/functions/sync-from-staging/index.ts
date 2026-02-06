@@ -39,8 +39,7 @@ Deno.serve(async (req) => {
     const clearStaging = body.clear_staging !== false;
     const syncBatchId = body.sync_batch_id;
 
-    // deno-lint-ignore no-explicit-any
-    const supabase: any = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const results: TransferResult[] = [];
     const startTime = Date.now();
 
@@ -135,7 +134,7 @@ async function transferReservations(
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
-      const { error: upsertError } = await supabase
+      const { error: upsertError } = await (supabase as any)
         .from("arketa_reservations_history")
         .upsert(batch, { onConflict: "reservation_id,class_id" });
       if (upsertError) {
@@ -227,7 +226,7 @@ async function transferPayments(
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
-      const { error: upsertError } = await supabase
+      const { error: upsertError } = await (supabase as any)
         .from("arketa_payments_history")
         .upsert(batch, { onConflict: "payment_id,source_endpoint" });
       if (upsertError) {

@@ -992,6 +992,7 @@ export type Database = {
           class_id: string
           class_name: string | null
           client_id: string | null
+          created_at: string | null
           experience_type: string | null
           gross_amount_paid: number | null
           id: string
@@ -1012,6 +1013,7 @@ export type Database = {
           class_id: string
           class_name?: string | null
           client_id?: string | null
+          created_at?: string | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
@@ -1032,6 +1034,7 @@ export type Database = {
           class_id?: string
           class_name?: string | null
           client_id?: string | null
+          created_at?: string | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
@@ -1049,19 +1052,13 @@ export type Database = {
       }
       arketa_reservations_staging: {
         Row: {
-          arketa_class_id: string | null
-          arketa_reservation_id: string | null
-          cancelled_at: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
           class_id: string | null
           class_name: string | null
-          client_email: string | null
           client_id: string | null
-          client_name: string | null
           created_at: string | null
-          cursor_position: string | null
           experience_type: string | null
           gross_amount_paid: number | null
           id: string
@@ -1071,25 +1068,18 @@ export type Database = {
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
-          staged_at: string | null
           status: string | null
           sync_batch_id: string
           synced_at: string | null
         }
         Insert: {
-          arketa_class_id?: string | null
-          arketa_reservation_id?: string | null
-          cancelled_at?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
           client_id?: string | null
-          client_name?: string | null
           created_at?: string | null
-          cursor_position?: string | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
@@ -1099,25 +1089,18 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          staged_at?: string | null
           status?: string | null
           sync_batch_id: string
           synced_at?: string | null
         }
         Update: {
-          arketa_class_id?: string | null
-          arketa_reservation_id?: string | null
-          cancelled_at?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
           client_id?: string | null
-          client_name?: string | null
           created_at?: string | null
-          cursor_position?: string | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
@@ -1127,7 +1110,6 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          staged_at?: string | null
           status?: string | null
           sync_batch_id?: string
           synced_at?: string | null
@@ -1292,6 +1274,7 @@ export type Database = {
           api_source: string
           batch_cursor: string | null
           completed_at: string | null
+          completed_dates: number | null
           created_at: string
           created_by: string | null
           cumulative_inserted: number | null
@@ -1302,6 +1285,7 @@ export type Database = {
           end_date: string
           errors: Json | null
           id: string
+          job_type: string | null
           last_batch_synced_at: string | null
           last_cursor: string | null
           no_more_records: boolean | null
@@ -1310,6 +1294,7 @@ export type Database = {
           records_inserted: number | null
           records_processed: number
           records_updated: number | null
+          results: Json | null
           retry_scheduled_at: string | null
           staging_synced: boolean | null
           start_date: string
@@ -1317,13 +1302,17 @@ export type Database = {
           status: string
           sync_phase: string | null
           total_batches_completed: number | null
+          total_dates: number | null
           total_days: number
+          total_new_records: number | null
+          total_records: number | null
           total_records_expected: number | null
         }
         Insert: {
           api_source: string
           batch_cursor?: string | null
           completed_at?: string | null
+          completed_dates?: number | null
           created_at?: string
           created_by?: string | null
           cumulative_inserted?: number | null
@@ -1334,6 +1323,7 @@ export type Database = {
           end_date: string
           errors?: Json | null
           id?: string
+          job_type?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1342,6 +1332,7 @@ export type Database = {
           records_inserted?: number | null
           records_processed?: number
           records_updated?: number | null
+          results?: Json | null
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date: string
@@ -1349,13 +1340,17 @@ export type Database = {
           status?: string
           sync_phase?: string | null
           total_batches_completed?: number | null
+          total_dates?: number | null
           total_days?: number
+          total_new_records?: number | null
+          total_records?: number | null
           total_records_expected?: number | null
         }
         Update: {
           api_source?: string
           batch_cursor?: string | null
           completed_at?: string | null
+          completed_dates?: number | null
           created_at?: string
           created_by?: string | null
           cumulative_inserted?: number | null
@@ -1366,6 +1361,7 @@ export type Database = {
           end_date?: string
           errors?: Json | null
           id?: string
+          job_type?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1374,6 +1370,7 @@ export type Database = {
           records_inserted?: number | null
           records_processed?: number
           records_updated?: number | null
+          results?: Json | null
           retry_scheduled_at?: string | null
           staging_synced?: boolean | null
           start_date?: string
@@ -1381,7 +1378,10 @@ export type Database = {
           status?: string
           sync_phase?: string | null
           total_batches_completed?: number | null
+          total_dates?: number | null
           total_days?: number
+          total_new_records?: number | null
+          total_records?: number | null
           total_records_expected?: number | null
         }
         Relationships: [
@@ -2758,6 +2758,66 @@ export type Database = {
           resolved_by?: string | null
           shift_type?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      historical_backfill_progress: {
+        Row: {
+          api_name: string
+          backfill_phase: string | null
+          chunk_days: number
+          created_at: string
+          current_date_cursor: string
+          empty_dates_cursor: string | null
+          error_message: string | null
+          id: string
+          last_chunk_completed_at: string | null
+          last_chunk_records: number
+          last_chunk_started_at: string | null
+          priority: number | null
+          reverify_cursor: string | null
+          status: string
+          target_end_date: string
+          total_records_synced: number
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          backfill_phase?: string | null
+          chunk_days?: number
+          created_at?: string
+          current_date_cursor?: string
+          empty_dates_cursor?: string | null
+          error_message?: string | null
+          id?: string
+          last_chunk_completed_at?: string | null
+          last_chunk_records?: number
+          last_chunk_started_at?: string | null
+          priority?: number | null
+          reverify_cursor?: string | null
+          status?: string
+          target_end_date?: string
+          total_records_synced?: number
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          backfill_phase?: string | null
+          chunk_days?: number
+          created_at?: string
+          current_date_cursor?: string
+          empty_dates_cursor?: string | null
+          error_message?: string | null
+          id?: string
+          last_chunk_completed_at?: string | null
+          last_chunk_records?: number
+          last_chunk_started_at?: string | null
+          priority?: number | null
+          reverify_cursor?: string | null
+          status?: string
+          target_end_date?: string
+          total_records_synced?: number
+          updated_at?: string
         }
         Relationships: []
       }

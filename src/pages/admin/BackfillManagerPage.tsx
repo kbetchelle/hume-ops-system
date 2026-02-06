@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBackfillJobs, DATA_TYPES_BY_SOURCE, BackfillJob, getSyncPhaseLabel } from "@/hooks/useBackfillJobs";
 import { useCSVImport } from "@/hooks/useCSVImport";
@@ -568,13 +568,10 @@ function ActiveJobCard({
   );
 }
 
-function CompletedJobRow({ 
-  job, 
-  onDelete 
-}: { 
+const CompletedJobRow = forwardRef<HTMLDivElement, { 
   job: BackfillJob; 
   onDelete: () => void;
-}) {
+}>(function CompletedJobRow({ job, onDelete }, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const hasErrors = job.errors && job.errors.length > 0;
 
@@ -697,7 +694,7 @@ function CompletedJobRow({
       </div>
     </Collapsible>
   );
-}
+});
 
 export default function BackfillManagerPage() {
   const { 

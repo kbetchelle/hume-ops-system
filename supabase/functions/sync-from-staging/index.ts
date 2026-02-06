@@ -39,7 +39,8 @@ Deno.serve(async (req) => {
     const clearStaging = body.clear_staging !== false;
     const syncBatchId = body.sync_batch_id;
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    // deno-lint-ignore no-explicit-any
+    const supabase: any = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const results: TransferResult[] = [];
     const startTime = Date.now();
 

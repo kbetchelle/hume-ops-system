@@ -30,6 +30,7 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { format, differenceInSeconds, differenceInMinutes, differenceInHours, formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 function formatDuration(startedAt: string | null, completedAt: string | null): string {
@@ -736,16 +737,24 @@ export default function BackfillManagerPage() {
   const requiresDateFiltering = true;
 
   const handleCreateJob = () => {
-    if (!dataType) return;
-    if (!startDate || !endDate) return;
-    
+    if (!dataType) {
+      toast.error("Please select a data type");
+      return;
+    }
+    if (!startDate || !endDate) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      toast.error("End date must be on or after start date");
+      return;
+    }
     createJob.mutate({
       api_source: apiSource,
       data_type: dataType,
       start_date: startDate,
       end_date: endDate,
     });
-    // Reset form
     setDataType("");
     setStartDate("");
     setEndDate("");
@@ -762,24 +771,24 @@ export default function BackfillManagerPage() {
 
   return (
     <DashboardLayout title="Backfill & Import Manager">
-      <div className="space-y-8">
+      <div className="space-y-8 min-w-0 overflow-hidden px-4 md:px-8 py-4">
         {/* Create New Backfill */}
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm overflow-hidden">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
+              <Database className="h-5 w-5 flex-shrink-0" />
               Create New Backfill
             </CardTitle>
             <CardDescription>
               Fetch and sync historical data from external APIs. Arketa: Reservations, Subscriptions, Payments. Sling: Shifts.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="space-y-2">
+          <CardContent className="min-w-0">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="space-y-2 min-w-[140px] flex-1">
                 <Label>API Source</Label>
                 <Select value={apiSource} onValueChange={(v) => { setApiSource(v as "arketa" | "sling"); setDataType(""); }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -789,10 +798,10 @@ export default function BackfillManagerPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-[140px] flex-1">
                 <Label>Data Type</Label>
                 <Select value={dataType} onValueChange={setDataType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -807,31 +816,33 @@ export default function BackfillManagerPage() {
 
               {requiresDateFiltering && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-[140px]">
                     <Label>Start Date</Label>
                     <Input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full min-w-0"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-[140px]">
                     <Label>End Date</Label>
                     <Input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full min-w-0"
                     />
                   </div>
                 </>
               )}
 
-              <div className="flex items-end">
+              <div className="flex items-end min-w-[140px] flex-shrink-0">
                 <Button 
                   onClick={handleCreateJob}
                   disabled={!dataType || (requiresDateFiltering && (!startDate || !endDate)) || createJob.isPending}
-                  className="w-full md:min-w-[160px]"
+                  className="w-full sm:w-auto"
                 >
                   {createJob.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -855,7 +866,7 @@ export default function BackfillManagerPage() {
         </Card>
 
         {/* CSV Import Section */}
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm overflow-hidden">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />

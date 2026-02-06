@@ -166,19 +166,13 @@ function SyncCycleProgress({ phase }: { phase: string | null }) {
   );
 }
 
-function ActiveJobCard({
-  job,
-  onPause, 
-  onResume, 
-  onCancel,
-  onContinue
-}: { 
+const ActiveJobCard = forwardRef<HTMLDivElement, { 
   job: BackfillJob; 
   onPause: () => void;
   onResume: () => void;
   onCancel: () => void;
   onContinue: () => void;
-}) {
+}>(function ActiveJobCard({ job, onPause, onResume, onCancel, onContinue }, ref) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [, setTick] = useState(0);
   
@@ -566,7 +560,7 @@ function ActiveJobCard({
       </CardContent>
     </Card>
   );
-}
+});
 
 const CompletedJobRow = forwardRef<HTMLDivElement, { 
   job: BackfillJob; 

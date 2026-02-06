@@ -2,6 +2,17 @@
 
 This doc describes how the Select Dates backfill (per-date flow) aligns with the hume-ops DB: api_endpoints, api_logs, staging/history tables, and **sync-from-staging**.
 
+## Deployment (required for date-selector backfill)
+
+The Arketa reservations/payments **Select dates** backfill needs both edge functions deployed to the **same** Supabase project the app uses:
+
+```bash
+supabase functions deploy backfill-historical
+supabase functions deploy sync-from-staging
+```
+
+If either function is missing or deployed to a different project, you can get a **404** when starting the backfill. The UI will show the error; if the body includes `error_message` (e.g. "Job not found" or a PostgREST code), the function ran but could not find the job row (e.g. app and functions use different projects).
+
 ## Architecture in hume-ops
 
 - **Select Dates (reservations / payments):** UI → `backfill-historical` edge function.

@@ -46,6 +46,26 @@ function getBackfillInvokeTarget(job: { api_source: string; data_type: string })
   return "unified-backfill-sync";
 }
 
+/** Build a user-facing message from an edge function invoke error (e.g. 404 with error_message in body). */
+async function getInvokeErrorMessage(error: unknown): Promise<string> {
+  const fallback = error instanceof Error ? error.message : String(error);
+  try {
+    const ctx = (error as { context?: Response })?.context;
+    if (ctx && typeof (ctx as Response).json === "function") {
+      const body = await (ctx as Response).json().catch(() => null);
+      if (body && typeof body === "object") {
+        const parts = [body.error ?? "Request failed"];
+        if (body.error_message) parts.push(body.error_message);
+        if (body.job_id) parts.push(`(job_id: ${body.job_id})`);
+        return parts.join(" — ");
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return fallback;
+}
+
 function daysBetween(start: string, end: string): number {
   const startDate = new Date(start);
   const endDate = new Date(end);
@@ -248,7 +268,10 @@ export function useBackfillJobs() {
 
       const { data, error } = await supabase.functions.invoke(target, { body });
 
-      if (error) throw error;
+      if (error) {
+        const message = await getInvokeErrorMessage(error);
+        throw new Error(message);
+      }
       return { ...data, job_id: newJob.id };
     },
     onSuccess: (data) => {

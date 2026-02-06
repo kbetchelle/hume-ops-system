@@ -139,7 +139,7 @@ async function transferReservations(
       if (upsertError) {
         return {
           api: "arketa_reservations",
-          records_processed: rows.length,
+          records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
           error: upsertError.message,
@@ -149,10 +149,9 @@ async function transferReservations(
     }
 
     const countAfter = await getHistoryCount(supabase, "arketa_reservations_history");
-    recordsInserted = Math.max(0, countAfter - countBefore - (recordsProcessed - (countAfter - countBefore)));
-    recordsUpdated = recordsProcessed - (countAfter - countBefore);
+    recordsInserted = Math.max(0, countAfter - countBefore);
+    recordsUpdated = recordsProcessed - recordsInserted;
     if (recordsUpdated < 0) recordsUpdated = 0;
-    if (recordsInserted < 0) recordsInserted = countAfter - countBefore;
 
     if (clearStaging && rows.length) {
       const ids = rows.map((r: { id?: string }) => r.id).filter(Boolean);
@@ -232,7 +231,7 @@ async function transferPayments(
       if (upsertError) {
         return {
           api: "arketa_payments",
-          records_processed: rows.length,
+          records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
           error: upsertError.message,

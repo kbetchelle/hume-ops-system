@@ -664,13 +664,28 @@ Deno.serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(req);
 
+  let body: BackfillRequest;
+  try {
+    body = (await req.json()) as BackfillRequest;
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or missing request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON in request body' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { api_source, data_type, start_date, end_date, job_id, action } = body;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const body = await req.json() as BackfillRequest;
-    const { api_source, data_type, start_date, end_date, job_id, action } = body;
 
     const logger = createSyncLogger('backfill', job_id);
 
@@ -686,7 +701,12 @@ Deno.serve(async (req) => {
 
         if (fetchError || !existingJob) {
           return new Response(
-            JSON.stringify({ error: 'Job not found' }),
+            JSON.stringify({
+              error: 'Job not found',
+              job_id,
+              error_message: fetchError?.message ?? (existingJob ? null : 'No row returned'),
+              code: fetchError?.code ?? null,
+            }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -702,7 +722,12 @@ Deno.serve(async (req) => {
 
         if (fetchError || !existingJob) {
           return new Response(
-            JSON.stringify({ error: 'Job not found' }),
+            JSON.stringify({
+              error: 'Job not found',
+              job_id,
+              error_message: fetchError?.message ?? (existingJob ? null : 'No row returned'),
+              code: fetchError?.code ?? null,
+            }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -784,7 +809,12 @@ Deno.serve(async (req) => {
 
       if (error || !existingJob) {
         return new Response(
-          JSON.stringify({ error: 'Job not found' }),
+          JSON.stringify({
+            error: 'Job not found',
+            job_id,
+            error_message: error?.message ?? (existingJob ? null : 'No row returned'),
+            code: error?.code ?? null,
+          }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

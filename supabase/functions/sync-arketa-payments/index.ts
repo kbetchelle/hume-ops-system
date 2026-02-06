@@ -40,7 +40,11 @@ interface ArketaPayment {
 interface SyncRequest {
   start_date?: string;
   end_date?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
+  triggeredBy?: string;
+  isHistorical?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -69,15 +73,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
     const today = new Date();
-    
-    // Default: 7 days back to 7 days forward
     const defaultStart = new Date(today);
     defaultStart.setDate(defaultStart.getDate() - 7);
     const defaultEnd = new Date(today);
     defaultEnd.setDate(defaultEnd.getDate() + 7);
-    
-    const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
-    const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
+    const startDate = body.startDate || body.start_date || defaultStart.toISOString().split('T')[0];
+    const endDate = body.endDate || body.end_date || defaultEnd.toISOString().split('T')[0];
     const limit = body.limit ?? 400;
 
     logger.info(`Syncing payments from ${startDate} to ${endDate} (limit ${limit} per endpoint)`);
@@ -148,74 +149,41 @@ Deno.serve(async (req) => {
 
     logger.info(`Total fetched: ${payments.length} payments`);
 
-    const syncedPayments = [];
-    let totalRevenue = 0;
+    // Write to staging - fields matching arketa_payments_history
+    const syncBatchId = crypto.randomUUID();
+    const stagingRows = payments.map((p) => ({
+      source_endpoint: 'purchases',
+      payment_id: String(p.id),
+      client_id: p.client_id ? String(p.client_id) : null,
+      amount: p.amount ?? p.total ?? 0,
+      status: p.status ?? 'ACTIVE',
+      description: p.description ?? p.notes ?? null,
+      payment_type: p.type ?? 'purchase',
+      category: (p as { category?: string }).category ?? null,
+      offering_id: (p as { offering_id?: string }).offering_id ?? (p as { offering?: { id?: string } }).offering?.id ?? null,
+      start_date: (p as { start_date?: string }).start_date ?? (p as { startDate?: string }).startDate ?? null,
+      end_date: (p as { end_date?: string }).end_date ?? (p as { endDate?: string }).endDate ?? null,
+      remaining_uses: (p as { remaining_uses?: number }).remaining_uses ?? null,
+      currency: p.currency ?? null,
+      total_refunded: p.amount_refunded ?? (p as { refundedAmount?: number }).refundedAmount ?? null,
+      net_sales: p.net_sales ?? (p as { netAmount?: number }).netAmount ?? p.amount ?? p.total ?? null,
+      transaction_fees: p.transaction_fees ?? (p as { fees?: number }).fees ?? null,
+      stripe_fees: (p as { stripe_fees?: number }).stripe_fees ?? null,
+      tax: p.tax ?? (p as { tax_amount?: number }).tax_amount ?? null,
+      updated_at: (p as { updated_at?: string }).updated_at ?? (p as { updatedAt?: string }).updatedAt ?? null,
+      sync_batch_id: syncBatchId,
+    }));
+
     let failedCount = 0;
-
-    for (const payment of payments) {
-      const amount = payment.amount ?? payment.total ?? 0;
-      const paymentDate = payment.created_at || payment.date || new Date().toISOString();
-
-      try {
-        const { result } = await withRetry(
-          async () => {
-            const { error } = await supabase
-              .from('arketa_payments')
-              .upsert({
-                external_id: String(payment.id),
-                client_id: payment.client_id ? String(payment.client_id) : null,
-                amount,
-                payment_type: payment.type || 'purchase',
-                status: payment.status || 'completed',
-                payment_date: paymentDate,
-                notes: payment.notes || null,
-                // Additional fields
-                description: payment.description || payment.notes || null,
-                currency: payment.currency || 'USD',
-                amount_refunded: payment.amount_refunded || payment.refundedAmount || 0,
-                source: payment.source || payment.payment_source || null,
-                location_name: payment.location?.name || payment.location_name || null,
-                offering_name: payment.offering?.name || payment.offering_name || payment.item_name || null,
-                promo_code: payment.promo_code || payment.coupon_code || null,
-                net_sales: payment.net_sales || payment.netAmount || amount,
-                transaction_fees: payment.transaction_fees || payment.fees || 0,
-                tax: payment.tax || payment.tax_amount || 0,
-                raw_data: payment,
-                synced_at: new Date().toISOString(),
-              }, {
-                onConflict: 'external_id',
-              });
-
-            if (error && !isRetryableSupabaseError(error)) {
-              throw error;
-            }
-            return { error };
-          },
-          { maxAttempts: 2 },
-          `upsert payment ${payment.id}`
-        );
-
-        if (result.error) {
-          logger.error(`Failed to upsert payment ${payment.id}`, result.error);
-          failedCount++;
-          continue;
-        }
-
-        totalRevenue += amount;
-        syncedPayments.push({
-          id: payment.id,
-          amount,
-          type: payment.type,
-          status: payment.status,
-          date: paymentDate,
-        });
-      } catch (error) {
-        logger.error(`Error upserting payment ${payment.id}`, error);
-        failedCount++;
+    if (stagingRows.length > 0) {
+      const { error } = await supabase.from('arketa_payments_staging').insert(stagingRows);
+      if (error) {
+        logger.error('Failed to insert payments to staging', error);
+        failedCount = stagingRows.length;
       }
     }
+    const syncedCount = stagingRows.length - failedCount;
 
-    // Log sync metrics
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {
       syncType: 'arketa_payments',
@@ -223,30 +191,32 @@ Deno.serve(async (req) => {
       completedAt: new Date().toISOString(),
       durationMs,
       recordsFetched: payments.length,
-      recordsSynced: syncedPayments.length,
+      recordsSynced: syncedCount,
       recordsFailed: failedCount,
-      retryCount: Math.max(0, totalAttempts - 2), // Approx retries
+      retryCount: Math.max(0, totalAttempts - 2),
     });
-
-    // Update sync status
     await supabase
       .from('api_sync_status')
       .upsert({
         api_name: 'arketa_payments',
         last_sync_at: new Date().toISOString(),
-        last_sync_success: true,
+        last_sync_success: failedCount === 0,
         last_records_processed: payments.length,
-        last_records_inserted: syncedPayments.length,
+        last_records_inserted: syncedCount,
       }, { onConflict: 'api_name' });
 
     return new Response(
       JSON.stringify({
-        success: true,
-        payments: syncedPayments,
+        success: failedCount === 0,
+        data: {
+          payments_synced: syncedCount,
+          payments_staged: syncedCount,
+          records_processed: payments.length,
+          records_inserted: syncedCount,
+        },
         totalFetched: payments.length,
-        syncedCount: syncedPayments.length,
+        syncedCount,
         failedCount,
-        totalRevenue,
         dateRange: { startDate, endDate },
         apiAttempts: totalAttempts,
       }),

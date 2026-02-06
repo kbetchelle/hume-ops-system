@@ -1,3 +1,7 @@
+/**
+ * DEPRECATED: Use run-backfill-job + sync-arketa-reservations/payments instead.
+ * All date-based backfill now goes through run-backfill-job.
+ */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';

@@ -11,12 +11,14 @@ interface ArketaReservation {
   id: string;
   class_id?: string;
   client_id?: string;
-  client?: {
-    id?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-  };
+  client?: { id?: string; firstName?: string; lastName?: string; email?: string };
+  purchase_id?: string;
+  reservation_type?: string;
+  experience_type?: string;
+  late_cancel?: boolean;
+  gross_amount_paid?: number;
+  net_amount_paid?: number;
+  created_at?: string;
   checked_in?: boolean;
   status?: string;
   checkedInAt?: string;
@@ -36,8 +38,12 @@ interface PaginatedResponse {
 interface SyncRequest {
   start_date?: string;
   end_date?: string;
+  startDate?: string;
+  endDate?: string;
   class_id?: string;
   limit?: number;
+  triggeredBy?: string;
+  isHistorical?: boolean;
 }
 
 // Fetch reservations via classes (Arketa has no flat /reservations endpoint)
@@ -105,9 +111,13 @@ async function fetchAllReservations(
 
   logger?.info(`Found ${allClasses.length} classes, fetching reservations for each...`);
 
-  const allReservations: ArketaReservation[] = [];
+  const allReservations: (ArketaReservation & { class_name?: string; class_date?: string })[] = [];
   for (const cls of allClasses) {
-    const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${cls.id}/reservations`);
+    const classId = String(cls.id);
+    const className = (cls as { name?: string }).name || 'Unknown Class';
+    const startTime = (cls as { start_time?: string }).start_time;
+    const classDate = startTime ? new Date(startTime).toISOString().split('T')[0] : undefined;
+    const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${classId}/reservations`);
 
     try {
       const { response, attempts } = await fetchWithRetry(resUrl.toString(), { method: 'GET', headers });
@@ -116,7 +126,7 @@ async function fetchAllReservations(
 
       if (!response.ok) {
         if (response.status === 404) continue;
-        logger?.warn(`Error fetching reservations for class ${cls.id}: ${response.status}`);
+        logger?.warn(`Error fetching reservations for class ${classId}: ${response.status}`);
         continue;
       }
 
@@ -125,13 +135,12 @@ async function fetchAllReservations(
         ? resData
         : (resData.items || resData.data || resData.reservations || resData.bookings || []);
 
-      // Enrich with class_id
       for (const res of reservations) {
-        if (!res.class_id) res.class_id = String(cls.id);
-        allReservations.push(res);
+        if (!res.class_id) res.class_id = classId;
+        allReservations.push({ ...res, class_name: className, class_date: classDate });
       }
     } catch (err) {
-      logger?.warn(`Failed to fetch reservations for class ${cls.id}`);
+      logger?.warn(`Failed to fetch reservations for class ${classId}`);
       continue;
     }
   }
@@ -167,15 +176,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
     const today = new Date();
-    
-    // Default: 7 days back to 7 days forward
     const defaultStart = new Date(today);
     defaultStart.setDate(defaultStart.getDate() - 7);
     const defaultEnd = new Date(today);
     defaultEnd.setDate(defaultEnd.getDate() + 7);
-    
-    const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
-    const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
+    const startDate = body.startDate || body.start_date || defaultStart.toISOString().split('T')[0];
+    const endDate = body.endDate || body.end_date || defaultEnd.toISOString().split('T')[0];
     const limit = body.limit || 400;
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);
@@ -204,66 +210,44 @@ Deno.serve(async (req) => {
 
     logger.info(`Total fetched: ${reservations.length} reservations in ${pagesProcessed} page(s), ${totalAttempts} API attempt(s)`);
 
-    const syncedReservations = [];
+    // Map to CSV fields only - write to staging
+    const syncBatchId = crypto.randomUUID();
+    const checkedIn = (r: ArketaReservation) => r.checked_in === true || ['checked_in', 'ATTENDED', 'attended', 'completed', 'COMPLETED'].includes(r.status || '');
+    const stagingRows = reservations
+      .map((res) => {
+        const resWithClass = res as ArketaReservation & { class_name?: string; class_date?: string };
+        return {
+          client_id: ((v: unknown) => v != null ? String(v) : null)(res.client_id ?? res.client?.id),
+          reservation_id: String(res.id),
+          purchase_id: res.purchase_id ?? (res as { purchaseId?: string }).purchaseId ?? null,
+          reservation_type: res.reservation_type ?? (res as { type?: string }).type ?? 'class',
+          class_id: String(res.class_id || ''),
+          class_name: resWithClass.class_name ?? (res as { class_name?: string }).class_name ?? null,
+          status: res.status || 'booked',
+          checked_in: checkedIn(res),
+          checked_in_at: res.checkedInAt || res.checked_in_at || null,
+          experience_type: res.experience_type ?? (res as { experienceType?: string }).experienceType ?? null,
+          late_cancel: res.late_cancel ?? (res as { lateCancel?: boolean }).lateCancel ?? false,
+          created_at: res.created_at ?? (res as { createdAt?: string }).createdAt ?? null,
+          gross_amount_paid: res.gross_amount_paid ?? (res as { grossAmountPaid?: number }).grossAmountPaid ?? (res as { amount?: number }).amount ?? 0,
+          net_amount_paid: res.net_amount_paid ?? (res as { netAmountPaid?: number }).netAmountPaid ?? (res as { amount?: number }).amount ?? 0,
+          class_date: resWithClass.class_date ?? (res as { class_date?: string }).class_date ?? null,
+          sync_batch_id: syncBatchId,
+          raw_data: res,
+        };
+      })
+      .filter((r) => r.reservation_id && r.class_id);
+
     let failedCount = 0;
-
-    for (const res of reservations) {
-      const clientName = res.client 
-        ? `${res.client.firstName || ''} ${res.client.lastName || ''}`.trim()
-        : null;
-      const clientEmail = res.client?.email || null;
-      const clientId = res.client_id || res.client?.id || null;
-      const checkedInAt = res.checkedInAt || res.checked_in_at || null;
-
-      try {
-        const { result } = await withRetry(
-          async () => {
-            const { error } = await supabase
-              .from('arketa_reservations')
-              .upsert({
-                external_id: String(res.id),
-                class_id: String(res.class_id || ''),
-                client_id: clientId ? String(clientId) : null,
-                client_name: clientName,
-                client_email: clientEmail,
-                status: res.status || 'booked',
-                checked_in: res.checked_in || false,
-                checked_in_at: checkedInAt,
-                raw_data: res,
-                synced_at: new Date().toISOString(),
-              }, {
-                onConflict: 'external_id',
-              });
-            
-            if (error && !isRetryableSupabaseError(error)) {
-              throw error;
-            }
-            return { error };
-          },
-          { maxAttempts: 2 },
-          `upsert reservation ${res.id}`
-        );
-
-        if (result.error) {
-          logger.error(`Failed to upsert reservation ${res.id}`, result.error);
-          failedCount++;
-          continue;
-        }
-
-        syncedReservations.push({
-          id: res.id,
-          classId: res.class_id,
-          clientName,
-          status: res.status,
-          checkedIn: res.checked_in,
-        });
-      } catch (error) {
-        logger.error(`Error upserting reservation ${res.id}`, error);
-        failedCount++;
+    if (stagingRows.length > 0) {
+      const { error } = await supabase.from('arketa_reservations_staging').insert(stagingRows);
+      if (error) {
+        logger.error('Failed to insert to staging', error);
+        failedCount = stagingRows.length;
       }
     }
+    const syncedCount = stagingRows.length - failedCount;
 
-    // Log sync metrics
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {
       syncType: 'arketa_reservations',
@@ -271,50 +255,41 @@ Deno.serve(async (req) => {
       completedAt: new Date().toISOString(),
       durationMs,
       recordsFetched: reservations.length,
-      recordsSynced: syncedReservations.length,
+      recordsSynced: syncedCount,
       recordsFailed: failedCount,
       retryCount: totalAttempts - pagesProcessed,
     });
-
-    // Update sync status
     await supabase
       .from('api_sync_status')
       .upsert({
         api_name: 'arketa_reservations',
         last_sync_at: new Date().toISOString(),
-        last_sync_success: true,
+        last_sync_success: failedCount === 0,
         last_records_processed: reservations.length,
-        last_records_inserted: syncedReservations.length,
+        last_records_inserted: syncedCount,
       }, { onConflict: 'api_name' });
-
-    // Log to api_logs for Sync Log History visibility
     await logApiCall(supabase, {
       apiName: 'arketa_reservations',
       endpoint: '/reservations',
       syncSuccess: failedCount === 0,
       durationMs,
       recordsProcessed: reservations.length,
-      recordsInserted: syncedReservations.length,
+      recordsInserted: syncedCount,
       responseStatus: 200,
-      triggeredBy: 'manual',
+      triggeredBy: body.triggeredBy || 'manual',
     });
-
-    // Calculate summary stats
-    const checkedInCount = syncedReservations.filter(r => r.checkedIn).length;
-    const noShowCount = syncedReservations.filter(r => r.status === 'no_show').length;
 
     return new Response(
       JSON.stringify({
-        success: true,
-        reservations: syncedReservations,
-        totalFetched: reservations.length,
-        syncedCount: syncedReservations.length,
-        failedCount,
-        summary: {
-          total: syncedReservations.length,
-          checkedIn: checkedInCount,
-          noShows: noShowCount,
+        success: failedCount === 0,
+        data: {
+          reservations_synced: syncedCount,
+          records_processed: reservations.length,
+          records_inserted: syncedCount,
         },
+        totalFetched: reservations.length,
+        syncedCount,
+        failedCount,
         dateRange: { startDate, endDate },
         pagesProcessed,
         apiAttempts: totalAttempts,

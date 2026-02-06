@@ -38,12 +38,9 @@ export interface BackfillJob {
   cumulative_updated: number | null;
 }
 
-/** Jobs that use per-date backfill (backfill-historical); others use unified-backfill-sync.
- * Arketa reservations and payments now use unified-backfill-sync (cursor-based pagination with date range)
- * matching the working sync-arketa-reservations pattern. backfill-historical is kept as legacy fallback. */
-function getBackfillInvokeTarget(job: { api_source: string; data_type: string }): "backfill-historical" | "unified-backfill-sync" {
-  // All job types now use unified-backfill-sync for consistency
-  return "unified-backfill-sync";
+/** Backfill jobs use run-backfill-job (arketa-gym-flow style). */
+function getBackfillInvokeTarget(job: { api_source: string; data_type: string }): "run-backfill-job" {
+  return "run-backfill-job";
 }
 
 /** Build a user-facing message from an edge function invoke error (e.g. 404 with error_message in body). */
@@ -76,17 +73,12 @@ async function getInvokeErrorMessage(
     }
 
     if (status === 404 && functionName) {
-      const deployHint =
-        functionName === "backfill-historical"
-          ? "Deploy: supabase functions deploy backfill-historical sync-from-staging"
-          : functionName === "unified-backfill-sync"
-            ? "Deploy: supabase functions deploy unified-backfill-sync"
-            : `Deploy: supabase functions deploy ${functionName}`;
+      const deployHint = `Deploy: supabase functions deploy run-backfill-job sync-arketa-reservations sync-arketa-payments sync-from-staging`;
       return `Edge function "${functionName}" not found (404). ${deployHint}`;
     }
 
     if (status === 404) {
-      return `Not found (404). For Arketa reservations backfill, deploy: supabase functions deploy backfill-historical sync-from-staging`;
+      return `Not found (404). Deploy: supabase functions deploy run-backfill-job sync-arketa-reservations sync-from-staging`;
     }
   } catch {
     // ignore
@@ -149,16 +141,11 @@ export function useBackfillJobs() {
     refetchInterval: 2000, // Poll every 2 seconds for live updates
   });
 
-  // Continue a job that's waiting for retry
+  // Continue a job (run-backfill-job self-continues; this is for backwards compat only)
   const continueJob = useMutation({
-    mutationFn: async (job: BackfillJob) => {
-      const target = getBackfillInvokeTarget(job);
-      const { data, error } = await supabase.functions.invoke(target, {
-        body: { job_id: job.id, action: "continue" },
-      });
-
-      if (error) throw error;
-      return data;
+    mutationFn: async (_job: BackfillJob) => {
+      // run-backfill-job self-invokes for next batch - no manual continue needed
+      return { success: true, skipped: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backfill-jobs"] });
@@ -251,10 +238,11 @@ export function useBackfillJobs() {
       const { data: user } = await supabase.auth.getUser();
       const totalDays = daysBetween(params.start_date, params.end_date);
 
-      // All job types now use unified-backfill-sync with batch/cursor pagination
+      const jobType = `${params.api_source}_${params.data_type}`;
       const insertPayload = {
         api_source: params.api_source,
         data_type: params.data_type,
+        job_type: jobType,
         start_date: params.start_date,
         end_date: params.end_date,
         status: "pending",
@@ -262,10 +250,11 @@ export function useBackfillJobs() {
         total_days: totalDays,
         days_processed: 0,
         created_by: user?.user?.id || null,
-        sync_phase: "idle",
-        total_batches_completed: 0,
-        records_in_current_batch: 0,
-        no_more_records: false,
+        total_dates: totalDays,
+        completed_dates: 0,
+        total_records: 0,
+        total_new_records: 0,
+        results: [],
       };
 
       const { data: newJob, error: insertError } = await supabase
@@ -277,7 +266,7 @@ export function useBackfillJobs() {
       if (insertError) throw insertError;
 
       const target = getBackfillInvokeTarget(params);
-      const body = { job_id: newJob.id, action: "continue" };
+      const body = { jobId: newJob.id };
 
       const { data, error } = await supabase.functions.invoke(target, { body });
 
@@ -357,7 +346,7 @@ export function useBackfillJobs() {
     },
   });
 
-  // Cancel job - uses backfill-historical for arketa reservations/payments, else unified-backfill-sync
+  // Cancel job - uses run-backfill-job
   const cancelJob = useMutation({
     mutationFn: async (jobId: string) => {
       const { data: job, error: fetchError } = await supabase
@@ -368,7 +357,7 @@ export function useBackfillJobs() {
       if (fetchError || !job) throw new Error("Job not found");
       const target = getBackfillInvokeTarget(job);
       const { data, error } = await supabase.functions.invoke(target, {
-        body: { job_id: jobId, action: "cancel" },
+        body: { jobId, action: "cancel" },
       });
 
       if (error) throw error;

@@ -125,6 +125,7 @@ async function transferReservations(
       checked_in_at: r.checked_in_at ?? null,
       experience_type: r.experience_type ?? null,
       late_cancel: r.late_cancel ?? false,
+      created_at: r.created_at ?? null,
       gross_amount_paid: r.gross_amount_paid ?? null,
       net_amount_paid: r.net_amount_paid ?? null,
       raw_data: r.raw_data ?? null,

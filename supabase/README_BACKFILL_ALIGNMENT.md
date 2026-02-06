@@ -7,10 +7,10 @@ This doc describes how the Select Dates backfill (per-date flow) aligns with the
 The Arketa reservations/payments **Select dates** backfill needs these edge functions deployed to the **same** Supabase project the app uses:
 
 ```bash
-supabase functions deploy refresh-arketa-token backfill-historical sync-from-staging
+supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions
 ```
 
-Or use the npm script: `npm run supabase:deploy-backfill` (also deploys `unified-backfill-sync`). **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.
+Or use the npm script: `npm run supabase:deploy-backfill`. **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.
 
 If either function is missing or deployed to a different project, you can get a **404** when starting the backfill. The UI will show the error; if the body includes `error_message` (e.g. "Job not found" or a PostgREST code), the function ran but could not find the job row (e.g. app and functions use different projects).
 
@@ -18,20 +18,19 @@ If either function is missing or deployed to a different project, you can get a 
 
 ## Architecture in hume-ops
 
-- **Select Dates (reservations / payments):** UI → `backfill-historical` edge function.
-- **backfill-historical** for reservations/payments: writes to **staging** (`arketa_reservations_staging`, `arketa_payments_staging`), then invokes **sync-from-staging** to transfer staging → **history** (`arketa_reservations_history`, `arketa_payments_history`). Unique targets: (reservation_id, class_id) and (payment_id, source_endpoint).
+- **Select Dates (reservations / payments):** UI → `run-backfill-job` edge function.
+- **run-backfill-job** for reservations/payments: processes dates one-by-one, calls `sync-arketa-reservations` or `sync-arketa-payments` per date, writes to **staging**, then invokes **sync-from-staging** to transfer staging → **history**. Unique targets: (reservation_id, class_id) and (payment_id, source_endpoint).
 - **sync-from-staging** edge function: copies staging → history (upsert on conflict), optionally clears staging, logs to api_logs.
-- **Other backfill types (e.g. clients, classes):** Use `unified-backfill-sync`, which does fetch → staging → transform → upsert → clear in one function.
+- **Other backfill types (e.g. clients, classes):** Use `backfill-historical` (deprecated), which does fetch → staging → transform → upsert → clear in one function.
 
-Hume-ops has a `sync-from-staging` edge function for Arketa reservations and payments. The reference system’s staging → history flow is not used here; backfill-historical and unified-backfill-sync each write to their target tables (or staging then target in one run).
+Hume-ops has a `sync-from-staging` edge function for Arketa reservations and payments. The reference system’s staging → history flow is not used here; Date-based backfill uses run-backfill-job → sync-arketa-reservations/payments → staging → sync-from-staging → history. historical-backfill-cron runs periodically (hourly recommended).
 
 ## Tables and columns (staging → history)
 
 ### Reservations
 
-- **Staging:** `arketa_reservations_staging` — columns: `reservation_id`, `class_id`, `arketa_class_id`, `client_id`, `purchase_id`, `reservation_type`, `class_name`, `class_date`, `status`, `checked_in`, `checked_in_at`, `experience_type`, `late_cancel`, `gross_amount_paid`, `net_amount_paid`, `raw_data`, `sync_batch_id`. Backfill-historical inserts here when using staging flow.
+- **Staging:** `arketa_reservations_staging` — CSV fields only: `id`, `client_id`, `reservation_id`, `purchase_id`, `reservation_type`, `class_id`, `class_name`, `status`, `checked_in`, `checked_in_at`, `experience_type`, `late_cancel`, `created_at`, `gross_amount_paid`, `net_amount_paid`, `class_date`, `sync_batch_id`, `raw_data`. sync-arketa-reservations inserts here.
 - **Target:** `arketa_reservations_history` — same columns as staging plus `synced_at`. **Unique:** `(reservation_id, class_id)`. Filled by **sync-from-staging** from staging.
-- **Legacy:** `arketa_reservations` still exists; backfill-historical can write there when not using staging (no syncBatchId).
 
 ### Payments
 
@@ -53,15 +52,15 @@ Hume-ops has a `sync-from-staging` edge function for Arketa reservations and pay
 ## api_sync_status
 
 - **Columns (reference):** `last_processed_date` (cursor, e.g. `page:{num}:{endpoint}`), `last_sync_status` (e.g. `fetching:45%:2300/5000` or `stop_requested`), `is_enabled`. Migration `20260209120000_arketa_history_staging_api_sync.sql` adds `last_processed_date` and `last_sync_status` if missing.
-- **backfill-historical** does **not** update `api_sync_status`; progress is in `backfill_jobs` only. Other syncs update `api_sync_status` and write to `api_logs`.
+- **run-backfill-job** and **sync-arketa-reservations/payments** do not update `api_sync_status`; progress is in `backfill_jobs` only.
 
 ## backfill_jobs
 
-- **Columns used by backfill-historical:** `id`, `api_source`, `data_type`, `start_date`, `end_date`, `processing_date`, `status`, `total_days`, `days_processed`, `records_processed`, `errors`, `started_at`, `completed_at`, `retry_scheduled_at`, `last_cursor` (clients path only). All exist in migrations.
+- **Columns used by run-backfill-job:** `id`, `job_type`, `start_date`, `end_date`, `processing_date`, `status`, `total_dates`, `completed_dates`, `total_records`, `total_new_records`, `results`, `started_at`, `completed_at`. `job_type` = arketa_reservations | arketa_payments.
 
 ## Staging and sync-from-staging
 
-- **arketa_reservations_staging** and **arketa_payments_staging** are used by **backfill-historical** (Select Dates) and by **unified-backfill-sync** (other types). Backfill-historical writes to staging when running reservations/payments, then calls **sync-from-staging** to transfer to **arketa_reservations_history** and **arketa_payments_history**.
+- **arketa_reservations_staging** and **arketa_payments_staging** are used by **run-backfill-job** (via sync-arketa-reservations/payments) and by **historical-backfill-cron**. sync-arketa-reservations/payments write to staging, then **sync-from-staging** transfers to history.
 
 ## Summary
 

@@ -69,10 +69,10 @@ export function useBackfillJob(jobType: BackfillJobType) {
     ? {
         isRunning: activeJob.status === "running" || activeJob.status === "pending",
         currentDate: activeJob.processing_date,
-        totalDates: activeJob.total_dates || activeJob.total_days || 0,
-        completedDates: activeJob.completed_dates || activeJob.days_processed || 0,
-        totalRecords: activeJob.total_records || activeJob.records_processed || 0,
-        results: (Array.isArray(activeJob.results) ? activeJob.results : []) as SyncProgress["results"],
+        totalDates: activeJob.total_days || 0,
+        completedDates: activeJob.days_processed || 0,
+        totalRecords: activeJob.records_processed || 0,
+        results: [],
         startTime: activeJob.started_at ? new Date(activeJob.started_at).getTime() : null,
       }
     : { isRunning: false, currentDate: null, totalDates: 0, completedDates: 0, totalRecords: 0, results: [], startTime: null };
@@ -84,18 +84,14 @@ export function useBackfillJob(jobType: BackfillJobType) {
       const { data: job, error: createError } = await supabase
         .from("backfill_jobs")
         .insert({
-          job_type: jobType,
           api_source: "arketa",
           data_type: jobType.replace("arketa_", ""),
           status: "pending",
           start_date: startDate,
           end_date: isRange ? endDate : startDate,
-          total_dates: dates.length,
-          completed_dates: 0,
-          total_records: 0,
-          total_new_records: 0,
-          results: [],
-          triggered_by: "manual-backfill",
+          total_days: dates.length,
+          days_processed: 0,
+          records_processed: 0,
           created_by: user?.user?.id || null,
         })
         .select()

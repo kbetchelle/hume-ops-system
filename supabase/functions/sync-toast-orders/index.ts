@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
         logger.info(`Cleared staging table for batch ${batchId}`);
       }
     } catch (clearErr) {
-      logger.warn('Error clearing staging table', clearErr);
+      logger.warn('Error clearing staging table', clearErr as Record<string, unknown>);
     }
 
     // Log sync metrics

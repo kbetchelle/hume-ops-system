@@ -219,14 +219,20 @@ const ActiveJobCard = forwardRef<HTMLDivElement, {
     setIsDetailsOpen(!isDetailsOpen);
   };
 
-  // Calculate progress
+  // Per-date jobs (backfill-historical) use total_days and don't set sync_phase; batch jobs use total_records_expected/sync_phase
+  const isDateBasedJob = job.total_days > 0 && !['fetching_api', 'staging', 'transforming', 'upserting', 'clearing_staging', 'batch_complete'].includes(job.sync_phase ?? '');
   const hasKnownTotal = Boolean(job.total_records_expected && job.total_records_expected > 0);
-  const progress = hasKnownTotal 
-    ? Math.min((job.records_processed / job.total_records_expected) * 100, 100)
-    : null;
+  const progress = isDateBasedJob
+    ? (job.total_days > 0 ? Math.min((job.days_processed / job.total_days) * 100, 100) : null)
+    : hasKnownTotal
+      ? Math.min((job.records_processed / job.total_records_expected) * 100, 100)
+      : null;
 
-  // Get batch status text
+  // Get batch status text (or date-based status)
   const getBatchStatusText = () => {
+    if (isDateBasedJob) {
+      return `Date ${job.days_processed} of ${job.total_days}`;
+    }
     const batchNum = (job.total_batches_completed || 0) + 1;
     switch (job.sync_phase) {
       case "fetching_api":
@@ -284,8 +290,8 @@ const ActiveJobCard = forwardRef<HTMLDivElement, {
                 {getStatusBadge(job.status, job.sync_phase)}
               </div>
 
-              {/* Sync Phase Indicator */}
-              <SyncPhaseIndicator phase={job.sync_phase} />
+              {/* Sync Phase Indicator (batch jobs only; date-based jobs show Date X of Y above) */}
+              {!isDateBasedJob && <SyncPhaseIndicator phase={job.sync_phase} />}
 
               {/* Progress Section */}
               <div className="space-y-2">

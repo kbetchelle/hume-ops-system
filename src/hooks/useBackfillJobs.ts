@@ -38,6 +38,21 @@ export interface BackfillJob {
   cumulative_updated: number | null;
 }
 
+/** Jobs that use per-date backfill (backfill-historical); others use unified-backfill-sync. */
+function getBackfillInvokeTarget(job: { api_source: string; data_type: string }): "backfill-historical" | "unified-backfill-sync" {
+  if (job.api_source === "arketa" && (job.data_type === "reservations" || job.data_type === "payments")) {
+    return "backfill-historical";
+  }
+  return "unified-backfill-sync";
+}
+
+function daysBetween(start: string, end: string): number {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
 // Human-readable labels for sync phases
 export function getSyncPhaseLabel(phase: string | null): string {
   switch (phase) {
@@ -89,11 +104,9 @@ export function useBackfillJobs() {
   // Continue a job that's waiting for retry
   const continueJob = useMutation({
     mutationFn: async (job: BackfillJob) => {
-      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
-        body: {
-          job_id: job.id,
-          action: "continue",
-        },
+      const target = getBackfillInvokeTarget(job);
+      const { data, error } = await supabase.functions.invoke(target, {
+        body: { job_id: job.id, action: "continue" },
       });
 
       if (error) throw error;
@@ -179,7 +192,7 @@ export function useBackfillJobs() {
     };
   }, [queryClient]);
 
-  // Create new backfill job - now uses unified-backfill-sync
+  // Create new backfill job - uses backfill-historical for arketa reservations/payments, else unified-backfill-sync
   const createJob = useMutation({
     mutationFn: async (params: {
       api_source: "arketa" | "sling";
@@ -187,36 +200,53 @@ export function useBackfillJobs() {
       start_date: string;
       end_date: string;
     }) => {
-      // First create the job record
       const { data: user } = await supabase.auth.getUser();
-      
+      const useHistorical =
+        params.api_source === "arketa" &&
+        (params.data_type === "reservations" || params.data_type === "payments");
+      const totalDays = daysBetween(params.start_date, params.end_date);
+
+      const insertPayload = {
+        api_source: params.api_source,
+        data_type: params.data_type,
+        start_date: params.start_date,
+        end_date: params.end_date,
+        status: "pending",
+        records_processed: 0,
+        total_days: totalDays,
+        days_processed: 0,
+        created_by: user?.user?.id || null,
+        ...(useHistorical
+          ? {}
+          : {
+              sync_phase: "idle",
+              total_batches_completed: 0,
+              records_in_current_batch: 0,
+              no_more_records: false,
+            }),
+      };
+
       const { data: newJob, error: insertError } = await supabase
         .from("backfill_jobs")
-        .insert({
-          api_source: params.api_source,
-          data_type: params.data_type,
-          start_date: params.start_date,
-          end_date: params.end_date,
-          status: "pending",
-          sync_phase: "idle",
-          records_processed: 0,
-          total_batches_completed: 0,
-          records_in_current_batch: 0,
-          no_more_records: false,
-          created_by: user?.user?.id || null,
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
       if (insertError) throw insertError;
 
-      // Then start the sync
-      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
-        body: {
-          job_id: newJob.id,
-          action: "continue",
-        },
-      });
+      const target = useHistorical ? "backfill-historical" : "unified-backfill-sync";
+      const body = useHistorical
+        ? {
+            job_id: newJob.id,
+            start_date: newJob.start_date,
+            end_date: newJob.end_date,
+            api_source: newJob.api_source,
+            data_type: newJob.data_type,
+            action: "continue",
+          }
+        : { job_id: newJob.id, action: "continue" };
+
+      const { data, error } = await supabase.functions.invoke(target, { body });
 
       if (error) throw error;
       return { ...data, job_id: newJob.id };
@@ -237,10 +267,17 @@ export function useBackfillJobs() {
     },
   });
 
-  // Pause job - now uses unified-backfill-sync
+  // Pause job - uses backfill-historical for arketa reservations/payments, else unified-backfill-sync
   const pauseJob = useMutation({
     mutationFn: async (jobId: string) => {
-      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
+      const { data: job, error: fetchError } = await supabase
+        .from("backfill_jobs")
+        .select("api_source, data_type")
+        .eq("id", jobId)
+        .single();
+      if (fetchError || !job) throw new Error("Job not found");
+      const target = getBackfillInvokeTarget(job);
+      const { data, error } = await supabase.functions.invoke(target, {
         body: { job_id: jobId, action: "pause" },
       });
 
@@ -260,14 +297,12 @@ export function useBackfillJobs() {
     },
   });
 
-  // Resume job - now uses unified-backfill-sync
+  // Resume job - uses backfill-historical for arketa reservations/payments, else unified-backfill-sync
   const resumeJob = useMutation({
     mutationFn: async (job: BackfillJob) => {
-      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
-        body: {
-          job_id: job.id,
-          action: "continue",
-        },
+      const target = getBackfillInvokeTarget(job);
+      const { data, error } = await supabase.functions.invoke(target, {
+        body: { job_id: job.id, action: "continue" },
       });
 
       if (error) throw error;
@@ -286,10 +321,17 @@ export function useBackfillJobs() {
     },
   });
 
-  // Cancel job - now uses unified-backfill-sync
+  // Cancel job - uses backfill-historical for arketa reservations/payments, else unified-backfill-sync
   const cancelJob = useMutation({
     mutationFn: async (jobId: string) => {
-      const { data, error } = await supabase.functions.invoke("unified-backfill-sync", {
+      const { data: job, error: fetchError } = await supabase
+        .from("backfill_jobs")
+        .select("api_source, data_type")
+        .eq("id", jobId)
+        .single();
+      if (fetchError || !job) throw new Error("Job not found");
+      const target = getBackfillInvokeTarget(job);
+      const { data, error } = await supabase.functions.invoke(target, {
         body: { job_id: jobId, action: "cancel" },
       });
 

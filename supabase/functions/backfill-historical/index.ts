@@ -704,8 +704,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Validate required fields for new/resume job
-    if (!api_source || !data_type || !start_date || !end_date) {
+    // Validate required fields: when creating new job (no job_id) need all; when continuing (job_id) only job_id is required
+    if (!job_id && (!api_source || !data_type || !start_date || !end_date)) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: api_source, data_type, start_date, end_date' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -768,6 +768,10 @@ Deno.serve(async (req) => {
       job = newJob as BackfillJob;
     }
 
+    // Use job's date range so continue/self-invoke only needs job_id and action
+    const effectiveStart = job.start_date;
+    const effectiveEnd = job.end_date;
+
     // Update status to running
     await supabase
       .from('backfill_jobs')
@@ -778,19 +782,19 @@ Deno.serve(async (req) => {
       })
       .eq('id', job.id);
 
-    // Get rate limit from api_endpoints using endpoint type mapping
-    const lookupType = endpointTypeMap[data_type] || data_type;
-    const endpointConfig = await getApiEndpointConfig(supabase, api_source, lookupType);
+    // Get rate limit from api_endpoints using endpoint type mapping (use job so continue works with only job_id)
+    const lookupType = endpointTypeMap[job.data_type] || job.data_type;
+    const endpointConfig = await getApiEndpointConfig(supabase, job.api_source, lookupType);
     const rateLimitPerMin = endpointConfig?.rateLimitPerMin || 60;
     const delayMs = Math.ceil(60000 / rateLimitPerMin);
 
-    console.log(`[Backfill] Starting job ${job.id}: ${api_source}/${data_type} from ${start_date} to ${end_date}`);
+    console.log(`[Backfill] Starting job ${job.id}: ${job.api_source}/${job.data_type} from ${effectiveStart} to ${effectiveEnd}`);
     console.log(`[Backfill] Rate limit: ${rateLimitPerMin}/min, delay: ${delayMs}ms`);
 
     // Determine which sync function to use
     let syncFunction: (supabase: any, date: string) => Promise<number>;
     
-    switch (`${api_source}_${data_type}`) {
+    switch (`${job.api_source}_${job.data_type}`) {
       case 'arketa_classes':
         syncFunction = syncArketaClasses;
         break;
@@ -985,16 +989,18 @@ Deno.serve(async (req) => {
         throw new Error(`Unsupported sync type: ${api_source}_${data_type}`);
     }
 
-    // Process day by day for other data types
-    let currentDate = job.processing_date || start_date;
+    // Process day by day for other data types (max 5 dates per invocation to avoid timeout)
+    const DATES_PER_INVOCATION = 5;
+    let currentDate = job.processing_date || effectiveStart;
     let daysProcessed = job.days_processed;
     let recordsProcessed = job.records_processed;
+    let datesProcessedThisInvocation = 0;
     let totalRetries = 0;
     const errors: any[] = Array.isArray(job.errors) ? [...job.errors] : [];
 
-    logger.info(`Starting processing from ${currentDate} to ${end_date}`);
+    logger.info(`Starting processing from ${currentDate} to ${effectiveEnd}`);
 
-    while (currentDate <= end_date) {
+    while (currentDate <= effectiveEnd && datesProcessedThisInvocation < DATES_PER_INVOCATION) {
       // Check if job was paused or cancelled
       const { data: currentJob } = await supabase
         .from('backfill_jobs')
@@ -1059,13 +1065,56 @@ Deno.serve(async (req) => {
         logger.error(`Error on ${currentDate} (after retries)`, err);
       }
 
+      datesProcessedThisInvocation++;
       // Move to next day
       currentDate = addDays(currentDate, 1);
 
       // Rate limit delay
-      if (currentDate <= end_date) {
+      if (currentDate <= effectiveEnd && datesProcessedThisInvocation < DATES_PER_INVOCATION) {
         await delay(delayMs);
       }
+    }
+
+    // More dates remain: update job and self-invoke for next batch
+    if (currentDate <= effectiveEnd) {
+      await supabase
+        .from('backfill_jobs')
+        .update({
+          processing_date: currentDate,
+          days_processed: daysProcessed,
+          records_processed: recordsProcessed,
+          errors,
+          retry_scheduled_at: new Date(Date.now() + 3000).toISOString(),
+        })
+        .eq('id', job.id);
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const functionUrl = `${supabaseUrl}/functions/v1/backfill-historical`;
+      try {
+        await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({ job_id: job.id, action: 'continue' }),
+        });
+      } catch (fetchErr) {
+        logger.error('Self-invoke failed', fetchErr);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          job_id: job.id,
+          status: 'running',
+          days_processed: daysProcessed,
+          records_processed: recordsProcessed,
+          message: 'Batch complete, more dates scheduled',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Mark as completed
@@ -1079,6 +1128,17 @@ Deno.serve(async (req) => {
       .eq('id', job.id);
 
     logger.info(`Job completed: ${daysProcessed} days, ${recordsProcessed} records, ${totalRetries} retries`);
+
+    // Log to api_logs for Sync Log History (aligned with other sync functions)
+    const logApiName = job.data_type === 'reservations' ? 'arketa_reservations' : job.data_type === 'payments' ? 'arketa_payments' : `arketa_${job.data_type}`;
+    await supabase.from('api_logs').insert({
+      api_name: logApiName,
+      endpoint: 'backfill-historical',
+      sync_success: true,
+      records_processed: recordsProcessed,
+      records_inserted: recordsProcessed,
+      triggered_by: 'backfill-job',
+    }).then(({ error: logErr }) => { if (logErr) logger.warn('api_logs insert failed', logErr); });
 
     return new Response(
       JSON.stringify({
@@ -1096,6 +1156,21 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[Backfill] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    // Log failure to api_logs for Sync Log History
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseForLog = createClient(supabaseUrl, supabaseKey);
+      await supabaseForLog.from('api_logs').insert({
+        api_name: 'backfill-historical',
+        endpoint: 'backfill-historical',
+        sync_success: false,
+        records_processed: 0,
+        records_inserted: 0,
+        error_message: errorMessage,
+        triggered_by: 'backfill-job',
+      });
+    } catch (_) { /* ignore */ }
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -872,7 +872,7 @@ export type Database = {
       }
       arketa_reservations_staging: {
         Row: {
-          arketa_class_id: string
+          arketa_class_id: string | null
           arketa_reservation_id: string | null
           cancelled_at: string | null
           checked_in: boolean | null
@@ -884,14 +884,14 @@ export type Database = {
           cursor_position: string | null
           id: string
           raw_data: Json | null
-          reservation_id: string
+          reservation_id: string | null
           staged_at: string | null
           status: string | null
           sync_batch_id: string
           synced_at: string | null
         }
         Insert: {
-          arketa_class_id: string
+          arketa_class_id?: string | null
           arketa_reservation_id?: string | null
           cancelled_at?: string | null
           checked_in?: boolean | null
@@ -903,14 +903,14 @@ export type Database = {
           cursor_position?: string | null
           id?: string
           raw_data?: Json | null
-          reservation_id: string
+          reservation_id?: string | null
           staged_at?: string | null
           status?: string | null
           sync_batch_id: string
           synced_at?: string | null
         }
         Update: {
-          arketa_class_id?: string
+          arketa_class_id?: string | null
           arketa_reservation_id?: string | null
           cancelled_at?: string | null
           checked_in?: boolean | null
@@ -922,7 +922,7 @@ export type Database = {
           cursor_position?: string | null
           id?: string
           raw_data?: Json | null
-          reservation_id?: string
+          reservation_id?: string | null
           staged_at?: string | null
           status?: string | null
           sync_batch_id?: string

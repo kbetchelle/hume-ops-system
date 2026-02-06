@@ -747,6 +747,9 @@ export default function BackfillManagerPage() {
       toast.error("End date must be on or after start date");
       return;
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BackfillManagerPage.tsx:handleCreateJob',message:'Create job params',data:{startDate,endDate,apiSource,dataType},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     createJob.mutate({
       api_source: apiSource,
       data_type: dataType,

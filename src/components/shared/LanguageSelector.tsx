@@ -9,6 +9,7 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUpdateProfile } from "@/hooks/useUserRoles";
+import { PREFERRED_LANGUAGE_PENDING_KEY } from "./SyncProfileLanguage";
 
 export function LanguageSelector() {
   const { language, setLanguage } = useLanguage();
@@ -16,6 +17,9 @@ export function LanguageSelector() {
   const updateProfile = useUpdateProfile();
 
   const handleLanguageChange = (lang: "en" | "es") => {
+    if (user?.id) {
+      sessionStorage.setItem(PREFERRED_LANGUAGE_PENDING_KEY, lang);
+    }
     setLanguage(lang);
     if (user?.id) {
       updateProfile.mutate({ userId: user.id, preferred_language: lang });

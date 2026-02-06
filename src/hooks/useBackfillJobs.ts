@@ -282,6 +282,10 @@ export function useBackfillJobs() {
 
       if (insertError) throw insertError;
 
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob',message:'Insert result + invoke body',data:{paramsStartDate:params.start_date,paramsEndDate:params.end_date,newJobStartDate:newJob.start_date,newJobEndDate:newJob.end_date,useHistorical,jobId:newJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+
       const target = useHistorical ? "backfill-historical" : "unified-backfill-sync";
       const body = useHistorical
         ? {

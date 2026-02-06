@@ -155,6 +155,10 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
     let url = buildArketaUrl(ARKETA_PARTNER_ID!, `reservations?limit=400&start_date=${date}&end_date=${date}`, false);
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
+    // #region agent log
+    if (!nextCursor) console.log(JSON.stringify({ _debug: true, hypothesisId: 'D_E', location: 'syncArketaReservations', message: 'Arketa URL for date', date, url: url.replace(/\/[^/]+\/[^/]+\/[^/]+$/, '/***/reservations?...') }));
+    // #endregion
+
     const response = await fetch(url, {
       method: 'GET',
       headers: getArketaHeaders(token),
@@ -860,6 +864,10 @@ Deno.serve(async (req) => {
     // Use job's date range so continue/self-invoke only needs job_id and action
     const effectiveStart = job.start_date;
     const effectiveEnd = job.end_date;
+
+    // #region agent log
+    console.log(JSON.stringify({ _debug: true, hypothesisId: 'C', location: 'backfill-historical', message: 'Effective date range', job_start_date: job.start_date, job_end_date: job.end_date, effectiveStart, effectiveEnd, job_id: job.id }));
+    // #endregion
 
     // Update status to running
     await supabase

@@ -232,11 +232,13 @@ function SidebarNav() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
 
   // Determine the effective role based on URL path for proper navigation rendering
-  // This ensures admin/manager dashboards always show the correct nav even if activeRole hasn't updated
+  // This ensures admin/manager/BOH dashboards always show the correct nav even if activeRole hasn't updated
   const getEffectiveRole = (): AppRole | null => {
     const path = location.pathname;
     if (path.startsWith("/dashboard/admin")) return "admin";
     if (path.startsWith("/dashboard/manager")) return "manager";
+    if (path.startsWith("/dashboard/floater")) return "floater";
+    if (path.startsWith("/dashboard/spa")) return "female_spa_attendant";
     return activeRole;
   };
   const effectiveRole = getEffectiveRole();
@@ -509,9 +511,11 @@ function UserInfoDropdown({
 function DashboardHeader({ title }: { title: string }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { activeRole } = useActiveRole();
   const isBOH =
     location.pathname.startsWith("/dashboard/spa") ||
-    location.pathname.startsWith("/dashboard/floater");
+    location.pathname.startsWith("/dashboard/floater") ||
+    (activeRole !== null && BOH_ROLES.includes(activeRole));
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">

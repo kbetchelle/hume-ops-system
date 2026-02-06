@@ -140,23 +140,24 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
 
 // Sync Arketa reservations for a single date with pagination; writes to staging (then sync-from-staging -> history)
 async function syncArketaReservations(supabase: any, date: string, syncBatchId?: string): Promise<number> {
-  const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
-  const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+  const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  // Use shared auth helper to get a valid Bearer token (OAuth or API key fallback)
+  const { getArketaToken, getArketaHeaders, buildArketaUrl } = await import('../_shared/arketaAuth.ts');
+  const token = await getArketaToken(SUPABASE_URL!, SERVICE_ROLE_KEY!);
 
   let allReservations: any[] = [];
   let nextCursor: string | undefined;
 
   do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=400&start_date=${date}&end_date=${date}`;
+    let url = buildArketaUrl(ARKETA_PARTNER_ID!, `reservations?limit=400&start_date=${date}&end_date=${date}`, false);
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-api-key': ARKETA_API_KEY!,
-        'Content-Type': 'application/json',
-      },
+      headers: getArketaHeaders(token),
     });
 
     if (!response.ok) {

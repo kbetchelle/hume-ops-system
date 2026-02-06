@@ -78,9 +78,9 @@ Deno.serve(async (req) => {
     
     const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
     const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
-    // No limit parameter - fetch all records
+    const limit = body.limit ?? 400;
 
-    logger.info(`Syncing payments from ${startDate} to ${endDate}`);
+    logger.info(`Syncing payments from ${startDate} to ${endDate} (limit ${limit} per endpoint)`);
 
     // Try to get token via refresh flow, fall back to API key
     let headers: Record<string, string>;
@@ -96,8 +96,8 @@ Deno.serve(async (req) => {
     let payments: ArketaPayment[] = [];
     let totalAttempts = 0;
     
-    // Try purchases endpoint first with retry
-    const purchasesUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases?start_date=${startDate}&end_date=${endDate}`;
+    // Try purchases endpoint first with retry (400 records per sync)
+    const purchasesUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: purchasesResponse, attempts } = await fetchWithRetry(purchasesUrl, {
@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
       logger.error('Purchases endpoint failed', error);
     }
 
-    // Also try payments endpoint and merge
-    const paymentsUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/payments?start_date=${startDate}&end_date=${endDate}`;
+    // Also try payments endpoint and merge (400 records per sync)
+    const paymentsUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/payments?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
     
     try {
       const { response: paymentsResponse, attempts } = await fetchWithRetry(paymentsUrl, {

@@ -307,32 +307,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger on hard delete
-DROP TRIGGER IF EXISTS trigger_queue_photo_on_delete ON checklist_completions;
-CREATE TRIGGER trigger_queue_photo_on_delete
-  BEFORE DELETE ON checklist_completions
-  FOR EACH ROW
-  EXECUTE FUNCTION queue_photo_deletion();
-
--- Function to cleanup old completions (14 day retention)
-CREATE OR REPLACE FUNCTION cleanup_old_completions()
-RETURNS void AS $$
+-- Trigger on hard delete (skip if checklist_completions was dropped)
+DO $$
 BEGIN
-  -- Queue photos for deletion from records older than 14 days
-  INSERT INTO storage_deletion_queue (bucket_name, file_path)
-  SELECT 'checklist-photos', regexp_replace(photo_url, '^.*/checklist-photos/', '')
-  FROM checklist_completions
-  WHERE completion_date < CURRENT_DATE - INTERVAL '14 days'
-    AND photo_url IS NOT NULL
-    AND deleted_at IS NULL;
-  
-  -- Soft delete old completions
-  UPDATE checklist_completions
-  SET deleted_at = now()
-  WHERE completion_date < CURRENT_DATE - INTERVAL '14 days'
-    AND deleted_at IS NULL;
-END;
-$$ LANGUAGE plpgsql;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='checklist_completions') THEN
+    DROP TRIGGER IF EXISTS trigger_queue_photo_on_delete ON checklist_completions;
+    CREATE TRIGGER trigger_queue_photo_on_delete
+      BEFORE DELETE ON checklist_completions
+      FOR EACH ROW
+      EXECUTE FUNCTION queue_photo_deletion();
+  END IF;
+END $$;
+
+-- Function to cleanup old completions (14 day retention) - only create if table exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='checklist_completions') THEN
+    CREATE OR REPLACE FUNCTION cleanup_old_completions()
+    RETURNS void AS $func$
+    BEGIN
+      INSERT INTO storage_deletion_queue (bucket_name, file_path)
+      SELECT 'checklist-photos', regexp_replace(photo_url, '^.*/checklist-photos/', '')
+      FROM checklist_completions
+      WHERE completion_date < CURRENT_DATE - INTERVAL '14 days'
+        AND photo_url IS NOT NULL
+        AND deleted_at IS NULL;
+      UPDATE checklist_completions
+      SET deleted_at = now()
+      WHERE completion_date < CURRENT_DATE - INTERVAL '14 days'
+        AND deleted_at IS NULL;
+    END;
+    $func$ LANGUAGE plpgsql;
+  ELSE
+    CREATE OR REPLACE FUNCTION cleanup_old_completions() RETURNS void AS $stub$ BEGIN RETURN; END; $stub$ LANGUAGE plpgsql;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- 7. ADD COMMENTS TO DOCUMENT CHANGES

@@ -123,7 +123,7 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformReservation,
     stagingIdField: 'arketa_reservation_id',
-    useDev: true, // CRITICAL: Must use partnerApiDev - prod /reservations returns 404
+    useDev: false, // Use prod endpoint - verified working in sync-arketa-reservations
     paginationStyle: 'cursor',
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',

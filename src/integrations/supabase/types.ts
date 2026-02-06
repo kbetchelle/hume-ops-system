@@ -197,6 +197,7 @@ export type Database = {
           raw_response: string | null
           records_inserted: number | null
           records_processed: number | null
+          records_updated: number | null
           request_method: string | null
           response_body: Json | null
           response_status: number | null
@@ -213,6 +214,7 @@ export type Database = {
           raw_response?: string | null
           records_inserted?: number | null
           records_processed?: number | null
+          records_updated?: number | null
           request_method?: string | null
           response_body?: Json | null
           response_status?: number | null
@@ -229,6 +231,7 @@ export type Database = {
           raw_response?: string | null
           records_inserted?: number | null
           records_processed?: number | null
+          records_updated?: number | null
           request_method?: string | null
           response_body?: Json | null
           response_status?: number | null
@@ -244,9 +247,11 @@ export type Database = {
           id: string
           is_enabled: boolean | null
           last_error_message: string | null
+          last_processed_date: string | null
           last_records_inserted: number | null
           last_records_processed: number | null
           last_sync_at: string | null
+          last_sync_status: string | null
           last_sync_success: boolean | null
           sync_frequency_minutes: number | null
           updated_at: string | null
@@ -257,9 +262,11 @@ export type Database = {
           id?: string
           is_enabled?: boolean | null
           last_error_message?: string | null
+          last_processed_date?: string | null
           last_records_inserted?: number | null
           last_records_processed?: number | null
           last_sync_at?: string | null
+          last_sync_status?: string | null
           last_sync_success?: boolean | null
           sync_frequency_minutes?: number | null
           updated_at?: string | null
@@ -270,9 +277,11 @@ export type Database = {
           id?: string
           is_enabled?: boolean | null
           last_error_message?: string | null
+          last_processed_date?: string | null
           last_records_inserted?: number | null
           last_records_processed?: number | null
           last_sync_at?: string | null
+          last_sync_status?: string | null
           last_sync_success?: boolean | null
           sync_frequency_minutes?: number | null
           updated_at?: string | null
@@ -663,19 +672,103 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_payments_history: {
+        Row: {
+          amount: number | null
+          category: string | null
+          client_id: string | null
+          currency: string | null
+          description: string | null
+          end_date: string | null
+          net_sales: number | null
+          offering_id: string | null
+          payment_id: string
+          payment_type: string | null
+          record_id: string
+          remaining_uses: number | null
+          source_endpoint: string
+          start_date: string | null
+          status: string | null
+          stripe_fees: number | null
+          sync_batch_id: string | null
+          synced_at: string | null
+          tax: number | null
+          total_refunded: number | null
+          transaction_fees: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          client_id?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id: string
+          payment_type?: string | null
+          record_id?: string
+          remaining_uses?: number | null
+          source_endpoint: string
+          start_date?: string | null
+          status?: string | null
+          stripe_fees?: number | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          client_id?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id?: string
+          payment_type?: string | null
+          record_id?: string
+          remaining_uses?: number | null
+          source_endpoint?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_fees?: number | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       arketa_payments_staging: {
         Row: {
           amount: number | null
           arketa_payment_id: string
+          category: string | null
           client_id: string | null
           created_at: string | null
           currency: string | null
           cursor_position: string | null
           description: string | null
+          end_date: string | null
           id: string
+          net_sales: number | null
+          offering_id: string | null
+          payment_id: string | null
           payment_type: string | null
           raw_data: Json | null
+          record_id: string | null
+          remaining_uses: number | null
+          source_endpoint: string | null
           staged_at: string | null
+          start_date: string | null
           status: string | null
           stripe_fees: number | null
           sync_batch_id: string
@@ -683,19 +776,29 @@ export type Database = {
           tax: number | null
           total_refunded: number | null
           transaction_fees: number | null
+          updated_at: string | null
         }
         Insert: {
           amount?: number | null
           arketa_payment_id: string
+          category?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id?: string | null
           payment_type?: string | null
           raw_data?: Json | null
+          record_id?: string | null
+          remaining_uses?: number | null
+          source_endpoint?: string | null
           staged_at?: string | null
+          start_date?: string | null
           status?: string | null
           stripe_fees?: number | null
           sync_batch_id: string
@@ -703,19 +806,29 @@ export type Database = {
           tax?: number | null
           total_refunded?: number | null
           transaction_fees?: number | null
+          updated_at?: string | null
         }
         Update: {
           amount?: number | null
           arketa_payment_id?: string
+          category?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id?: string | null
           payment_type?: string | null
           raw_data?: Json | null
+          record_id?: string | null
+          remaining_uses?: number | null
+          source_endpoint?: string | null
           staged_at?: string | null
+          start_date?: string | null
           status?: string | null
           stripe_fees?: number | null
           sync_batch_id?: string
@@ -723,6 +836,7 @@ export type Database = {
           tax?: number | null
           total_refunded?: number | null
           transaction_fees?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -870,6 +984,69 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_reservations_history: {
+        Row: {
+          checked_in: boolean | null
+          checked_in_at: string | null
+          class_date: string | null
+          class_id: string
+          class_name: string | null
+          client_id: string | null
+          experience_type: string | null
+          gross_amount_paid: number | null
+          id: string
+          late_cancel: boolean | null
+          net_amount_paid: number | null
+          purchase_id: string | null
+          raw_data: Json | null
+          reservation_id: string
+          reservation_type: string | null
+          status: string | null
+          sync_batch_id: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          class_date?: string | null
+          class_id: string
+          class_name?: string | null
+          client_id?: string | null
+          experience_type?: string | null
+          gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
+          net_amount_paid?: number | null
+          purchase_id?: string | null
+          raw_data?: Json | null
+          reservation_id: string
+          reservation_type?: string | null
+          status?: string | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string
+          class_name?: string | null
+          client_id?: string | null
+          experience_type?: string | null
+          gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
+          net_amount_paid?: number | null
+          purchase_id?: string | null
+          raw_data?: Json | null
+          reservation_id?: string
+          reservation_type?: string | null
+          status?: string | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
       arketa_reservations_staging: {
         Row: {
           arketa_class_id: string | null
@@ -877,14 +1054,23 @@ export type Database = {
           cancelled_at: string | null
           checked_in: boolean | null
           checked_in_at: string | null
+          class_date: string | null
+          class_id: string | null
+          class_name: string | null
           client_email: string | null
           client_id: string | null
           client_name: string | null
           created_at: string | null
           cursor_position: string | null
+          experience_type: string | null
+          gross_amount_paid: number | null
           id: string
+          late_cancel: boolean | null
+          net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
+          reservation_type: string | null
           staged_at: string | null
           status: string | null
           sync_batch_id: string
@@ -896,14 +1082,23 @@ export type Database = {
           cancelled_at?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
           cursor_position?: string | null
+          experience_type?: string | null
+          gross_amount_paid?: number | null
           id?: string
+          late_cancel?: boolean | null
+          net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
+          reservation_type?: string | null
           staged_at?: string | null
           status?: string | null
           sync_batch_id: string
@@ -915,14 +1110,23 @@ export type Database = {
           cancelled_at?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
           cursor_position?: string | null
+          experience_type?: string | null
+          gross_amount_paid?: number | null
           id?: string
+          late_cancel?: boolean | null
+          net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
+          reservation_type?: string | null
           staged_at?: string | null
           status?: string | null
           sync_batch_id?: string

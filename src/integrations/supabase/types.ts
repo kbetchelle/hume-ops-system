@@ -677,7 +677,12 @@ export type Database = {
           raw_data: Json | null
           staged_at: string | null
           status: string | null
+          stripe_fees: number | null
           sync_batch_id: string
+          synced_at: string | null
+          tax: number | null
+          total_refunded: number | null
+          transaction_fees: number | null
         }
         Insert: {
           amount?: number | null
@@ -692,7 +697,12 @@ export type Database = {
           raw_data?: Json | null
           staged_at?: string | null
           status?: string | null
+          stripe_fees?: number | null
           sync_batch_id: string
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
         }
         Update: {
           amount?: number | null
@@ -707,7 +717,12 @@ export type Database = {
           raw_data?: Json | null
           staged_at?: string | null
           status?: string | null
+          stripe_fees?: number | null
           sync_batch_id?: string
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
         }
         Relationships: []
       }
@@ -873,6 +888,7 @@ export type Database = {
           staged_at: string | null
           status: string | null
           sync_batch_id: string
+          synced_at: string | null
         }
         Insert: {
           arketa_class_id: string
@@ -891,6 +907,7 @@ export type Database = {
           staged_at?: string | null
           status?: string | null
           sync_batch_id: string
+          synced_at?: string | null
         }
         Update: {
           arketa_class_id?: string
@@ -909,6 +926,7 @@ export type Database = {
           staged_at?: string | null
           status?: string | null
           sync_batch_id?: string
+          synced_at?: string | null
         }
         Relationships: []
       }
@@ -1656,6 +1674,48 @@ export type Database = {
           reported_by?: string | null
           reported_date?: string
           shift_type?: string | null
+        }
+        Relationships: []
+      }
+      checklist_shift_submissions: {
+        Row: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          id: string
+          notes: string | null
+          position: string | null
+          shift_time: string
+          submitted_at: string
+          submitted_by: string
+          submitted_by_id: string | null
+          total_tasks: number
+        }
+        Insert: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time: string
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_id?: string | null
+          total_tasks: number
+        }
+        Update: {
+          completed_tasks?: number
+          completion_date?: string
+          department?: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time?: string
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_id?: string | null
+          total_tasks?: number
         }
         Relationships: []
       }

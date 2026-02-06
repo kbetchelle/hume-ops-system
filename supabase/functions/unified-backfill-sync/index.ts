@@ -122,11 +122,11 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     uniqueKey: 'external_id',
     transformFn: transformReservation,
     stagingIdField: 'arketa_reservation_id',
-    useDev: false, // Uses partnerApi (prod)
-    paginationStyle: 'cursor', // Verified from sync-arketa-reservations
+    useDev: true, // CRITICAL: Must use partnerApiDev - prod /reservations returns 404
+    paginationStyle: 'cursor',
     paginationCursorField: 'nextCursor',
     primaryIdField: 'id',
-    responseDataPaths: ['items', 'data', 'reservations', 'bookings'], // items first
+    responseDataPaths: ['items', 'data', 'reservations', 'bookings'],
     supportsLimit: true,
   },
   'arketa-payments': {

@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
             sync_batch_id: batchId,
           };
 
-          const { error: stagingErr } = await withRetry(
+          const stagingResult = await withRetry(
             async () => {
               const { error } = await supabase.from('toast_staging').upsert(stagingRow, {
                 onConflict: 'business_date,sync_batch_id',
@@ -229,9 +229,9 @@ Deno.serve(async (req) => {
             { maxAttempts: 2 },
             `toast_staging ${currentDate}`
           );
-          if (stagingErr) throw stagingErr;
+          if (stagingResult.result.error) throw stagingResult.result.error;
 
-          const { error: targetErr } = await withRetry(
+          const targetResult = await withRetry(
             async () => {
               const { error } = await supabase.from('toast_sales').upsert({
                 business_date: aggregated.businessDate,
@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
             { maxAttempts: 2 },
             `toast_sales ${currentDate}`
           );
-          if (targetErr) throw targetErr;
+          if (targetResult.result.error) throw targetResult.result.error;
 
           totalOrdersThisRun = allOrdersForDay.length;
           daysSyncedThisRun = 1;

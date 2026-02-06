@@ -733,7 +733,7 @@ export type Database = {
           canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
-          class_id: string
+          class_id: string | null
           class_name: string | null
           class_time: string | null
           client_email: string | null
@@ -780,7 +780,7 @@ export type Database = {
           canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
-          class_id: string
+          class_id?: string | null
           class_name?: string | null
           class_time?: string | null
           client_email?: string | null
@@ -827,7 +827,7 @@ export type Database = {
           canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
-          class_id?: string
+          class_id?: string | null
           class_name?: string | null
           class_time?: string | null
           client_email?: string | null

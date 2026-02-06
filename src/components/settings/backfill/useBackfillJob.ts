@@ -58,10 +58,12 @@ export function useBackfillJob(jobType: BackfillJobType) {
 
   useEffect(() => {
     if (activeJob && (activeJob.status === "completed" || activeJob.status === "cancelled" || activeJob.status === "failed")) {
+      const countQueryKey = jobType === "arketa_reservations" ? ["total-reservations-count"] : ["total-payments-count"];
+      queryClient.invalidateQueries({ queryKey: countQueryKey });
       const timer = setTimeout(() => { setActiveJobId(null); queryClient.invalidateQueries({ queryKey: ["sync-logs-with-details"] }); }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [activeJob?.status, queryClient]);
+  }, [activeJob?.status, queryClient, jobType]);
 
   const syncProgress: SyncProgress = activeJob
     ? {

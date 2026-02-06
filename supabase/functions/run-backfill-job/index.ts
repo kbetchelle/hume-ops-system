@@ -146,19 +146,21 @@ Deno.serve(async (req) => {
       await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
     }
 
+    // Transfer staging → history after each batch so users see records in history during the job (not only at completion)
+    if (results.some(r => r.success && r.recordCount > 0)) {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+          body: JSON.stringify({ api: config.transferApi, clear_staging: true, sync_batch_id: undefined }),
+        });
+      } catch (err) {
+        console.error("Failed to trigger sync-from-staging:", err);
+      }
+    }
+
     const isComplete = results.length >= allDates.length;
     if (isComplete) {
-      if (results.some(r => r.success && r.recordCount > 0)) {
-        try {
-          await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-            body: JSON.stringify({ api: config.transferApi, clear_staging: true, sync_batch_id: undefined }),
-          });
-        } catch (err) {
-          console.error("Failed to trigger sync-from-staging:", err);
-        }
-      }
       await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null }).eq("id", jobId);
       return new Response(JSON.stringify({ success: true, completed: true, totalDates: allDates.length, totalRecords, totalNewRecords }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -549,12 +549,9 @@ async function fetchFromApi(
   config: BackfillConfig,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ records: Record<string, unknown>[]; nextCursor: string | null; hasMore: boolean }> {
-  // SIMPLIFIED AUTH: Use API key directly (matches working arketa-gym-flow pattern)
-  // Try both env var naming conventions for compatibility
   const ARKETA_API_KEY = Deno.env.get("ARKETA_API_KEY") || Deno.env.get("PARTNER_API_KEY");
   const partnerId = Deno.env.get("ARKETA_PARTNER_ID") || Deno.env.get("PARTNER_ID");
   
-  // Validate required environment variables
   if (!ARKETA_API_KEY) {
     logger.error('API key not found - checked ARKETA_API_KEY and PARTNER_API_KEY');
     throw new Error('API key is required but not configured (checked ARKETA_API_KEY, PARTNER_API_KEY)');
@@ -564,21 +561,23 @@ async function fetchFromApi(
     throw new Error('Partner ID is required but not configured (checked ARKETA_PARTNER_ID, PARTNER_ID)');
   }
   
-  logger.info('Authentication configured', {
-    hasApiKey: !!ARKETA_API_KEY,
-    apiKeyPrefix: ARKETA_API_KEY.substring(0, 8) + '...',
-    partnerId: partnerId,
-    usedEnvVars: {
-      apiKey: Deno.env.get("ARKETA_API_KEY") ? 'ARKETA_API_KEY' : 'PARTNER_API_KEY',
-      partnerId: Deno.env.get("ARKETA_PARTNER_ID") ? 'ARKETA_PARTNER_ID' : 'PARTNER_ID'
-    }
-  });
-  
-  // Use Bearer token auth (matches working arketa-gym-flow pattern)
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${ARKETA_API_KEY}`,
-    'Content-Type': 'application/json'
-  };
+  // Use OAuth token with API key fallback (matches working sync-arketa-reservations pattern)
+  let headers: Record<string, string>;
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const token = await getArketaToken(supabaseUrl, serviceRoleKey);
+    headers = getArketaHeaders(token);
+    logger.info('Using OAuth token for authentication');
+  } catch (tokenError) {
+    logger.warn('OAuth token failed, using API key fallback', {
+      error: tokenError instanceof Error ? tokenError.message : String(tokenError)
+    });
+    headers = {
+      'x-api-key': ARKETA_API_KEY,
+      'Content-Type': 'application/json'
+    };
+  }
 
   const baseUrl = config.useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
   
@@ -1353,15 +1352,25 @@ function transformClass(raw: Record<string, unknown>): Record<string, unknown> {
 }
 
 function transformReservation(raw: Record<string, unknown>): Record<string, unknown> {
+  // Handle both snake_case (API) and camelCase field names
+  const client = raw.client as Record<string, unknown> | undefined;
+  const clientId = raw.client_id || raw.clientId || client?.id || null;
+  const clientName = client
+    ? `${client.firstName || client.first_name || ''} ${client.lastName || client.last_name || ''}`.trim() || null
+    : (raw.client_name || raw.clientName || null);
+  const clientEmail = client?.email || raw.client_email || raw.clientEmail || null;
+  const checkedIn = raw.checked_in === true || raw.checkedIn === true ||
+    ['checked_in', 'ATTENDED', 'attended', 'completed', 'COMPLETED'].includes(raw.status as string);
+
   return {
     external_id: String(raw.id),
-    client_id: raw.clientId,
-    class_id: raw.classId,
-    client_name: raw.clientName,
-    client_email: raw.clientEmail,
-    status: raw.status,
-    checked_in: raw.checkedIn || false,
-    checked_in_at: raw.checkedInAt,
+    client_id: clientId ? String(clientId) : null,
+    class_id: String(raw.class_id || raw.classId || ''),
+    client_name: clientName,
+    client_email: clientEmail,
+    status: raw.status || 'booked',
+    checked_in: checkedIn,
+    checked_in_at: raw.checked_in_at || raw.checkedInAt || null,
     raw_data: raw,
     synced_at: new Date().toISOString()
   };

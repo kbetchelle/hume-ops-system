@@ -38,11 +38,11 @@ export interface BackfillJob {
   cumulative_updated: number | null;
 }
 
-/** Jobs that use per-date backfill (backfill-historical); others use unified-backfill-sync. */
+/** Jobs that use per-date backfill (backfill-historical); others use unified-backfill-sync.
+ * Arketa reservations and payments now use unified-backfill-sync (cursor-based pagination with date range)
+ * matching the working sync-arketa-reservations pattern. backfill-historical is kept as legacy fallback. */
 function getBackfillInvokeTarget(job: { api_source: string; data_type: string }): "backfill-historical" | "unified-backfill-sync" {
-  if (job.api_source === "arketa" && (job.data_type === "reservations" || job.data_type === "payments")) {
-    return "backfill-historical";
-  }
+  // All job types now use unified-backfill-sync for consistency
   return "unified-backfill-sync";
 }
 
@@ -249,11 +249,9 @@ export function useBackfillJobs() {
       end_date: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
-      const useHistorical =
-        params.api_source === "arketa" &&
-        (params.data_type === "reservations" || params.data_type === "payments");
       const totalDays = daysBetween(params.start_date, params.end_date);
 
+      // All job types now use unified-backfill-sync with batch/cursor pagination
       const insertPayload = {
         api_source: params.api_source,
         data_type: params.data_type,
@@ -264,14 +262,10 @@ export function useBackfillJobs() {
         total_days: totalDays,
         days_processed: 0,
         created_by: user?.user?.id || null,
-        ...(useHistorical
-          ? {}
-          : {
-              sync_phase: "idle",
-              total_batches_completed: 0,
-              records_in_current_batch: 0,
-              no_more_records: false,
-            }),
+        sync_phase: "idle",
+        total_batches_completed: 0,
+        records_in_current_batch: 0,
+        no_more_records: false,
       };
 
       const { data: newJob, error: insertError } = await supabase
@@ -282,21 +276,8 @@ export function useBackfillJobs() {
 
       if (insertError) throw insertError;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/074fc952-a0d0-47df-950e-fd07947807af',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBackfillJobs.ts:createJob',message:'Insert result + invoke body',data:{paramsStartDate:params.start_date,paramsEndDate:params.end_date,newJobStartDate:newJob.start_date,newJobEndDate:newJob.end_date,useHistorical,jobId:newJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-
-      const target = useHistorical ? "backfill-historical" : "unified-backfill-sync";
-      const body = useHistorical
-        ? {
-            job_id: newJob.id,
-            start_date: newJob.start_date,
-            end_date: newJob.end_date,
-            api_source: newJob.api_source,
-            data_type: newJob.data_type,
-            action: "continue",
-          }
-        : { job_id: newJob.id, action: "continue" };
+      const target = getBackfillInvokeTarget(params);
+      const body = { job_id: newJob.id, action: "continue" };
 
       const { data, error } = await supabase.functions.invoke(target, { body });
 

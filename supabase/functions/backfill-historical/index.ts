@@ -162,42 +162,64 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
   }
 
   let allReservations: any[] = [];
-  let nextCursor: string | undefined;
+
+  // Step 1: Fetch classes for this date (reservations are nested under classes)
+  let classCursor: string | undefined;
+  const allClasses: any[] = [];
 
   do {
-    // Use URL class for proper query param encoding (matches working sync-arketa-reservations)
-    const url = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations`);
-    url.searchParams.set('limit', '400');
-    url.searchParams.set('start_date', date);
-    url.searchParams.set('end_date', date);
-    if (nextCursor) url.searchParams.set('cursor', nextCursor);
+    const classUrl = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes`);
+    classUrl.searchParams.set('limit', '400');
+    classUrl.searchParams.set('start_date', date);
+    classUrl.searchParams.set('end_date', date);
+    if (classCursor) classUrl.searchParams.set('cursor', classCursor);
 
-    console.log(`[backfill-reservations] Fetching: ${url.toString()}`);
+    console.log(`[backfill-reservations] Fetching classes: ${classUrl.toString()}`);
+    const classResponse = await fetch(classUrl.toString(), { method: 'GET', headers });
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers,
-    });
-
-    if (!response.ok) {
-      const status = response.status;
-      const errorText = await response.text().catch(() => '');
-      console.error(`[backfill-reservations] API error ${status}: ${errorText.substring(0, 200)}`);
-      if (status === 429 || status >= 500) {
-        throw new RetryableError(`Arketa API error: ${status}`, status);
-      }
-      throw new Error(`Arketa API error: ${status} (non-retryable)`);
+    if (!classResponse.ok) {
+      const status = classResponse.status;
+      if (status === 429 || status >= 500) throw new RetryableError(`Arketa classes API error: ${status}`, status);
+      throw new Error(`Arketa classes API error: ${status}`);
     }
 
-    const responseData = await response.json();
-    const reservations = Array.isArray(responseData) 
-      ? responseData 
-      : (responseData.items || responseData.data || responseData.reservations || []);
-    allReservations.push(...reservations);
-    console.log(`[backfill-reservations] Fetched ${reservations.length} reservations for ${date}`);
+    const classData = await classResponse.json();
+    const classes = Array.isArray(classData) ? classData : (classData.items || classData.data || classData.classes || []);
+    allClasses.push(...classes);
+    classCursor = classData.pagination?.nextCursor;
+  } while (classCursor);
 
-    nextCursor = responseData.pagination?.nextCursor;
-  } while (nextCursor);
+  console.log(`[backfill-reservations] Found ${allClasses.length} classes for ${date}`);
+
+  // Step 2: Fetch reservations for each class
+  for (const cls of allClasses) {
+    const classId = String(cls.id);
+    const resUrl = new URL(`${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes/${classId}/reservations`);
+
+    try {
+      const response = await fetch(resUrl.toString(), { method: 'GET', headers });
+      if (!response.ok) {
+        if (response.status === 404) continue; // Class may have been deleted
+        console.warn(`[backfill-reservations] Error fetching reservations for class ${classId}: ${response.status}`);
+        continue;
+      }
+
+      const responseData = await response.json();
+      const reservations = Array.isArray(responseData)
+        ? responseData
+        : (responseData.items || responseData.data || responseData.reservations || responseData.bookings || []);
+
+      // Enrich with class_id
+      for (const res of reservations) {
+        if (!res.class_id && !res.classId) res.class_id = classId;
+        allReservations.push(res);
+      }
+      console.log(`[backfill-reservations] Class ${classId}: ${reservations.length} reservations`);
+    } catch (fetchErr) {
+      console.warn(`[backfill-reservations] Failed to fetch reservations for class ${classId}:`, fetchErr);
+      continue;
+    }
+  }
 
   if (!allReservations.length) return 0;
 

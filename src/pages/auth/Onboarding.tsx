@@ -12,16 +12,19 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Step = "profile" | "roles";
+type Step = "profile" | "language" | "roles";
+
+type LanguageChoice = "en" | "es";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const assignRoles = useAssignRoles();
   const updateProfile = useUpdateProfile();
-  
+
   const [step, setStep] = useState<Step>("profile");
   const [fullName, setFullName] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageChoice>("en");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,7 +41,7 @@ export default function Onboarding() {
       toast.error("Please enter your name");
       return;
     }
-    
+
     if (!user?.id) {
       toast.error("User session not found");
       return;
@@ -46,9 +49,26 @@ export default function Onboarding() {
 
     try {
       await updateProfile.mutateAsync({ userId: user.id, fullName: fullName.trim() });
-      setStep("roles");
+      setStep("language");
     } catch (error) {
       toast.error("Failed to save profile");
+    }
+  };
+
+  const handleLanguageNext = async () => {
+    if (!user?.id) {
+      toast.error("User session not found");
+      return;
+    }
+
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        preferred_language: selectedLanguage,
+      });
+      setStep("roles");
+    } catch (error) {
+      toast.error("Failed to save language preference");
     }
   };
 
@@ -83,33 +103,52 @@ export default function Onboarding() {
         <CardHeader className="space-y-4 text-center pb-8">
           <CardTitle className="text-sm">Complete Your Profile</CardTitle>
           <CardDescription className="text-xs tracking-wide">
-            {step === "profile" 
-              ? "Tell us about yourself" 
-              : "Select your role(s)"}
+            {step === "profile"
+              ? "Tell us about yourself"
+              : step === "language"
+                ? "Choose your language"
+                : "Select your role(s)"}
           </CardDescription>
-          
+
           {/* Step indicator */}
-          <div className="flex items-center justify-center gap-4 pt-6">
-            <div className={cn(
-              "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
-              step === "profile" 
-                ? "border-foreground bg-foreground text-background" 
-                : "border-foreground bg-transparent text-foreground"
-            )}>
+          <div className="flex items-center justify-center gap-2 pt-6">
+            <div
+              className={cn(
+                "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
+                step === "profile"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-foreground bg-transparent text-foreground"
+              )}
+            >
               1
             </div>
-            <div className="w-12 h-px bg-border" />
-            <div className={cn(
-              "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
-              step === "roles" 
-                ? "border-foreground bg-foreground text-background" 
-                : "border-border bg-transparent text-muted-foreground"
-            )}>
+            <div className="w-8 h-px bg-border" />
+            <div
+              className={cn(
+                "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
+                step === "language"
+                  ? "border-foreground bg-foreground text-background"
+                  : step === "profile"
+                    ? "border-border bg-transparent text-muted-foreground"
+                    : "border-foreground bg-transparent text-foreground"
+              )}
+            >
               2
+            </div>
+            <div className="w-8 h-px bg-border" />
+            <div
+              className={cn(
+                "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
+                step === "roles"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-transparent text-muted-foreground"
+              )}
+            >
+              3
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-8">
           {step === "profile" ? (
             <div className="space-y-4 max-w-sm mx-auto">
@@ -125,6 +164,40 @@ export default function Onboarding() {
               <p className="text-[10px] text-muted-foreground tracking-wide uppercase">
                 This name will be displayed across the platform
               </p>
+            </div>
+          ) : step === "language" ? (
+            <div className="space-y-4 max-w-sm mx-auto">
+              <p className="text-[10px] text-muted-foreground tracking-wide uppercase text-center">
+                You can change this later in the app
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div
+                  onClick={() => setSelectedLanguage("en")}
+                  className={cn(
+                    "relative flex flex-col items-center gap-2 p-6 border cursor-pointer transition-all duration-300 hover:opacity-70",
+                    selectedLanguage === "en"
+                      ? "border-foreground bg-secondary"
+                      : "border-border hover:border-foreground"
+                  )}
+                >
+                  <span className="text-[10px] uppercase tracking-widest font-normal">
+                    English
+                  </span>
+                </div>
+                <div
+                  onClick={() => setSelectedLanguage("es")}
+                  className={cn(
+                    "relative flex flex-col items-center gap-2 p-6 border cursor-pointer transition-all duration-300 hover:opacity-70",
+                    selectedLanguage === "es"
+                      ? "border-foreground bg-secondary"
+                      : "border-border hover:border-foreground"
+                  )}
+                >
+                  <span className="text-[10px] uppercase tracking-widest font-normal">
+                    Español
+                  </span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -160,19 +233,36 @@ export default function Onboarding() {
         </CardContent>
         
         <CardFooter className="flex justify-between pt-8">
-          {step === "roles" && (
-            <Button
-              variant="outline"
-              onClick={() => setStep("profile")}
-            >
+          {step === "language" && (
+            <Button variant="outline" onClick={() => setStep("profile")}>
               Back
             </Button>
           )}
-          
+          {step === "roles" && (
+            <Button variant="outline" onClick={() => setStep("language")}>
+              Back
+            </Button>
+          )}
+
           {step === "profile" ? (
             <Button
-              className="ml-auto"
+              className={step === "profile" ? "ml-auto" : ""}
               onClick={handleProfileNext}
+              disabled={updateProfile.isPending}
+            >
+              {updateProfile.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Saving
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          ) : step === "language" ? (
+            <Button
+              className="ml-auto"
+              onClick={handleLanguageNext}
               disabled={updateProfile.isPending}
             >
               {updateProfile.isPending ? (

@@ -1172,7 +1172,7 @@ Deno.serve(async (req) => {
       const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const syncFromStagingUrl = `${supabaseUrl}/functions/v1/sync-from-staging`;
       try {
-        await fetch(syncFromStagingUrl, {
+        const syncRes = await fetch(syncFromStagingUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1184,7 +1184,16 @@ Deno.serve(async (req) => {
             clear_staging: true,
           }),
         });
+        if (!syncRes.ok) {
+          const msg = `sync-from-staging returned ${syncRes.status}${syncRes.status === 404 ? ' (deploy: supabase functions deploy sync-from-staging)' : ''}`;
+          errors.push({ date: 'staging', error: msg, timestamp: new Date().toISOString() });
+          await supabase.from('backfill_jobs').update({ errors }).eq('id', job.id);
+          logger.warn('sync-from-staging failed', { status: syncRes.status });
+        }
       } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        errors.push({ date: 'staging', error: `sync-from-staging failed: ${msg}`, timestamp: new Date().toISOString() });
+        await supabase.from('backfill_jobs').update({ errors }).eq('id', job.id);
         logger.warn('sync-from-staging failed', fetchErr instanceof Error ? { message: fetchErr.message } : undefined);
       }
     }
@@ -1206,7 +1215,7 @@ Deno.serve(async (req) => {
       const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const functionUrl = `${supabaseUrl}/functions/v1/backfill-historical`;
       try {
-        await fetch(functionUrl, {
+        const continueRes = await fetch(functionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1214,8 +1223,25 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ job_id: job.id, action: 'continue' }),
         });
+        if (!continueRes.ok) {
+          const msg = `Continue batch returned ${continueRes.status}${continueRes.status === 404 ? ' (backfill-historical not found - deploy to this project)' : ''}`;
+          const nextErrors = [...errors, { date: 'continue', error: msg, timestamp: new Date().toISOString() }];
+          await supabase.from('backfill_jobs').update({ errors: nextErrors, status: 'failed' }).eq('id', job.id);
+          logger.error('Self-invoke failed', { status: continueRes.status });
+          return new Response(
+            JSON.stringify({ error: msg, job_id: job.id, status: 'failed' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        const nextErrors = [...errors, { date: 'continue', error: `Continue batch failed: ${msg}`, timestamp: new Date().toISOString() }];
+        await supabase.from('backfill_jobs').update({ errors: nextErrors, status: 'failed' }).eq('id', job.id);
         logger.error('Self-invoke failed', fetchErr);
+        return new Response(
+          JSON.stringify({ error: `Continue batch failed: ${msg}`, job_id: job.id, status: 'failed' }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       return new Response(

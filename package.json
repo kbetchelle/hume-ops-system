@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "supabase:deploy-backfill": "supabase functions deploy backfill-historical sync-from-staging unified-backfill-sync"
+    "supabase:deploy-backfill": "supabase functions deploy refresh-arketa-token backfill-historical sync-from-staging unified-backfill-sync"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

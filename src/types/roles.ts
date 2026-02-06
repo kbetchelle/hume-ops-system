@@ -73,6 +73,7 @@ export interface UserProfile {
   email: string;
   full_name: string | null;
   onboarding_completed: boolean;
+  preferred_language: string | null;
   created_at: string;
   updated_at: string;
 }

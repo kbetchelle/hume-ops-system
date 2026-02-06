@@ -30,7 +30,10 @@ export async function getArketaToken(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to get Arketa token: ${errorText}`);
+    const hint = response.status === 404
+      ? ' (refresh-arketa-token may not be deployed - run: supabase functions deploy refresh-arketa-token)'
+      : '';
+    throw new Error(`Failed to get Arketa token: ${response.status}${hint} - ${errorText || response.statusText}`);
   }
 
   const result = await response.json();

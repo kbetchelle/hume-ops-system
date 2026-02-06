@@ -4,12 +4,13 @@ This doc describes how the Select Dates backfill (per-date flow) aligns with the
 
 ## Deployment (required for date-selector backfill)
 
-The Arketa reservations/payments **Select dates** backfill needs both edge functions deployed to the **same** Supabase project the app uses:
+The Arketa reservations/payments **Select dates** backfill needs these edge functions deployed to the **same** Supabase project the app uses:
 
 ```bash
-supabase functions deploy backfill-historical
-supabase functions deploy sync-from-staging
+supabase functions deploy refresh-arketa-token backfill-historical sync-from-staging
 ```
+
+Or use the npm script: `npm run supabase:deploy-backfill` (also deploys `unified-backfill-sync`). **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.
 
 If either function is missing or deployed to a different project, you can get a **404** when starting the backfill. The UI will show the error; if the body includes `error_message` (e.g. "Job not found" or a PostgREST code), the function ran but could not find the job row (e.g. app and functions use different projects).
 

@@ -59,6 +59,10 @@ import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 import LostAndFoundPage from "./pages/dashboards/LostAndFoundPage";
+import ClassSchedulePage from "./pages/dashboards/ClassSchedulePage";
+import AnnouncementsPage from "./pages/dashboards/AnnouncementsPage";
+import DocumentsPage from "./pages/dashboards/DocumentsPage";
+import WhosWorkingPage from "./pages/dashboards/WhosWorkingPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -310,6 +314,46 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
                   <LostAndFoundPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Class Schedule for BOH and Concierge */}
+            <Route
+              path="/dashboard/class-schedule"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <ClassSchedulePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Announcements for BOH and Concierge */}
+            <Route
+              path="/dashboard/announcements"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <AnnouncementsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Documents for BOH and Concierge */}
+            <Route
+              path="/dashboard/documents"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <DocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Who's Working for BOH and Concierge */}
+            <Route
+              path="/dashboard/whos-working"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                  <WhosWorkingPage />
                 </ProtectedRoute>
               }
             />

@@ -12,6 +12,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupCon
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
 import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package } from "lucide-react";
+import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
 import humeLogo from "@/assets/hume-logo.png";
@@ -37,6 +38,9 @@ interface SettingsGroup {
   icon: React.ElementType;
   items: SettingsSubItem[];
 }
+
+// Back-of-house roles: spa attendants and floater get checklist-first nav
+const BOH_ROLES: AppRole[] = ["female_spa_attendant", "male_spa_attendant", "floater"];
 
 // Navigation items per role
 const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => {
@@ -66,6 +70,35 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package
+    }];
+  }
+  // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
+  if (role && BOH_ROLES.includes(role)) {
+    const checklistUrl = role === "floater" ? "/dashboard/floater" : "/dashboard/spa";
+    return [{
+      title: "Checklist",
+      url: checklistUrl,
+      icon: ClipboardList
+    }, {
+      title: "Class Schedule",
+      url: "/dashboard/class-schedule",
+      icon: Calendar
+    }, {
+      title: "Announcements",
+      url: "/dashboard/announcements",
+      icon: Bell
+    }, {
+      title: "Lost & Found",
+      url: "/dashboard/lost-and-found",
+      icon: Package
+    }, {
+      title: "Documents",
+      url: "/dashboard/documents",
+      icon: FileText
+    }, {
+      title: "Who's Working",
+      url: "/dashboard/whos-working",
+      icon: Users
     }];
   }
   const baseItems: NavItem[] = [{
@@ -473,22 +506,32 @@ function UserInfoDropdown({
       <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
     </>;
 }
-function DashboardHeader({
-  title
-}: {
-  title: string;
-}) {
+function DashboardHeader({ title }: { title: string }) {
   const navigate = useNavigate();
-  return <header className="sticky top-0 z-50 border-b border-border bg-background">
+  const location = useLocation();
+  const isBOH =
+    location.pathname.startsWith("/dashboard/spa") ||
+    location.pathname.startsWith("/dashboard/floater");
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="flex h-20 items-center justify-between px-4 md:px-6">
         <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
           {title}
         </h1>
 
-        {/* Logo aligned to the right - 75% larger with vertical padding */}
-        <img src={humeLogo} alt="Hume" className="h-[50px] w-auto cursor-pointer hover:opacity-70 transition-opacity my-[12px]" onClick={() => navigate("/dashboard")} />
+        <div className="flex items-center gap-2">
+          {isBOH && <LanguageSelector />}
+          <img
+            src={humeLogo}
+            alt="Hume"
+            className="h-[50px] w-auto cursor-pointer hover:opacity-70 transition-opacity my-[12px]"
+            onClick={() => navigate("/dashboard")}
+          />
+        </div>
       </div>
-    </header>;
+    </header>
+  );
 }
 export function DashboardLayout({
   children,

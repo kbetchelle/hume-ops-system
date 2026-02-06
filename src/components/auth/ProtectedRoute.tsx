@@ -3,6 +3,7 @@ import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
 import { AppRole } from "@/types/roles";
 import { Loader2 } from "lucide-react";
+import { SyncProfileLanguage } from "@/components/shared/SyncProfileLanguage";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -45,5 +46,10 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     }
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <SyncProfileLanguage />
+      {children}
+    </>
+  );
 }

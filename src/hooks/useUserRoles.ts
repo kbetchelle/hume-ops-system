@@ -75,14 +75,27 @@ export function useAssignRoles() {
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ userId, fullName }: { userId: string; fullName: string }) => {
+    mutationFn: async ({
+      userId,
+      fullName,
+      preferred_language,
+    }: {
+      userId: string;
+      fullName?: string;
+      preferred_language?: string | null;
+    }) => {
+      const updates: { full_name?: string; preferred_language?: string | null } = {};
+      if (fullName !== undefined) updates.full_name = fullName;
+      if (preferred_language !== undefined) updates.preferred_language = preferred_language;
+      if (Object.keys(updates).length === 0) return { success: true };
+
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update(updates)
         .eq("user_id", userId);
-      
+
       if (error) throw error;
       return { success: true };
     },

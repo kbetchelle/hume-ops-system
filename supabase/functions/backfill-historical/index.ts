@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { getApiEndpointConfig } from '../_shared/apiEndpoints.ts';
 import { withRetry, RetryableError } from '../_shared/retry.ts';
 import { createSyncLogger } from '../_shared/logger.ts';
+import { getSuggestedDelayFromMessage } from '../_shared/syncErrorLearning.ts';
 
 interface BackfillRequest {
   api_source: 'arketa' | 'sling';
@@ -77,11 +78,9 @@ async function syncArketaClasses(supabase: any, date: string): Promise<number> {
 
   let allClasses: any[] = [];
   let nextCursor: string | undefined;
-  let pageCount = 0;
-  const maxPages = 50;
 
   do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=500&start_date=${date}&end_date=${date}`;
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=400&start_date=${date}&end_date=${date}`;
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
     const response = await fetch(url, {
@@ -107,8 +106,7 @@ async function syncArketaClasses(supabase: any, date: string): Promise<number> {
     allClasses.push(...classes);
 
     nextCursor = responseData.pagination?.nextCursor;
-    pageCount++;
-  } while (nextCursor && pageCount < maxPages);
+  } while (nextCursor);
 
   let recordCount = 0;
   for (const cls of allClasses) {
@@ -148,11 +146,9 @@ async function syncArketaReservations(supabase: any, date: string): Promise<numb
 
   let allReservations: any[] = [];
   let nextCursor: string | undefined;
-  let pageCount = 0;
-  const maxPages = 50;
 
   do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=500&start_date=${date}&end_date=${date}`;
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/reservations?limit=400&start_date=${date}&end_date=${date}`;
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
     const response = await fetch(url, {
@@ -178,8 +174,7 @@ async function syncArketaReservations(supabase: any, date: string): Promise<numb
     allReservations.push(...reservations);
 
     nextCursor = responseData.pagination?.nextCursor;
-    pageCount++;
-  } while (nextCursor && pageCount < maxPages);
+  } while (nextCursor);
 
   let recordCount = 0;
   for (const res of allReservations) {
@@ -216,11 +211,9 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
 
   let allPayments: any[] = [];
   let nextCursor: string | undefined;
-  let pageCount = 0;
-  const maxPages = 50;
 
   do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=500&start_date=${date}&end_date=${date}`;
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/purchases?limit=400&start_date=${date}&end_date=${date}`;
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
     const response = await fetch(url, {
@@ -246,8 +239,7 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
     allPayments.push(...payments);
 
     nextCursor = responseData.pagination?.nextCursor;
-    pageCount++;
-  } while (nextCursor && pageCount < maxPages);
+  } while (nextCursor);
 
   let recordCount = 0;
   for (const payment of allPayments) {
@@ -330,7 +322,7 @@ async function syncArketaClientsPageToStaging(
   }
 
   // Fetch ONE page of clients
-  let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/clients?limit=500`;
+  let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/clients?limit=400`;
   if (cursor) url += `&cursor=${cursor}`;
 
   console.log(`[backfill] Fetching clients page: ${url}`);
@@ -423,7 +415,7 @@ async function syncArketaClientsPageToStaging(
   // Check pagination
   const nextCursor = responseData.pagination?.nextCursor || null;
   const apiHasMore = responseData.pagination?.hasMore;
-  const hasMore = nextCursor ? (apiHasMore ?? clients.length === 500) : false;
+  const hasMore = nextCursor ? (apiHasMore ?? clients.length === 400) : false;
 
   console.log(`[backfill] Staged ${recordCount} clients, hasMore: ${hasMore}, nextCursor: ${nextCursor ? 'yes' : 'no'}`);
 
@@ -477,8 +469,8 @@ async function promoteClientsStagingToProduction(
     last_synced_at: new Date().toISOString(),
   }));
 
-  // Batch upsert to production in chunks of 100
-  const BATCH_SIZE = 100;
+  // Batch upsert to production in chunks of 400
+  const BATCH_SIZE = 400;
   let promotedCount = 0;
   
   for (let i = 0; i < productionRecords.length; i += BATCH_SIZE) {
@@ -823,11 +815,12 @@ Deno.serve(async (req) => {
         
         let totalRecords = job.records_processed || 0;
         let pageCount = 0;
-        const maxPagesPerRun = 100; // Process up to 100 pages per invocation
         let hasMorePages = true;
+        // Per-invocation limit so we can pause and schedule continuation (avoids timeout; total data is unbounded)
+        const MAX_PAGES_PER_INVOCATION = 200;
 
         try {
-          while (hasMorePages && pageCount < maxPagesPerRun) {
+          while (hasMorePages && pageCount < MAX_PAGES_PER_INVOCATION) {
             // Sync a single page to staging - with internal retries
             let pageResult: ClientSyncResult | null = null;
             let retryCount = 0;
@@ -953,7 +946,8 @@ Deno.serve(async (req) => {
         } catch (err) {
           // Handle error - schedule retry in 3 minutes
           const errorMessage = err instanceof Error ? err.message : String(err);
-          const retryTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+          const delayMs = getSuggestedDelayFromMessage(errorMessage);
+          const retryTime = new Date(Date.now() + delayMs).toISOString();
           const combinedCursor = `batch:${syncBatchId}|cursor:${apiCursor || ''}`;
           
           await supabase
@@ -970,7 +964,7 @@ Deno.serve(async (req) => {
             })
             .eq('id', job.id);
 
-          logger.error(`Clients sync error, will retry at ${retryTime}`, err instanceof Error ? err : new Error(String(err)));
+          logger.error(`Clients sync error, will retry at ${retryTime} (delay ${delayMs}ms)`, err instanceof Error ? err : new Error(String(err)));
 
           return new Response(
             JSON.stringify({
@@ -981,7 +975,7 @@ Deno.serve(async (req) => {
               records_processed: totalRecords,
               error: errorMessage,
               retry_scheduled_at: retryTime,
-              message: 'Sync will retry automatically in 3 minutes',
+              message: `Sync will retry automatically in ${Math.round(delayMs / 1000)}s`,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );

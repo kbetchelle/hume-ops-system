@@ -153,7 +153,12 @@ export async function fetchWithRetry(
         lastError = new Error(`HTTP ${response.status}: ${errorText}`);
         
         if (attempt < finalConfig.maxAttempts) {
-          const delayMs = calculateDelay(attempt, finalConfig);
+          let delayMs = calculateDelay(attempt, finalConfig);
+          // Learn from rate limit: use longer backoff on 429 so next sync improves
+          if (response.status === 429) {
+            delayMs = Math.min(finalConfig.maxDelayMs, delayMs * 2);
+            console.log(`[retry] Rate limit (429) - using extended backoff: ${delayMs}ms`);
+          }
           totalDelayMs += delayMs;
           console.log(
             `[retry] HTTP ${response.status} received, retrying in ${delayMs}ms ` +

@@ -261,7 +261,7 @@ async function runSync(
     requestBody = {};
   } else if (syncType === 'calendly_events') {
     // Sync 7 days past to 90 days future
-    requestBody = { limit: 100 };
+    requestBody = { limit: 400 };
   }
 
   // Call the appropriate edge function

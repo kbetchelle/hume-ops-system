@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const limit = body.limit || 100;
+    const limit = body.limit || 400;
 
     // Default to events from 7 days ago to 90 days in the future
     const minStartTime = body.min_start_time || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -215,12 +215,6 @@ Deno.serve(async (req) => {
         // Check for more pages
         cursor = data.pagination?.next_page_token || null;
         if (!cursor || events.length === 0) {
-          break;
-        }
-
-        // Safety limit: 1,000 events
-        if (allEvents.length >= 1000) {
-          logger.warn('Reached safety limit of 1,000 events');
           break;
         }
       } catch (error) {

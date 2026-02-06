@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const limit = body.limit || 100;
+    const limit = body.limit || 400;
     const statusFilter = body.status || 'active'; // Default to active subscriptions
     
     // Default: 7 days back to 7 days forward
@@ -177,12 +177,6 @@ Deno.serve(async (req) => {
         const pagination = data.pagination;
         cursor = pagination?.nextCursor || pagination?.next_cursor || null;
         hasMore = (pagination?.hasMore || pagination?.has_more || false) && cursor !== null;
-
-        // Safety limit to prevent infinite loops
-        if (allSubscriptions.length >= 10000) {
-          logger.warn('Reached safety limit of 10000 subscriptions');
-          break;
-        }
       } catch (error) {
         logger.error('Failed to fetch subscriptions', error);
         break;

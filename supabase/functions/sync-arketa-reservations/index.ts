@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     
     const startDate = body.start_date || defaultStart.toISOString().split('T')[0];
     const endDate = body.end_date || defaultEnd.toISOString().split('T')[0];
-    const limit = body.limit || 500;
+    const limit = body.limit || 400;
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);
 

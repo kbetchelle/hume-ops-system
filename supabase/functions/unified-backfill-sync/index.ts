@@ -32,8 +32,9 @@ import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { getArketaToken, getArketaHeaders, ARKETA_URLS } from "../_shared/arketaAuth.ts";
 import { fetchWithRetry } from "../_shared/retry.ts";
 import { createSyncLogger } from "../_shared/logger.ts";
+import { getSuggestedDelayMs } from "../_shared/syncErrorLearning.ts";
 
-const BATCH_SIZE = 100; // Matching working arketa-gym-flow implementation
+const BATCH_SIZE = 400;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -98,7 +99,7 @@ const BACKFILL_CONFIGS: Record<string, BackfillConfig> = {
     paginationCursorField: 'nextStartAfterId', // Response uses nextStartAfterId, NOT nextCursor
     primaryIdField: 'client_id', // API returns client_id as primary ID
     responseDataPaths: ['items', 'data', 'clients'], // items is primary in working implementation
-    supportsLimit: true, // API supports limit parameter (uses 100 in working impl)
+    supportsLimit: true,
   },
   'arketa-classes': {
     endpointPath: '/classes',
@@ -387,9 +388,10 @@ serve(async (req) => {
       updateData.sync_phase = 'complete';
       logger.info('Job complete - no more records');
     } else {
-      // Schedule next batch with a small delay for rate limiting
-      updateData.retry_scheduled_at = new Date(Date.now() + 2000).toISOString();
-      logger.info('Scheduling next batch', { scheduledAt: updateData.retry_scheduled_at });
+      // Schedule next batch; learn from errors (longer delay on rate limit / errors)
+      const delayMs = getSuggestedDelayMs(result.errors || []);
+      updateData.retry_scheduled_at = new Date(Date.now() + delayMs).toISOString();
+      logger.info('Scheduling next batch', { scheduledAt: updateData.retry_scheduled_at, delayMs, errorCount: result.errors?.length ?? 0 });
     }
 
     // CRITICAL: Add error handling to job status update

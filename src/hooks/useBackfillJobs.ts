@@ -47,18 +47,44 @@ function getBackfillInvokeTarget(job: { api_source: string; data_type: string })
 }
 
 /** Build a user-facing message from an edge function invoke error (e.g. 404 with error_message in body). */
-async function getInvokeErrorMessage(error: unknown): Promise<string> {
+async function getInvokeErrorMessage(
+  error: unknown,
+  /** Function name used for deploy hint when 404 (function not found). */
+  functionName?: string
+): Promise<string> {
   const fallback = error instanceof Error ? error.message : String(error);
   try {
     const ctx = (error as { context?: Response })?.context;
-    if (ctx && typeof (ctx as Response).json === "function") {
-      const body = await (ctx as Response).json().catch(() => null);
-      if (body && typeof body === "object") {
-        const parts = [body.error ?? "Request failed"];
-        if (body.error_message) parts.push(body.error_message);
-        if (body.job_id) parts.push(`(job_id: ${body.job_id})`);
-        return parts.join(" — ");
-      }
+    if (!ctx || typeof (ctx as Response).json !== "function") return fallback;
+
+    const res = ctx as Response;
+    const status = res.status;
+
+    let body: Record<string, unknown> | null = null;
+    try {
+      const parsed = await res.json().catch(() => null);
+      if (parsed && typeof parsed === "object") body = parsed as Record<string, unknown>;
+    } catch {
+      // ignore
+    }
+
+    if (body?.error != null || body?.error_message != null) {
+      const parts = [String(body.error ?? "Request failed")];
+      if (body.error_message) parts.push(String(body.error_message));
+      if (body.job_id) parts.push(`(job_id: ${body.job_id})`);
+      return parts.join(" — ");
+    }
+
+    if (status === 404 && functionName) {
+      const deployHint =
+        functionName === "backfill-historical"
+          ? "Deploy: supabase functions deploy backfill-historical sync-from-staging"
+          : `Deploy: supabase functions deploy ${functionName}`;
+      return `Edge function "${functionName}" not found (404). ${deployHint}`;
+    }
+
+    if (status === 404) {
+      return `Not found (404). For Arketa reservations backfill, deploy: supabase functions deploy backfill-historical sync-from-staging`;
     }
   } catch {
     // ignore
@@ -269,7 +295,7 @@ export function useBackfillJobs() {
       const { data, error } = await supabase.functions.invoke(target, { body });
 
       if (error) {
-        const message = await getInvokeErrorMessage(error);
+        const message = await getInvokeErrorMessage(error, target);
         throw new Error(message);
       }
       return { ...data, job_id: newJob.id };

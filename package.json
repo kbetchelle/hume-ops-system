@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "supabase:deploy-backfill": "supabase functions deploy backfill-historical sync-from-staging"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

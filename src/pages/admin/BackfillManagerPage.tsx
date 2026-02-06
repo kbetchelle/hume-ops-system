@@ -732,24 +732,18 @@ export default function BackfillManagerPage() {
 
   const dataTypes = DATA_TYPES_BY_SOURCE[apiSource];
 
-  // Check if data type requires date filtering
-  const requiresDateFiltering = !["clients", "instructors"].includes(dataType);
+  // All Arketa types (reservations, subscriptions, payments) require date filtering; Sling shifts do too
+  const requiresDateFiltering = true;
 
   const handleCreateJob = () => {
     if (!dataType) return;
-    
-    // For data types that don't use date filtering, use today as default dates
-    const today = new Date().toISOString().split('T')[0];
-    const effectiveStartDate = requiresDateFiltering ? startDate : today;
-    const effectiveEndDate = requiresDateFiltering ? endDate : today;
-    
-    if (requiresDateFiltering && (!startDate || !endDate)) return;
+    if (!startDate || !endDate) return;
     
     createJob.mutate({
       api_source: apiSource,
       data_type: dataType,
-      start_date: effectiveStartDate,
-      end_date: effectiveEndDate,
+      start_date: startDate,
+      end_date: endDate,
     });
     // Reset form
     setDataType("");
@@ -762,10 +756,7 @@ export default function BackfillManagerPage() {
     const days = Math.ceil(
       (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
-    // Rough estimates - clients is not date-based
-    if (dataType === "clients") return "All clients (cursor-based)";
-    if (dataType === "instructors") return "All instructors";
-    const avgPerDay = dataType === "classes" ? 20 : dataType === "reservations" ? 100 : 50;
+    const avgPerDay = dataType === "reservations" ? 100 : dataType === "subscriptions" ? 20 : 50;
     return days * avgPerDay;
   };
 
@@ -773,12 +764,14 @@ export default function BackfillManagerPage() {
     <DashboardLayout title="Backfill & Import Manager">
       <div className="space-y-8">
         {/* Create New Backfill */}
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle>Create New Backfill</CardTitle>
+        <Card className="border-border shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Create New Backfill
+            </CardTitle>
             <CardDescription>
-              Fetch and sync historical data from external APIs (Arketa, Sling). 
-              Supports: Clients, Subscriptions, Payments, Instructors, and Staff Shifts.
+              Fetch and sync historical data from external APIs. Arketa: Reservations, Subscriptions, Payments. Sling: Shifts.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -850,14 +843,11 @@ export default function BackfillManagerPage() {
               </div>
             </div>
 
-            {dataType && (requiresDateFiltering ? (startDate && endDate) : true) && (
+            {dataType && startDate && endDate && (
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 <span>
-                  {!requiresDateFiltering
-                    ? "Will sync all records (cursor-based pagination, 400 records per batch)"
-                    : `Estimated ~${typeof estimatedRecords() === 'number' ? estimatedRecords()?.toLocaleString() : estimatedRecords()} records`
-                  }
+                  Estimated ~{typeof estimatedRecords() === "number" ? estimatedRecords()?.toLocaleString() : estimatedRecords()} records
                 </span>
               </div>
             )}
@@ -865,15 +855,15 @@ export default function BackfillManagerPage() {
         </Card>
 
         {/* CSV Import Section */}
-        <Card className="border-border">
-          <CardHeader>
+        <Card className="border-border shadow-sm">
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
               Import from CSV
             </CardTitle>
             <CardDescription>
               Import data from CSV files with flexible field mapping and table selection. 
-              Supports all Arketa data types (Clients, Subscriptions, Payments, Instructors) and custom tables.
+              Supports Arketa Reservations, Subscriptions, Payments and custom tables.
             </CardDescription>
           </CardHeader>
           <CardContent>

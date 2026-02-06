@@ -43,14 +43,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Available tables for import
+// Available tables for import (Arketa: reservations, subscriptions, payments only; Sling: shifts)
 const AVAILABLE_TABLES = [
-  { value: "arketa_clients", label: "Arketa Clients", uniqueKey: "external_id", csvUniqueKey: "client_id" },
-  { value: "arketa_subscriptions", label: "Arketa Subscriptions", uniqueKey: "external_id", csvUniqueKey: "subscription_id" },
-  { value: "arketa_classes", label: "Arketa Classes", uniqueKey: "external_id", csvUniqueKey: "class_id" },
   { value: "arketa_reservations", label: "Arketa Reservations", uniqueKey: "reservation_id", csvUniqueKey: "reservation_id" },
+  { value: "arketa_subscriptions", label: "Arketa Subscriptions", uniqueKey: "external_id", csvUniqueKey: "subscription_id" },
   { value: "arketa_payments", label: "Arketa Payments", uniqueKey: "external_id", csvUniqueKey: "payment_id" },
-  { value: "arketa_instructors", label: "Arketa Instructors", uniqueKey: "external_id", csvUniqueKey: "instructor_id" },
   { value: "staff_shifts", label: "Staff Shifts", uniqueKey: "sling_shift_id", csvUniqueKey: "shift_id" },
 ] as const;
 

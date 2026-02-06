@@ -358,13 +358,12 @@ export function useBackfillJobs() {
   };
 }
 
-// Data type options by API source
+// Data type options by API source (Arketa: reservations, subscriptions, payments only)
 export const DATA_TYPES_BY_SOURCE = {
   arketa: [
-    { value: "clients", label: "Clients" },
+    { value: "reservations", label: "Reservations" },
     { value: "subscriptions", label: "Subscriptions" },
     { value: "payments", label: "Payments" },
-    { value: "instructors", label: "Instructors" },
   ],
   sling: [
     { value: "shifts", label: "Shifts" },

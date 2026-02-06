@@ -71,7 +71,7 @@ const endpointTypeMap: Record<string, string> = {
 };
 
 // Sync Arketa classes for a single date with pagination
-async function syncArketaClasses(supabase: any, date: string): Promise<number> {
+async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
@@ -138,8 +138,8 @@ async function syncArketaClasses(supabase: any, date: string): Promise<number> {
   return recordCount;
 }
 
-// Sync Arketa reservations for a single date with pagination
-async function syncArketaReservations(supabase: any, date: string): Promise<number> {
+// Sync Arketa reservations for a single date with pagination; writes to staging (then sync-from-staging -> history)
+async function syncArketaReservations(supabase: any, date: string, syncBatchId?: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
@@ -176,35 +176,63 @@ async function syncArketaReservations(supabase: any, date: string): Promise<numb
     nextCursor = responseData.pagination?.nextCursor;
   } while (nextCursor);
 
+  if (!allReservations.length) return 0;
+
+  const checkedIn = (res: any) => res.checked_in === true || ['checked_in', 'ATTENDED', 'attended', 'completed', 'COMPLETED'].includes(res.status);
+  const reservationId = (res: any) => res.id ?? res.booking_id ?? res.purchase_id ?? `${res.class_id ?? res.classId}-${res.client_id ?? res.client?.id}`;
+
+  if (syncBatchId) {
+    const classId = (res: any) => String(res.class_id ?? res.classId ?? '');
+    const stagingRows = allReservations.map((res) => ({
+      reservation_id: String(reservationId(res)),
+      class_id: classId(res),
+      arketa_class_id: classId(res),
+      client_id: res.client_id ?? res.client?.id ? String(res.client_id ?? res.client?.id) : null,
+      purchase_id: res.purchase_id ?? res.purchaseId ?? null,
+      reservation_type: res.reservation_type ?? res.type ?? null,
+      class_name: res.class_name ?? res.className ?? null,
+      class_date: date,
+      status: res.status ?? 'booked',
+      checked_in: checkedIn(res),
+      checked_in_at: res.checked_in_at ?? res.checkedInAt ?? null,
+      experience_type: res.experience_type ?? null,
+      late_cancel: res.late_cancel ?? res.lateCancel ?? false,
+      gross_amount_paid: res.gross_amount_paid ?? res.grossAmountPaid ?? null,
+      net_amount_paid: res.net_amount_paid ?? res.netAmountPaid ?? null,
+      raw_data: res,
+      sync_batch_id: syncBatchId,
+    }));
+    const { error } = await supabase.from('arketa_reservations_staging').insert(stagingRows);
+    if (error) throw new Error(`Staging insert failed: ${error.message}`);
+    return stagingRows.length;
+  }
+
   let recordCount = 0;
   for (const res of allReservations) {
     const clientName = res.client?.firstName && res.client?.lastName 
       ? `${res.client.firstName} ${res.client.lastName}`.trim()
       : res.client_name || null;
-
     const { error } = await supabase
       .from('arketa_reservations')
       .upsert({
-        external_id: String(res.id),
+        external_id: String(reservationId(res)),
         class_id: String(res.class_id || res.classId),
         client_id: res.client_id || res.client?.id ? String(res.client_id || res.client?.id) : null,
         client_name: clientName,
         client_email: res.client?.email || res.client_email || null,
         status: res.status || 'booked',
-        checked_in: res.checked_in ?? res.checkedIn ?? false,
+        checked_in: checkedIn(res),
         checked_in_at: res.checked_in_at || res.checkedInAt || null,
         raw_data: res,
         synced_at: new Date().toISOString(),
       }, { onConflict: 'external_id' });
-
     if (!error) recordCount++;
   }
-
   return recordCount;
 }
 
-// Sync Arketa payments for a single date with pagination
-async function syncArketaPayments(supabase: any, date: string): Promise<number> {
+// Sync Arketa payments for a single date with pagination; writes to staging (then sync-from-staging -> history)
+async function syncArketaPayments(supabase: any, date: string, syncBatchId?: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
@@ -241,6 +269,38 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
     nextCursor = responseData.pagination?.nextCursor;
   } while (nextCursor);
 
+  if (!allPayments.length) return 0;
+
+  if (syncBatchId) {
+    const stagingRows = allPayments.map((p) => ({
+      source_endpoint: 'purchases',
+      payment_id: String(p.id ?? p.payment_id),
+      arketa_payment_id: String(p.id ?? p.payment_id),
+      client_id: p.client_id ?? p.clientId ?? p.client?.id ? String(p.client_id ?? p.clientId ?? p.client?.id) : null,
+      amount: p.amount ?? p.price ?? p.total ?? 0,
+      status: p.status ?? 'ACTIVE',
+      description: p.description ?? p.name ?? null,
+      payment_type: p.payment_type ?? p.type ?? null,
+      category: p.category ?? null,
+      offering_id: p.offering_id ?? p.offeringId ?? null,
+      start_date: p.start_date ?? p.startDate ?? null,
+      end_date: p.end_date ?? p.endDate ?? null,
+      remaining_uses: p.remaining_uses ?? p.remainingUses ?? null,
+      currency: p.currency ?? null,
+      total_refunded: p.total_refunded ?? p.refunded ?? null,
+      net_sales: p.net_sales ?? p.net_amount ?? null,
+      transaction_fees: p.transaction_fees ?? p.fees ?? null,
+      stripe_fees: p.stripe_fees ?? null,
+      tax: p.tax ?? p.tax_amount ?? null,
+      updated_at: p.updated_at ?? p.updatedAt ?? null,
+      synced_at: new Date().toISOString(),
+      sync_batch_id: syncBatchId,
+    }));
+    const { error } = await supabase.from('arketa_payments_staging').insert(stagingRows);
+    if (error) throw new Error(`Payments staging insert failed: ${error.message}`);
+    return stagingRows.length;
+  }
+
   let recordCount = 0;
   for (const payment of allPayments) {
     const { error } = await supabase
@@ -256,10 +316,8 @@ async function syncArketaPayments(supabase: any, date: string): Promise<number> 
         raw_data: payment,
         synced_at: new Date().toISOString(),
       }, { onConflict: 'external_id' });
-
     if (!error) recordCount++;
   }
-
   return recordCount;
 }
 
@@ -511,7 +569,7 @@ async function promoteClientsStagingToProduction(
 }
 
 // Sync Sling shifts for a single date
-async function syncSlingShifts(supabase: any, date: string): Promise<number> {
+async function syncSlingShifts(supabase: any, date: string, _syncBatchId?: string): Promise<number> {
   const SLING_AUTH_TOKEN = Deno.env.get('SLING_AUTH_TOKEN');
   const SLING_ORG_ID = Deno.env.get('SLING_ORG_ID');
   const SLING_BASE_URL = 'https://api.getsling.com/v1';
@@ -792,7 +850,7 @@ Deno.serve(async (req) => {
     console.log(`[Backfill] Rate limit: ${rateLimitPerMin}/min, delay: ${delayMs}ms`);
 
     // Determine which sync function to use
-    let syncFunction: (supabase: any, date: string) => Promise<number>;
+    let syncFunction: (supabase: any, date: string, syncBatchId?: string) => Promise<number>;
     
     switch (`${job.api_source}_${job.data_type}`) {
       case 'arketa_classes':
@@ -991,6 +1049,7 @@ Deno.serve(async (req) => {
 
     // Process day by day for other data types (max 5 dates per invocation to avoid timeout)
     const DATES_PER_INVOCATION = 5;
+    const stagingSyncBatchId = (job.data_type === 'reservations' || job.data_type === 'payments') ? generateUUID() : undefined;
     let currentDate = job.processing_date || effectiveStart;
     let daysProcessed = job.days_processed;
     let recordsProcessed = job.records_processed;
@@ -1027,7 +1086,7 @@ Deno.serve(async (req) => {
         
         // Wrap syncFunction with retry logic (2 attempts, 2s base delay)
         const { result: records, attempts } = await withRetry(
-          () => syncFunction(supabase, currentDate),
+          () => syncFunction(supabase, currentDate, stagingSyncBatchId),
           { maxAttempts: 2, baseDelayMs: 2000, maxDelayMs: 10000, timeoutMs: 120000 },
           `sync ${currentDate}`
         );
@@ -1072,6 +1131,30 @@ Deno.serve(async (req) => {
       // Rate limit delay
       if (currentDate <= effectiveEnd && datesProcessedThisInvocation < DATES_PER_INVOCATION) {
         await delay(delayMs);
+      }
+    }
+
+    // Transfer staging -> history when using staging (reservations/payments)
+    if (stagingSyncBatchId && (job.data_type === 'reservations' || job.data_type === 'payments')) {
+      const syncFromStagingApi = job.data_type === 'reservations' ? 'arketa_reservations' : 'arketa_payments';
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const syncFromStagingUrl = `${supabaseUrl}/functions/v1/sync-from-staging`;
+      try {
+        await fetch(syncFromStagingUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            api: syncFromStagingApi,
+            sync_batch_id: stagingSyncBatchId,
+            clear_staging: true,
+          }),
+        });
+      } catch (fetchErr) {
+        logger.warn('sync-from-staging failed', fetchErr);
       }
     }
 

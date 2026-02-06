@@ -79,7 +79,9 @@ async function getInvokeErrorMessage(
       const deployHint =
         functionName === "backfill-historical"
           ? "Deploy: supabase functions deploy backfill-historical sync-from-staging"
-          : `Deploy: supabase functions deploy ${functionName}`;
+          : functionName === "unified-backfill-sync"
+            ? "Deploy: supabase functions deploy unified-backfill-sync"
+            : `Deploy: supabase functions deploy ${functionName}`;
       return `Edge function "${functionName}" not found (404). ${deployHint}`;
     }
 

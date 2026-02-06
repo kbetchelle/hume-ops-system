@@ -220,7 +220,8 @@ const ActiveJobCard = forwardRef<HTMLDivElement, {
   };
 
   // Per-date jobs (backfill-historical) use total_days and don't set sync_phase; batch jobs use total_records_expected/sync_phase
-  const isDateBasedJob = job.total_days > 0 && !['fetching_api', 'staging', 'transforming', 'upserting', 'clearing_staging', 'batch_complete'].includes(job.sync_phase ?? '');
+  const batchSyncPhases = ['idle', 'fetching_api', 'staging', 'transforming', 'upserting', 'clearing_staging', 'batch_complete', 'complete'];
+  const isDateBasedJob = job.total_days > 0 && !batchSyncPhases.includes(job.sync_phase ?? '');
   const hasKnownTotal = Boolean(job.total_records_expected && job.total_records_expected > 0);
   const progress = isDateBasedJob
     ? (job.total_days > 0 ? Math.min((job.days_processed / job.total_days) * 100, 100) : null)

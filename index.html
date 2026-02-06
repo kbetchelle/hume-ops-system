@@ -15,8 +15,15 @@
     <meta name="apple-mobile-web-app-title" content="HUME Ops" />
     <meta name="format-detection" content="telephone=no" />
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- PWA Manifest (omit on Lovable host to avoid CORS when /manifest.json redirects to auth-bridge) -->
+    <script>
+      if (!window.location.origin.includes('lovableproject.com')) {
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/manifest.json';
+        document.head.appendChild(link);
+      }
+    </script>
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />

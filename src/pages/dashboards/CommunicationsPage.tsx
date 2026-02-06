@@ -74,12 +74,6 @@ export default function CommunicationsPage() {
                 : "Stay updated with the latest announcements"}
             </p>
           </div>
-          {isManager && (
-            <Button onClick={() => setAnnouncementDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Announcement
-            </Button>
-          )}
         </div>
 
         {announcementsLoading ? (

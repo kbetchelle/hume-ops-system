@@ -1185,7 +1185,7 @@ Deno.serve(async (req) => {
           }),
         });
       } catch (fetchErr) {
-        logger.warn('sync-from-staging failed', fetchErr);
+        logger.warn('sync-from-staging failed', fetchErr instanceof Error ? { message: fetchErr.message } : undefined);
       }
     }
 

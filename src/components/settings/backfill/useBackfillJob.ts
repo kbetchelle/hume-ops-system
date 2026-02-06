@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { toast } from "sonner";
-import { SyncProgress, BackfillJobType } from "./types";
+import { SyncProgress, SyncResult, BackfillJobType } from "./types";
 
 export function useBackfillJob(jobType: BackfillJobType) {
   const queryClient = useQueryClient();
@@ -69,13 +69,15 @@ export function useBackfillJob(jobType: BackfillJobType) {
     ? {
         isRunning: activeJob.status === "running" || activeJob.status === "pending",
         currentDate: activeJob.processing_date,
-        totalDates: activeJob.total_days || 0,
-        completedDates: activeJob.days_processed || 0,
-        totalRecords: activeJob.records_processed || 0,
-        results: [],
+        totalDates: activeJob.total_days || activeJob.total_dates || 0,
+        completedDates: activeJob.days_processed || activeJob.completed_dates || 0,
+        totalRecords: activeJob.total_records || activeJob.records_processed || 0,
+        results: (activeJob.results as unknown as SyncResult[] | null) || [],
         startTime: activeJob.started_at ? new Date(activeJob.started_at).getTime() : null,
       }
     : { isRunning: false, currentDate: null, totalDates: 0, completedDates: 0, totalRecords: 0, results: [], startTime: null };
+
+  const totalNewRecords: number = activeJob?.total_new_records || 0;
 
   const handleSync = useCallback(async () => {
     const dates = isRange ? eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) }) : [parseISO(startDate)];
@@ -123,5 +125,5 @@ export function useBackfillJob(jobType: BackfillJobType) {
   const elapsedMs = syncProgress.startTime ? Date.now() - syncProgress.startTime : 0;
   const elapsedText = elapsedMs > 0 ? `${Math.floor(elapsedMs / 1000)}s` : "";
 
-  return { startDate, setStartDate, endDate, setEndDate, isRange, setIsRange, dayCount, syncProgress, activeJobId, handleSync, handleCancelJob, elapsedText };
+  return { startDate, setStartDate, endDate, setEndDate, isRange, setIsRange, dayCount, syncProgress, activeJobId, handleSync, handleCancelJob, elapsedText, totalNewRecords };
 }

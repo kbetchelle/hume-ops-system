@@ -114,7 +114,7 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     description: "Syncs class reservations/bookings including check-in status and client details.",
     edgeFunction: "sync-arketa-reservations",
     apiEndpoint: "/partnerApi/v0/{partnerId}/reservations",
-    pagination: "Cursor-based (max 100 pages safety limit)",
+    pagination: "Cursor-based (400 records per page)",
     dateRange: {
       ahead: "Same day (configurable via end_date)",
       behind: "Same day (configurable via start_date)",
@@ -124,8 +124,7 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     stagingTable: "arketa_reservations_staging",
     limitations: [
       "Default syncs today only - requires date params for historical",
-      "Max 100 pages per sync to prevent infinite loops",
-      "Limit of 500 records per page",
+      "400 records per page per sync",
     ],
     fieldsMapped: [
       { apiField: "id", dbField: "booking_id", nullable: false },
@@ -162,13 +161,13 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     dateRange: {
       ahead: "Same day",
       behind: "Same day",
-      default: "Today only (limit 500)",
+      default: "Today only (limit 400)",
     },
     targetTable: "arketa_payments",
     stagingTable: "arketa_payments_staging",
     limitations: [
       "Fetches from TWO endpoints (purchases + payments) and merges",
-      "Default 500 record limit per endpoint",
+      "400 records per page per endpoint",
       "No cursor pagination - may miss records on high-volume days",
     ],
     fieldsMapped: [

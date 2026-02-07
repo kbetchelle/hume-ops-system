@@ -235,7 +235,6 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
     const stagingRows = allReservations.map((res) => ({
       reservation_id: String(reservationId(res)),
       class_id: classId(res),
-      arketa_class_id: classId(res),
       client_id: res.client_id ?? res.client?.id ? String(res.client_id ?? res.client?.id) : null,
       purchase_id: res.purchase_id ?? res.purchaseId ?? null,
       reservation_type: res.reservation_type ?? res.type ?? null,
@@ -257,24 +256,28 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
   }
 
   let recordCount = 0;
+  const classId = (res: any) => String(res.class_id ?? res.classId ?? '');
   for (const res of allReservations) {
-    const clientName = res.client?.firstName && res.client?.lastName 
-      ? `${res.client.firstName} ${res.client.lastName}`.trim()
-      : res.client_name || null;
     const { error } = await supabase
       .from('arketa_reservations')
       .upsert({
-        external_id: String(reservationId(res)),
-        class_id: String(res.class_id || res.classId),
+        reservation_id: String(reservationId(res)),
+        class_id: classId(res),
         client_id: res.client_id || res.client?.id ? String(res.client_id || res.client?.id) : null,
-        client_name: clientName,
-        client_email: res.client?.email || res.client_email || null,
+        purchase_id: res.purchase_id ?? res.purchaseId ?? null,
+        reservation_type: res.reservation_type ?? res.type ?? 'class',
+        class_name: res.class_name ?? res.className ?? null,
+        class_date: date,
         status: res.status || 'booked',
         checked_in: checkedIn(res),
         checked_in_at: res.checked_in_at || res.checkedInAt || null,
+        experience_type: res.experience_type ?? null,
+        late_cancel: res.late_cancel ?? res.lateCancel ?? false,
+        gross_amount_paid: res.gross_amount_paid ?? res.grossAmountPaid ?? null,
+        net_amount_paid: res.net_amount_paid ?? res.netAmountPaid ?? null,
         raw_data: res,
-        synced_at: new Date().toISOString(),
-      }, { onConflict: 'external_id' });
+        sync_batch_id: null,
+      }, { onConflict: 'reservation_id,class_id' });
     if (!error) recordCount++;
   }
   return recordCount;

@@ -21,15 +21,22 @@ export interface ArketaClass {
 
 export interface ArketaReservation {
   id: string;
-  booking_id: string;
-  class_id: string;
+  reservation_id: string | null;
+  class_id: string | null;
   client_id: string | null;
-  client_name: string | null;
-  client_email: string | null;
+  purchase_id: string | null;
+  reservation_type: string | null;
+  class_name: string | null;
+  class_date: string | null;
   status: string | null;
   checked_in: boolean | null;
   checked_in_at: string | null;
-  synced_at: string | null;
+  experience_type: string | null;
+  late_cancel: boolean | null;
+  gross_amount_paid: number | null;
+  net_amount_paid: number | null;
+  raw_data: unknown;
+  sync_batch_id: string | null;
 }
 
 export interface ArketaPayment {
@@ -87,7 +94,7 @@ export function useClassReservations(classId: string) {
         .from("arketa_reservations")
         .select("*")
         .eq("class_id", classId)
-        .order("synced_at", { ascending: false });
+        .order("checked_in_at", { ascending: false });
 
       if (error) throw error;
       return data as ArketaReservation[];

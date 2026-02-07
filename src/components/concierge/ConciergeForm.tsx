@@ -213,32 +213,50 @@ export function ConciergeForm() {
       const shiftDate = new Date(reportDate);
       let startHour = shiftType === 'AM' ? 6 : 14;
       let endHour = shiftType === 'AM' ? 14 : 22;
-      
+
       // Check if weekend (Saturday = 6, Sunday = 0)
       const isWeekend = shiftDate.getDay() === 0 || shiftDate.getDay() === 6;
       if (isWeekend) {
         startHour = shiftType === 'AM' ? 6 : 13;
         endHour = shiftType === 'AM' ? 13 : 19;
       }
-      
+
       const shiftStart = new Date(shiftDate);
       shiftStart.setHours(startHour, 0, 0, 0);
-      
       const shiftEnd = new Date(shiftDate);
       shiftEnd.setHours(endHour, 0, 0, 0);
-      
-      const { data, error } = await supabase
+
+      // Reservations only have class_date; use arketa_classes for time range and ordering
+      const { data: classes, error: classError } = await supabase
+        .from('arketa_classes')
+        .select('external_id, start_time')
+        .gte('start_time', shiftStart.toISOString())
+        .lte('start_time', shiftEnd.toISOString());
+
+      if (classError) throw classError;
+      const classIds = (classes || []).map((c) => c.external_id);
+      if (classIds.length === 0) {
+        setArketaCheckIns([]);
+        return;
+      }
+
+      const { data: reservations, error } = await supabase
         .from('arketa_reservations')
         .select('*')
-        .eq('status', 'checked_in')
-        .gte('class_time', shiftStart.toISOString())
-        .lte('class_time', shiftEnd.toISOString())
-        .order('class_time', { ascending: true });
-      
+        .eq('checked_in', true)
+        .eq('class_date', reportDate)
+        .in('class_id', classIds);
+
       if (error) throw error;
-      
-      setArketaCheckIns(data || []);
-      console.log('[ConciergeForm] Loaded', data?.length || 0, 'check-ins from Arketa');
+
+      const classStartByExternalId = new Map((classes || []).map((c) => [c.external_id, c.start_time]));
+      const sorted = (reservations || []).sort((a, b) => {
+        const tA = classStartByExternalId.get(a.class_id) || '';
+        const tB = classStartByExternalId.get(b.class_id) || '';
+        return tA.localeCompare(tB);
+      });
+      setArketaCheckIns(sorted);
+      console.log('[ConciergeForm] Loaded', sorted.length, 'check-ins from Arketa');
     } catch (error) {
       console.error('[ConciergeForm] Failed to fetch Arketa check-ins:', error);
     }

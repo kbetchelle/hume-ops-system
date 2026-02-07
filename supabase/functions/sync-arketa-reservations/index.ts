@@ -228,7 +228,6 @@ Deno.serve(async (req) => {
           checked_in_at: res.checkedInAt || res.checked_in_at || null,
           experience_type: res.experience_type ?? (res as { experienceType?: string }).experienceType ?? null,
           late_cancel: res.late_cancel ?? (res as { lateCancel?: boolean }).lateCancel ?? false,
-          created_at: res.created_at ?? (res as { createdAt?: string }).createdAt ?? null,
           gross_amount_paid: res.gross_amount_paid ?? (res as { grossAmountPaid?: number }).grossAmountPaid ?? (res as { amount?: number }).amount ?? 0,
           net_amount_paid: res.net_amount_paid ?? (res as { netAmountPaid?: number }).netAmountPaid ?? (res as { amount?: number }).amount ?? 0,
           class_date: resWithClass.class_date ?? (res as { class_date?: string }).class_date ?? null,

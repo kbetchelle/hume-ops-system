@@ -87,15 +87,15 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
       // Get class IDs to fetch reservations
       const classIds = arketaClasses?.map(c => c.external_id) || [];
 
-      // Fetch Arketa reservations for today's classes
+      // Fetch Arketa reservations for today's classes (schema: id + 16 fields only; no client_name)
       let arketaReservations: Array<{
         class_id: string;
+        client_id: string | null;
         checked_in: boolean;
         status: string | null;
-        client_name: string | null;
         checked_in_at: string | null;
       }> = [];
-      
+
       if (classIds.length > 0) {
         const { data: reservations, error: resError } = await supabase
           .from("arketa_reservations")
@@ -106,6 +106,27 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
           console.error("Error fetching arketa reservations:", resError);
         } else {
           arketaReservations = reservations || [];
+        }
+      }
+
+      // Resolve client names from arketa_clients. reservation.client_id is the Arketa client id
+      // and matches arketa_clients.external_id when synced from the API. If lookup fails (e.g.
+      // different ID scheme from CSV/backfill), we never show the raw id to avoid poor UX.
+      const checkedInClientIds = [...new Set(
+        arketaReservations
+          .filter(r => r.checked_in && r.checked_in_at && r.client_id)
+          .map(r => r.client_id!)
+      )];
+      let clientNameByReservationClientId: Record<string, string> = {};
+      if (checkedInClientIds.length > 0) {
+        const { data: clients } = await supabase
+          .from("arketa_clients")
+          .select("external_id, client_name")
+          .in("external_id", checkedInClientIds);
+        if (clients) {
+          clientNameByReservationClientId = Object.fromEntries(
+            clients.map(c => [c.external_id, c.client_name || "Unknown Member"])
+          );
         }
       }
 
@@ -191,13 +212,14 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
         shiftEnd: shift.shift_end,
       }));
 
-      // Build recent check-ins from reservations and member_checkins
+      // Build recent check-ins from reservations and member_checkins (member name from arketa_clients).
+      // When name lookup fails we show "Unknown Member" only, never the raw client_id.
       const recentCheckIns = arketaReservations
         .filter(r => r.checked_in && r.checked_in_at)
         .sort((a, b) => new Date(b.checked_in_at!).getTime() - new Date(a.checked_in_at!).getTime())
         .slice(0, 10)
         .map(r => ({
-          memberName: r.client_name || "Unknown Member",
+          memberName: (r.client_id && clientNameByReservationClientId[r.client_id]) || "Unknown Member",
           time: r.checked_in_at!,
           type: "class",
         }));

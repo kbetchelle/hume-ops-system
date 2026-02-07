@@ -99,7 +99,8 @@ async function transferReservations(
   let recordsUpdated = 0;
 
   try {
-    let query = supabase.from("arketa_reservations_staging").select("*");
+    const stagingSelect = "id, reservation_id, class_id, client_id, purchase_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, experience_type, late_cancel, gross_amount_paid, net_amount_paid, raw_data, sync_batch_id";
+    let query = supabase.from("arketa_reservations_staging").select(stagingSelect);
     if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
     const { data: rows, error: fetchError } = await query;
 
@@ -124,12 +125,10 @@ async function transferReservations(
       checked_in_at: r.checked_in_at ?? null,
       experience_type: r.experience_type ?? null,
       late_cancel: r.late_cancel ?? false,
-      created_at: r.created_at ?? null,
       gross_amount_paid: r.gross_amount_paid ?? null,
       net_amount_paid: r.net_amount_paid ?? null,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
-      synced_at: new Date().toISOString(),
     })).filter((r) => r.reservation_id && r.class_id);
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {

@@ -104,7 +104,9 @@ async function fetchOrdersPage(
     throw new Error(`Toast orders fetch failed: ${response.status} - ${errorText}`);
   }
   const ordersData = await response.json();
-  const rawOrders = Array.isArray(ordersData) ? ordersData : ordersData?.orders;
+  const rawOrders = Array.isArray(ordersData)
+    ? ordersData
+    : (ordersData?.orders ?? ordersData?.data);
   const orders = Array.isArray(rawOrders) ? rawOrders : [];
   const hasMore = orders.length >= PAGE_SIZE;
   logger.info(`Fetched page ${page} for ${businessDate}: ${orders.length} orders (after ${attempts} attempt(s))`);
@@ -131,16 +133,16 @@ function aggregateOrdersForDate(orders: Record<string, unknown>[], businessDate:
   };
 }
 
-/** List of YYYY-MM-DD dates from startDate through endDate (inclusive), max 31 days. */
+/** Iterate calendar days in UTC so the list is correct regardless of server timezone (avoid skipping or duplicating days). Max 31 days. */
 function dateRangeDays(startDate: string, endDate: string): string[] {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(startDate + 'T00:00:00.000Z');
+  const end = new Date(endDate + 'T00:00:00.000Z');
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
   const out: string[] = [];
   const current = new Date(start);
   while (current <= end && out.length < 31) {
-    out.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
+    out.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   return out;
 }
@@ -286,8 +288,8 @@ Deno.serve(async (req) => {
       try {
         const stagingRow = {
           business_date: dayData.businessDate,
-          net_sales: dayData.netSales || 0,
-          gross_sales: dayData.grossSales || 0,
+          net_sales: dayData.netSales ?? 0,
+          gross_sales: dayData.grossSales ?? 0,
           cafe_sales: dayData.cafeSales ?? dayData.netSales ?? 0,
           raw_data: dayData,
           sync_batch_id: batchId,
@@ -346,7 +348,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        totalNetSales += dayData.netSales || 0;
+        totalNetSales += dayData.netSales ?? 0;
         syncedDates.push(dayData.businessDate);
       } catch (error) {
         logger.error(`Error syncing ${dayData.businessDate}`, error);

@@ -86,7 +86,9 @@ async function fetchOrdersPage(
   }
 
   const ordersData = await response.json();
-  const rawOrders = Array.isArray(ordersData) ? ordersData : ordersData?.orders;
+  const rawOrders = Array.isArray(ordersData)
+    ? ordersData
+    : (ordersData?.orders ?? ordersData?.data);
   const orders = Array.isArray(rawOrders) ? rawOrders : [];
   const hasMore = orders.length >= PAGE_SIZE;
   logger.info(`Fetched page ${page} for ${businessDate}: ${orders.length} orders`);
@@ -115,15 +117,16 @@ function aggregateOrdersByDate(orders: Record<string, unknown>[], businessDate: 
 
 const MAX_DAYS_PER_RUN = 31;
 
+/** Iterate calendar days in UTC so the list is correct regardless of server timezone (avoid skipping or duplicating days). */
 function parseDateRange(startDate: string, endDate: string): string[] {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(startDate + 'T00:00:00.000Z');
+  const end = new Date(endDate + 'T00:00:00.000Z');
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
   const dates: string[] = [];
   const current = new Date(start);
   while (current <= end && dates.length < MAX_DAYS_PER_RUN) {
-    dates.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   return dates;
 }
@@ -360,9 +363,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const nextDateObj = new Date(currentDate);
-      nextDateObj.setDate(nextDateObj.getDate() + 1);
-      const nextDate = nextDateObj.toISOString().split('T')[0];
+      const [y, m, d] = currentDate.split('-').map(Number);
+      const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 
       await supabase.from('toast_backfill_state').update({
         cursor_date: nextDate,

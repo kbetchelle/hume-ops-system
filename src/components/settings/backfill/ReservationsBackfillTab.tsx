@@ -5,20 +5,12 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import DateSelector from "./DateSelector";
 import { useBackfillJob } from "./useBackfillJob";
+import BackfillSyncLog from "./BackfillSyncLog";
 
 export default function ReservationsBackfillTab() {
   const {
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
-    isRange,
-    setIsRange,
-    dayCount,
-    syncProgress,
-    handleSync,
-    handleCancelJob,
-    elapsedText,
+    startDate, setStartDate, endDate, setEndDate, isRange, setIsRange,
+    dayCount, syncProgress, handleSync, handleCancelJob, elapsedText, totalNewRecords,
   } = useBackfillJob("arketa_reservations");
 
   const { data: totalCount } = useQuery({
@@ -34,23 +26,14 @@ export default function ReservationsBackfillTab() {
   return (
     <div className="space-y-6">
       <DateSelector
-        startDate={startDate}
-        endDate={endDate}
-        isRange={isRange}
-        onStartDateChange={setStartDate}
-        onEndDateChange={setEndDate}
-        onIsRangeChange={setIsRange}
-        isRunning={syncProgress.isRunning}
-        elapsedText={elapsedText}
-        onSync={handleSync}
-        onCancel={handleCancelJob}
-        dayCount={dayCount}
+        startDate={startDate} endDate={endDate} isRange={isRange}
+        onStartDateChange={setStartDate} onEndDateChange={setEndDate} onIsRangeChange={setIsRange}
+        isRunning={syncProgress.isRunning} elapsedText={elapsedText}
+        onSync={handleSync} onCancel={handleCancelJob} dayCount={dayCount}
       />
       {syncProgress.isRunning && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Progress</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Progress</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Dates: {syncProgress.completedDates} / {syncProgress.totalDates}</span>
@@ -72,6 +55,12 @@ export default function ReservationsBackfillTab() {
           </div>
         </CardContent>
       </Card>
+      <BackfillSyncLog
+        results={syncProgress.results}
+        isRunning={syncProgress.isRunning}
+        totalRecords={syncProgress.totalRecords}
+        totalNewRecords={totalNewRecords}
+      />
     </div>
   );
 }

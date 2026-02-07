@@ -113,7 +113,7 @@ async function fetchAllReservations(
 
   const seen = new Set<string>();
   const classRows: { class_id: string; class_name: string | null; class_date: string | null }[] = [];
-  for (const row of historyRows ?? []) {
+  for (const row of (historyRows ?? []) as any[]) {
     const key = `${row.class_id ?? ''}:${row.class_date ?? ''}`;
     if (row.class_id && !seen.has(key)) {
       seen.add(key);
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
       startDate,
       endDate,
       limit,
-      supabase,
+      supabase as any,
       body.class_id,
       logger
     );

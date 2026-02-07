@@ -292,6 +292,7 @@ export type Database = {
         Row: {
           booked_count: number | null
           capacity: number | null
+          class_date: string | null
           created_at: string | null
           duration_minutes: number | null
           external_id: string
@@ -309,6 +310,7 @@ export type Database = {
         Insert: {
           booked_count?: number | null
           capacity?: number | null
+          class_date?: string | null
           created_at?: string | null
           duration_minutes?: number | null
           external_id: string
@@ -326,6 +328,7 @@ export type Database = {
         Update: {
           booked_count?: number | null
           capacity?: number | null
+          class_date?: string | null
           created_at?: string | null
           duration_minutes?: number | null
           external_id?: string
@@ -4451,7 +4454,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      arketa_orphan_classes: {
+        Row: {
+          booked_count: number | null
+          class_date: string | null
+          class_id: string | null
+          class_name: string | null
+          id: string | null
+          is_cancelled: boolean | null
+          start_time: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_get_all_users: {

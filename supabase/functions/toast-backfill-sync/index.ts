@@ -12,7 +12,7 @@ import { createSyncLogger } from '../_shared/logger.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const BACKFILL_START_DATE = '2024-08-01'; // Through 08/01/24
-const PAGE_SIZE = 400;
+const PAGE_SIZE = 100;
 
 interface ToastAuthResponse {
   token: { tokenType: string; accessToken: string; expiresIn: number };

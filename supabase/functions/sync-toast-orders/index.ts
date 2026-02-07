@@ -9,6 +9,7 @@ import { logApiCall } from '../_shared/apiLogger.ts';
 // Common causes: missing TOAST_CLIENT_ID/TOAST_CLIENT_SECRET/TOAST_RESTAURANT_GUID in
 // Edge Function secrets; wrong restaurant GUID; Toast API rate limits or endpoint changes.
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
+const PAGE_SIZE = 100;
 
 interface ToastSalesData {
   businessDate: string;
@@ -70,23 +71,22 @@ async function getToastToken(
   return authData.token.accessToken;
 }
 
-// Fetch sales data from Toast API
-async function fetchToastSales(
+/** Format YYYY-MM-DD as Toast businessDate (yyyymmdd). Toast filters by restaurant business day in local time when using businessDate. */
+function toToastBusinessDateParam(isoDate: string): string {
+  return isoDate.replace(/-/g, '');
+}
+
+/** Fetch one page of orders for a single business date. Uses businessDate (yyyymmdd) so Toast returns orders opened that business day in restaurant local time. */
+async function fetchOrdersPage(
   token: string,
   restaurantGuid: string,
-  startDate: string,
-  endDate: string,
+  businessDate: string,
+  page: number,
   logger: ReturnType<typeof createSyncLogger>
-): Promise<ToastSalesData[]> {
-  // Toast uses different endpoints for different data
-  // Try the orders bulk endpoint for sales data
-  const startParam = encodeURIComponent(`${startDate}T00:00:00.000+0000`);
-  const endParam = encodeURIComponent(`${endDate}T23:59:59.999+0000`);
-  const ordersUrl = `${TOAST_BASE_URL}/orders/v2/ordersBulk?startDate=${startParam}&endDate=${endParam}`;
-  
-  logger.info(`Fetching orders from ${startDate} to ${endDate}`);
-  
-  const { response, attempts } = await fetchWithRetry(ordersUrl, {
+): Promise<{ orders: Record<string, unknown>[]; hasMore: boolean }> {
+  const businessDateParam = toToastBusinessDateParam(businessDate);
+  const url = `${TOAST_BASE_URL}/orders/v2/ordersBulk?businessDate=${businessDateParam}&pageSize=${PAGE_SIZE}&page=${page}`;
+  const { response, attempts } = await fetchWithRetry(url, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -99,48 +99,78 @@ async function fetchToastSales(
     maxDelayMs: 10000,
     timeoutMs: 60000,
   });
-
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Toast orders fetch failed: ${response.status} - ${errorText}`);
   }
-
   const ordersData = await response.json();
-  logger.info(`Fetched orders data after ${attempts} attempt(s)`);
-
-  // Aggregate orders by business date (API returns array or { orders: [...] })
-  const salesByDate = new Map<string, ToastSalesData>();
   const rawOrders = Array.isArray(ordersData) ? ordersData : ordersData?.orders;
   const orders = Array.isArray(rawOrders) ? rawOrders : [];
-  if (orders.length === 0 && ordersData != null && !Array.isArray(ordersData) && !ordersData?.orders) {
-    logger.warn('Unexpected orders response shape, using empty list', { keys: ordersData && typeof ordersData === 'object' ? Object.keys(ordersData) : [] });
-  }
-  
+  const hasMore = orders.length >= PAGE_SIZE;
+  logger.info(`Fetched page ${page} for ${businessDate}: ${orders.length} orders (after ${attempts} attempt(s))`);
+  return { orders, hasMore };
+}
+
+/** Aggregate orders into one ToastSalesData row for a business date. */
+function aggregateOrdersForDate(orders: Record<string, unknown>[], businessDate: string): ToastSalesData | null {
+  if (orders.length === 0) return null;
+  let netSales = 0, grossSales = 0, cafeSales = 0;
   for (const order of orders) {
-    const businessDate = order.businessDate || order.openedDate?.split('T')[0];
-    if (!businessDate) continue;
-
-    const existing = salesByDate.get(businessDate) || {
-      businessDate,
-      netSales: 0,
-      grossSales: 0,
-      cafeSales: 0,
-      totalOrders: 0,
-    };
-
-    // Aggregate sales (coerce to number in case API returns strings)
     const orderTotal = Number(order.totalAmount ?? order.amount ?? 0) || 0;
-    const orderNet = Number(order.netAmount ?? orderTotal) || orderTotal;
-    
-    existing.netSales = (existing.netSales || 0) + orderNet;
-    existing.grossSales = (existing.grossSales || 0) + orderTotal;
-    existing.cafeSales = (existing.cafeSales || 0) + orderNet; // Default to net
-    existing.totalOrders = (existing.totalOrders || 0) + 1;
-
-    salesByDate.set(businessDate, existing);
+    const orderNet = order.netAmount != null ? Number(order.netAmount) : orderTotal;
+    netSales += orderNet;
+    grossSales += orderTotal;
+    cafeSales += orderNet;
   }
+  return {
+    businessDate,
+    netSales,
+    grossSales,
+    cafeSales,
+    totalOrders: orders.length,
+  };
+}
 
-  return Array.from(salesByDate.values());
+/** List of YYYY-MM-DD dates from startDate through endDate (inclusive), max 31 days. */
+function dateRangeDays(startDate: string, endDate: string): string[] {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
+  const out: string[] = [];
+  const current = new Date(start);
+  while (current <= end && out.length < 31) {
+    out.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return out;
+}
+
+// Fetch sales data from Toast API: one businessDate (yyyymmdd) per day so we get orders opened that business day in restaurant local time. startDate/endDate filter by modification time and often return 0.
+async function fetchToastSales(
+  token: string,
+  restaurantGuid: string,
+  startDate: string,
+  endDate: string,
+  logger: ReturnType<typeof createSyncLogger>
+): Promise<ToastSalesData[]> {
+  const days = dateRangeDays(startDate, endDate);
+  logger.info(`Fetching orders by businessDate for ${days.length} days (${startDate} to ${endDate})`);
+  const salesByDate: ToastSalesData[] = [];
+  for (const businessDate of days) {
+    let page = 1;
+    const allOrders: Record<string, unknown>[] = [];
+    let hasMore = true;
+    while (hasMore) {
+      const { orders, hasMore: more } = await fetchOrdersPage(token, restaurantGuid, businessDate, page, logger);
+      allOrders.push(...orders);
+      hasMore = more && orders.length >= PAGE_SIZE;
+      if (hasMore) page++;
+      else break;
+    }
+    const aggregated = aggregateOrdersForDate(allOrders, businessDate);
+    if (aggregated) salesByDate.push(aggregated);
+  }
+  return salesByDate;
 }
 
 Deno.serve(async (req) => {

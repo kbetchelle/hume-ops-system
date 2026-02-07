@@ -55,7 +55,12 @@ async function getToastToken(clientId: string, clientSecret: string): Promise<st
   return authData.token.accessToken;
 }
 
-/** Fetch one page of orders for a single business date. Toast uses fixed-size pagination: page + pageSize (max 100). */
+/** Format YYYY-MM-DD as Toast businessDate (yyyymmdd). Toast filters by restaurant business day in local time when using businessDate. */
+function toToastBusinessDate(isoDate: string): string {
+  return isoDate.replace(/-/g, '');
+}
+
+/** Fetch one page of orders for a single business date. Uses businessDate (yyyymmdd) so Toast returns orders opened that business day in restaurant local time; startDate/endDate filter by modification time and often return 0. */
 async function fetchOrdersPage(
   token: string,
   restaurantGuid: string,
@@ -63,9 +68,8 @@ async function fetchOrdersPage(
   page: number,
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ orders: Record<string, unknown>[]; hasMore: boolean }> {
-  const startParam = encodeURIComponent(`${businessDate}T00:00:00.000+0000`);
-  const endParam = encodeURIComponent(`${businessDate}T23:59:59.999+0000`);
-  const url = `${TOAST_BASE_URL}/orders/v2/ordersBulk?startDate=${startParam}&endDate=${endParam}&pageSize=${PAGE_SIZE}&page=${page}`;
+  const businessDateParam = toToastBusinessDate(businessDate);
+  const url = `${TOAST_BASE_URL}/orders/v2/ordersBulk?businessDate=${businessDateParam}&pageSize=${PAGE_SIZE}&page=${page}`;
 
   const { response, attempts } = await fetchWithRetry(url, {
     method: 'GET',
@@ -95,7 +99,7 @@ function aggregateOrdersByDate(orders: Record<string, unknown>[], businessDate: 
   let netSales = 0, grossSales = 0, cafeSales = 0;
   for (const order of orders) {
     const orderTotal = Number(order.totalAmount ?? order.amount ?? 0) || 0;
-    const orderNet = Number(order.netAmount ?? orderTotal) || orderTotal;
+    const orderNet = order.netAmount != null ? Number(order.netAmount) : orderTotal;
     netSales += orderNet;
     grossSales += orderTotal;
     cafeSales += orderNet;

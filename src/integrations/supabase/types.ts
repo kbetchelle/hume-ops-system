@@ -842,180 +842,180 @@ export type Database = {
       }
       arketa_reservations: {
         Row: {
-          id: string
-          reservation_id: string | null
-          class_id: string | null
-          client_id: string | null
-          purchase_id: string | null
-          reservation_type: string | null
-          class_name: string | null
-          class_date: string | null
-          status: string | null
           checked_in: boolean | null
           checked_in_at: string | null
+          class_date: string | null
+          class_id: string | null
+          class_name: string | null
+          client_id: string | null
           experience_type: string | null
-          late_cancel: boolean | null
           gross_amount_paid: number | null
+          id: string
+          late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
+          reservation_id: string | null
+          reservation_type: string | null
+          status: string | null
           sync_batch_id: string | null
         }
         Insert: {
-          id?: string
-          reservation_id?: string | null
-          class_id?: string | null
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id?: string | null
         }
         Update: {
-          id?: string
-          reservation_id?: string | null
-          class_id?: string | null
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id?: string | null
         }
         Relationships: []
       }
       arketa_reservations_history: {
         Row: {
-          id: string
-          reservation_id: string
-          class_id: string
-          client_id: string | null
-          purchase_id: string | null
-          reservation_type: string | null
-          class_name: string | null
-          class_date: string | null
-          status: string | null
           checked_in: boolean | null
           checked_in_at: string | null
+          class_date: string | null
+          class_id: string
+          class_name: string | null
+          client_id: string | null
           experience_type: string | null
-          late_cancel: boolean | null
           gross_amount_paid: number | null
+          id: string
+          late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
+          reservation_id: string
+          reservation_type: string | null
+          status: string | null
           sync_batch_id: string | null
         }
         Insert: {
-          id?: string
-          reservation_id: string
-          class_id: string
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id: string
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id: string
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id?: string | null
         }
         Update: {
-          id?: string
-          reservation_id?: string
-          class_id?: string
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id?: string
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id?: string | null
         }
         Relationships: []
       }
       arketa_reservations_staging: {
         Row: {
-          id: string
-          reservation_id: string | null
-          class_id: string | null
-          client_id: string | null
-          purchase_id: string | null
-          reservation_type: string | null
-          class_name: string | null
-          class_date: string | null
-          status: string | null
           checked_in: boolean | null
           checked_in_at: string | null
+          class_date: string | null
+          class_id: string | null
+          class_name: string | null
+          client_id: string | null
           experience_type: string | null
-          late_cancel: boolean | null
           gross_amount_paid: number | null
+          id: string
+          late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
+          reservation_id: string | null
+          reservation_type: string | null
+          status: string | null
           sync_batch_id: string
         }
         Insert: {
-          id?: string
-          reservation_id?: string | null
-          class_id?: string | null
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id: string
         }
         Update: {
-          id?: string
-          reservation_id?: string | null
-          class_id?: string | null
-          client_id?: string | null
-          purchase_id?: string | null
-          reservation_type?: string | null
-          class_name?: string | null
-          class_date?: string | null
-          status?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
+          class_date?: string | null
+          class_id?: string | null
+          class_name?: string | null
+          client_id?: string | null
           experience_type?: string | null
-          late_cancel?: boolean | null
           gross_amount_paid?: number | null
+          id?: string
+          late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
+          reservation_id?: string | null
+          reservation_type?: string | null
+          status?: string | null
           sync_batch_id?: string
         }
         Relationships: []

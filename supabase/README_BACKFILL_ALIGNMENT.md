@@ -2,12 +2,14 @@
 
 This doc describes how the Select Dates backfill (per-date flow) aligns with the hume-ops DB: api_endpoints, api_logs, staging/history tables, and **sync-from-staging**.
 
+For Arketa API shape, 3-tier reservation fetch, table roles, and aggregation chain, see **[docs/ARKETA_ARCHITECTURE.md](../docs/ARKETA_ARCHITECTURE.md)**.
+
 ## Deployment (required for date-selector backfill)
 
 The Arketa reservations/payments **Select dates** backfill needs these edge functions deployed to the **same** Supabase project the app uses:
 
 ```bash
-supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions
+supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions sync-arketa-classes aggregate-arketa-to-daily-reports
 ```
 
 Or use the npm script: `npm run supabase:deploy-backfill`. **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.

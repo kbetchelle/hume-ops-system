@@ -74,7 +74,7 @@ const endpointTypeMap: Record<string, string> = {
   'clients': 'clients',
 };
 
-// Sync Arketa classes for a single date with pagination
+// Sync Arketa classes for a single date with pagination. See docs/ARKETA_ARCHITECTURE.md: arketa_classes is the master catalog for class_ids.
 async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: string): Promise<number> {
   const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
@@ -84,7 +84,7 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
   let nextCursor: string | undefined;
 
   do {
-    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=400&start_date=${date}&end_date=${date}`;
+    let url = `${ARKETA_PROD_URL}/${ARKETA_PARTNER_ID}/classes?limit=400&start_date=${date}&end_date=${date}&include_cancelled=true&include_past=true&include_completed=true`;
     if (nextCursor) url += `&cursor=${nextCursor}`;
 
     const response = await fetch(url, {
@@ -117,13 +117,16 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
     const name = cls.name || cls.class_name || 'Unknown Class';
     const instructorName = cls.instructor_name || 
       (cls.instructor ? `${cls.instructor.first_name || ''} ${cls.instructor.last_name || ''}`.trim() : null);
+    const startTime = cls.start_time;
+    const classDate = startTime ? new Date(startTime).toISOString().split('T')[0] : null;
 
     const { error } = await supabase
       .from('arketa_classes')
       .upsert({
         external_id: String(cls.id),
         name,
-        start_time: cls.start_time,
+        start_time: startTime,
+        class_date: classDate,
         duration_minutes: cls.duration_minutes ?? cls.duration ?? null,
         capacity: cls.capacity ?? cls.max_capacity ?? null,
         booked_count: cls.total_booked ?? cls.booked_count ?? 0,
@@ -176,6 +179,9 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
     classUrl.searchParams.set('limit', '400');
     classUrl.searchParams.set('start_date', date);
     classUrl.searchParams.set('end_date', date);
+    classUrl.searchParams.set('include_cancelled', 'true');
+    classUrl.searchParams.set('include_past', 'true');
+    classUrl.searchParams.set('include_completed', 'true');
     if (classCursor) classUrl.searchParams.set('cursor', classCursor);
 
     console.log(`[backfill-reservations] Fetching classes: ${classUrl.toString()}`);

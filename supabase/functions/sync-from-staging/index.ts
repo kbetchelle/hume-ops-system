@@ -2,6 +2,7 @@
  * sync-from-staging: Transfer staging tables to history (target) tables.
  * - arketa_reservations_staging -> arketa_reservations_history (unique: reservation_id, class_id)
  * - arketa_payments_staging -> arketa_payments_history (unique: payment_id, source_endpoint)
+ * - order_checks_staging -> order_checks (unique: check_guid)
  * Logs to api_logs and optionally clears staging after transfer.
  */
 
@@ -12,7 +13,7 @@ const BATCH_SIZE = 500;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-type TransferApi = "arketa_reservations" | "arketa_payments" | "both";
+type TransferApi = "arketa_reservations" | "arketa_payments" | "order_checks" | "both";
 
 interface SyncFromStagingRequest {
   api?: TransferApi;
@@ -49,6 +50,10 @@ Deno.serve(async (req) => {
     }
     if (api === "arketa_payments" || api === "both") {
       const r = await transferPayments(supabase, clearStaging, syncBatchId);
+      results.push(r);
+    }
+    if (api === "order_checks" || api === "both") {
+      const r = await transferOrderChecks(supabase, clearStaging, syncBatchId);
       results.push(r);
     }
 
@@ -261,6 +266,90 @@ async function transferPayments(
   } catch (e) {
     return {
       api: "arketa_payments",
+      records_processed: recordsProcessed,
+      records_inserted: recordsInserted,
+      records_updated: recordsUpdated,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function transferOrderChecks(
+  supabase: any,
+  clearStaging: boolean,
+  syncBatchId?: string
+): Promise<TransferResult> {
+  let recordsProcessed = 0;
+  let recordsInserted = 0;
+  let recordsUpdated = 0;
+
+  try {
+    let query = supabase.from("order_checks_staging").select("*");
+    if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
+    const { data: rows, error: fetchError } = await query;
+
+    if (fetchError) {
+      return { api: "order_checks", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+    }
+    if (!rows?.length) {
+      return { api: "order_checks", records_processed: 0, records_inserted: 0, records_updated: 0 };
+    }
+
+    const countBefore = await getHistoryCount(supabase, "order_checks");
+    const toUpsert = rows.map((r: Record<string, unknown>) => ({
+      check_guid: r.check_guid ?? null,
+      order_guid: r.order_guid ?? null,
+      business_date: r.business_date ?? null,
+      amount: r.amount ?? null,
+      tax_amount: r.tax_amount ?? null,
+      total_amount: r.total_amount ?? null,
+      payment_status: r.payment_status ?? null,
+      paid_date: r.paid_date ?? null,
+      closed_date: r.closed_date ?? null,
+      voided: r.voided ?? false,
+      void_date: r.void_date ?? null,
+      raw_data: r.raw_data ?? null,
+      sync_batch_id: r.sync_batch_id ?? null,
+    })).filter((r: { check_guid: string | null }) => r.check_guid);
+
+    for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
+      const batch = toUpsert.slice(i, i + BATCH_SIZE);
+      const { error: upsertError } = await (supabase as any)
+        .from("order_checks")
+        .upsert(batch, { onConflict: "check_guid" });
+      if (upsertError) {
+        return {
+          api: "order_checks",
+          records_processed: toUpsert.length,
+          records_inserted: recordsInserted,
+          records_updated: recordsUpdated,
+          error: upsertError.message,
+        };
+      }
+      recordsProcessed += batch.length;
+    }
+
+    const countAfter = await getHistoryCount(supabase, "order_checks");
+    recordsInserted = Math.max(0, countAfter - countBefore);
+    recordsUpdated = recordsProcessed - recordsInserted;
+    if (recordsUpdated < 0) recordsUpdated = 0;
+
+    if (clearStaging && rows.length) {
+      const ids = rows.map((r: { id?: string }) => r.id).filter(Boolean);
+      if (ids.length) {
+        await supabase.from("order_checks_staging").delete().in("id", ids);
+      }
+    }
+
+    return {
+      api: "order_checks",
+      records_processed: recordsProcessed,
+      records_inserted: recordsInserted,
+      records_updated: recordsUpdated,
+    };
+  } catch (e) {
+    return {
+      api: "order_checks",
       records_processed: recordsProcessed,
       records_inserted: recordsInserted,
       records_updated: recordsUpdated,

@@ -270,6 +270,9 @@ async function runSync(
   } else if (syncType === 'toast_backfill') {
     // Backfill through 08/01/24; no body needed (uses toast_backfill_state cursor)
     requestBody = {};
+  } else if (syncType === 'order_checks_backfill') {
+    // Order checks backfill; no body needed (uses order_checks_backfill_state cursor)
+    requestBody = {};
   } else if (syncType === 'calendly_events') {
     // Sync 7 days past to 90 days future
     requestBody = { limit: 400 };
@@ -323,7 +326,10 @@ async function runSync(
     ?? (data.subscriptions as unknown[] | undefined)?.length
     ?? (data.syncedDates as unknown[] | undefined)?.length  // Toast sales
     ?? (data.ordersThisRun as number | undefined)  // Toast backfill
+    ?? (data.checksStagedThisRun as number | undefined)  // Order checks backfill
+    ?? (data.checks_staged as number | undefined)
     ?? (data.total_records_synced as number | undefined)
+    ?? (data.total_checks_synced as number | undefined)
     ?? 0;
 
   return {

@@ -129,7 +129,7 @@ async function transferReservations(
       net_amount_paid: r.net_amount_paid ?? null,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
-    })).filter((r) => r.reservation_id && r.class_id);
+    })).filter((r: any) => r.reservation_id && r.class_id);
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
@@ -221,7 +221,7 @@ async function transferPayments(
       updated_at: r.updated_at ?? null,
       synced_at: new Date().toISOString(),
       sync_batch_id: r.sync_batch_id ?? null,
-    })).filter((r) => r.payment_id && r.source_endpoint);
+    })).filter((r: any) => r.payment_id && r.source_endpoint);
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);

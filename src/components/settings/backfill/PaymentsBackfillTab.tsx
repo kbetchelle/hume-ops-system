@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DateSelector from "./DateSelector";
 import { useBackfillJob } from "./useBackfillJob";
 import BackfillSyncLog from "./BackfillSyncLog";
+import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 
 export default function PaymentsBackfillTab() {
   const {
@@ -61,6 +62,7 @@ export default function PaymentsBackfillTab() {
         totalRecords={syncProgress.totalRecords}
         totalNewRecords={totalNewRecords}
       />
+      <BackfillCalendarHeatmap type="payments" refetchTrigger={syncProgress.isRunning} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DateSelector from "./DateSelector";
+import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 import { format, subDays } from "date-fns";
 
 function daysBetween(start: string, end: string): number {
@@ -113,6 +114,7 @@ export default function ToastBackfillTab() {
           )}
         </CardContent>
       </Card>
+      <BackfillCalendarHeatmap type="toast" refetchTrigger={syncMutation.isPending} />
     </div>
   );
 }

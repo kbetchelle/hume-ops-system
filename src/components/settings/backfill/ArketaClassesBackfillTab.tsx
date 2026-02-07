@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useSyncArketaClasses } from "@/hooks/useArketaApi";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 
 function formatDate(d: Date) {
   return d.toISOString().split("T")[0];
@@ -104,6 +105,7 @@ export default function ArketaClassesBackfillTab() {
           </div>
         </CardContent>
       </Card>
+      <BackfillCalendarHeatmap type="classes" />
     </div>
   );
 }

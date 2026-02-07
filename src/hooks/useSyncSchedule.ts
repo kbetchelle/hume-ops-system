@@ -102,9 +102,13 @@ export function useRunSync() {
     },
     onError: (error, syncType) => {
       console.error(`Failed to run ${syncType} sync:`, error);
+      const message =
+        (error as { message?: string })?.message ||
+        (error as { error?: string })?.error ||
+        `Failed to trigger ${syncType} sync.`;
       toast({
         title: "Sync Failed",
-        description: `Failed to trigger ${syncType} sync.`,
+        description: message,
         variant: "destructive",
       });
     },

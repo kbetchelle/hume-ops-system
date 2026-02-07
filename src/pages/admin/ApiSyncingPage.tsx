@@ -42,6 +42,7 @@ import {
   type SyncSchedule,
 } from "@/hooks/useSyncSchedule";
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
+import { useSyncArketaClasses } from "@/hooks/useArketaApi";
 
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
@@ -56,6 +57,35 @@ const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: str
   toast_backfill: { stagingTable: "toast_staging", targetTable: "toast_sales" },
   calendly_events: { stagingTable: "scheduled_tours_staging", targetTable: "scheduled_tours" },
 };
+
+function ArketaClassesSyncButton() {
+  const syncClasses = useSyncArketaClasses();
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium">Arketa Classes</span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => syncClasses.mutate({})}
+        disabled={syncClasses.isPending}
+        className="gap-1"
+      >
+        {syncClasses.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Syncing…
+          </>
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            Sync now
+          </>
+        )}
+      </Button>
+      <span className="text-xs text-muted-foreground">Last 30 days → +7 days (default)</span>
+    </div>
+  );
+}
 
 function StatusBadge({ status, isHealthy }: { status: string | boolean | null; isHealthy?: boolean }) {
   if (isHealthy !== undefined) {
@@ -485,6 +515,22 @@ export default function ApiSyncingPage() {
             Refresh
           </Button>
         </div>
+
+        {/* One-off: Arketa Classes (not on schedule; run manually) */}
+        <Card className="border border-border rounded-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-normal flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Manual syncs
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              One-off syncs not on the schedule. Arketa Classes populates the class catalog for reservation backfill.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-4">
+            <ArketaClassesSyncButton />
+          </CardContent>
+        </Card>
 
         {/* Tabs for Overview and History */}
         <Tabs defaultValue="overview" className="space-y-4">

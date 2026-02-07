@@ -78,9 +78,20 @@ Deno.serve(async (req) => {
     }
 
     if (!dueSyncs || dueSyncs.length === 0) {
+      // Manual trigger with specific type: return 404 so UI can show "not found or disabled"
+      if (specificSyncType) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Sync type "${specificSyncType}" not found or not enabled. Check sync_schedule and enable the sync.`,
+            sync_type: specificSyncType,
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'No syncs due to run',
           syncsRun: 0,
         }),

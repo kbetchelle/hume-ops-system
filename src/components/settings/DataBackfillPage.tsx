@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { History, CreditCard } from "lucide-react";
+import { History, CreditCard, BookOpen } from "lucide-react";
 import ReservationsBackfillTab from "./backfill/ReservationsBackfillTab";
 import PaymentsBackfillTab from "./backfill/PaymentsBackfillTab";
+import ArketaClassesBackfillTab from "./backfill/ArketaClassesBackfillTab";
 
 export default function DataBackfillPage() {
   return (
@@ -10,7 +10,7 @@ export default function DataBackfillPage() {
       <div>
         <h1 className="text-2xl font-bold">Data Backfill</h1>
         <p className="text-muted-foreground">
-          Sync historical Arketa data by date range. Uses Arketa Partner API via run-backfill-job.
+          Sync historical Arketa data by date range. Reservations and payments use run-backfill-job; classes use sync-arketa-classes.
         </p>
       </div>
       <Tabs defaultValue="reservations" className="space-y-4">
@@ -23,12 +23,19 @@ export default function DataBackfillPage() {
             <CreditCard className="h-4 w-4" />
             Payments
           </TabsTrigger>
+          <TabsTrigger value="classes" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            Arketa Classes
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="reservations" className="space-y-4">
           <ReservationsBackfillTab />
         </TabsContent>
         <TabsContent value="payments" className="space-y-4">
           <PaymentsBackfillTab />
+        </TabsContent>
+        <TabsContent value="classes" className="space-y-4">
+          <ArketaClassesBackfillTab />
         </TabsContent>
       </Tabs>
     </div>

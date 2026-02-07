@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useSyncArketaClasses } from "@/hooks/useArketaApi";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 
@@ -14,6 +14,7 @@ function formatDate(d: Date) {
 }
 
 export default function ArketaClassesBackfillTab() {
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -41,7 +42,12 @@ export default function ArketaClassesBackfillTab() {
   const handleSync = () => {
     syncClasses.mutate(
       { start_date: startDate, end_date: endDate },
-      { onSuccess: () => refetchCount() }
+      {
+        onSuccess: () => {
+          refetchCount();
+          queryClient.invalidateQueries({ queryKey: ["backfill-calendar", "classes"] });
+        },
+      }
     );
   };
 
@@ -105,7 +111,7 @@ export default function ArketaClassesBackfillTab() {
           </div>
         </CardContent>
       </Card>
-      <BackfillCalendarHeatmap type="classes" />
+      <BackfillCalendarHeatmap type="classes" refetchTrigger={syncClasses.isPending} />
     </div>
   );
 }

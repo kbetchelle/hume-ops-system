@@ -45,6 +45,7 @@ export default function ToastBackfillTab() {
     onSuccess: (data) => {
       if (data?.success) {
         queryClient.invalidateQueries({ queryKey: ["toast-sales-count"] });
+        queryClient.invalidateQueries({ queryKey: ["backfill-calendar", "toast"] });
         toast({
           title: "Toast backfill completed",
           description: `${data.daysSyncedThisRun ?? 0} days synced, ${data.ordersThisRun ?? 0} orders.`,

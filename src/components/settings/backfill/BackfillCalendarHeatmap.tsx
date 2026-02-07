@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,8 +46,10 @@ function getStatus(
 export default function BackfillCalendarHeatmap({ type, refetchTrigger }: BackfillCalendarHeatmapProps) {
   const rpc = RPC_MAP[type];
 
-  const { data: rows, isLoading } = useQuery({
-    queryKey: ["backfill-calendar", type, rpc, refetchTrigger],
+  const prevTriggerRef = useRef(refetchTrigger);
+
+  const { data: rows, isLoading, refetch } = useQuery({
+    queryKey: ["backfill-calendar", type, rpc],
     queryFn: async () => {
       const { data, error } = await supabase.rpc(rpc);
       if (error) throw error;
@@ -54,8 +57,16 @@ export default function BackfillCalendarHeatmap({ type, refetchTrigger }: Backfi
         { d: string; record_count: number; checked_in_count?: number } | { d: string; record_count: number }
       >;
     },
-    refetchInterval: 60_000,
+    refetchInterval: refetchTrigger ? 2_000 : 60_000,
+    refetchIntervalInBackground: !!refetchTrigger,
   });
+
+  useEffect(() => {
+    if (prevTriggerRef.current === true && refetchTrigger === false) {
+      refetch();
+    }
+    prevTriggerRef.current = refetchTrigger;
+  }, [refetchTrigger, refetch]);
 
   const dateMap = new Map<string, DayStatus>();
   if (rows) {

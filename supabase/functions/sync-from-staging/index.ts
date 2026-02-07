@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 });
 
 async function transferReservations(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clearStaging: boolean,
   syncBatchId?: string
 ): Promise<TransferResult> {
@@ -178,7 +178,7 @@ async function transferReservations(
 }
 
 async function transferPayments(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clearStaging: boolean,
   syncBatchId?: string
 ): Promise<TransferResult> {
@@ -269,7 +269,7 @@ async function transferPayments(
   }
 }
 
-async function getHistoryCount(supabase: ReturnType<typeof createClient>, table: string): Promise<number> {
+async function getHistoryCount(supabase: any, table: string): Promise<number> {
   const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
   if (error) return 0;
   return count ?? 0;

@@ -5,7 +5,7 @@ import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 import { logApiCall } from '../_shared/apiLogger.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
-const PAGE_SIZE = 300;
+const PAGE_SIZE = 100;
 const BATCH_UPSERT_SIZE = 100;
 
 interface SyncRequest {

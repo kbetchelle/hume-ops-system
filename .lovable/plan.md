@@ -1,98 +1,94 @@
 
-# Fix Text Formatting and Save Shortcut in Latest Edits
 
-## Overview
-This plan addresses two issues in the "Latest Edits in Ops System Application" feature:
-1. Inconsistent text formatting (varying font sizes visible in the editor)
-2. Enter key triggering save instead of Cmd+Enter
+# Plan: Arketa Classes PST Timezone Fix, Toast Raw Order Storage, and Page Size Increase
 
----
+## 1. Arketa Classes: Convert start_time to PST for class_date
 
-## Changes
+**Problem:** Currently, `class_date` is derived from `start_time` using UTC (`new Date(startTime).toISOString().split('T')[0]`), which can assign the wrong calendar date for classes in the America/Los_Angeles timezone.
 
-### 1. Normalize Text Formatting in RichTextEditor
-**File:** `src/components/shared/RichTextEditor.tsx`
+**Changes:**
 
-- Remove inline styling that causes font size inconsistencies
-- Ensure the editor strips font-size styles when content is pasted or modified
-- Update the paste handler to strip HTML formatting that includes font sizes
-- Add CSS normalization to ensure all text inherits the same base size
+### Edge Function: `supabase/functions/sync-arketa-classes/index.ts`
+- Replace the UTC-based date extraction with PST/PDT-aware conversion
+- Use `Intl.DateTimeFormat` with `timeZone: 'America/Los_Angeles'` to derive the correct local date from the `start_time` timestamp
+- No external dependencies needed; Deno supports IANA timezones natively
 
-### 2. Normalize Display Formatting in DevDashboardPanel  
-**File:** `src/components/admin/DevDashboardPanel.tsx`
-
-- Ensure the display div (non-editing view) matches the editor's text styling
-- Add CSS to normalize any existing formatted content to consistent sizing
-
-### 3. Change Save Shortcut from Enter to Cmd+Enter
-**File:** `src/components/admin/DevDashboardPanel.tsx`
-
-Update the keyboard event handler:
-
-```text
-Current behavior:
-┌─────────────────────────────┐
-│ Enter key → triggers save   │
-└─────────────────────────────┘
-
-New behavior:
-┌──────────────────────────────────────┐
-│ Cmd+Enter (Mac) / Ctrl+Enter (Win)  │
-│ → triggers save                      │
-│                                      │
-│ Enter key → normal line break       │
-└──────────────────────────────────────┘
-```
-
-**Code change in handleKeyDown:**
-```typescript
-// Before:
-if (event.key === "Enter" && !event.shiftKey) {
-  saveNotes();
-}
-
-// After:
-if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-  event.preventDefault();
-  saveNotes();
-}
-```
-
-### 4. Add Keyboard Shortcut Listener to Modal
-**File:** `src/components/admin/DevNotesModal.tsx`
-
-- Add a keyboard event listener for Cmd+Enter to trigger save and close the modal
-- This ensures consistent behavior between the card view and modal view
+### Database Migration: Fix existing `arketa_classes` records
+- Run a migration that updates all existing rows:
+  ```sql
+  UPDATE arketa_classes
+  SET class_date = (start_time AT TIME ZONE 'America/Los_Angeles')::date
+  WHERE start_time IS NOT NULL;
+  ```
 
 ---
 
-## Technical Details
+## 2. Toast: Store Raw Individual Orders (No Aggregation)
 
-### Font Normalization CSS
-The RichTextEditor will add styling to strip inline font-size:
-```css
-[&_*]:!text-inherit
-```
+**Problem:** Both `toast-backfill-sync` and `sync-toast-orders` currently aggregate all orders for a business date into a single summary row. The requirement is to store every individual order as its own row in both `toast_staging` and `toast_sales`.
 
-### Paste Handler Enhancement
-Update the paste handler to ensure clean text is inserted without formatting:
-- Currently strips to plain text, which is good
-- No changes needed here
+**Changes:**
 
-### Display Consistency
-The display div in DevDashboardPanel needs matching text-base class to match editor styling.
+### Database Migration
+- **Restructure `toast_staging`:**
+  - Drop the existing `UNIQUE(business_date, sync_batch_id)` constraint
+  - Add an `order_guid` TEXT column (Toast order GUID, unique identifier per order)
+  - Add a `UNIQUE(order_guid)` constraint for deduplication
+  - Keep `raw_data` JSONB for the full raw order object
+  - Keep `business_date`, `net_sales`, `gross_sales`, `cafe_sales` per-order (individual amounts, not aggregated)
+
+- **Restructure `toast_sales`:**
+  - Drop the existing `UNIQUE(business_date)` constraint (was one row per day; now one row per order)
+  - Add an `order_guid` TEXT column with a `UNIQUE(order_guid)` constraint
+  - Add `order_count` INTEGER column (always 1 per row, for compatibility)
+  - Keep per-order `net_sales`, `gross_sales`, `cafe_sales`, `raw_data`
+
+- **Truncate existing data** in both `toast_staging` and `toast_sales` (175 and 231 rows respectively -- all aggregated, not useful in new schema)
+
+- **Update `get_backfill_toast_calendar` RPC** to count individual order rows per date instead of expecting one row per date
+
+### Edge Function: `supabase/functions/toast-backfill-sync/index.ts`
+- Remove the `aggregateOrdersByDate` function entirely
+- Instead of aggregating, insert each raw order individually:
+  - Extract `order_guid` from `order.guid` (Toast's unique order identifier)
+  - Extract per-order `netAmount`, `totalAmount` for `net_sales`/`gross_sales`
+  - Store full raw order JSON in `raw_data`
+  - Upsert to `toast_staging` on `order_guid`, then upsert to `toast_sales` on `order_guid`
+- Use batch upserts (100 records at a time) instead of one-by-one for performance
+
+### Edge Function: `supabase/functions/sync-toast-orders/index.ts`
+- Same changes: remove `aggregateOrdersForDate`, store each order individually
+- Upsert on `order_guid` instead of `business_date`
+- Batch upserts for efficiency
+
+### Frontend: `src/components/settings/backfill/ToastBackfillTab.tsx`
+- Update description text from "daily aggregated sales" to "individual order records"
+- The count query already uses `select("*", { count: "exact" })` so it will automatically reflect the new row count
 
 ---
 
-## Files to Modify
-1. `src/components/admin/DevDashboardPanel.tsx` - Change Enter to Cmd+Enter, normalize display text
-2. `src/components/admin/DevNotesModal.tsx` - Add Cmd+Enter keyboard shortcut support
-3. `src/components/shared/RichTextEditor.tsx` - Add CSS to normalize all child text to inherit font size
+## 3. Toast Backfill Page Size: Increase to 300
+
+**Problem:** Current `PAGE_SIZE` is 100, but the Toast API documentation notes page size is "strictly limited to 100 records per request."
+
+**Important note:** The Toast `ordersBulk` API has a hard cap of 100 per page. Setting `pageSize=300` in the request will either be ignored (Toast returns 100 anyway) or cause an error. The pagination logic already fetches all pages automatically via `hasMore`. However, per your request:
+
+**Changes:**
+- In `toast-backfill-sync/index.ts`: Change `PAGE_SIZE` from 100 to 300
+- In `sync-toast-orders/index.ts`: Change `PAGE_SIZE` from 100 to 300
+- Update the `hasMore` check to compare against the new PAGE_SIZE
+
+If Toast rejects or silently caps at 100, the existing pagination loop will still work correctly -- it just means fewer pages will be needed if Toast honors the larger size.
 
 ---
 
-## Expected Outcome
-- All text in the Latest Edits panel will display at a consistent size
-- Pressing Enter will create a new line (normal text editing behavior)
-- Pressing Cmd+Enter (Mac) or Ctrl+Enter (Windows) will save the notes
-- Behavior will be consistent between the inline editor and the modal view
+## Technical Summary of All Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/functions/sync-arketa-classes/index.ts` | PST timezone conversion for `class_date` |
+| `supabase/functions/toast-backfill-sync/index.ts` | Remove aggregation, store raw orders, PAGE_SIZE to 300 |
+| `supabase/functions/sync-toast-orders/index.ts` | Remove aggregation, store raw orders, PAGE_SIZE to 300 |
+| `src/components/settings/backfill/ToastBackfillTab.tsx` | Update description text |
+| New migration SQL | Update existing `arketa_classes.class_date` to PST; restructure `toast_staging` and `toast_sales` tables (add `order_guid`, drop old unique constraints, truncate old data); update `get_backfill_toast_calendar` RPC |
+

@@ -12,7 +12,7 @@ import { createSyncLogger } from '../_shared/logger.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const BACKFILL_START_DATE = '2024-08-01';
-const PAGE_SIZE = 300;
+const PAGE_SIZE = 100;
 const MAX_DAYS_PER_CRON_RUN = 5;
 const DELAY_BETWEEN_DAYS_MS = 2000;
 const BATCH_UPSERT_SIZE = 100;

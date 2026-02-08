@@ -100,7 +100,7 @@ export default function ToastBackfillTab() {
         <CardHeader>
           <CardTitle className="text-base">toast_sales</CardTitle>
           <CardDescription>
-            Cafe/POS sales from Toast API. Max 31 days per run.
+            Individual order records from Toast API. Max 31 days per run.
           </CardDescription>
         </CardHeader>
         <CardContent>

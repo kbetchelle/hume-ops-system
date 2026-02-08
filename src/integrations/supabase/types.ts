@@ -4208,6 +4208,8 @@ export type Database = {
           gross_sales: number | null
           id: string
           net_sales: number | null
+          order_count: number | null
+          order_guid: string | null
           raw_data: Json | null
           sync_batch_id: string | null
         }
@@ -4218,6 +4220,8 @@ export type Database = {
           gross_sales?: number | null
           id?: string
           net_sales?: number | null
+          order_count?: number | null
+          order_guid?: string | null
           raw_data?: Json | null
           sync_batch_id?: string | null
         }
@@ -4228,6 +4232,8 @@ export type Database = {
           gross_sales?: number | null
           id?: string
           net_sales?: number | null
+          order_count?: number | null
+          order_guid?: string | null
           raw_data?: Json | null
           sync_batch_id?: string | null
         }
@@ -4241,6 +4247,7 @@ export type Database = {
           id: string
           net_sales: number | null
           order_count: number | null
+          order_guid: string | null
           raw_data: Json | null
           staged_at: string | null
           sync_batch_id: string
@@ -4252,6 +4259,7 @@ export type Database = {
           id?: string
           net_sales?: number | null
           order_count?: number | null
+          order_guid?: string | null
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id: string
@@ -4263,6 +4271,7 @@ export type Database = {
           id?: string
           net_sales?: number | null
           order_count?: number | null
+          order_guid?: string | null
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id?: string

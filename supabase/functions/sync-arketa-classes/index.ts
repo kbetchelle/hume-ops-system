@@ -87,7 +87,17 @@ Deno.serve(async (req) => {
       const instructorName = cls.instructor_name ??
         (cls.instructor ? `${cls.instructor.first_name ?? ''} ${cls.instructor.last_name ?? ''}`.trim() : null);
       const startTime = cls.start_time;
-      const classDate = startTime ? new Date(startTime).toISOString().split('T')[0] : null;
+      let classDate: string | null = null;
+      if (startTime) {
+        // Convert to America/Los_Angeles (PST/PDT) before extracting date
+        const dtf = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Los_Angeles',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        });
+        classDate = dtf.format(new Date(startTime)); // returns YYYY-MM-DD
+      }
 
       const { error } = await supabase
         .from('arketa_classes')

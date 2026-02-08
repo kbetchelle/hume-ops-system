@@ -51,9 +51,9 @@ export default function BackfillCalendarHeatmap({ type, refetchTrigger }: Backfi
   const { data: rows, isLoading, refetch } = useQuery({
     queryKey: ["backfill-calendar", type, rpc],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc(rpc);
+      const { data, error } = await (supabase.rpc as any)(rpc);
       if (error) throw error;
-      return (data ?? []) as Array<
+      return (data ?? []) as unknown as Array<
         { d: string; record_count: number; checked_in_count?: number } | { d: string; record_count: number }
       >;
     },

@@ -4525,6 +4525,35 @@ export type Database = {
         Returns: undefined
       }
       exec_sql: { Args: { sql: string }; Returns: undefined }
+      get_backfill_classes_calendar: {
+        Args: never
+        Returns: {
+          d: string
+          record_count: number
+        }[]
+      }
+      get_backfill_payments_calendar: {
+        Args: never
+        Returns: {
+          d: string
+          record_count: number
+        }[]
+      }
+      get_backfill_reservations_calendar: {
+        Args: never
+        Returns: {
+          checked_in_count: number
+          d: string
+          record_count: number
+        }[]
+      }
+      get_backfill_toast_calendar: {
+        Args: never
+        Returns: {
+          d: string
+          record_count: number
+        }[]
+      }
       get_trainer_member_ids: {
         Args: { _trainer_id: string }
         Returns: string[]

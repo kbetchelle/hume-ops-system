@@ -20,6 +20,8 @@ interface SyncResult {
   syncedCount?: number;
   error?: string;
   timedOut?: boolean;
+  /** For backfill syncs: true when cursor has reached end; false when more work remains. */
+  completed?: boolean;
 }
 
 /**
@@ -200,6 +202,23 @@ Deno.serve(async (req) => {
       }
 
       results.push({ syncType: sync.sync_type, result });
+
+      // When toast_backfill has more work (completed: false), trigger one follow-up run so backfill continues without waiting for the next cron tick
+      if (
+        sync.sync_type === 'toast_backfill' &&
+        result.success &&
+        result.completed === false
+      ) {
+        const runnerUrl = `${supabaseUrl}/functions/v1/scheduled-sync-runner`;
+        fetch(runnerUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sync_type: 'toast_backfill' }),
+        }).catch((err) => console.warn('[Scheduled Sync Runner] toast_backfill follow-up request failed', err));
+      }
     }
 
     const successCount = results.filter(r => r.result.success).length;
@@ -336,6 +355,7 @@ async function runSync(
     success: data.success !== false && !data.error,
     syncedCount: Number(syncedCount),
     error: data.error as string | undefined,
+    completed: data.completed as boolean | undefined,
   };
 }
 

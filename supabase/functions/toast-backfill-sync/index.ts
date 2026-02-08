@@ -13,6 +13,10 @@ import { createSyncLogger } from '../_shared/logger.ts';
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const BACKFILL_START_DATE = '2024-08-01'; // Through 08/01/24
 const PAGE_SIZE = 100;
+/** Max days to process per cron invocation (reduces 429s; one run makes more progress so backfill continues even if cron is infrequent). */
+const MAX_DAYS_PER_CRON_RUN = 5;
+/** Delay between days (ms) to reduce Toast API 429 rate limits. */
+const DELAY_BETWEEN_DAYS_MS = 2000;
 
 interface ToastAuthResponse {
   token: { tokenType: string; accessToken: string; expiresIn: number };
@@ -300,88 +304,100 @@ Deno.serve(async (req) => {
       );
     }
 
-    const batchId = crypto.randomUUID();
     let currentDate = cursorDate;
     let currentPage = cursorPage;
-    const allOrdersForDay: Record<string, unknown>[] = [];
+    let totalOrdersThisRun = 0;
+    let daysSyncedThisRun = 0;
+    let daysProcessed = 0;
 
     try {
-      let hasMore = true;
-      while (hasMore) {
-        const { orders, hasMore: more } = await fetchOrdersPage(token, TOAST_RESTAURANT_GUID, currentDate, currentPage, logger);
-        allOrdersForDay.push(...orders);
-        hasMore = more && orders.length >= PAGE_SIZE;
-        if (hasMore) currentPage++;
-        else break;
-      }
+      while (currentDate <= today && daysProcessed < MAX_DAYS_PER_CRON_RUN) {
+        const batchId = crypto.randomUUID();
+        const allOrdersForDay: Record<string, unknown>[] = [];
+        let hasMore = true;
+        let page = currentPage;
 
-      let totalOrdersThisRun = 0;
-      let daysSyncedThisRun = 0;
+        while (hasMore) {
+          const { orders, hasMore: more } = await fetchOrdersPage(token, TOAST_RESTAURANT_GUID, currentDate, page, logger);
+          allOrdersForDay.push(...orders);
+          hasMore = more && orders.length >= PAGE_SIZE;
+          if (hasMore) page++;
+          else break;
+        }
 
-      if (allOrdersForDay.length > 0) {
-        const aggregated = aggregateOrdersByDate(allOrdersForDay, currentDate);
-        if (aggregated) {
-          const stagingResult = await withRetry(
-            async () => {
-              const { error } = await supabase.from('toast_staging').upsert({
-                business_date: aggregated.businessDate,
-                net_sales: aggregated.netSales,
-                gross_sales: aggregated.grossSales,
-                cafe_sales: aggregated.cafeSales,
-                order_count: aggregated.totalOrders,
-                raw_data: aggregated,
-                sync_batch_id: batchId,
-              }, { onConflict: 'business_date,sync_batch_id' });
-              if (error && !isRetryableSupabaseError(error)) throw error;
-              return { error };
-            },
-            { maxAttempts: 2 },
-            `toast_staging ${currentDate}`
-          );
-          if (stagingResult.result.error) throw stagingResult.result.error;
+        if (allOrdersForDay.length > 0) {
+          const aggregated = aggregateOrdersByDate(allOrdersForDay, currentDate);
+          if (aggregated) {
+            const stagingResult = await withRetry(
+              async () => {
+                const { error } = await supabase.from('toast_staging').upsert({
+                  business_date: aggregated.businessDate,
+                  net_sales: aggregated.netSales,
+                  gross_sales: aggregated.grossSales,
+                  cafe_sales: aggregated.cafeSales,
+                  order_count: aggregated.totalOrders,
+                  raw_data: aggregated,
+                  sync_batch_id: batchId,
+                }, { onConflict: 'business_date,sync_batch_id' });
+                if (error && !isRetryableSupabaseError(error)) throw error;
+                return { error };
+              },
+              { maxAttempts: 2 },
+              `toast_staging ${currentDate}`
+            );
+            if (stagingResult.result.error) throw stagingResult.result.error;
 
-          const targetResult = await withRetry(
-            async () => {
-              const { error } = await supabase.from('toast_sales').upsert({
-                business_date: aggregated.businessDate,
-                net_sales: aggregated.netSales,
-                gross_sales: aggregated.grossSales,
-                cafe_sales: aggregated.cafeSales,
-                raw_data: aggregated,
-                sync_batch_id: batchId,
-              }, { onConflict: 'business_date' });
-              if (error && !isRetryableSupabaseError(error)) throw error;
-              return { error };
-            },
-            { maxAttempts: 2 },
-            `toast_sales ${currentDate}`
-          );
-          if (targetResult.result.error) throw targetResult.result.error;
+            const targetResult = await withRetry(
+              async () => {
+                const { error } = await supabase.from('toast_sales').upsert({
+                  business_date: aggregated.businessDate,
+                  net_sales: aggregated.netSales,
+                  gross_sales: aggregated.grossSales,
+                  cafe_sales: aggregated.cafeSales,
+                  raw_data: aggregated,
+                  sync_batch_id: batchId,
+                }, { onConflict: 'business_date' });
+                if (error && !isRetryableSupabaseError(error)) throw error;
+                return { error };
+              },
+              { maxAttempts: 2 },
+              `toast_sales ${currentDate}`
+            );
+            if (targetResult.result.error) throw targetResult.result.error;
 
-          totalOrdersThisRun = allOrdersForDay.length;
-          daysSyncedThisRun = 1;
+            totalOrdersThisRun += allOrdersForDay.length;
+            daysSyncedThisRun += 1;
+          }
+        }
+
+        const [y, m, d] = currentDate.split('-').map(Number);
+        const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+        currentDate = nextDate;
+        currentPage = 1;
+        daysProcessed += 1;
+
+        await supabase.from('toast_backfill_state').update({
+          cursor_date: nextDate,
+          cursor_page: 1,
+          status: nextDate > today ? 'completed' : 'running',
+          last_error: null,
+          last_synced_at: new Date().toISOString(),
+          total_days_synced: state.total_days_synced + daysSyncedThisRun,
+          total_records_synced: state.total_records_synced + totalOrdersThisRun,
+          updated_at: new Date().toISOString(),
+        }).eq('id', 'toast_backfill');
+
+        if (nextDate > today) break;
+        if (daysProcessed < MAX_DAYS_PER_CRON_RUN) {
+          await new Promise((r) => setTimeout(r, DELAY_BETWEEN_DAYS_MS));
         }
       }
-
-      const [y, m, d] = currentDate.split('-').map(Number);
-      const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-
-      await supabase.from('toast_backfill_state').update({
-        cursor_date: nextDate,
-        cursor_page: 1,
-        status: nextDate > today ? 'completed' : 'running',
-        last_error: null,
-        last_synced_at: new Date().toISOString(),
-        total_days_synced: state.total_days_synced + daysSyncedThisRun,
-        total_records_synced: state.total_records_synced + totalOrdersThisRun,
-        updated_at: new Date().toISOString(),
-      }).eq('id', 'toast_backfill');
 
       return new Response(
         JSON.stringify({
           success: true,
-          completed: nextDate > today,
-          cursor_date: nextDate,
+          completed: currentDate > today,
+          cursor_date: currentDate,
           cursor_page: 1,
           ordersThisRun: totalOrdersThisRun,
           daysSyncedThisRun,

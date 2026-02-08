@@ -2,7 +2,7 @@
  * Toast API backfill: state-based cron (one day per call) or date-range manual run.
  * - With body.start_date + body.end_date: sync that range (max 31 days), do not update state.
  * - Without date range: use toast_backfill_state cursor (one day per call), update state.
- * Writes to toast_staging then toast_sales.
+ * Writes individual raw orders to toast_staging then toast_sales (no aggregation).
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -11,12 +11,11 @@ import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/
 import { createSyncLogger } from '../_shared/logger.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
-const BACKFILL_START_DATE = '2024-08-01'; // Through 08/01/24
-const PAGE_SIZE = 100;
-/** Max days to process per cron invocation (reduces 429s; one run makes more progress so backfill continues even if cron is infrequent). */
+const BACKFILL_START_DATE = '2024-08-01';
+const PAGE_SIZE = 300;
 const MAX_DAYS_PER_CRON_RUN = 5;
-/** Delay between days (ms) to reduce Toast API 429 rate limits. */
 const DELAY_BETWEEN_DAYS_MS = 2000;
+const BATCH_UPSERT_SIZE = 100;
 
 interface ToastAuthResponse {
   token: { tokenType: string; accessToken: string; expiresIn: number };
@@ -32,15 +31,6 @@ interface ToastBackfillState {
   last_synced_at: string | null;
   total_days_synced: number;
   total_records_synced: number;
-}
-
-interface ToastSalesData {
-  businessDate: string;
-  netSales: number;
-  grossSales: number;
-  cafeSales: number;
-  totalOrders: number;
-  [key: string]: unknown;
 }
 
 async function getToastToken(clientId: string, clientSecret: string): Promise<string> {
@@ -59,12 +49,10 @@ async function getToastToken(clientId: string, clientSecret: string): Promise<st
   return authData.token.accessToken;
 }
 
-/** Format YYYY-MM-DD as Toast businessDate (yyyymmdd). Toast filters by restaurant business day in local time when using businessDate. */
 function toToastBusinessDate(isoDate: string): string {
   return isoDate.replace(/-/g, '');
 }
 
-/** Fetch one page of orders for a single business date. Uses businessDate (yyyymmdd) so Toast returns orders opened that business day in restaurant local time; startDate/endDate filter by modification time and often return 0. */
 async function fetchOrdersPage(
   token: string,
   restaurantGuid: string,
@@ -99,29 +87,66 @@ async function fetchOrdersPage(
   return { orders, hasMore };
 }
 
-/** Aggregate orders into one row per business_date (toast_staging format). */
-function aggregateOrdersByDate(orders: Record<string, unknown>[], businessDate: string): ToastSalesData | null {
-  if (orders.length === 0) return null;
-  let netSales = 0, grossSales = 0, cafeSales = 0;
-  for (const order of orders) {
-    const orderTotal = Number(order.totalAmount ?? order.amount ?? 0) || 0;
-    const orderNet = order.netAmount != null ? Number(order.netAmount) : orderTotal;
-    netSales += orderNet;
-    grossSales += orderTotal;
-    cafeSales += orderNet;
+/** Upsert individual orders in batches to staging and sales tables. */
+async function upsertRawOrders(
+  supabase: ReturnType<typeof createClient>,
+  orders: Record<string, unknown>[],
+  businessDate: string,
+  batchId: string,
+  logger: ReturnType<typeof createSyncLogger>
+): Promise<number> {
+  let upsertedCount = 0;
+
+  for (let i = 0; i < orders.length; i += BATCH_UPSERT_SIZE) {
+    const batch = orders.slice(i, i + BATCH_UPSERT_SIZE);
+
+    const stagingRows = batch.map((order) => ({
+      order_guid: String(order.guid ?? order.entityType ?? crypto.randomUUID()),
+      business_date: businessDate,
+      net_sales: Number(order.netAmount ?? 0) || 0,
+      gross_sales: Number(order.totalAmount ?? order.amount ?? 0) || 0,
+      cafe_sales: Number(order.netAmount ?? order.totalAmount ?? 0) || 0,
+      raw_data: order,
+      sync_batch_id: batchId,
+    }));
+
+    const { error: stagingErr } = await (supabase.from('toast_staging') as any).upsert(
+      stagingRows,
+      { onConflict: 'order_guid' }
+    );
+    if (stagingErr) {
+      logger.error(`Staging batch error for ${businessDate}`, stagingErr);
+      throw stagingErr;
+    }
+
+    const salesRows = batch.map((order) => ({
+      order_guid: String(order.guid ?? order.entityType ?? crypto.randomUUID()),
+      business_date: businessDate,
+      net_sales: Number(order.netAmount ?? 0) || 0,
+      gross_sales: Number(order.totalAmount ?? order.amount ?? 0) || 0,
+      cafe_sales: Number(order.netAmount ?? order.totalAmount ?? 0) || 0,
+      order_count: 1,
+      raw_data: order,
+      sync_batch_id: batchId,
+    }));
+
+    const { error: salesErr } = await (supabase.from('toast_sales') as any).upsert(
+      salesRows,
+      { onConflict: 'order_guid' }
+    );
+    if (salesErr) {
+      logger.error(`Sales batch error for ${businessDate}`, salesErr);
+      throw salesErr;
+    }
+
+    upsertedCount += batch.length;
   }
-  return {
-    businessDate,
-    netSales,
-    grossSales,
-    cafeSales,
-    totalOrders: orders.length,
-  };
+
+  return upsertedCount;
 }
 
 const MAX_DAYS_PER_RUN = 31;
 
-/** Iterate calendar days in UTC so the list is correct regardless of server timezone (avoid skipping or duplicating days). */
 function parseDateRange(startDate: string, endDate: string): string[] {
   const start = new Date(startDate + 'T00:00:00.000Z');
   const end = new Date(endDate + 'T00:00:00.000Z');
@@ -163,7 +188,7 @@ Deno.serve(async (req) => {
       ? parseDateRange(body.start_date, body.end_date)
       : null;
 
-    // Mode 1: Date range provided (manual backfill from UI) — process each day in range, do not touch state
+    // Mode 1: Date range provided (manual backfill from UI)
     if (dateRange && dateRange.length > 0) {
       let token: string;
       try {
@@ -193,48 +218,9 @@ Deno.serve(async (req) => {
         }
 
         if (allOrdersForDay.length > 0) {
-          const aggregated = aggregateOrdersByDate(allOrdersForDay, businessDate);
-          if (aggregated) {
-            const stagingResult = await withRetry(
-              async () => {
-                const { error } = await supabase.from('toast_staging').upsert({
-                  business_date: aggregated.businessDate,
-                  net_sales: aggregated.netSales,
-                  gross_sales: aggregated.grossSales,
-                  cafe_sales: aggregated.cafeSales,
-                  order_count: aggregated.totalOrders,
-                  raw_data: aggregated,
-                  sync_batch_id: batchId,
-                }, { onConflict: 'business_date,sync_batch_id' });
-                if (error && !isRetryableSupabaseError(error)) throw error;
-                return { error };
-              },
-              { maxAttempts: 2 },
-              `toast_staging ${businessDate}`
-            );
-            if (stagingResult.result.error) throw stagingResult.result.error;
-
-            const targetResult = await withRetry(
-              async () => {
-                const { error } = await supabase.from('toast_sales').upsert({
-                  business_date: aggregated.businessDate,
-                  net_sales: aggregated.netSales,
-                  gross_sales: aggregated.grossSales,
-                  cafe_sales: aggregated.cafeSales,
-                  raw_data: aggregated,
-                  sync_batch_id: batchId,
-                }, { onConflict: 'business_date' });
-                if (error && !isRetryableSupabaseError(error)) throw error;
-                return { error };
-              },
-              { maxAttempts: 2 },
-              `toast_sales ${businessDate}`
-            );
-            if (targetResult.result.error) throw targetResult.result.error;
-
-            totalOrdersThisRun += allOrdersForDay.length;
-            datesProcessed.push(businessDate);
-          }
+          const count = await upsertRawOrders(supabase, allOrdersForDay, businessDate, batchId, logger);
+          totalOrdersThisRun += count;
+          datesProcessed.push(businessDate);
         }
       }
 
@@ -261,7 +247,7 @@ Deno.serve(async (req) => {
     if (stateError || !stateRow) {
       logger.error('Failed to load toast_backfill_state', stateError);
       return new Response(
-        JSON.stringify({ error: 'Backfill state not found. Run migration 20260206120000_toast_backfill_state_and_cron.sql.' }),
+        JSON.stringify({ error: 'Backfill state not found.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -269,13 +255,12 @@ Deno.serve(async (req) => {
     const state = stateRow as ToastBackfillState;
     if (state.status === 'completed') {
       return new Response(
-        JSON.stringify({ success: true, completed: true, message: 'Backfill already completed through 08/01/24' }),
+        JSON.stringify({ success: true, completed: true, message: 'Backfill already completed' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const cursorDate = state.cursor_date;
-    const cursorPage = state.cursor_page;
     const today = new Date().toISOString().split('T')[0];
     if (cursorDate > today) {
       await supabase.from('toast_backfill_state').update({
@@ -284,7 +269,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('id', 'toast_backfill');
       return new Response(
-        JSON.stringify({ success: true, completed: true, message: 'Backfill finished through 08/01/24' }),
+        JSON.stringify({ success: true, completed: true, message: 'Backfill finished' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -305,7 +290,6 @@ Deno.serve(async (req) => {
     }
 
     let currentDate = cursorDate;
-    let currentPage = cursorPage;
     let totalOrdersThisRun = 0;
     let daysSyncedThisRun = 0;
     let daysProcessed = 0;
@@ -315,7 +299,7 @@ Deno.serve(async (req) => {
         const batchId = crypto.randomUUID();
         const allOrdersForDay: Record<string, unknown>[] = [];
         let hasMore = true;
-        let page = currentPage;
+        let page = 1;
 
         while (hasMore) {
           const { orders, hasMore: more } = await fetchOrdersPage(token, TOAST_RESTAURANT_GUID, currentDate, page, logger);
@@ -326,54 +310,14 @@ Deno.serve(async (req) => {
         }
 
         if (allOrdersForDay.length > 0) {
-          const aggregated = aggregateOrdersByDate(allOrdersForDay, currentDate);
-          if (aggregated) {
-            const stagingResult = await withRetry(
-              async () => {
-                const { error } = await supabase.from('toast_staging').upsert({
-                  business_date: aggregated.businessDate,
-                  net_sales: aggregated.netSales,
-                  gross_sales: aggregated.grossSales,
-                  cafe_sales: aggregated.cafeSales,
-                  order_count: aggregated.totalOrders,
-                  raw_data: aggregated,
-                  sync_batch_id: batchId,
-                }, { onConflict: 'business_date,sync_batch_id' });
-                if (error && !isRetryableSupabaseError(error)) throw error;
-                return { error };
-              },
-              { maxAttempts: 2 },
-              `toast_staging ${currentDate}`
-            );
-            if (stagingResult.result.error) throw stagingResult.result.error;
-
-            const targetResult = await withRetry(
-              async () => {
-                const { error } = await supabase.from('toast_sales').upsert({
-                  business_date: aggregated.businessDate,
-                  net_sales: aggregated.netSales,
-                  gross_sales: aggregated.grossSales,
-                  cafe_sales: aggregated.cafeSales,
-                  raw_data: aggregated,
-                  sync_batch_id: batchId,
-                }, { onConflict: 'business_date' });
-                if (error && !isRetryableSupabaseError(error)) throw error;
-                return { error };
-              },
-              { maxAttempts: 2 },
-              `toast_sales ${currentDate}`
-            );
-            if (targetResult.result.error) throw targetResult.result.error;
-
-            totalOrdersThisRun += allOrdersForDay.length;
-            daysSyncedThisRun += 1;
-          }
+          const count = await upsertRawOrders(supabase, allOrdersForDay, currentDate, batchId, logger);
+          totalOrdersThisRun += count;
+          daysSyncedThisRun += 1;
         }
 
         const [y, m, d] = currentDate.split('-').map(Number);
         const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
         currentDate = nextDate;
-        currentPage = 1;
         daysProcessed += 1;
 
         await supabase.from('toast_backfill_state').update({
@@ -398,7 +342,6 @@ Deno.serve(async (req) => {
           success: true,
           completed: currentDate > today,
           cursor_date: currentDate,
-          cursor_page: 1,
           ordersThisRun: totalOrdersThisRun,
           daysSyncedThisRun,
           total_days_synced: state.total_days_synced + daysSyncedThisRun,
@@ -415,11 +358,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('id', 'toast_backfill');
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: errMsg,
-          resume_from: { cursor_date: currentDate, cursor_page: currentPage },
-        }),
+        JSON.stringify({ success: false, error: errMsg }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

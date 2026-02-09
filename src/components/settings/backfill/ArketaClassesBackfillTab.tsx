@@ -1,104 +1,56 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { useSyncArketaClasses } from "@/hooks/useArketaApi";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import DateSelector from "./DateSelector";
+import { useBackfillJob } from "./useBackfillJob";
+import BackfillSyncLog from "./BackfillSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 
-function formatDate(d: Date) {
-  return d.toISOString().split("T")[0];
-}
-
 export default function ArketaClassesBackfillTab() {
-  const queryClient = useQueryClient();
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return formatDate(d);
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return formatDate(d);
-  });
+  const {
+    startDate, setStartDate, endDate, setEndDate, isRange, setIsRange,
+    dayCount, syncProgress, handleSync, handleCancelJob, elapsedText, totalNewRecords,
+  } = useBackfillJob("arketa_classes");
 
-  const syncClasses = useSyncArketaClasses();
-
-  const { data: totalCount, refetch: refetchCount } = useQuery({
+  const { data: totalCount } = useQuery({
     queryKey: ["arketa-classes-count"],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("arketa_classes")
-        .select("*", { count: "exact", head: true });
+      const { count, error } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true });
       if (error) throw error;
-      return count ?? 0;
+      return count || 0;
     },
+    refetchInterval: syncProgress.isRunning ? 5000 : 60000,
   });
 
-  const handleSync = () => {
-    syncClasses.mutate(
-      { start_date: startDate, end_date: endDate },
-      {
-        onSuccess: () => {
-          refetchCount();
-          queryClient.invalidateQueries({ queryKey: ["backfill-calendar", "classes"] });
-        },
-      }
-    );
-  };
+  const hasCooldown = syncProgress.results.some(r => r.hitPageLimit);
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sync Arketa Classes</CardTitle>
-          <CardDescription>
-            Populate arketa_classes for a date range. Required for reservation sync (Tier 2/3). Uses sync-arketa-classes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="classes-start">Start date</Label>
-              <Input
-                id="classes-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                disabled={syncClasses.isPending}
-              />
+      <DateSelector
+        startDate={startDate} endDate={endDate} isRange={isRange}
+        onStartDateChange={setStartDate} onEndDateChange={setEndDate} onIsRangeChange={setIsRange}
+        isRunning={syncProgress.isRunning} elapsedText={elapsedText}
+        onSync={handleSync} onCancel={handleCancelJob} dayCount={dayCount}
+      />
+      {syncProgress.isRunning && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Progress</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Dates: {syncProgress.completedDates} / {syncProgress.totalDates}</span>
+              <span>Records: {syncProgress.totalRecords.toLocaleString()}</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="classes-end">End date</Label>
-              <Input
-                id="classes-end"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={syncClasses.isPending}
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleSync}
-            disabled={syncClasses.isPending}
-            className="gap-2"
-          >
-            {syncClasses.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Syncing…
-              </>
-            ) : (
-              "Sync classes"
+            <Progress value={syncProgress.totalDates ? (syncProgress.completedDates / syncProgress.totalDates) * 100 : 0} className="h-2" />
+            {hasCooldown && (
+              <p className="text-xs text-muted-foreground">
+                ⏳ Page limit reached — auto-restarting after 2 min cooldown. Last date will be re-synced to ensure no records are missed.
+              </p>
             )}
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">arketa_classes</CardTitle>
@@ -106,12 +58,18 @@ export default function ArketaClassesBackfillTab() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
+            <Badge variant="secondary">Total records</Badge>
             <span className="text-2xl font-semibold">{totalCount?.toLocaleString() ?? "—"}</span>
-            <span className="text-muted-foreground text-sm">classes</span>
           </div>
         </CardContent>
       </Card>
-      <BackfillCalendarHeatmap type="classes" refetchTrigger={syncClasses.isPending} />
+      <BackfillSyncLog
+        results={syncProgress.results}
+        isRunning={syncProgress.isRunning}
+        totalRecords={syncProgress.totalRecords}
+        totalNewRecords={totalNewRecords}
+      />
+      <BackfillCalendarHeatmap type="classes" refetchTrigger={syncProgress.isRunning} />
     </div>
   );
 }

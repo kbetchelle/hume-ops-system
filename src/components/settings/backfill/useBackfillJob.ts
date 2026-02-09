@@ -5,6 +5,23 @@ import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { toast } from "sonner";
 import { SyncProgress, SyncResult, BackfillJobType } from "./types";
 
+function getCountQueryKey(jobType: BackfillJobType): string[] {
+  switch (jobType) {
+    case "arketa_reservations": return ["total-reservations-count"];
+    case "arketa_classes": return ["arketa-classes-count"];
+    case "toast_orders": return ["toast-sales-count"];
+    default: return ["total-payments-count"];
+  }
+}
+
+function getApiSource(jobType: BackfillJobType): string {
+  return jobType.startsWith("toast") ? "toast" : "arketa";
+}
+
+function getDataType(jobType: BackfillJobType): string {
+  return jobType.replace("arketa_", "").replace("toast_", "");
+}
+
 export function useBackfillJob(jobType: BackfillJobType) {
   const queryClient = useQueryClient();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -58,8 +75,7 @@ export function useBackfillJob(jobType: BackfillJobType) {
 
   useEffect(() => {
     if (activeJob && (activeJob.status === "completed" || activeJob.status === "cancelled" || activeJob.status === "failed")) {
-      const countQueryKey = jobType === "arketa_reservations" ? ["total-reservations-count"] : ["total-payments-count"];
-      queryClient.invalidateQueries({ queryKey: countQueryKey });
+      queryClient.invalidateQueries({ queryKey: getCountQueryKey(jobType) });
       const timer = setTimeout(() => { setActiveJobId(null); queryClient.invalidateQueries({ queryKey: ["sync-logs-with-details"] }); }, 3000);
       return () => clearTimeout(timer);
     }
@@ -86,8 +102,9 @@ export function useBackfillJob(jobType: BackfillJobType) {
       const { data: job, error: createError } = await supabase
         .from("backfill_jobs")
         .insert({
-          api_source: "arketa",
-          data_type: jobType.replace("arketa_", ""),
+          api_source: getApiSource(jobType),
+          data_type: getDataType(jobType),
+          job_type: jobType,
           status: "pending",
           start_date: startDate,
           end_date: isRange ? endDate : startDate,

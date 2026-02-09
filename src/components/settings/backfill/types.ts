@@ -5,6 +5,7 @@ export interface SyncResult {
   recordCount: number;
   success: boolean;
   error?: string;
+  hitPageLimit?: boolean;
 }
 
 export interface SyncProgress {
@@ -17,4 +18,4 @@ export interface SyncProgress {
   startTime: number | null;
 }
 
-export type BackfillJobType = "arketa_reservations" | "arketa_payments";
+export type BackfillJobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "toast_orders";

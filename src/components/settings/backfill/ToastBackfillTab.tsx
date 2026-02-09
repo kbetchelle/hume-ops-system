@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import DateSelector from "./DateSelector";
 import { useBackfillJob } from "./useBackfillJob";
 import BackfillSyncLog from "./BackfillSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
+import SyncProgressCard from "./SyncProgressCard";
 
 export default function ToastBackfillTab() {
   const {
@@ -34,23 +34,13 @@ export default function ToastBackfillTab() {
         isRunning={syncProgress.isRunning} elapsedText={elapsedText}
         onSync={handleSync} onCancel={handleCancelJob} dayCount={dayCount}
       />
-      {syncProgress.isRunning && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Progress</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Dates: {syncProgress.completedDates} / {syncProgress.totalDates}</span>
-              <span>Records: {syncProgress.totalRecords.toLocaleString()}</span>
-            </div>
-            <Progress value={syncProgress.totalDates ? (syncProgress.completedDates / syncProgress.totalDates) * 100 : 0} className="h-2" />
-            {hasCooldown && (
-              <p className="text-xs text-muted-foreground">
-                ⏳ Page limit reached — auto-restarting after 2 min cooldown. Last date will be re-synced to ensure no records are missed.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <SyncProgressCard
+        syncProgress={syncProgress}
+        startDate={startDate}
+        endDate={endDate}
+        isRange={isRange}
+        hasCooldown={hasCooldown}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">toast_sales</CardTitle>

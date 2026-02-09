@@ -32,14 +32,24 @@ const RPC_MAP: Record<BackfillCalendarType, string> = {
   toast: "get_backfill_toast_calendar",
 };
 
+/** Threshold below which a day is considered "partially" synced. */
+const PARTIAL_THRESHOLD: Record<BackfillCalendarType, number> = {
+  reservations: 3,
+  payments: 3,
+  classes: 2,
+  toast: 5,
+};
+
 function getStatus(
   type: BackfillCalendarType,
   recordCount: number,
   checkedInCount?: number
 ): DayStatus {
   if (recordCount === 0) return "not_pulled";
-  if (type === "reservations" && typeof checkedInCount === "number" && checkedInCount === 0)
+  // For reservations, also check if there are check-ins
+  if (type === "reservations" && typeof checkedInCount === "number" && checkedInCount === 0 && recordCount < PARTIAL_THRESHOLD.reservations)
     return "partial";
+  if (recordCount < PARTIAL_THRESHOLD[type]) return "partial";
   return "synced";
 }
 
@@ -93,7 +103,7 @@ export default function BackfillCalendarHeatmap({ type, refetchTrigger }: Backfi
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Sync coverage by day</CardTitle>
         <CardDescription>
-          From Aug 1, 2024. Green = synced, {type === "reservations" ? "Amber = partial (no check-ins), " : ""}Gray = not pulled.
+          From Aug 1, 2024. Green = synced, Amber = partially synced, Gray = not pulled.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -101,11 +111,9 @@ export default function BackfillCalendarHeatmap({ type, refetchTrigger }: Backfi
           <span className="flex items-center gap-1">
             <span className="h-3 w-3 rounded-sm bg-emerald-500/80" aria-hidden /> Synced
           </span>
-          {type === "reservations" && (
-            <span className="flex items-center gap-1">
-              <span className="h-3 w-3 rounded-sm bg-amber-500/80" aria-hidden /> Partial (no check-ins)
-            </span>
-          )}
+          <span className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded-sm bg-amber-500/80" aria-hidden /> Partially synced
+          </span>
           <span className="flex items-center gap-1">
             <span className="h-3 w-3 rounded-sm bg-muted" aria-hidden /> Not pulled
           </span>

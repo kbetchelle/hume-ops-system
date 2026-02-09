@@ -47,6 +47,7 @@ import { Input } from "@/components/ui/input";
 
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
+  arketa_classes: { stagingTable: "arketa_classes_staging", targetTable: "arketa_classes" },
   arketa_clients: { stagingTable: "arketa_clients_staging", targetTable: "arketa_clients" },
   arketa_reservations: { stagingTable: "arketa_reservations_staging", targetTable: "arketa_reservations" },
   arketa_payments: { stagingTable: "arketa_payments_staging", targetTable: "arketa_payments" },
@@ -70,36 +71,6 @@ function getDefaultArketaDateRange() {
     start_date: start.toISOString().split("T")[0],
     end_date: end.toISOString().split("T")[0],
   };
-}
-
-function ArketaClassesSyncButton() {
-  const syncClasses = useSyncArketaClasses();
-  const defaultRange = getDefaultArketaDateRange();
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium">Arketa Classes</span>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => syncClasses.mutate(defaultRange)}
-        disabled={syncClasses.isPending}
-        className="gap-1"
-      >
-        {syncClasses.isPending ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Syncing…
-          </>
-        ) : (
-          <>
-            <Play className="h-4 w-4" />
-            Sync now
-          </>
-        )}
-      </Button>
-      <span className="text-xs text-muted-foreground">Same range as reservations (-7 to +7 days)</span>
-    </div>
-  );
 }
 
 function ArketaClassesAndReservationsSync() {
@@ -220,8 +191,10 @@ function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
   const updateSchedule = useUpdateSyncSchedule();
   const runSync = useRunSync();
+  const syncArketaClasses = useSyncArketaClasses();
   const intervalOptions = getIntervalOptions();
   const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
+  const defaultArketaRange = getDefaultArketaDateRange();
 
   const handleIntervalChange = (id: string, value: string) => {
     updateSchedule.mutate({
@@ -233,7 +206,12 @@ function SyncOverviewTable() {
   const handleRunNow = async (syncType: string) => {
     setRunningSyncType(syncType);
     try {
-      await runSync.mutateAsync(syncType);
+      if (syncType === "arketa_classes") {
+        await syncArketaClasses.mutateAsync(defaultArketaRange);
+        refetch();
+      } else {
+        await runSync.mutateAsync(syncType);
+      }
     } finally {
       setRunningSyncType(null);
     }
@@ -276,6 +254,63 @@ function SyncOverviewTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
+          {/* Arketa Classes: manual-only row (not in sync_schedule), same format as other endpoints */}
+          {(() => {
+            const config = API_CONFIG["arketa_classes"] || { stagingTable: null, targetTable: "—" };
+            const isRunning = runningSyncType === "arketa_classes";
+            return (
+              <TableRow key="arketa_classes">
+                <TableCell className="font-medium">Arketa Classes</TableCell>
+                <TableCell>
+                  <StatusBadge status={null} isHealthy={true} />
+                </TableCell>
+                <TableCell>
+                  <span className="text-muted-foreground">—</span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-muted-foreground">Manual</span>
+                </TableCell>
+                <TableCell className="text-sm">
+                  <span className="text-muted-foreground">—</span>
+                </TableCell>
+                <TableCell>
+                  {config.stagingTable ? (
+                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
+                      {config.stagingTable}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="font-mono text-xs bg-muted/50">
+                    {config.targetTable}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRunNow("arketa_classes")}
+                    disabled={runningSyncType !== null}
+                    className="gap-1"
+                  >
+                    {isRunning ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-xs">Syncing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4" />
+                        <span className="text-xs">Sync Now</span>
+                      </>
+                    )}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })()}
           {schedules
             ?.filter((sync) => sync.is_enabled) // Only show enabled syncs
             .map((sync) => {
@@ -583,7 +618,7 @@ export default function ApiSyncingPage() {
           </Button>
         </div>
 
-        {/* One-off: Arketa Classes and combined Classes + Reservations */}
+        {/* One-off: Arketa (Classes + Reservations) with date range */}
         <Card className="border border-border rounded-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-normal flex items-center gap-2">
@@ -591,11 +626,10 @@ export default function ApiSyncingPage() {
               Manual syncs
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              One-off syncs not on the schedule. Run Classes first, then Reservations, or use one button to run both with the same date range.
+              Run Arketa Classes then Reservations in one go with the same date range (classes run first).
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <ArketaClassesSyncButton />
+          <CardContent className="flex flex-wrap items-center gap-4">
             <ArketaClassesAndReservationsSync />
           </CardContent>
         </Card>

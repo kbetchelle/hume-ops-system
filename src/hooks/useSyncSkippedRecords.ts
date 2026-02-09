@@ -31,6 +31,7 @@ export function useSyncSkippedRecords(apiName: string | null, options?: { refetc
       return (data ?? []) as ApiSyncSkippedRecord[];
     },
     refetchInterval,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -48,5 +49,6 @@ export function useSyncSkippedRecordsApiNames() {
       return names as string[];
     },
     refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 }

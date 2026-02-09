@@ -35,18 +35,20 @@ export function usePageStatuses() {
         .order("task", { ascending: true });
 
       if (error) throw error;
-      // Map to expected interface
-      return data.map((item: any) => ({
-        id: item.id,
-        category: item.category,
-        task: item.task,
-        page_title: item.task,
-        status: item.status as PageStatus,
-        role_category: item.category,
-        notes: item.notes,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      }));
+      // Map to expected interface; exclude Skipped Records (lives only in nav under Dev Tools, not on dashboard)
+      return data
+        .filter((item: any) => item.task !== "Skipped Records")
+        .map((item: any) => ({
+          id: item.id,
+          category: item.category,
+          task: item.task,
+          page_title: item.task,
+          status: item.status as PageStatus,
+          role_category: item.category,
+          notes: item.notes,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        }));
     },
   });
 }

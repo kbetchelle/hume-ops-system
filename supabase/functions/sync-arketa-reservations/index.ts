@@ -353,6 +353,21 @@ Deno.serve(async (req) => {
       triggeredBy: body.triggeredBy || 'manual',
     });
 
+    // Refresh daily_schedule for the synced date range (after reservations are in staging; trigger will refresh again when sync-from-staging runs)
+    try {
+      const refreshUrl = `${supabaseUrl}/functions/v1/refresh-daily-schedule`;
+      await fetch(refreshUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+      });
+    } catch (refreshErr) {
+      logger?.warn('Failed to call refresh-daily-schedule', refreshErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: failedCount === 0,

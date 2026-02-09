@@ -37,15 +37,16 @@ import {
 } from "@/components/ui/select";
 import { selectFrom } from "@/lib/dataApi";
 
-interface ClassSchedule {
+interface DailyScheduleClass {
   id: string;
-  class_date: string;
+  schedule_date: string;
   class_name: string;
-  instructor_name: string | null;
+  instructor: string | null;
   start_time: string;
   end_time: string | null;
-  signups: number | null;
-  capacity: number | null;
+  total_booked: number | null;
+  max_capacity: number | null;
+  canceled: boolean | null;
 }
 
 interface ScheduledTour {
@@ -59,14 +60,13 @@ interface ScheduledTour {
   status: string;
 }
 
-interface DailySchedule {
+interface StaffShift {
   id: string;
-  schedule_date: string;
-  staff_name: string | null;
+  shift_date: string | null;
+  user_name: string | null;
   position: string | null;
   shift_start: string;
   shift_end: string;
-  location: string | null;
 }
 
 interface CalendarEvent {
@@ -126,14 +126,14 @@ export function MasterCalendar() {
     refetchInterval: 60000,
   });
 
-  // Fetch classes
+  // Fetch classes (from daily_schedule: arketa classes + reservations)
   const { data: classes, isLoading: classesLoading } = useQuery({
-    queryKey: ["class-schedule-calendar", startDateStr, endDateStr],
+    queryKey: ["daily-schedule-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ClassSchedule>("class_schedule", {
+      const { data, error } = await selectFrom<DailyScheduleClass>("daily_schedule", {
         filters: [
-          { type: "gte", column: "class_date", value: startDateStr },
-          { type: "lte", column: "class_date", value: endDateStr },
+          { type: "gte", column: "schedule_date", value: startDateStr },
+          { type: "lte", column: "schedule_date", value: endDateStr },
         ],
         order: { column: "start_time", ascending: true },
       });
@@ -143,14 +143,14 @@ export function MasterCalendar() {
     refetchInterval: 60000,
   });
 
-  // Fetch staff shifts
+  // Fetch staff shifts (from staff_shifts: Sling)
   const { data: shifts, isLoading: shiftsLoading } = useQuery({
-    queryKey: ["daily-schedules-calendar", startDateStr, endDateStr],
+    queryKey: ["staff-shifts-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailySchedule>("daily_schedules", {
+      const { data, error } = await selectFrom<StaffShift>("staff_shifts", {
         filters: [
-          { type: "gte", column: "schedule_date", value: startDateStr },
-          { type: "lte", column: "schedule_date", value: endDateStr },
+          { type: "gte", column: "shift_date", value: startDateStr },
+          { type: "lte", column: "shift_date", value: endDateStr },
         ],
         order: { column: "shift_start", ascending: true },
       });
@@ -180,28 +180,28 @@ export function MasterCalendar() {
     const classEvents: CalendarEvent[] = (classes || []).map((c) => ({
       id: `class-${c.id}`,
       type: "class" as const,
-      title: c.class_name || "Unnamed Class",
-      subtitle: c.instructor_name || undefined,
+      title: c.canceled ? `${c.class_name || "Unnamed Class"} (Canceled)` : (c.class_name || "Unnamed Class"),
+      subtitle: c.instructor || undefined,
       startTime: parseISO(c.start_time),
       endTime: c.end_time ? parseISO(c.end_time) : undefined,
       details:
-        c.signups !== null && c.capacity !== null
-          ? `${c.signups}/${c.capacity} signed up`
+        c.total_booked !== null && c.max_capacity !== null
+          ? `${c.total_booked}/${c.max_capacity} signed up`
           : undefined,
-      date: c.class_date,
-      color: "bg-green-100 border-green-300 text-green-900",
+      date: c.schedule_date,
+      color: c.canceled ? "bg-muted border-muted-foreground/30 text-muted-foreground" : "bg-green-100 border-green-300 text-green-900",
       icon: <Dumbbell className="h-3 w-3" />,
     }));
 
     const shiftEvents: CalendarEvent[] = (shifts || []).map((s) => ({
       id: `shift-${s.id}`,
       type: "shift" as const,
-      title: s.staff_name || "Staff Member",
+      title: s.user_name || "Staff Member",
       subtitle: s.position || undefined,
       startTime: parseISO(s.shift_start),
       endTime: parseISO(s.shift_end),
-      details: s.location || undefined,
-      date: s.schedule_date,
+      details: undefined,
+      date: s.shift_date || "",
       color: "bg-purple-100 border-purple-300 text-purple-900",
       icon: <Briefcase className="h-3 w-3" />,
     }));

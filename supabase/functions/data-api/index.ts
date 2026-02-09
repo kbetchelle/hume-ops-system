@@ -12,7 +12,7 @@ import {
 
 const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'daily_reports': { management: ['select', 'insert', 'update'], concierge: ['select'] },
-  'daily_schedules': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'daily_schedule': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'member_checkins': { management: ['select', 'insert', 'update'], concierge: ['select'] },
   'class_schedule': { management: ['select', 'insert', 'update'], concierge: ['select'], staff: ['select'] },
   'scheduled_tours': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'update'] },

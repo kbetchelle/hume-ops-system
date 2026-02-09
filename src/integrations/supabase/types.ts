@@ -2366,45 +2366,48 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_schedules: {
+      daily_schedule: {
         Row: {
           id: string
-          is_currently_working: boolean | null
-          last_synced_at: string | null
-          location: string | null
-          position: string | null
+          class_id: string
           schedule_date: string
-          shift_end: string
-          shift_start: string
-          sling_user_id: number
-          staff_id: string | null
-          staff_name: string | null
+          start_time: string
+          end_time: string | null
+          class_name: string
+          max_capacity: number | null
+          total_booked: number | null
+          instructor: string | null
+          description: string | null
+          updated_at: string | null
+          canceled: boolean | null
         }
         Insert: {
           id?: string
-          is_currently_working?: boolean | null
-          last_synced_at?: string | null
-          location?: string | null
-          position?: string | null
+          class_id: string
           schedule_date: string
-          shift_end: string
-          shift_start: string
-          sling_user_id: number
-          staff_id?: string | null
-          staff_name?: string | null
+          start_time: string
+          end_time?: string | null
+          class_name: string
+          max_capacity?: number | null
+          total_booked?: number | null
+          instructor?: string | null
+          description?: string | null
+          updated_at?: string | null
+          canceled?: boolean | null
         }
         Update: {
           id?: string
-          is_currently_working?: boolean | null
-          last_synced_at?: string | null
-          location?: string | null
-          position?: string | null
+          class_id?: string
           schedule_date?: string
-          shift_end?: string
-          shift_start?: string
-          sling_user_id?: number
-          staff_id?: string | null
-          staff_name?: string | null
+          start_time?: string
+          end_time?: string | null
+          class_name?: string
+          max_capacity?: number | null
+          total_booked?: number | null
+          instructor?: string | null
+          description?: string | null
+          updated_at?: string | null
+          canceled?: boolean | null
         }
         Relationships: []
       }

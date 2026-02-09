@@ -8,12 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { selectFrom } from "@/lib/dataApi";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 
-interface ClassSchedule {
+interface DailyScheduleClass {
   id: string;
   class_name: string;
   start_time: string;
-  signups: number | null;
-  capacity: number | null;
+  total_booked: number | null;
+  max_capacity: number | null;
+  canceled: boolean | null;
 }
 
 interface ScheduledTour {
@@ -41,10 +42,10 @@ export function ShiftEventsMiniCalendar() {
   const formattedDate = format(new Date(), "EEE, MMM d");
 
   const { data: classes, isLoading: classesLoading } = useQuery({
-    queryKey: ["class-schedule", today],
+    queryKey: ["daily-schedule", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ClassSchedule>("class_schedule", {
-        filters: [{ type: "eq", column: "class_date", value: today }],
+      const { data, error } = await selectFrom<DailyScheduleClass>("daily_schedule", {
+        filters: [{ type: "eq", column: "schedule_date", value: today }],
         order: { column: "start_time", ascending: true },
       });
       if (error) throw error;
@@ -88,11 +89,11 @@ export function ShiftEventsMiniCalendar() {
       .map((c) => ({
         id: c.id,
         type: "class" as const,
-        title: c.class_name || "Unnamed Class",
+        title: c.canceled ? `${c.class_name || "Unnamed Class"} (Canceled)` : (c.class_name || "Unnamed Class"),
         time: format(parseISO(c.start_time), "h:mm a"),
         details:
-          c.signups !== null && c.capacity !== null
-            ? `${c.signups}/${c.capacity} signed up`
+          c.total_booked !== null && c.max_capacity !== null
+            ? `${c.total_booked}/${c.max_capacity} signed up`
             : undefined,
         sortTime: parseISO(c.start_time),
       }));

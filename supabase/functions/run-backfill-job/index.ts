@@ -68,7 +68,121 @@ function getSyncConfig(jobType: JobType) {
   }
 }
 
-/** Build the request body for the sync function based on job type */
+/** Handle arketa_classes with wide-range syncs (7-day chunks) instead of day-by-day */
+async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>) {
+  const startDate = new Date(job.start_date);
+  const endDate = new Date(job.end_date);
+  const CHUNK_DAYS = 7;
+  
+  // Build weekly chunks
+  const chunks: { start: string; end: string }[] = [];
+  const cur = new Date(startDate);
+  while (cur <= endDate) {
+    const chunkEnd = new Date(cur);
+    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS - 1);
+    if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
+    chunks.push({ start: formatDate(cur), end: formatDate(chunkEnd) });
+    cur.setDate(cur.getDate() + CHUNK_DAYS);
+  }
+
+  const existingResults: SyncResult[] = job.results || [];
+  const completedChunks = new Set(existingResults.filter((r: SyncResult) => r.success).map((r: SyncResult) => r.date));
+  
+  // Re-sync last successful chunk on restart
+  const successResults = existingResults.filter((r: SyncResult) => r.success);
+  const lastSuccessChunk = successResults.length > 0 ? successResults[successResults.length - 1]?.date : null;
+  if (lastSuccessChunk) {
+    completedChunks.delete(lastSuccessChunk);
+    const idx = existingResults.findIndex((r: SyncResult) => r.date === lastSuccessChunk && r.success);
+    if (idx !== -1) existingResults.splice(idx, 1);
+  }
+
+  const remainingChunks = chunks.filter(c => !completedChunks.has(`${c.start}_${c.end}`));
+
+  if (remainingChunks.length === 0) {
+    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null, completed_dates: chunks.length }).eq("id", jobId);
+    return new Response(JSON.stringify({ success: true, completed: true, totalChunks: chunks.length }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Process one chunk at a time (each is already a wide-range API call)
+  const chunk = remainingChunks[0];
+  const results: SyncResult[] = [...existingResults];
+  let totalRecords = job.total_records || 0;
+  let totalNewRecords = job.total_new_records || 0;
+
+  const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
+  if (currentJob?.status === "cancelled") {
+    return new Response(JSON.stringify({ success: true, cancelled: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  await supabase.from("backfill_jobs").update({ processing_date: `${chunk.start} → ${chunk.end}` }).eq("id", jobId);
+
+  // Count existing classes in this chunk's date range before sync
+  const { count: existingBefore } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true }).gte("class_date", chunk.start).lte("class_date", chunk.end);
+  const existingCount = existingBefore || 0;
+
+  try {
+    const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-arketa-classes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ startDate: chunk.start, endDate: chunk.end }),
+    });
+    const syncData = await syncResponse.json();
+
+    if (!syncResponse.ok) {
+      results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
+    } else {
+      const recordCount = syncData?.syncedCount ?? syncData?.totalFetched ?? 0;
+      const totalFetched = syncData?.totalFetched ?? 0;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const { count: afterCount } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true }).gte("class_date", chunk.start).lte("class_date", chunk.end);
+      const newRecords = Math.max(0, (afterCount || 0) - existingCount);
+      totalRecords += recordCount;
+      totalNewRecords += newRecords;
+
+      const hitPageLimit = totalFetched > 0 && totalFetched % 400 === 0;
+      results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit });
+
+      if (hitPageLimit) {
+        console.log(`[run-backfill-job] Classes chunk ${chunk.start}-${chunk.end} hit 400 page limit (fetched ${totalFetched}). Scheduling 2-min cooldown.`);
+        await supabase.from("backfill_jobs").update({
+          retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
+          completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results,
+        }).eq("id", jobId);
+        await new Promise(resolve => setTimeout(resolve, 120_000));
+      }
+    }
+  } catch (err) {
+    results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+  }
+
+  await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+
+  const isComplete = results.length >= chunks.length;
+  if (isComplete) {
+    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null }).eq("id", jobId);
+    return new Response(JSON.stringify({ success: true, completed: true, totalChunks: chunks.length, totalRecords, totalNewRecords }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Schedule next chunk
+  fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ jobId }),
+  }).catch(err => console.error("Failed to trigger next chunk:", err));
+
+  return new Response(JSON.stringify({ success: true, completed: false, processedChunks: results.length, totalChunks: chunks.length }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+
 function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknown> {
   if (jobType === "toast_orders") {
     return { start_date: dateStr, end_date: dateStr };
@@ -134,6 +248,11 @@ Deno.serve(async (req) => {
 
     await supabase.from("backfill_jobs").update({ status: "running", started_at: job.started_at || new Date().toISOString() }).eq("id", jobId);
 
+    // ── Arketa Classes: wide-range sync (not day-by-day) ──
+    if (jobType === "arketa_classes") {
+      return await handleClassesBackfill(supabase, job, jobId, corsHeaders);
+    }
+
     const startDate = new Date(job.start_date);
     const endDate = new Date(job.end_date);
     const allDates = eachDayOfInterval(startDate, endDate);
@@ -198,7 +317,7 @@ Deno.serve(async (req) => {
           totalNewRecords += newRecords;
           
           // Detect if the sync hit the page limit (totalFetched is a multiple of the page size)
-          const hitPageLimit = totalFetched > 0 && totalFetched % 100 === 0; // Toast uses 100, Arketa uses 400
+          const hitPageLimit = totalFetched > 0 && totalFetched % (jobType === "toast_orders" ? 100 : 400) === 0;
           if (hitPageLimit) {
             console.log(`[run-backfill-job] Page limit likely hit for ${dateStr} (fetched ${totalFetched}). Will schedule 2-min cooldown.`);
             batchHitPageLimit = true;

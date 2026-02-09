@@ -81,12 +81,16 @@ export function useBackfillJob(jobType: BackfillJobType) {
     }
   }, [activeJob?.status, queryClient, jobType]);
 
+  // For classes, completed_dates tracks chunks not days; total_days is the original day count but completed_dates is chunk count
+  const completedCount = activeJob?.completed_dates || activeJob?.days_processed || 0;
+  const totalCount = activeJob?.total_days || activeJob?.total_dates || 0;
+
   const syncProgress: SyncProgress = activeJob
     ? {
         isRunning: activeJob.status === "running" || activeJob.status === "pending",
         currentDate: activeJob.processing_date,
-        totalDates: activeJob.total_days || activeJob.total_dates || 0,
-        completedDates: activeJob.days_processed || activeJob.completed_dates || 0,
+        totalDates: totalCount,
+        completedDates: completedCount,
         totalRecords: activeJob.total_records || activeJob.records_processed || 0,
         results: (activeJob.results as unknown as SyncResult[] | null) || [],
         startTime: activeJob.started_at ? new Date(activeJob.started_at).getTime() : null,

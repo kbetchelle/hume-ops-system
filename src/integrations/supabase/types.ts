@@ -2368,46 +2368,46 @@ export type Database = {
       }
       daily_schedule: {
         Row: {
-          id: string
+          canceled: boolean | null
           class_id: string
+          class_name: string
+          description: string | null
+          end_time: string | null
+          id: string
+          instructor: string | null
+          max_capacity: number | null
           schedule_date: string
           start_time: string
-          end_time: string | null
-          class_name: string
-          max_capacity: number | null
           total_booked: number | null
-          instructor: string | null
-          description: string | null
           updated_at: string | null
-          canceled: boolean | null
         }
         Insert: {
-          id?: string
+          canceled?: boolean | null
           class_id: string
+          class_name: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          instructor?: string | null
+          max_capacity?: number | null
           schedule_date: string
           start_time: string
-          end_time?: string | null
-          class_name: string
-          max_capacity?: number | null
           total_booked?: number | null
-          instructor?: string | null
-          description?: string | null
           updated_at?: string | null
-          canceled?: boolean | null
         }
         Update: {
-          id?: string
+          canceled?: boolean | null
           class_id?: string
+          class_name?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          instructor?: string | null
+          max_capacity?: number | null
           schedule_date?: string
           start_time?: string
-          end_time?: string | null
-          class_name?: string
-          max_capacity?: number | null
           total_booked?: number | null
-          instructor?: string | null
-          description?: string | null
           updated_at?: string | null
-          canceled?: boolean | null
         }
         Relationships: []
       }
@@ -4584,6 +4584,10 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_trainer: { Args: { _user_id: string }; Returns: boolean }
+      refresh_daily_schedule: {
+        Args: { p_schedule_date: string }
+        Returns: number
+      }
       search_sling_users: {
         Args: { _search: string }
         Returns: {

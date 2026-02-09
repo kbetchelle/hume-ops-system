@@ -11,9 +11,10 @@ interface SyncResult {
   recordCount: number;
   success: boolean;
   error?: string;
+  hitPageLimit?: boolean;
 }
 
-type JobType = "arketa_reservations" | "arketa_payments";
+type JobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "toast_orders";
 
 function eachDayOfInterval(start: Date, end: Date): Date[] {
   const dates: Date[] = [];
@@ -31,12 +32,29 @@ function formatDate(date: Date): string {
 
 function getSyncConfig(jobType: JobType) {
   switch (jobType) {
+    case "arketa_classes":
+      return {
+        syncFunction: "sync-arketa-classes",
+        historyTable: "arketa_classes",
+        dateColumn: "class_date",
+        transferApi: null,
+        needsTransfer: false,
+      };
+    case "toast_orders":
+      return {
+        syncFunction: "toast-backfill-sync",
+        historyTable: "toast_sales",
+        dateColumn: "business_date",
+        transferApi: null,
+        needsTransfer: false,
+      };
     case "arketa_payments":
       return {
         syncFunction: "sync-arketa-payments",
         historyTable: "arketa_payments_history",
         dateColumn: "start_date",
         transferApi: "arketa_payments" as const,
+        needsTransfer: true,
       };
     case "arketa_reservations":
     default:
@@ -45,8 +63,37 @@ function getSyncConfig(jobType: JobType) {
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
         transferApi: "arketa_reservations" as const,
+        needsTransfer: true,
       };
   }
+}
+
+/** Build the request body for the sync function based on job type */
+function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknown> {
+  if (jobType === "toast_orders") {
+    return { start_date: dateStr, end_date: dateStr };
+  }
+  return { startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", manual: true, noLimit: true };
+}
+
+/** Extract record count from sync response based on job type */
+function extractRecordCount(jobType: JobType, syncData: any): { recordCount: number; totalFetched: number } {
+  if (jobType === "toast_orders") {
+    return {
+      recordCount: syncData?.ordersThisRun ?? 0,
+      totalFetched: syncData?.ordersThisRun ?? 0,
+    };
+  }
+  if (jobType === "arketa_classes") {
+    return {
+      recordCount: syncData?.syncedCount ?? syncData?.totalFetched ?? 0,
+      totalFetched: syncData?.totalFetched ?? 0,
+    };
+  }
+  return {
+    recordCount: syncData?.data?.reservations_synced ?? syncData?.data?.payments_synced ?? syncData?.data?.payments_staged ?? syncData?.recordsInserted ?? syncData?.recordsProcessed ?? 0,
+    totalFetched: syncData?.totalFetched ?? 0,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -91,7 +138,17 @@ Deno.serve(async (req) => {
     const endDate = new Date(job.end_date);
     const allDates = eachDayOfInterval(startDate, endDate);
     const existingResults: SyncResult[] = job.results || [];
-    const processedDates = new Set(existingResults.map((r: SyncResult) => r.date));
+    
+    // On restart, re-sync the last successfully synced date to ensure no records were missed
+    const successResults = existingResults.filter((r: SyncResult) => r.success);
+    const lastSuccessDate = successResults.length > 0 ? successResults[successResults.length - 1]?.date : null;
+    const processedDates = new Set(existingResults.filter((r: SyncResult) => r.success).map((r: SyncResult) => r.date));
+    if (lastSuccessDate) {
+      processedDates.delete(lastSuccessDate);
+      const lastIdx = existingResults.findIndex((r: SyncResult) => r.date === lastSuccessDate && r.success);
+      if (lastIdx !== -1) existingResults.splice(lastIdx, 1);
+    }
+    
     const remainingDates = allDates.filter(d => !processedDates.has(formatDate(d)));
 
     if (remainingDates.length === 0) {
@@ -106,6 +163,7 @@ Deno.serve(async (req) => {
     const results: SyncResult[] = [...existingResults];
     let totalRecords = job.total_records || 0;
     let totalNewRecords = job.total_new_records || 0;
+    let batchHitPageLimit = false;
 
     for (const date of datesToProcess) {
       const dateStr = formatDate(date);
@@ -121,23 +179,32 @@ Deno.serve(async (req) => {
       const existingCount = existingBefore || 0;
 
       try {
+        const syncBody = buildSyncBody(jobType, dateStr);
         const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${config.syncFunction}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-          body: JSON.stringify({ startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", manual: true, noLimit: true }),
+          body: JSON.stringify(syncBody),
         });
         const syncData = await syncResponse.json();
 
         if (!syncResponse.ok) {
           results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
         } else {
-          const recordCount = syncData?.data?.reservations_synced ?? syncData?.data?.payments_synced ?? syncData?.data?.payments_staged ?? syncData?.recordsInserted ?? syncData?.recordsProcessed ?? 0;
+          const { recordCount, totalFetched } = extractRecordCount(jobType, syncData);
           await new Promise(resolve => setTimeout(resolve, 500));
           const { count: afterCount } = await supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
           const newRecords = Math.max(0, (afterCount || 0) - existingCount);
           totalRecords += recordCount;
           totalNewRecords += newRecords;
-          results.push({ date: dateStr, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false });
+          
+          // Detect if the sync hit the page limit (totalFetched is a multiple of the page size)
+          const hitPageLimit = totalFetched > 0 && totalFetched % 100 === 0; // Toast uses 100, Arketa uses 400
+          if (hitPageLimit) {
+            console.log(`[run-backfill-job] Page limit likely hit for ${dateStr} (fetched ${totalFetched}). Will schedule 2-min cooldown.`);
+            batchHitPageLimit = true;
+          }
+          
+          results.push({ date: dateStr, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit });
         }
       } catch (err) {
         results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
@@ -146,8 +213,8 @@ Deno.serve(async (req) => {
       await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
     }
 
-    // Transfer staging → history after each batch so users see records in history during the job (not only at completion)
-    if (results.some(r => r.success && r.recordCount > 0)) {
+    // Transfer staging → history after each batch (only for types that use staging)
+    if (config.needsTransfer && config.transferApi && results.some(r => r.success && r.recordCount > 0)) {
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
           method: "POST",
@@ -167,13 +234,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If page limit was hit, schedule a 2-minute cooldown before continuing
+    if (batchHitPageLimit) {
+      console.log(`[run-backfill-job] Page limit hit — scheduling 2-minute cooldown before next batch`);
+      await supabase.from("backfill_jobs").update({ 
+        retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
+        processing_date: null,
+      }).eq("id", jobId);
+      
+      await new Promise(resolve => setTimeout(resolve, 120_000));
+    }
+
     fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
       body: JSON.stringify({ jobId }),
     }).catch(err => console.error("Failed to trigger next batch:", err));
 
-    return new Response(JSON.stringify({ success: true, completed: false, processedDates: results.length, totalDates: allDates.length, remainingDates: allDates.length - results.length }), {
+    return new Response(JSON.stringify({ success: true, completed: false, processedDates: results.length, totalDates: allDates.length, remainingDates: allDates.length - results.length, cooldown: batchHitPageLimit }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

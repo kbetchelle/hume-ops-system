@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ start_date: startDate, end_date: endDate }),
       });
     } catch (refreshErr) {
-      logger?.warn('Failed to call refresh-daily-schedule', refreshErr);
+      logger?.warn('Failed to call refresh-daily-schedule', refreshErr as object);
     }
 
     return new Response(

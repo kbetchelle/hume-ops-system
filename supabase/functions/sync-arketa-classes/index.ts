@@ -67,15 +67,17 @@ Deno.serve(async (req) => {
       if (cursor) url.searchParams.set('cursor', cursor);
 
       const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+      // Clone before reading so body-already-consumed errors are avoided
+      const cloned = response.clone();
       if (!response.ok) {
-        const text = await response.text();
+        const text = await cloned.text().catch(() => 'Body unavailable');
         return new Response(
           JSON.stringify({ error: `Arketa classes API error: ${response.status}`, details: text }),
           { status: response.status >= 500 ? 502 : response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const data = await response.json();
+      const data = await cloned.json();
       const page = Array.isArray(data) ? data : (data.classes ?? data.data ?? data.items ?? []);
       allClasses.push(...page);
       cursor = data.pagination?.nextCursor;

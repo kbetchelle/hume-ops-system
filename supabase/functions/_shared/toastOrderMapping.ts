@@ -11,10 +11,14 @@ export interface OrderAmounts {
 /**
  * Extract net and gross amounts from a Toast order.
  * Tries order-level totalAmount/netAmount first; else sums from order.checks[].
+ * Net and gross can differ (e.g. gross from totalAmount, net from netAmount or derived).
  */
 export function extractOrderAmounts(order: Record<string, unknown>): OrderAmounts {
-  const topLevel = Number(order.totalAmount ?? order.netAmount ?? order.amount ?? 0);
-  if (topLevel > 0) return { net: topLevel, gross: topLevel };
+  const grossTop = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+  const netTop = Number(order.netAmount ?? 0) || 0;
+  if (grossTop > 0 || netTop > 0) {
+    return { gross: grossTop, net: netTop };
+  }
 
   const checks = (order.checks as Array<{ totalAmount?: number; amount?: number; taxAmount?: number }>) ?? [];
   const gross = checks.reduce((s, c) => s + (Number(c.totalAmount ?? c.amount ?? 0) || 0), 0);
@@ -56,12 +60,18 @@ export interface SalesRow {
   sync_batch_id: string;
 }
 
+function getOrderGuid(order: Record<string, unknown>): string {
+  if (order.guid != null) return String(order.guid);
+  if (order.entityType != null) return String(order.entityType);
+  return crypto.randomUUID();
+}
+
 export function mapOrderToStagingRow(
   order: Record<string, unknown>,
   businessDate: string,
   batchId: string
 ): StagingRow {
-  const orderGuid = order.guid != null ? String(order.guid) : crypto.randomUUID();
+  const orderGuid = getOrderGuid(order);
   const date = toBusinessDate(order, businessDate);
   const { net, gross } = extractOrderAmounts(order);
   return {
@@ -81,7 +91,7 @@ export function mapOrderToSalesRow(
   businessDate: string,
   batchId: string
 ): SalesRow {
-  const orderGuid = order.guid != null ? String(order.guid) : crypto.randomUUID();
+  const orderGuid = getOrderGuid(order);
   const date = toBusinessDate(order, businessDate);
   const { net, gross } = extractOrderAmounts(order);
   return {

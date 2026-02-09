@@ -7,8 +7,9 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { fetchWithRetry, withRetry, isRetryableSupabaseError } from '../_shared/retry.ts';
+import { fetchWithRetry } from '../_shared/retry.ts';
 import { createSyncLogger } from '../_shared/logger.ts';
+import { mapOrderToStagingRow, mapOrderToSalesRow } from '../_shared/toastOrderMapping.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const BACKFILL_START_DATE = '2024-08-01';
@@ -100,15 +101,7 @@ async function upsertRawOrders(
   for (let i = 0; i < orders.length; i += BATCH_UPSERT_SIZE) {
     const batch = orders.slice(i, i + BATCH_UPSERT_SIZE);
 
-    const stagingRows = batch.map((order) => ({
-      order_guid: String(order.guid ?? order.entityType ?? crypto.randomUUID()),
-      business_date: businessDate,
-      net_sales: Number(order.netAmount ?? 0) || 0,
-      gross_sales: Number(order.totalAmount ?? order.amount ?? 0) || 0,
-      cafe_sales: Number(order.netAmount ?? order.totalAmount ?? 0) || 0,
-      raw_data: order,
-      sync_batch_id: batchId,
-    }));
+    const stagingRows = batch.map((order) => mapOrderToStagingRow(order, businessDate, batchId));
 
     const { error: stagingErr } = await (supabase.from('toast_staging') as any).upsert(
       stagingRows,
@@ -119,16 +112,7 @@ async function upsertRawOrders(
       throw stagingErr;
     }
 
-    const salesRows = batch.map((order) => ({
-      order_guid: String(order.guid ?? order.entityType ?? crypto.randomUUID()),
-      business_date: businessDate,
-      net_sales: Number(order.netAmount ?? 0) || 0,
-      gross_sales: Number(order.totalAmount ?? order.amount ?? 0) || 0,
-      cafe_sales: Number(order.netAmount ?? order.totalAmount ?? 0) || 0,
-      order_count: 1,
-      raw_data: order,
-      sync_batch_id: batchId,
-    }));
+    const salesRows = batch.map((order) => mapOrderToSalesRow(order, businessDate, batchId));
 
     const { error: salesErr } = await (supabase.from('toast_sales') as any).upsert(
       salesRows,

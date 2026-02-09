@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import DateSelector from "./DateSelector";
 import { useBackfillJob } from "./useBackfillJob";
 import BackfillSyncLog from "./BackfillSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
+import SyncProgressCard from "./SyncProgressCard";
 
 export default function ReservationsBackfillTab() {
   const {
@@ -32,18 +32,12 @@ export default function ReservationsBackfillTab() {
         isRunning={syncProgress.isRunning} elapsedText={elapsedText}
         onSync={handleSync} onCancel={handleCancelJob} dayCount={dayCount}
       />
-      {syncProgress.isRunning && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Progress</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Dates: {syncProgress.completedDates} / {syncProgress.totalDates}</span>
-              <span>Records: {syncProgress.totalRecords.toLocaleString()}</span>
-            </div>
-            <Progress value={syncProgress.totalDates ? (syncProgress.completedDates / syncProgress.totalDates) * 100 : 0} className="h-2" />
-          </CardContent>
-        </Card>
-      )}
+      <SyncProgressCard
+        syncProgress={syncProgress}
+        startDate={startDate}
+        endDate={endDate}
+        isRange={isRange}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">History Table</CardTitle>

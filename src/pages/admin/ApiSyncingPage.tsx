@@ -42,7 +42,8 @@ import {
   type SyncSchedule,
 } from "@/hooks/useSyncSchedule";
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
-import { useSyncArketaClasses } from "@/hooks/useArketaApi";
+import { useSyncArketaClasses, useSyncArketaClassesAndReservations } from "@/hooks/useArketaApi";
+import { Input } from "@/components/ui/input";
 
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
@@ -58,15 +59,29 @@ const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: str
   calendly_events: { stagingTable: "scheduled_tours_staging", targetTable: "scheduled_tours" },
 };
 
+// Same default date range as reservations (-7 to +7 days)
+function getDefaultArketaDateRange() {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 7);
+  const end = new Date(today);
+  end.setDate(end.getDate() + 7);
+  return {
+    start_date: start.toISOString().split("T")[0],
+    end_date: end.toISOString().split("T")[0],
+  };
+}
+
 function ArketaClassesSyncButton() {
   const syncClasses = useSyncArketaClasses();
+  const defaultRange = getDefaultArketaDateRange();
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium">Arketa Classes</span>
       <Button
         variant="outline"
         size="sm"
-        onClick={() => syncClasses.mutate({})}
+        onClick={() => syncClasses.mutate(defaultRange)}
         disabled={syncClasses.isPending}
         className="gap-1"
       >
@@ -82,7 +97,59 @@ function ArketaClassesSyncButton() {
           </>
         )}
       </Button>
-      <span className="text-xs text-muted-foreground">Last 30 days → +7 days (default)</span>
+      <span className="text-xs text-muted-foreground">Same range as reservations (-7 to +7 days)</span>
+    </div>
+  );
+}
+
+function ArketaClassesAndReservationsSync() {
+  const defaultRange = getDefaultArketaDateRange();
+  const [startDate, setStartDate] = useState(defaultRange.start_date);
+  const [endDate, setEndDate] = useState(defaultRange.end_date);
+  const syncBoth = useSyncArketaClassesAndReservations();
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-sm font-medium">Arketa (Classes + Reservations)</span>
+      <div className="flex items-center gap-2">
+        <Label htmlFor="arketa-start" className="text-xs text-muted-foreground whitespace-nowrap">Start</Label>
+        <Input
+          id="arketa-start"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="h-8 w-[140px]"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Label htmlFor="arketa-end" className="text-xs text-muted-foreground whitespace-nowrap">End</Label>
+        <Input
+          id="arketa-end"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="h-8 w-[140px]"
+        />
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => syncBoth.mutate({ start_date: startDate, end_date: endDate })}
+        disabled={syncBoth.isPending}
+        className="gap-1"
+      >
+        {syncBoth.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Syncing…
+          </>
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            Sync classes then reservations
+          </>
+        )}
+      </Button>
+      <span className="text-xs text-muted-foreground">Classes run first, then reservations (same range)</span>
     </div>
   );
 }
@@ -516,7 +583,7 @@ export default function ApiSyncingPage() {
           </Button>
         </div>
 
-        {/* One-off: Arketa Classes (not on schedule; run manually) */}
+        {/* One-off: Arketa Classes and combined Classes + Reservations */}
         <Card className="border border-border rounded-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-normal flex items-center gap-2">
@@ -524,11 +591,12 @@ export default function ApiSyncingPage() {
               Manual syncs
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              One-off syncs not on the schedule. Arketa Classes populates the class catalog for reservation backfill.
+              One-off syncs not on the schedule. Run Classes first, then Reservations, or use one button to run both with the same date range.
             </p>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-4">
+          <CardContent className="space-y-4">
             <ArketaClassesSyncButton />
+            <ArketaClassesAndReservationsSync />
           </CardContent>
         </Card>
 

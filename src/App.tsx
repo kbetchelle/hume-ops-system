@@ -55,6 +55,7 @@ import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
+import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
@@ -478,6 +479,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <ApiSyncingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sync Skipped Records (Dev Tools) for Admin/Manager */}
+            <Route
+              path="/dashboard/sync-skipped-records"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <SyncSkippedRecordsPage />
                 </ProtectedRoute>
               }
             />

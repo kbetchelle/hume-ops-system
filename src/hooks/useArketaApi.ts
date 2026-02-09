@@ -257,6 +257,47 @@ export function useSyncArketaReservations() {
   });
 }
 
+// Sync classes then reservations with the same date range (default -7 to +7 days)
+export function useSyncArketaClassesAndReservations() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params?: { start_date?: string; end_date?: string }) => {
+      const { data, error } = await supabase.functions.invoke("sync-arketa-classes-and-reservations", {
+        body: params || {},
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["arketaClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["arketaReservations"] });
+      queryClient.invalidateQueries({ queryKey: ["arketaReservationsToday"] });
+      queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
+      const classes = data?.classes ?? {};
+      const reservations = data?.reservations ?? {};
+      const c = classes.syncedCount ?? 0;
+      const r = reservations.syncedCount ?? 0;
+      toast({
+        title: data?.success ? "Arketa Sync Complete" : "Arketa Sync Completed With Errors",
+        description: data?.success
+          ? `Classes: ${c}, Reservations: ${r}`
+          : `Classes: ${c}, Reservations: ${r}. Check logs for errors.`,
+        variant: data?.success ? "default" : "destructive",
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to sync Arketa classes + reservations:", error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to run Arketa classes and reservations sync.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 // Sync payments mutation
 export function useSyncArketaPayments() {
   const queryClient = useQueryClient();

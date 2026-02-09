@@ -240,6 +240,36 @@ export type Database = {
         }
         Relationships: []
       }
+      api_sync_skipped_records: {
+        Row: {
+          id: string
+          api_name: string
+          record_id: string
+          secondary_id: string | null
+          reason: string
+          details: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          api_name: string
+          record_id: string
+          secondary_id?: string | null
+          reason: string
+          details?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          api_name?: string
+          record_id?: string
+          secondary_id?: string | null
+          reason?: string
+          details?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       api_sync_status: {
         Row: {
           api_name: string

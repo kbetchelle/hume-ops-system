@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle } from "lucide-react";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -210,6 +210,10 @@ const settingsGroups: SettingsGroup[] = [{
     title: "Backfill Manager",
     url: "/dashboard/backfill",
     icon: Database
+  }, {
+    title: "Skipped Records",
+    url: "/dashboard/sync-skipped-records",
+    icon: AlertCircle
   }]
 }];
 const settingsDirectItems: SettingsSubItem[] = [{
@@ -246,7 +250,7 @@ function SidebarNav() {
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager";
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records");
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         <SidebarGroup>

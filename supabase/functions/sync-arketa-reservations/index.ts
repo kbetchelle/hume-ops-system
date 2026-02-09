@@ -310,17 +310,50 @@ Deno.serve(async (req) => {
           raw_data: res,
         };
       })
-      .filter((r) => r.reservation_id && r.class_id);
+      .filter((r) => r.reservation_id);
 
+    // Identify rows with no matching class_id (empty or not in arketa_classes) and log to api_sync_skipped_records
+    const classIdsInBatch = [...new Set(stagingRows.map((r) => r.class_id).filter((id): id is string => Boolean(id && id.trim())))];
+    let knownClassIds = new Set<string>();
+    if (classIdsInBatch.length > 0) {
+      const { data: classRows } = await supabase
+        .from('arketa_classes')
+        .select('external_id')
+        .in('external_id', classIdsInBatch);
+      knownClassIds = new Set((classRows ?? []).map((r: { external_id: string }) => r.external_id));
+    }
+    const skippedRows = stagingRows.filter(
+      (r) => !r.class_id?.trim() || !knownClassIds.has(r.class_id)
+    );
+    if (skippedRows.length > 0) {
+      const skippedRecords = skippedRows.map((r) => ({
+        api_name: 'arketa_reservations',
+        record_id: r.reservation_id,
+        secondary_id: r.class_id || null,
+        reason: 'no_matching_class_id',
+        details: {
+          class_name: r.class_name,
+          class_date: r.class_date,
+          client_id: r.client_id,
+        } as Record<string, unknown>,
+      }));
+      await supabase.from('api_sync_skipped_records').insert(skippedRecords);
+      logger?.info(`Logged ${skippedRows.length} reservations with no matching class_id to api_sync_skipped_records`);
+    }
+
+    // Only insert rows with a valid matching class_id into staging; skipped rows are logged but not persisted
+    const rowsToInsert = stagingRows.filter(
+      (r) => Boolean(r.class_id?.trim()) && knownClassIds.has(r.class_id)
+    );
     let failedCount = 0;
-    if (stagingRows.length > 0) {
-      const { error } = await supabase.from('arketa_reservations_staging').insert(stagingRows);
+    if (rowsToInsert.length > 0) {
+      const { error } = await supabase.from('arketa_reservations_staging').insert(rowsToInsert);
       if (error) {
         logger.error('Failed to insert to staging', error);
-        failedCount = stagingRows.length;
+        failedCount = rowsToInsert.length;
       }
     }
-    const syncedCount = stagingRows.length - failedCount;
+    const syncedCount = rowsToInsert.length - failedCount;
 
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {

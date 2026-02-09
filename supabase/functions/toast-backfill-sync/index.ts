@@ -89,8 +89,9 @@ async function fetchOrdersPage(
 }
 
 /** Upsert individual orders in batches to staging and sales tables. */
+// deno-lint-ignore no-explicit-any
 async function upsertRawOrders(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   orders: Record<string, unknown>[],
   businessDate: string,
   batchId: string,

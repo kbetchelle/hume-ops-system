@@ -1,94 +1,57 @@
 
+# Auto-Polling Sync Skipped Records Page
 
-# Plan: Arketa Classes PST Timezone Fix, Toast Raw Order Storage, and Page Size Increase
+## Current Status
+The page is **functional** -- queries return 200 OK. The table is empty because no skipped records have been logged yet (they appear when sync/backfill jobs encounter anomalies).
 
-## 1. Arketa Classes: Convert start_time to PST for class_date
+## Changes
 
-**Problem:** Currently, `class_date` is derived from `start_time` using UTC (`new Date(startTime).toISOString().split('T')[0]`), which can assign the wrong calendar date for classes in the America/Los_Angeles timezone.
+### 1. Remove the Refresh button
+Remove the `<Button>` with the `<RefreshCw>` icon and its `refetchNames` handler from `SyncSkippedRecordsPage.tsx`.
 
-**Changes:**
+### 2. Add active-sync detection
+Create a small helper query in `useSyncSkippedRecords.ts` that checks if any backfill job or sync schedule is currently running:
 
-### Edge Function: `supabase/functions/sync-arketa-classes/index.ts`
-- Replace the UTC-based date extraction with PST/PDT-aware conversion
-- Use `Intl.DateTimeFormat` with `timeZone: 'America/Los_Angeles'` to derive the correct local date from the `start_time` timestamp
-- No external dependencies needed; Deno supports IANA timezones natively
+```typescript
+export function useIsAnySyncRunning() {
+  return useQuery({
+    queryKey: ["isAnySyncRunning"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("backfill_jobs")
+        .select("id")
+        .in("status", ["pending", "running"])
+        .limit(1);
+      const backfillRunning = (data?.length ?? 0) > 0;
 
-### Database Migration: Fix existing `arketa_classes` records
-- Run a migration that updates all existing rows:
-  ```sql
-  UPDATE arketa_classes
-  SET class_date = (start_time AT TIME ZONE 'America/Los_Angeles')::date
-  WHERE start_time IS NOT NULL;
-  ```
+      const { data: schedData } = await supabase
+        .from("sync_schedule")
+        .select("id")
+        .eq("last_status", "running")
+        .limit(1);
+      const schedRunning = (schedData?.length ?? 0) > 0;
 
----
+      return backfillRunning || schedRunning;
+    },
+    refetchInterval: 30_000,
+  });
+}
+```
 
-## 2. Toast: Store Raw Individual Orders (No Aggregation)
+### 3. Dynamic polling interval in SyncSkippedRecordsPage
+- Use `useIsAnySyncRunning()` to determine if a sync is active.
+- When active: poll skipped records and API names every **60 seconds**.
+- When idle: poll every **5 minutes** (light background refresh).
+- Pass the dynamic interval to both `useSyncSkippedRecords` and `useSyncSkippedRecordsApiNames`.
+- Show a small status indicator (e.g., a pulsing dot + "Live -- syncs active") so the user knows auto-refresh is happening.
 
-**Problem:** Both `toast-backfill-sync` and `sync-toast-orders` currently aggregate all orders for a business date into a single summary row. The requirement is to store every individual order as its own row in both `toast_staging` and `toast_sales`.
-
-**Changes:**
-
-### Database Migration
-- **Restructure `toast_staging`:**
-  - Drop the existing `UNIQUE(business_date, sync_batch_id)` constraint
-  - Add an `order_guid` TEXT column (Toast order GUID, unique identifier per order)
-  - Add a `UNIQUE(order_guid)` constraint for deduplication
-  - Keep `raw_data` JSONB for the full raw order object
-  - Keep `business_date`, `net_sales`, `gross_sales`, `cafe_sales` per-order (individual amounts, not aggregated)
-
-- **Restructure `toast_sales`:**
-  - Drop the existing `UNIQUE(business_date)` constraint (was one row per day; now one row per order)
-  - Add an `order_guid` TEXT column with a `UNIQUE(order_guid)` constraint
-  - Add `order_count` INTEGER column (always 1 per row, for compatibility)
-  - Keep per-order `net_sales`, `gross_sales`, `cafe_sales`, `raw_data`
-
-- **Truncate existing data** in both `toast_staging` and `toast_sales` (175 and 231 rows respectively -- all aggregated, not useful in new schema)
-
-- **Update `get_backfill_toast_calendar` RPC** to count individual order rows per date instead of expecting one row per date
-
-### Edge Function: `supabase/functions/toast-backfill-sync/index.ts`
-- Remove the `aggregateOrdersByDate` function entirely
-- Instead of aggregating, insert each raw order individually:
-  - Extract `order_guid` from `order.guid` (Toast's unique order identifier)
-  - Extract per-order `netAmount`, `totalAmount` for `net_sales`/`gross_sales`
-  - Store full raw order JSON in `raw_data`
-  - Upsert to `toast_staging` on `order_guid`, then upsert to `toast_sales` on `order_guid`
-- Use batch upserts (100 records at a time) instead of one-by-one for performance
-
-### Edge Function: `supabase/functions/sync-toast-orders/index.ts`
-- Same changes: remove `aggregateOrdersForDate`, store each order individually
-- Upsert on `order_guid` instead of `business_date`
-- Batch upserts for efficiency
-
-### Frontend: `src/components/settings/backfill/ToastBackfillTab.tsx`
-- Update description text from "daily aggregated sales" to "individual order records"
-- The count query already uses `select("*", { count: "exact" })` so it will automatically reflect the new row count
-
----
-
-## 3. Toast Backfill Page Size: Increase to 300
-
-**Problem:** Current `PAGE_SIZE` is 100, but the Toast API documentation notes page size is "strictly limited to 100 records per request."
-
-**Important note:** The Toast `ordersBulk` API has a hard cap of 100 per page. Setting `pageSize=300` in the request will either be ignored (Toast returns 100 anyway) or cause an error. The pagination logic already fetches all pages automatically via `hasMore`. However, per your request:
-
-**Changes:**
-- In `toast-backfill-sync/index.ts`: Change `PAGE_SIZE` from 100 to 300
-- In `sync-toast-orders/index.ts`: Change `PAGE_SIZE` from 100 to 300
-- Update the `hasMore` check to compare against the new PAGE_SIZE
-
-If Toast rejects or silently caps at 100, the existing pagination loop will still work correctly -- it just means fewer pages will be needed if Toast honors the larger size.
-
----
-
-## Technical Summary of All Files Changed
-
+### 4. Files Modified
 | File | Change |
 |------|--------|
-| `supabase/functions/sync-arketa-classes/index.ts` | PST timezone conversion for `class_date` |
-| `supabase/functions/toast-backfill-sync/index.ts` | Remove aggregation, store raw orders, PAGE_SIZE to 300 |
-| `supabase/functions/sync-toast-orders/index.ts` | Remove aggregation, store raw orders, PAGE_SIZE to 300 |
-| `src/components/settings/backfill/ToastBackfillTab.tsx` | Update description text |
-| New migration SQL | Update existing `arketa_classes.class_date` to PST; restructure `toast_staging` and `toast_sales` tables (add `order_guid`, drop old unique constraints, truncate old data); update `get_backfill_toast_calendar` RPC |
+| `src/hooks/useSyncSkippedRecords.ts` | Add `useIsAnySyncRunning` hook |
+| `src/pages/admin/SyncSkippedRecordsPage.tsx` | Remove Refresh button, wire dynamic polling, add sync-active indicator |
 
+### Technical Details
+- The `useSyncSkippedRecords` hook already accepts a `refetchInterval` option -- we just pass the dynamic value from the page.
+- `useSyncSkippedRecordsApiNames` currently has a hardcoded 60s interval; we will make it accept an optional override parameter the same way.
+- No database or edge function changes required.

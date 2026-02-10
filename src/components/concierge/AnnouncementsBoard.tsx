@@ -397,17 +397,6 @@ export function AnnouncementsBoard() {
                         {!announcement.is_read && (
                           <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
                         )}
-                        {announcement.priority !== 'normal' && (
-                          <Badge
-                            variant={announcement.priority === 'urgent' ? 'destructive' : 'secondary'}
-                            className={cn(
-                              "text-[10px] h-5",
-                              announcement.priority === 'high' && 'bg-amber-500 text-white'
-                            )}
-                          >
-                            {announcement.priority}
-                          </Badge>
-                        )}
                         <CommentCountBadge count={commentCounts?.[announcement.id] || 0} />
                       </div>
                     </div>

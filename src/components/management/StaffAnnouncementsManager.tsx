@@ -825,8 +825,6 @@ export function StaffAnnouncementsManager() {
                             )}
                             {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
                           </Badge>
-                          {announcement.announcement_type === "announcement" &&
-                            getPriorityBadge(announcement.priority)}
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
                           )}

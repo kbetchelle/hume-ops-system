@@ -257,7 +257,7 @@ function SidebarNav() {
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
-        <div className={cn("px-3 pb-3 space-y-2", collapsed && "px-2")}>
+        <div className={cn("px-3 pb-3 space-y-0", collapsed && "px-2")}>
           <UserInfoDropdown collapsed={collapsed} />
           <RoleSwitcher collapsed={collapsed} />
         </div>
@@ -414,10 +414,10 @@ function RoleSwitcher({
   };
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-8 w-full px-0")}>
+        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-auto py-0 w-full px-0")}>
           {!collapsed && <>
               <span className="text-[10px] uppercase tracking-widest flex-1 text-left">
-                {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
+                {currentViewRole ? `⇢  ${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
               </span>
               <ChevronDown className="h-3 w-3 shrink-0" />
             </>}

@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import {
   Sidebar,
   SidebarContent,

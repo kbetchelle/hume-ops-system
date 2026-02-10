@@ -355,7 +355,7 @@ export function AnnouncementsBoard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {weeklyUpdates.map((update) => renderWeeklyCard(update))}
+              {weeklyUpdates.map((update) => renderWeeklyCard(update, update.id === thisWeekId))}
             </div>
           )}
         </TabsContent>

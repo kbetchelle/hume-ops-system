@@ -128,7 +128,7 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     icon: ClipboardList,
     roles: ["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]
   }, {
-    title: "Communications",
+    title: "Announcements",
     url: "/dashboard/communications",
     icon: Bell
   }, {

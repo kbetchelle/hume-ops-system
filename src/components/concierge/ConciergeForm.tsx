@@ -591,31 +591,6 @@ export function ConciergeForm() {
         </Dialog>
         
         <CardContent className="space-y-6">
-          {/* Notes for this shift (alert banners) */}
-          {notesForShift.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm">Notes for this shift:</Label>
-              {notesForShift.map((note) => (
-                <div
-                  key={note.id}
-                  className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm"
-                >
-                  <span className="font-medium shrink-0">From {note.from}:</span>
-                  <span className="flex-1">{note.text}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => setNotesForShift(prev => prev.filter(n => n.id !== note.id))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Date & Shift row */}
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm font-medium">
@@ -648,6 +623,31 @@ export function ConciergeForm() {
               </Select>
             </div>
           </div>
+
+          {/* Notes for this shift (alert banners) */}
+          {notesForShift.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">Notes for this shift:</Label>
+              {notesForShift.map((note) => (
+                <div
+                  key={note.id}
+                  className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm"
+                >
+                  <span className="font-medium shrink-0">From {note.from}:</span>
+                  <span className="flex-1">{note.text}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setNotesForShift(prev => prev.filter(n => n.id !== note.id))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <Separator />
         

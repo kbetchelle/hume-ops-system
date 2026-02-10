@@ -83,6 +83,7 @@ export function ConciergeSidebar({
   const { data: profile } = useUserProfile(user?.id);
   const { signOut } = useAuth();
   const [showBugReport, setShowBugReport] = useState(false);
+  const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
 
   const getFirstName = (fullName: string | null | undefined) => {
     if (!fullName) return "there";

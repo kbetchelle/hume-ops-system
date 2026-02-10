@@ -490,17 +490,17 @@ export function ConciergeForm() {
                     .order('shift_type', { ascending: false })
                     .limit(30)
                     .then(({ data, error }) => {
-                      if (error) throw error;
+                      if (error) {
+                        console.error('[ConciergeForm] Failed to load report history:', error);
+                        toast({
+                          title: 'Could not load history',
+                          description: 'Please try again.',
+                          variant: 'destructive',
+                        });
+                        setReportHistory([]);
+                        return;
+                      }
                       setReportHistory(data ?? []);
-                    })
-                    .catch((err) => {
-                      console.error('[ConciergeForm] Failed to load report history:', err);
-                      toast({
-                        title: 'Could not load history',
-                        description: 'Please try again.',
-                        variant: 'destructive',
-                      });
-                      setReportHistory([]);
                     });
                 }}
               >

@@ -1,0 +1,2 @@
+ALTER TABLE public.backfill_jobs DROP CONSTRAINT valid_api_source;
+ALTER TABLE public.backfill_jobs ADD CONSTRAINT valid_api_source CHECK (api_source = ANY (ARRAY['arketa'::text, 'sling'::text, 'toast'::text]));

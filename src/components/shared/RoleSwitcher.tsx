@@ -54,10 +54,10 @@ export function RoleSwitcher() {
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 rounded-none text-[10px] uppercase tracking-widest"
+          className="w-full gap-2 rounded-none text-[10px] uppercase tracking-widest"
         >
-          <ArrowLeftRight className="h-4 w-4" />
-          {currentViewRole ? getRoleLabel(currentViewRole) : "Switch View"}
+          <ArrowLeftRight className="h-4 w-4 shrink-0" />
+          <span className="truncate">{currentViewRole ? getRoleLabel(currentViewRole) : "Switch View"}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="rounded-none w-48 bg-background border border-border z-50">

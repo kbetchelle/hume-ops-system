@@ -13,7 +13,6 @@ export function ConciergeHeader() {
         </h1>
 
         <div className="flex items-center gap-2">
-          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"

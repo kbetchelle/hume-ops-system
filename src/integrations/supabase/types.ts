@@ -398,8 +398,8 @@ export type Database = {
           staged_at: string | null
           start_time: string
           status: string | null
-          synced_at: string | null
           sync_batch_id: string
+          synced_at: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -418,8 +418,8 @@ export type Database = {
           staged_at?: string | null
           start_time: string
           status?: string | null
-          synced_at?: string | null
           sync_batch_id: string
+          synced_at?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -438,8 +438,8 @@ export type Database = {
           staged_at?: string | null
           start_time?: string
           status?: string | null
-          synced_at?: string | null
           sync_batch_id?: string
+          synced_at?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
@@ -4636,6 +4636,10 @@ export type Database = {
           is_active: boolean
           sling_user_id: number
         }[]
+      }
+      upsert_arketa_classes_from_staging: {
+        Args: { p_sync_batch_id: string }
+        Returns: number
       }
       user_has_any_role: {
         Args: {

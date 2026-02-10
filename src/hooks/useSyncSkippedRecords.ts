@@ -35,7 +35,9 @@ export function useSyncSkippedRecords(apiName: string | null, options?: { refetc
   });
 }
 
-export function useSyncSkippedRecordsApiNames() {
+export function useSyncSkippedRecordsApiNames(options?: { refetchInterval?: number }) {
+  const refetchInterval = options?.refetchInterval ?? 60_000;
+
   return useQuery({
     queryKey: ["apiSyncSkippedRecordsApiNames"],
     queryFn: async () => {
@@ -48,7 +50,31 @@ export function useSyncSkippedRecordsApiNames() {
       const names = [...new Set((data ?? []).map((r: { api_name: string }) => r.api_name))];
       return names as string[];
     },
-    refetchInterval: 60_000,
+    refetchInterval,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useIsAnySyncRunning() {
+  return useQuery({
+    queryKey: ["isAnySyncRunning"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("backfill_jobs")
+        .select("id")
+        .in("status", ["pending", "running"])
+        .limit(1);
+      const backfillRunning = (data?.length ?? 0) > 0;
+
+      const { data: schedData } = await supabase
+        .from("sync_schedule")
+        .select("id")
+        .eq("last_status", "running")
+        .limit(1);
+      const schedRunning = (schedData?.length ?? 0) > 0;
+
+      return backfillRunning || schedRunning;
+    },
+    refetchInterval: 30_000,
   });
 }

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
-import { RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useSyncSkippedRecords,
   useSyncSkippedRecordsApiNames,
+  useIsAnySyncRunning,
   type ApiSyncSkippedRecord,
 } from "@/hooks/useSyncSkippedRecords";
 
@@ -24,8 +24,8 @@ function formatApiName(name: string): string {
   return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function SkippedRecordsTable({ apiName }: { apiName: string | null }) {
-  const { data: records, isLoading, error, refetch } = useSyncSkippedRecords(apiName);
+function SkippedRecordsTable({ apiName, refetchInterval }: { apiName: string | null; refetchInterval: number }) {
+  const { data: records, isLoading, error, refetch } = useSyncSkippedRecords(apiName, { refetchInterval });
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading && !records) {
@@ -112,7 +112,10 @@ function SkippedRecordsTable({ apiName }: { apiName: string | null }) {
 }
 
 export default function SyncSkippedRecordsPage() {
-  const { data: apiNames, isLoading: namesLoading, refetch: refetchNames } = useSyncSkippedRecordsApiNames();
+  const { data: isSyncRunning } = useIsAnySyncRunning();
+  const pollInterval = isSyncRunning ? 60_000 : 300_000;
+
+  const { data: apiNames, isLoading: namesLoading } = useSyncSkippedRecordsApiNames({ refetchInterval: pollInterval });
   const [activeTab, setActiveTab] = useState<string>("all");
 
   return (
@@ -127,15 +130,14 @@ export default function SyncSkippedRecordsPage() {
               Records logged when a sync runs and finds items without a matching reference (e.g. reservation without class_id). Updates when backfill, cron, or manual sync runs.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetchNames()}
-            disabled={namesLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${namesLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span
+              className={`inline-block h-2 w-2 rounded-full ${
+                isSyncRunning ? "bg-green-500 animate-pulse" : "bg-muted-foreground/40"
+              }`}
+            />
+            {isSyncRunning ? "Live — syncs active (1 min)" : "Idle (5 min)"}
+          </div>
         </div>
 
         <Card className="border border-border rounded-none">
@@ -165,11 +167,11 @@ export default function SyncSkippedRecordsPage() {
                   ))}
                 </TabsList>
                 <TabsContent value="all" className="mt-0">
-                  <SkippedRecordsTable apiName={null} />
+                  <SkippedRecordsTable apiName={null} refetchInterval={pollInterval} />
                 </TabsContent>
                 {(apiNames ?? []).map((name) => (
                   <TabsContent key={name} value={name} className="mt-0">
-                    <SkippedRecordsTable apiName={name} />
+                    <SkippedRecordsTable apiName={name} refetchInterval={pollInterval} />
                   </TabsContent>
                 ))}
               </Tabs>

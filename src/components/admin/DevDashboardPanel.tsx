@@ -155,11 +155,7 @@ export function DevDashboardPanel() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
-
-      {/* Modals */}
-      <DevNotesModal open={notesModalOpen} onOpenChange={setNotesModalOpen} noteContent={noteContent} onNoteChange={setNoteContent} onSave={saveNotes} />
 
       <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} isAdmin={isAdmin} />
     </>;

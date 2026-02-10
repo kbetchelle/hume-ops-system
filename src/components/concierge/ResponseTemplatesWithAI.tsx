@@ -1175,7 +1175,7 @@ export function ResponseTemplatesWithAI() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="ai" className="mt-4 space-y-4">
+            <TabsContent value="ai" className="space-y-4">
               {/* Mode Toggle */}
               <div className="flex gap-2">
                 <Button

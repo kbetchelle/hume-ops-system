@@ -135,7 +135,7 @@ export function ConciergeSidebar({
     <Sidebar className="w-60 border-r border-border flex flex-col">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
-        <div className="px-3 pb-3 space-y-2">
+        <div className="px-3 pb-3 space-y-0">
           <Button 
             variant="ghost" 
             size="sm" 

@@ -415,9 +415,12 @@ function RoleSwitcher({
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-8 w-full")}>
-          {!collapsed && <span className="text-[10px] uppercase tracking-widest">
+          {!collapsed && <>
+              <span className="text-[10px] uppercase tracking-widest flex-1 text-left">
                 {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
-              </span>}
+              </span>
+              <ChevronDown className="h-3 w-3 shrink-0" />
+            </>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">

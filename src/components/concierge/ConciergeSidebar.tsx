@@ -59,6 +59,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: number;
+  hasUnreadDot?: boolean;
 }
 
 interface NavSection {

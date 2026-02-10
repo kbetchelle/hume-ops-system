@@ -7,7 +7,7 @@ export interface StaffAnnouncement {
   id: string;
   title: string;
   content: string;
-  announcement_type: "alert" | "weekly_update";
+  announcement_type: "announcement" | "weekly_update";
   priority: "low" | "normal" | "high" | "urgent";
   target_departments: string[] | null;
   week_start_date: string | null;
@@ -23,7 +23,7 @@ export interface StaffAnnouncement {
 export interface CreateStaffAnnouncementInput {
   title: string;
   content: string;
-  announcement_type: "alert" | "weekly_update";
+  announcement_type: "announcement" | "weekly_update";
   priority?: "low" | "normal" | "high" | "urgent";
   target_departments?: string[] | null;
   week_start_date?: string | null;

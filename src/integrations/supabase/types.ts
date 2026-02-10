@@ -3654,7 +3654,7 @@ export type Database = {
       }
       staff_announcements: {
         Row: {
-          announcement_type: string | null
+          announcement_type: Database["public"]["Enums"]["staff_announcement_type"] | null
           content: string
           created_at: string | null
           created_by: string
@@ -3670,7 +3670,7 @@ export type Database = {
           week_start_date: string | null
         }
         Insert: {
-          announcement_type?: string | null
+          announcement_type?: Database["public"]["Enums"]["staff_announcement_type"] | null
           content: string
           created_at?: string | null
           created_by: string
@@ -3686,7 +3686,7 @@ export type Database = {
           week_start_date?: string | null
         }
         Update: {
-          announcement_type?: string | null
+          announcement_type?: Database["public"]["Enums"]["staff_announcement_type"] | null
           content?: string
           created_at?: string | null
           created_by?: string
@@ -4681,6 +4681,7 @@ export type Database = {
         | "water_bottle"
         | "other"
       membership_tier: "basic" | "standard" | "premium" | "vip"
+      staff_announcement_type: "announcement" | "weekly_update"
     }
     CompositeTypes: {
       [_ in never]: never

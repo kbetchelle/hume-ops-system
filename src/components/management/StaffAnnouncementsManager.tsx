@@ -71,7 +71,7 @@ import {
 import { useAnnouncementCommentCounts } from "@/hooks/useAnnouncementComments";
 import { AnnouncementTargetSelector, getTargetLabel } from "./AnnouncementTargetSelector";
 
-type AnnouncementType = "alert" | "weekly_update";
+type AnnouncementType = "announcement" | "weekly_update";
 type Priority = "low" | "normal" | "high" | "urgent";
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; icon: React.ReactNode }> = {
@@ -97,7 +97,7 @@ interface CreateDialogProps {
 function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDialogProps) {
   const isEditing = !!editingAnnouncement;
   
-  const [type, setType] = useState<AnnouncementType>(editingAnnouncement?.announcement_type || "alert");
+  const [type, setType] = useState<AnnouncementType>(editingAnnouncement?.announcement_type || "announcement");
   const [title, setTitle] = useState(editingAnnouncement?.title || "");
   const [content, setContent] = useState(editingAnnouncement?.content || "");
   const [priority, setPriority] = useState<Priority>((editingAnnouncement?.priority as Priority) || "normal");
@@ -120,7 +120,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   const updateMutation = useUpdateStaffAnnouncement();
 
   const resetForm = () => {
-    setType("alert");
+    setType("announcement");
     setTitle("");
     setContent("");
     setPriority("normal");
@@ -166,9 +166,9 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) return;
 
-    // Calculate expires_at for alerts
+    // Calculate expires_at for announcements
     let expiresAt: string | null = null;
-    if (type === "alert" && expiration !== "never") {
+    if (type === "announcement" && expiration !== "never") {
       const days = parseInt(expiration);
       expiresAt = addDays(new Date(), days).toISOString();
     }
@@ -183,7 +183,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
       title: title.trim(),
       content: content.trim(),
       announcement_type: type,
-      priority: type === "alert" ? priority : "normal",
+      priority: type === "announcement" ? priority : "normal",
       target_departments: targetDepartments,
       week_start_date: type === "weekly_update" ? weekStartDate : null,
       photo_url: photoUrl,
@@ -220,9 +220,9 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
             <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
               <TabsList className="w-full">
-                <TabsTrigger value="alert" className="flex-1 gap-2">
+                <TabsTrigger value="announcement" className="flex-1 gap-2">
                   <Bell className="h-4 w-4" />
-                  Alert
+                  Announcement
                 </TabsTrigger>
                 <TabsTrigger value="weekly_update" className="flex-1 gap-2">
                   <Calendar className="h-4 w-4" />
@@ -256,7 +256,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
           </div>
 
           {/* Priority (Alerts only) */}
-          {type === "alert" && (
+          {type === "announcement" && (
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priority</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -298,7 +298,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
           )}
 
           {/* Expiration (Alerts only) */}
-          {type === "alert" && (
+          {type === "announcement" && (
             <div className="space-y-2">
               <Label>Expires After</Label>
               <Select value={expiration} onValueChange={setExpiration}>
@@ -490,7 +490,7 @@ export function StaffAnnouncementsManager() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<StaffAnnouncement | null>(null);
   const [receiptsAnnouncement, setReceiptsAnnouncement] = useState<StaffAnnouncement | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<"all" | "alert" | "weekly_update">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "announcement" | "weekly_update">("all");
 
   const { data: announcements, isLoading } = useStaffAnnouncements();
   const deleteMutation = useDeleteStaffAnnouncement();
@@ -552,12 +552,12 @@ export function StaffAnnouncementsManager() {
           All
         </Button>
         <Button
-          variant={typeFilter === "alert" ? "default" : "outline"}
+          variant={typeFilter === "announcement" ? "default" : "outline"}
           size="sm"
-          onClick={() => setTypeFilter("alert")}
+          onClick={() => setTypeFilter("announcement")}
         >
           <Bell className="h-4 w-4 mr-2" />
-          Alerts
+          Announcements
         </Button>
         <Button
           variant={typeFilter === "weekly_update" ? "default" : "outline"}
@@ -600,14 +600,14 @@ export function StaffAnnouncementsManager() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Badge variant="outline">
-                        {announcement.announcement_type === "alert" ? (
+                        {announcement.announcement_type === "announcement" ? (
                           <Bell className="h-3 w-3 mr-1" />
                         ) : (
                           <Calendar className="h-3 w-3 mr-1" />
                         )}
-                        {announcement.announcement_type === "alert" ? "Alert" : "Weekly Update"}
+                        {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
                       </Badge>
-                      {announcement.announcement_type === "alert" &&
+                      {announcement.announcement_type === "announcement" &&
                         getPriorityBadge(announcement.priority)}
                       {!announcement.is_active && (
                         <Badge variant="secondary">Inactive</Badge>

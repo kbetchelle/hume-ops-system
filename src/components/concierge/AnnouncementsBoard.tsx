@@ -22,7 +22,7 @@ interface Announcement {
   id: string;
   title: string;
   content: string;
-  announcement_type: 'alert' | 'weekly_update';
+  announcement_type: 'announcement' | 'weekly_update';
   priority: 'low' | 'normal' | 'high' | 'urgent';
   target_departments: string[] | null;
   week_start_date: string | null;
@@ -155,7 +155,7 @@ export function AnnouncementsBoard() {
   const readSet = new Set(readAnnouncements || []);
 
   const alerts = filteredAnnouncements
-    .filter(a => a.announcement_type === 'alert')
+    .filter(a => a.announcement_type === 'announcement')
     .map(a => ({ ...a, is_read: readSet.has(a.id) }));
 
   const weeklyUpdates = filteredAnnouncements
@@ -207,7 +207,7 @@ export function AnnouncementsBoard() {
             Announcements
           </h2>
           <p className="text-sm text-muted-foreground">
-            Stay updated with alerts and weekly communications.
+            Stay updated with announcements and weekly communications.
           </p>
         </div>
       </div>
@@ -216,7 +216,7 @@ export function AnnouncementsBoard() {
         <TabsList className="w-full max-w-md">
           <TabsTrigger value="alerts" className="flex-1 gap-2">
             <Bell className="h-4 w-4" />
-            Alerts
+            Announcements
             {unreadAlerts > 0 && (
               <Badge variant="destructive" className="h-5 px-1.5 text-xs animate-pulse">
                 {unreadAlerts}
@@ -242,7 +242,7 @@ export function AnnouncementsBoard() {
           ) : alerts.length === 0 ? (
             <div className="border bg-muted/30 p-8 text-center">
               <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">No active alerts</p>
+              <p className="text-sm text-muted-foreground">No active announcements</p>
             </div>
           ) : (
             <div className="space-y-3">

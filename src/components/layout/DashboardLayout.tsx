@@ -414,7 +414,7 @@ function RoleSwitcher({
   };
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-8 w-full")}>
+        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-8 w-full px-0")}>
           {!collapsed && <>
               <span className="text-[10px] uppercase tracking-widest flex-1 text-left">
                 {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
@@ -424,10 +424,7 @@ function RoleSwitcher({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Switch Role
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        
         {availableRoles.map(userRole => {
         const roleInfo = ROLES.find(r => r.value === userRole.role);
         const isCurrentView = currentViewRole === userRole.role || currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant" || currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant";

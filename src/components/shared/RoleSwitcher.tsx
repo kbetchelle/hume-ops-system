@@ -54,17 +54,14 @@ export function RoleSwitcher() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full gap-2 rounded-none text-[10px] uppercase tracking-widest justify-start"
+          className="w-full gap-2 rounded-none text-[10px] uppercase tracking-widest justify-start px-0"
         >
           <span className="truncate">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
           <ChevronDown className="h-3 w-3 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="rounded-none w-48 bg-background border border-border z-50">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Role Views
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        
         {availableRoles.map((userRole) => {
           const isCurrentView = currentViewRole === userRole.role || 
             (currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant") ||

@@ -186,7 +186,7 @@ export function AnnouncementsBoard() {
 
   const weeklyUpdateStyle = 'border-blue-500 bg-blue-500/5';
 
-  const renderWeeklyCard = (item: Announcement & { is_read?: boolean }) => (
+  const renderWeeklyCard = (item: Announcement & { is_read?: boolean }, isThisWeek = false) => (
     <div
       key={item.id}
       className={cn(

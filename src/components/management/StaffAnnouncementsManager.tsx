@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
 import {
   Bell,
@@ -479,6 +479,18 @@ export function StaffAnnouncementsManager() {
     return a.announcement_type === typeFilter;
   });
 
+  const weeklyUpdates = (announcements || [])
+    .filter((a) => a.announcement_type === "weekly_update")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const thisWeekId = useMemo(() => {
+    if (weeklyUpdates.length === 0) return null;
+    const sixDaysAgo = new Date();
+    sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+    const newest = weeklyUpdates[0];
+    return new Date(newest.created_at) >= sixDaysAgo ? newest.id : null;
+  }, [weeklyUpdates]);
+
   const handleEdit = (announcement: StaffAnnouncement) => {
     setEditingAnnouncement(announcement);
     setCreateDialogOpen(true);
@@ -561,20 +573,29 @@ export function StaffAnnouncementsManager() {
               {filteredAnnouncements.map((announcement) => (
                 <Card
                   key={announcement.id}
-                  className={cn(!announcement.is_active && "opacity-60")}
+                  className={cn(
+                    !announcement.is_active && "opacity-60",
+                    announcement.announcement_type === "weekly_update" && "border-blue-500 bg-blue-500/5"
+                  )}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
+                          {announcement.announcement_type === "weekly_update" && announcement.id === thisWeekId && (
+                            <Badge className="bg-green-600 text-white border-green-600">This Week</Badge>
+                          )}
+                          {announcement.announcement_type === "weekly_update" ? (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                               <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
-                          </Badge>
+                              Weekly Update
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Announcement
+                            </Badge>
+                          )}
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
@@ -693,12 +714,8 @@ export function StaffAnnouncementsManager() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                            <Bell className="h-3 w-3 mr-1" />
+                            Announcement
                           </Badge>
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
@@ -811,19 +828,21 @@ export function StaffAnnouncementsManager() {
               {filteredAnnouncements.map((announcement) => (
                 <Card
                   key={announcement.id}
-                  className={cn(!announcement.is_active && "opacity-60")}
+                  className={cn(
+                    !announcement.is_active && "opacity-60",
+                    "border-blue-500 bg-blue-500/5"
+                  )}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                          {announcement.id === thisWeekId && (
+                            <Badge className="bg-green-600 text-white border-green-600">This Week</Badge>
+                          )}
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Weekly Update
                           </Badge>
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>

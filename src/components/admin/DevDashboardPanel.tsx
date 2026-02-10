@@ -117,7 +117,7 @@ export function DevDashboardPanel() {
       roleCategory
     });
   };
-  if (pagesLoading || notesLoading) {
+  if (pagesLoading) {
     return <div className="flex items-center justify-center h-64">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>;

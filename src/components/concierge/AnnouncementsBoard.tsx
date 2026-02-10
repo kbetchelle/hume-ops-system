@@ -273,22 +273,22 @@ export function AnnouncementsBoard() {
     <div className="space-y-6 px-8">
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'weekly' | 'announcements')}>
-        <TabsList className="w-full max-w-2xl">
-          <TabsTrigger value="all" className="flex-1 gap-2">
+        <TabsList className="w-full max-w-2xl overflow-x-auto flex-nowrap justify-start">
+          <TabsTrigger value="all" className="shrink-0 gap-2">
             <Megaphone className="h-4 w-4" />
             All
             {unreadAll > 0 && (
               <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="weekly" className="flex-1 gap-2">
+          <TabsTrigger value="weekly" className="shrink-0 gap-2">
             <Calendar className="h-4 w-4" />
             Weekly Updates
             {unreadWeekly > 0 && (
               <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="announcements" className="flex-1 gap-2">
+          <TabsTrigger value="announcements" className="shrink-0 gap-2">
             <Bell className="h-4 w-4" />
             Announcements
             {unreadAnnouncements > 0 && (

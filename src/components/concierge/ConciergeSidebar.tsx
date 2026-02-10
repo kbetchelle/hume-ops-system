@@ -134,6 +134,20 @@ export function ConciergeSidebar({
   return (
     <Sidebar className="w-60 border-r border-border flex flex-col">
       <SidebarContent className="pt-4 flex-1">
+        {/* User greeting and role switcher at top */}
+        <div className="px-3 pb-3 space-y-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full justify-start gap-2 h-8 px-2 rounded-none pointer-events-none"
+          >
+            <User className="h-4 w-4 shrink-0" />
+            <span className="text-[10px] uppercase tracking-widest truncate">
+              Hi, {getFirstName(profile?.full_name)}
+            </span>
+          </Button>
+          <RoleSwitcher />
+        </div>
         {sections.map((section) => (
           <SidebarGroup key={section.title}>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
@@ -177,9 +191,8 @@ export function ConciergeSidebar({
         ))}
       </SidebarContent>
       
-      {/* Role Switcher and User Info Dropdown at bottom of sidebar */}
-      <div className="p-3 border-t border-border space-y-2">
-        <RoleSwitcher />
+      {/* User dropdown and bug report at bottom */}
+      <div className="p-3 border-t border-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
@@ -187,9 +200,9 @@ export function ConciergeSidebar({
               size="sm" 
               className="w-full justify-start gap-2 h-8 px-2 rounded-none"
             >
-              <User className="h-4 w-4 shrink-0" />
+              <Settings className="h-4 w-4 shrink-0" />
               <span className="text-[10px] uppercase tracking-widest truncate">
-                Hi, {getFirstName(profile?.full_name)}
+                Settings
               </span>
             </Button>
           </DropdownMenuTrigger>

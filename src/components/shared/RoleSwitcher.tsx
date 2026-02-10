@@ -52,7 +52,7 @@ export function RoleSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           className="w-full gap-2 rounded-none text-[10px] uppercase tracking-widest"
         >

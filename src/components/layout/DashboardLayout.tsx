@@ -256,6 +256,11 @@ function SidebarNav() {
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records");
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
+        {/* User greeting and role switcher at top */}
+        <div className={cn("px-3 pb-3 space-y-2", collapsed && "px-2")}>
+          <UserInfoDropdown collapsed={collapsed} />
+          <RoleSwitcher collapsed={collapsed} />
+        </div>
         <SidebarGroup>
           <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
             Navigation
@@ -352,11 +357,7 @@ function SidebarNav() {
           </SidebarGroup>}
       </SidebarContent>
       
-      {/* Role Switcher and User Info at bottom of sidebar */}
-      <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
-        <RoleSwitcher collapsed={collapsed} />
-        <UserInfoDropdown collapsed={collapsed} />
-      </div>
+      {/* Bottom spacer removed - greeting and role switcher moved to top */}
     </Sidebar>;
 }
 function RoleSwitcher({
@@ -413,7 +414,7 @@ function RoleSwitcher({
   };
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("gap-2 rounded-none", collapsed ? "h-8 w-8 p-0" : "h-8")}>
+        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0", collapsed ? "h-8 w-8 p-0" : "h-8 w-full")}>
           <ArrowLeftRight className="h-4 w-4 shrink-0" />
           {!collapsed && <>
               <span className="text-[10px] uppercase tracking-widest">
@@ -474,7 +475,7 @@ function UserInfoDropdown({
   return <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 mt-2 rounded-none", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
+          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
             <User className="h-4 w-4 shrink-0" />
             {!collapsed && <span className="text-[10px] uppercase tracking-widest truncate">
                 Hi, {getFirstName(profile?.full_name)}

@@ -131,35 +131,38 @@ export default function ConciergeDashboard() {
     }
   };
 
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full bg-background">
-        <ConciergeHeader />
-        
-        <div className="flex flex-1 w-full">
-          {/* Desktop Sidebar */}
-          {!isMobile && (
-            <ConciergeSidebar
-              activeView={activeView}
-              onViewChange={setActiveView}
-              unreadCount={unreadCount}
-            />
-          )}
-
-          {/* Main Content */}
-          <main className={`flex-1 overflow-auto ${isMobile ? "pb-20" : ""}`}>
+  if (isMobile) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full bg-background">
+          <ConciergeHeader />
+          <main className="flex-1 overflow-auto pb-20">
             {renderContent()}
           </main>
-        </div>
-
-        {/* Mobile Bottom Nav */}
-        {isMobile && (
           <ConciergeBottomNav
             activeView={activeView}
             onViewChange={setActiveView}
             hasUnreadAnnouncements={!!hasUnreadAnnouncements}
           />
-        )}
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <ConciergeSidebar
+          activeView={activeView}
+          onViewChange={setActiveView}
+          unreadCount={unreadCount}
+        />
+        <div className="flex-1 flex flex-col min-w-0">
+          <ConciergeHeader />
+          <main className="flex-1 overflow-auto">
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );

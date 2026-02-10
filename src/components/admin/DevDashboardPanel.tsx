@@ -102,60 +102,9 @@ export function DevDashboardPanel() {
     data: pages,
     isLoading: pagesLoading
   } = usePageStatuses();
-  const {
-    data: devNote,
-    isLoading: notesLoading
-  } = useDevNotes();
   const updatePageStatus = useUpdatePageStatus();
-  const updateDevNotes = useUpdateDevNotes();
   const updatePageRole = useUpdatePageRole();
-  const [noteContent, setNoteContent] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const noteCardRef = useRef<HTMLDivElement>(null);
-  const hasLoadedNote = useRef(false);
-
-  // Load initial note content
-  useEffect(() => {
-    if (devNote && !hasLoadedNote.current) {
-      setNoteContent(devNote.content || "");
-      hasLoadedNote.current = true;
-    }
-  }, [devNote]);
-
-  // Handle click outside to save
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isEditing && noteCardRef.current && !noteCardRef.current.contains(event.target as Node)) {
-        saveNotes();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isEditing, noteContent]);
-
-  // Handle keyboard save
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      saveNotes();
-    }
-  };
-  useEffect(() => {
-    if (isEditing) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isEditing, noteContent]);
-  const saveNotes = useCallback(() => {
-    if (noteContent !== devNote?.content) {
-      updateDevNotes.mutate({
-        content: noteContent
-      });
-    }
-    setIsEditing(false);
-  }, [noteContent, devNote?.content, updateDevNotes]);
   const handleStatusChange = (pageId: string, newStatus: PageStatus) => {
     updatePageStatus.mutate({
       pageId,

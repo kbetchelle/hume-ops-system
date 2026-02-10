@@ -68,15 +68,6 @@ export function ConciergeHeader() {
           <Search className="h-4 w-4" />
         </Button>
 
-        {/* Logout */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-none"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
       </div>
     </header>
   );

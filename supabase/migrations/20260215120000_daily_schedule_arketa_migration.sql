@@ -1,8 +1,15 @@
 -- Daily schedule: disconnect from Sling, rename to daily_schedule, repurpose for Arketa classes + reservations.
 -- See plan: daily_schedule Arketa Migration.
 
--- 1) Rename table
-ALTER TABLE public.daily_schedules RENAME TO daily_schedule;
+-- 1) Rename table (skip if already renamed or source table missing)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedules') THEN
+    ALTER TABLE public.daily_schedules RENAME TO daily_schedule;
+  ELSIF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    RAISE EXCEPTION 'Table daily_schedules does not exist and daily_schedule does not exist - cannot run daily_schedule migration';
+  END IF;
+END $$;
 
 -- 2) Drop old unique constraint (name from default convention)
 ALTER TABLE public.daily_schedule DROP CONSTRAINT IF EXISTS daily_schedules_schedule_date_sling_user_id_shift_start_key;

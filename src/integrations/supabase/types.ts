@@ -324,6 +324,7 @@ export type Database = {
           capacity: number | null
           class_date: string | null
           created_at: string | null
+          description: string | null
           duration_minutes: number | null
           external_id: string
           id: string
@@ -335,6 +336,7 @@ export type Database = {
           start_time: string
           status: string | null
           synced_at: string | null
+          updated_at: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -342,6 +344,7 @@ export type Database = {
           capacity?: number | null
           class_date?: string | null
           created_at?: string | null
+          description?: string | null
           duration_minutes?: number | null
           external_id: string
           id?: string
@@ -353,6 +356,7 @@ export type Database = {
           start_time: string
           status?: string | null
           synced_at?: string | null
+          updated_at?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -360,6 +364,7 @@ export type Database = {
           capacity?: number | null
           class_date?: string | null
           created_at?: string | null
+          description?: string | null
           duration_minutes?: number | null
           external_id?: string
           id?: string
@@ -371,67 +376,71 @@ export type Database = {
           start_time?: string
           status?: string | null
           synced_at?: string | null
+          updated_at?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
       }
       arketa_classes_staging: {
         Row: {
-          arketa_class_id: string
+          booked_count: number | null
           capacity: number | null
-          class_name: string
-          cursor_position: string | null
+          class_date: string
           description: string | null
-          end_time: string | null
-          enrolled: number | null
+          duration_minutes: number | null
+          external_id: string
           id: string
-          instructor_id: string | null
           instructor_name: string | null
-          location: string | null
+          is_cancelled: boolean | null
+          name: string
           raw_data: Json | null
-          signups: number | null
+          room_name: string | null
           staged_at: string | null
           start_time: string
           status: string | null
+          synced_at: string | null
           sync_batch_id: string
+          waitlist_count: number | null
         }
         Insert: {
-          arketa_class_id: string
+          booked_count?: number | null
           capacity?: number | null
-          class_name: string
-          cursor_position?: string | null
+          class_date: string
           description?: string | null
-          end_time?: string | null
-          enrolled?: number | null
+          duration_minutes?: number | null
+          external_id: string
           id?: string
-          instructor_id?: string | null
           instructor_name?: string | null
-          location?: string | null
+          is_cancelled?: boolean | null
+          name: string
           raw_data?: Json | null
-          signups?: number | null
+          room_name?: string | null
           staged_at?: string | null
           start_time: string
           status?: string | null
+          synced_at?: string | null
           sync_batch_id: string
+          waitlist_count?: number | null
         }
         Update: {
-          arketa_class_id?: string
+          booked_count?: number | null
           capacity?: number | null
-          class_name?: string
-          cursor_position?: string | null
+          class_date?: string
           description?: string | null
-          end_time?: string | null
-          enrolled?: number | null
+          duration_minutes?: number | null
+          external_id?: string
           id?: string
-          instructor_id?: string | null
           instructor_name?: string | null
-          location?: string | null
+          is_cancelled?: boolean | null
+          name?: string
           raw_data?: Json | null
-          signups?: number | null
+          room_name?: string | null
           staged_at?: string | null
           start_time?: string
           status?: string | null
+          synced_at?: string | null
           sync_batch_id?: string
+          waitlist_count?: number | null
         }
         Relationships: []
       }

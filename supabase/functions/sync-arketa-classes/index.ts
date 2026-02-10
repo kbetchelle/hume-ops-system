@@ -1,5 +1,6 @@
 /**
- * sync-arketa-classes: Populate arketa_classes for a date range.
+ * sync-arketa-classes: Populate arketa_classes for a date range via staging.
+ * Fetches from API → inserts into arketa_classes_staging → upserts to arketa_classes on (external_id, class_date) → deletes from staging.
  * See docs/ARKETA_ARCHITECTURE.md — arketa_classes is the master catalog of class_ids for reservation sync.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -67,7 +68,6 @@ Deno.serve(async (req) => {
       if (cursor) url.searchParams.set('cursor', cursor);
 
       const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-      // Clone before reading so body-already-consumed errors are avoided
       const cloned = response.clone();
       if (!response.ok) {
         const text = await cloned.text().catch(() => 'Body unavailable');
@@ -83,48 +83,71 @@ Deno.serve(async (req) => {
       cursor = data.pagination?.nextCursor;
     } while (cursor);
 
-    let syncedCount = 0;
+    const syncBatchId = crypto.randomUUID();
+    const syncedAt = new Date().toISOString();
+
+    const stagingRows: Record<string, unknown>[] = [];
     for (const cls of allClasses) {
+      const startTime = cls.start_time;
+      if (!startTime) continue;
+
       const name = cls.name ?? cls.class_name ?? 'Unknown Class';
       const instructorName = cls.instructor_name ??
         (cls.instructor ? `${cls.instructor.first_name ?? ''} ${cls.instructor.last_name ?? ''}`.trim() : null);
-      const startTime = cls.start_time;
-      let classDate: string | null = null;
-      if (startTime) {
-        // Convert to America/Los_Angeles (PST/PDT) before extracting date
-        const dtf = new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'America/Los_Angeles',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        });
-        classDate = dtf.format(new Date(startTime)); // returns YYYY-MM-DD
-      }
+      const dtf = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const classDate = dtf.format(new Date(startTime));
 
-      const { error } = await supabase
-        .from('arketa_classes')
-        .upsert(
-          {
-            external_id: String(cls.id),
-            name,
-            start_time: startTime,
-            class_date: classDate,
-            duration_minutes: cls.duration_minutes ?? cls.duration ?? null,
-            capacity: cls.capacity ?? cls.max_capacity ?? null,
-            booked_count: cls.total_booked ?? cls.booked_count ?? 0,
-            waitlist_count: cls.waitlist_count ?? 0,
-            status: cls.status ?? 'scheduled',
-            is_cancelled: cls.is_cancelled ?? cls.cancelled ?? false,
-            room_name: cls.room?.name ?? null,
-            instructor_name: instructorName,
-            raw_data: cls,
-            synced_at: new Date().toISOString(),
-          },
-          { onConflict: 'external_id' }
-        );
-
-      if (!error) syncedCount++;
+      stagingRows.push({
+        external_id: String(cls.id),
+        class_date: classDate,
+        start_time: startTime,
+        duration_minutes: cls.duration_minutes ?? cls.duration ?? null,
+        name,
+        capacity: cls.capacity ?? cls.max_capacity ?? null,
+        instructor_name: instructorName,
+        is_cancelled: cls.is_cancelled ?? cls.cancelled ?? false,
+        description: cls.description ?? null,
+        booked_count: cls.total_booked ?? cls.booked_count ?? 0,
+        waitlist_count: cls.waitlist_count ?? 0,
+        status: cls.status ?? 'scheduled',
+        room_name: cls.room?.name ?? null,
+        raw_data: cls,
+        synced_at: syncedAt,
+        sync_batch_id: syncBatchId,
+      });
     }
+
+    if (stagingRows.length > 0) {
+      const chunkSize = 200;
+      for (let i = 0; i < stagingRows.length; i += chunkSize) {
+        const chunk = stagingRows.slice(i, i + chunkSize);
+        const { error } = await supabase.from('arketa_classes_staging').insert(chunk);
+        if (error) {
+          return new Response(
+            JSON.stringify({ success: false, error: error.message, details: 'staging insert failed' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
+    const { data: upsertedCount, error: rpcError } = await supabase.rpc('upsert_arketa_classes_from_staging', {
+      p_sync_batch_id: syncBatchId,
+    });
+
+    if (rpcError) {
+      return new Response(
+        JSON.stringify({ success: false, error: rpcError.message, details: 'upsert from staging failed' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const syncedCount = typeof upsertedCount === 'number' ? upsertedCount : stagingRows.length;
 
     return new Response(
       JSON.stringify({

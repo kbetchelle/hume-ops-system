@@ -114,11 +114,13 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
 
   let recordCount = 0;
   for (const cls of allClasses) {
-    const name = cls.name || cls.class_name || 'Unknown Class';
-    const instructorName = cls.instructor_name || 
-      (cls.instructor ? `${cls.instructor.first_name || ''} ${cls.instructor.last_name || ''}`.trim() : null);
     const startTime = cls.start_time;
-    const classDate = startTime ? new Date(startTime).toISOString().split('T')[0] : null;
+    if (!startTime) continue;
+
+    const name = cls.name || cls.class_name || 'Unknown Class';
+    const instructorName = cls.instructor_name ||
+      (cls.instructor ? `${cls.instructor.first_name || ''} ${cls.instructor.last_name || ''}`.trim() : null);
+    const classDate = new Date(startTime).toISOString().split('T')[0];
 
     const { error } = await supabase
       .from('arketa_classes')
@@ -135,9 +137,10 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
         is_cancelled: cls.is_cancelled ?? cls.cancelled ?? false,
         room_name: cls.room?.name || null,
         instructor_name: instructorName,
+        description: cls.description ?? null,
         raw_data: cls,
         synced_at: new Date().toISOString(),
-      }, { onConflict: 'external_id' });
+      }, { onConflict: 'external_id,class_date' });
 
     if (!error) recordCount++;
   }

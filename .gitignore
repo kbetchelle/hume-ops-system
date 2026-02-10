@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# macOS resource forks
+   ._*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

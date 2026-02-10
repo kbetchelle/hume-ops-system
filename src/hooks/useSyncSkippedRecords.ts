@@ -17,7 +17,7 @@ export function useSyncSkippedRecords(apiName: string | null, options?: { refetc
   return useQuery({
     queryKey: ["apiSyncSkippedRecords", apiName],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("api_sync_skipped_records")
         .select("*")
         .order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export function useSyncSkippedRecordsApiNames(options?: { refetchInterval?: numb
   return useQuery({
     queryKey: ["apiSyncSkippedRecordsApiNames"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("api_sync_skipped_records")
         .select("api_name")
         .order("api_name");
@@ -66,7 +66,7 @@ export function useIsAnySyncRunning() {
         .limit(1);
       const backfillRunning = (data?.length ?? 0) > 0;
 
-      const { data: schedData } = await supabase
+      const { data: schedData } = await (supabase as any)
         .from("sync_schedule")
         .select("id")
         .eq("last_status", "running")

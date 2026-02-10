@@ -17,9 +17,16 @@ export function useAutoSubmitConcierge(
   isSubmitted: boolean
 ) {
   const [willAutoSubmit, setWillAutoSubmit] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  // Delay auto-submit checks to let the draft/form data load first
+  useEffect(() => {
+    const readyTimer = setTimeout(() => setIsReady(true), 5000);
+    return () => clearTimeout(readyTimer);
+  }, [reportDate, shiftType]);
 
   useEffect(() => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isReady) return;
 
     const checkAutoSubmit = () => {
       const now = new Date();
@@ -45,10 +52,10 @@ export function useAutoSubmitConcierge(
 
     // Check every minute
     const interval = setInterval(checkAutoSubmit, 60000);
-    checkAutoSubmit(); // Check immediately
+    checkAutoSubmit();
 
     return () => clearInterval(interval);
-  }, [reportDate, shiftType, isSubmitted, handleSubmit]);
+  }, [reportDate, shiftType, isSubmitted, isReady, handleSubmit]);
 
   return { 
     willAutoSubmit,

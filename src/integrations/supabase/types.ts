@@ -52,65 +52,6 @@ export type Database = {
           },
         ]
       }
-      announcement_reads: {
-        Row: {
-          announcement_id: string
-          id: string
-          read_at: string
-          user_id: string
-        }
-        Insert: {
-          announcement_id: string
-          id?: string
-          read_at?: string
-          user_id: string
-        }
-        Update: {
-          announcement_id?: string
-          id?: string
-          read_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "announcement_reads_announcement_id_fkey"
-            columns: ["announcement_id"]
-            isOneToOne: false
-            referencedRelation: "announcements"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      announcements: {
-        Row: {
-          content: string
-          created_at: string
-          created_by: string
-          id: string
-          target_roles: Database["public"]["Enums"]["app_role"][]
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          created_by: string
-          id?: string
-          target_roles: Database["public"]["Enums"]["app_role"][]
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          target_roles?: Database["public"]["Enums"]["app_role"][]
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       api_credentials: {
         Row: {
           access_token: string
@@ -3618,7 +3559,7 @@ export type Database = {
             foreignKeyName: "staff_announcement_comments_announcement_id_fkey"
             columns: ["announcement_id"]
             isOneToOne: false
-            referencedRelation: "announcements"
+            referencedRelation: "staff_announcements"
             referencedColumns: ["id"]
           },
         ]
@@ -3654,7 +3595,9 @@ export type Database = {
       }
       staff_announcements: {
         Row: {
-          announcement_type: Database["public"]["Enums"]["staff_announcement_type"] | null
+          announcement_type:
+            | Database["public"]["Enums"]["staff_announcement_type"]
+            | null
           content: string
           created_at: string | null
           created_by: string
@@ -3670,7 +3613,9 @@ export type Database = {
           week_start_date: string | null
         }
         Insert: {
-          announcement_type?: Database["public"]["Enums"]["staff_announcement_type"] | null
+          announcement_type?:
+            | Database["public"]["Enums"]["staff_announcement_type"]
+            | null
           content: string
           created_at?: string | null
           created_by: string
@@ -3686,7 +3631,9 @@ export type Database = {
           week_start_date?: string | null
         }
         Update: {
-          announcement_type?: Database["public"]["Enums"]["staff_announcement_type"] | null
+          announcement_type?:
+            | Database["public"]["Enums"]["staff_announcement_type"]
+            | null
           content?: string
           created_at?: string | null
           created_by?: string
@@ -4836,6 +4783,7 @@ export const Constants = {
         "other",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
+      staff_announcement_type: ["announcement", "weekly_update"],
     },
   },
 } as const

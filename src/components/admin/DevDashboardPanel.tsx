@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RichTextEditor } from "@/components/shared/RichTextEditor";
-import { usePageStatuses, useUpdatePageStatus, useDevNotes, useUpdateDevNotes, useUpdatePageRole, useDeletePageStatus, PageStatus } from "@/hooks/useDevDashboard";
+import { usePageStatuses, useUpdatePageStatus, useUpdatePageRole, PageStatus } from "@/hooks/useDevDashboard";
 import { Loader2 } from "lucide-react";
-import { DevNotesModal } from "./DevNotesModal";
 import { BuildStatusModal } from "./BuildStatusModal";
 import { useActiveRole } from "@/hooks/useActiveRole";
 
@@ -102,60 +100,9 @@ export function DevDashboardPanel() {
     data: pages,
     isLoading: pagesLoading
   } = usePageStatuses();
-  const {
-    data: devNote,
-    isLoading: notesLoading
-  } = useDevNotes();
   const updatePageStatus = useUpdatePageStatus();
-  const updateDevNotes = useUpdateDevNotes();
   const updatePageRole = useUpdatePageRole();
-  const [noteContent, setNoteContent] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const noteCardRef = useRef<HTMLDivElement>(null);
-  const hasLoadedNote = useRef(false);
-
-  // Load initial note content
-  useEffect(() => {
-    if (devNote && !hasLoadedNote.current) {
-      setNoteContent(devNote.content || "");
-      hasLoadedNote.current = true;
-    }
-  }, [devNote]);
-
-  // Handle click outside to save
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isEditing && noteCardRef.current && !noteCardRef.current.contains(event.target as Node)) {
-        saveNotes();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isEditing, noteContent]);
-
-  // Handle keyboard save
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      saveNotes();
-    }
-  };
-  useEffect(() => {
-    if (isEditing) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isEditing, noteContent]);
-  const saveNotes = useCallback(() => {
-    if (noteContent !== devNote?.content) {
-      updateDevNotes.mutate({
-        content: noteContent
-      });
-    }
-    setIsEditing(false);
-  }, [noteContent, devNote?.content, updateDevNotes]);
   const handleStatusChange = (pageId: string, newStatus: PageStatus) => {
     updatePageStatus.mutate({
       pageId,
@@ -168,33 +115,14 @@ export function DevDashboardPanel() {
       roleCategory
     });
   };
-  if (pagesLoading || notesLoading) {
+  if (pagesLoading) {
     return <div className="flex items-center justify-center h-64">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>;
   }
   return <>
-      <div className="flex gap-6 h-full">
-        {/* Left panel - Dev Notes (7/12 width) */}
-        <div className="w-7/12 flex flex-col">
-          <Card ref={noteCardRef} className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setNotesModalOpen(true)}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0" onClick={e => e.stopPropagation()}>
-              {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-base flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_*]:!text-[length:inherit] border-primary border px-[10px] py-[6px] cursor-text" dangerouslySetInnerHTML={{
-              __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
-            }} onClick={e => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }} />}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right panel - Page Status Tracker (5/12 width) */}
-        <div className="w-5/12 flex flex-col">
-          <Card className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
+      <div className="h-full">
+          <Card className="border flex flex-col h-full cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xs">BUILD STATUS</CardTitle>
             </CardHeader>
@@ -225,11 +153,7 @@ export function DevDashboardPanel() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
-
-      {/* Modals */}
-      <DevNotesModal open={notesModalOpen} onOpenChange={setNotesModalOpen} noteContent={noteContent} onNoteChange={setNoteContent} onSave={saveNotes} />
 
       <BuildStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} pages={pages} onStatusChange={handleStatusChange} onRoleChange={handleRoleChange} isAdmin={isAdmin} />
     </>;

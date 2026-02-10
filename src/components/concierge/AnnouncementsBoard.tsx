@@ -330,17 +330,6 @@ export function AnnouncementsBoard() {
                         {!item.is_read && (
                           <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
                         )}
-                        {item.priority !== 'normal' && (
-                          <Badge
-                            variant={item.priority === 'urgent' ? 'destructive' : 'secondary'}
-                            className={cn(
-                              "text-[10px] h-5",
-                              item.priority === 'high' && 'bg-amber-500 text-white'
-                            )}
-                          >
-                            {item.priority}
-                          </Badge>
-                        )}
                         <CommentCountBadge count={commentCounts?.[item.id] || 0} />
                       </div>
                     </div>

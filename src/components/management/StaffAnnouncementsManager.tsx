@@ -479,6 +479,18 @@ export function StaffAnnouncementsManager() {
     return a.announcement_type === typeFilter;
   });
 
+  const weeklyUpdates = (announcements || [])
+    .filter((a) => a.announcement_type === "weekly_update")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const thisWeekId = useMemo(() => {
+    if (weeklyUpdates.length === 0) return null;
+    const sixDaysAgo = new Date();
+    sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+    const newest = weeklyUpdates[0];
+    return new Date(newest.created_at) >= sixDaysAgo ? newest.id : null;
+  }, [weeklyUpdates]);
+
   const handleEdit = (announcement: StaffAnnouncement) => {
     setEditingAnnouncement(announcement);
     setCreateDialogOpen(true);

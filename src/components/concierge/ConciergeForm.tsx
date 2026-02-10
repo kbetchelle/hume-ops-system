@@ -331,7 +331,11 @@ export function ConciergeForm() {
     }
   }
   
+  const isSubmittingRef = useRef(false);
+
   async function handleSubmit() {
+    if (isSubmittingRef.current) return;
+    
     if (!hasMeaningfulContent(formData)) {
       toast({
         title: 'Cannot submit empty report',
@@ -341,14 +345,34 @@ export function ConciergeForm() {
       return;
     }
     
+    isSubmittingRef.current = true;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('submit-concierge-report', {
-        body: {
-          reportDate,
-          shiftTime: shiftType,
-          formData,
-        },
-      });
+      const payload = {
+        report_date: reportDate,
+        shift_type: shiftType,
+        staff_user_id: user?.id || '',
+        staff_name: formData.staffName || user?.user_metadata?.full_name || '',
+        member_feedback: formData.memberFeedback as any,
+        membership_requests: formData.membershipCancelRequests as any,
+        celebratory_events: formData.celebratoryEvents as any,
+        scheduled_tours: formData.tours as any,
+        tour_notes: formData.tours as any,
+        facility_issues: formData.facilityIssues as any,
+        busiest_areas: formData.busiestAreas || '',
+        system_issues: formData.systemIssues as any,
+        management_notes: formData.managementNotes || '',
+        future_shift_notes: formData.futureNotes as any,
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+      };
+
+      // Try upsert based on date + shift
+      const { error } = await supabase
+        .from('daily_report_history')
+        .upsert(payload as any, {
+          onConflict: 'report_date,shift_type',
+        });
       
       if (error) throw error;
       
@@ -364,6 +388,8 @@ export function ConciergeForm() {
         description: 'Please try again',
         variant: 'destructive',
       });
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
   

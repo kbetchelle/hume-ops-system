@@ -1,67 +1,55 @@
 
 
-## Read Tracking and Unread Banner for Announcements
+## Notifications Icon + Concierge Header Layout Fix
 
-### Overview
-This plan changes how announcement read-tracking works, removes the "show all updates" toggle, and adds an unread indicator dot to the Announcements sidebar/bottom-nav item.
+### 1. Fix Concierge header/sidebar overlap
 
-### Changes
+**Problem**: The Concierge dashboard renders `ConciergeHeader` spanning full width above the sidebar+content row. The Admin/Manager `DashboardLayout` correctly places the header only in the content column next to the sidebar.
 
-**1. Scroll-to-bottom read tracking (AnnouncementsBoard.tsx)**
-- Replace the current `IntersectionObserver` approach (which marks as read when 60% visible for 1.5s) with a new strategy: only mark an announcement as read when the user scrolls to the **bottom** of its div.
-- Place a small sentinel element at the bottom of each announcement/weekly-update card. Attach an `IntersectionObserver` to that sentinel with a high threshold. When the sentinel becomes visible (meaning the user has scrolled to the bottom of that card), mark as read after a brief delay.
+**Fix**: Restructure `ConciergeDashboard.tsx` to match the `DashboardLayout` pattern -- sidebar sits alongside a column containing the header + content, so the header only fills the space to the right of the nav menu.
 
-**2. Auto-mark old announcements as read for new users (database migration)**
-- Add a SQL migration with a trigger on the `profiles` table: when a new profile row is inserted, automatically insert read records into `staff_announcement_reads` for all announcements created **before** the profile's `created_at` timestamp.
-- This ensures new users don't see a wall of "unread" historical content.
+Current (broken):
+```text
++------ full width header ------+
+| sidebar | content             |
++--------+----------------------+
+```
 
-**3. Remove "Show all updates" toggle (AnnouncementsBoard.tsx)**
-- Remove the `showAllWeekly` state variable and the `Switch` toggle UI.
-- Always render the full list of weekly updates (the "show all" view), removing the week-navigation UI entirely.
+Target (matching Admin layout):
+```text
++--------+---------------------+
+| sidebar| header (fills rest) |
+|        +---------------------+
+|        | content             |
++--------+---------------------+
+```
 
-**4. Unread dot on Announcements sidebar item (ConciergeSidebar.tsx)**
-- Query `staff_announcement_reads` vs active announcements to determine if the user has any unread announcements.
-- Show a small pulsing dot (no count) next to the "Announcements" menu item in `ConciergeSidebar` and `ConciergeBottomNav`.
+### 2. Add NotificationBell to all headers (same position for all users)
 
-**5. Remove numeric badge counts from tab headers (AnnouncementsBoard.tsx)**
-- Replace the `{unreadAll}`, `{unreadWeekly}`, `{unreadAnnouncements}` numeric badges on the tab triggers with simple dot indicators when unread > 0.
+**Placement**: In the header, between the page title and the HUME logo -- consistent across all dashboards.
+
+**Changes**:
+- Import and render `NotificationBell` in `DashboardHeader` inside `DashboardLayout.tsx` (covers Admin, Manager, BOH, Trainer, Cafe, and all other non-concierge pages).
+- Import and render `NotificationBell` in `ConciergeHeader.tsx` (covers Concierge pages).
+- The bell icon will sit to the left of the logo with the existing unread dot indicator.
 
 ---
 
 ### Technical Details
 
-**Database migration:**
-```sql
-CREATE OR REPLACE FUNCTION public.auto_mark_old_announcements_read()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.staff_announcement_reads (announcement_id, staff_id, read_at)
-  SELECT sa.id, NEW.user_id, NOW()
-  FROM public.staff_announcements sa
-  WHERE sa.created_at < NEW.created_at
-  ON CONFLICT DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER trg_auto_mark_old_announcements_read
-  AFTER INSERT ON public.profiles
-  FOR EACH ROW
-  EXECUTE FUNCTION public.auto_mark_old_announcements_read();
-```
-
-**Scroll-to-bottom sentinel pattern (AnnouncementsBoard.tsx):**
-- Add a `<div ref={sentinelRef} className="h-1" />` at the very end of each announcement card.
-- The `setupReadObserver` callback attaches to this sentinel instead of the outer card div, using `threshold: 1.0` so it only fires when fully visible (i.e., user scrolled to the bottom).
-
-**Sidebar unread indicator (ConciergeSidebar.tsx):**
-- Create a small hook or inline query that checks if `filteredAnnouncements.length > readAnnouncements.length`.
-- Pass a boolean `hasUnread` instead of a count, and render a dot indicator on the Announcements nav item.
-
 **Files to modify:**
-- `src/components/concierge/AnnouncementsBoard.tsx` -- sentinel-based read tracking, remove toggle, dot badges
-- `src/components/concierge/ConciergeSidebar.tsx` -- unread dot on Announcements item
-- `src/components/concierge/ConciergeBottomNav.tsx` -- unread dot when on comms tab
-- `src/pages/dashboards/ConciergeDashboard.tsx` -- pass unread state down
-- New database migration for the auto-mark trigger
+
+1. **`src/pages/dashboards/ConciergeDashboard.tsx`**
+   - Move `ConciergeHeader` from outside the sidebar/content flex row to inside the content column, matching the `DashboardLayout` pattern:
+     - Outer div: `min-h-screen flex w-full` (horizontal flex with sidebar + content column)
+     - Content column: `flex-1 flex flex-col min-w-0` containing header then main
+   - On mobile, keep the current stacked layout (no sidebar).
+
+2. **`src/components/concierge/ConciergeHeader.tsx`**
+   - Add `import { NotificationBell } from './NotificationBell'`
+   - Render `<NotificationBell />` in the header's right-side `flex items-center gap-2` div, before the logo.
+
+3. **`src/components/layout/DashboardLayout.tsx`**
+   - In the `DashboardHeader` component, add `import { NotificationBell } from '@/components/concierge/NotificationBell'`
+   - Render `<NotificationBell />` in the header's right-side div, before the logo image.
 

@@ -157,6 +157,7 @@ export default function ConciergeDashboard() {
           <ConciergeBottomNav
             activeView={activeView}
             onViewChange={setActiveView}
+            hasUnreadAnnouncements={!!hasUnreadAnnouncements}
           />
         )}
       </div>

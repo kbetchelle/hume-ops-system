@@ -4,6 +4,7 @@ import type { ConciergeView } from "./ConciergeSidebar";
 interface ConciergeBottomNavProps {
   activeView: ConciergeView;
   onViewChange: (view: ConciergeView) => void;
+  hasUnreadAnnouncements?: boolean;
 }
 
 const tabs = [
@@ -16,6 +17,7 @@ const tabs = [
 export function ConciergeBottomNav({
   activeView,
   onViewChange,
+  hasUnreadAnnouncements = false,
 }: ConciergeBottomNavProps) {
   // Map the activeView to the closest tab
   const getActiveTab = () => {
@@ -32,6 +34,12 @@ export function ConciergeBottomNav({
 
   const activeTab = getActiveTab();
 
+  // Show dot on Comms tab if there are unread announcements
+  const showDotOnTab = (tabId: string) => {
+    if (tabId === "messages" && hasUnreadAnnouncements) return true;
+    return false;
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border md:hidden">
       <div className="flex items-center justify-around h-16">
@@ -45,13 +53,18 @@ export function ConciergeBottomNav({
               onClick={() => onViewChange(tab.id)}
               className={`
                 flex flex-col items-center justify-center
-                flex-1 h-full
+                flex-1 h-full relative
                 text-[10px] uppercase tracking-widest
                 transition-colors duration-200
                 ${isActive ? "text-foreground" : "text-muted-foreground"}
               `}
             >
-              <Icon className="h-5 w-5 mb-1" />
+              <div className="relative">
+                <Icon className="h-5 w-5 mb-1" />
+                {showDotOnTab(tab.id) && (
+                  <span className="absolute -top-0.5 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse" />
+                )}
+              </div>
               <span>{tab.label}</span>
             </button>
           );

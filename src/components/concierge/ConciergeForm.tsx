@@ -553,12 +553,6 @@ export function ConciergeForm() {
               Auto-submit in {timeUntilSubmitFormatted}
             </Badge>
           )}
-          {isSubmitted && (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              Submitted
-            </Badge>
-          )}
         </CardHeader>
 
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>

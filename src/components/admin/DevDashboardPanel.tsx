@@ -123,27 +123,8 @@ export function DevDashboardPanel() {
       </div>;
   }
   return <>
-      <div className="flex gap-6 h-full">
-        {/* Left panel - Dev Notes (7/12 width) */}
-        <div className="w-7/12 flex flex-col">
-          <Card ref={noteCardRef} className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setNotesModalOpen(true)}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs">Latest Edits in Ops System Application</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0" onClick={e => e.stopPropagation()}>
-              {isEditing ? <RichTextEditor value={noteContent} onChange={setNoteContent} placeholder="Click to add notes..." minHeight="100%" className="flex-1 border border-primary" /> : <div className="prose prose-sm max-w-none text-base flex-1 overflow-auto [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_*]:!text-[length:inherit] border-primary border px-[10px] py-[6px] cursor-text" dangerouslySetInnerHTML={{
-              __html: noteContent || '<span class="text-muted-foreground">Click to add notes...</span>'
-            }} onClick={e => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }} />}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right panel - Page Status Tracker (5/12 width) */}
-        <div className="w-5/12 flex flex-col">
-          <Card className="border flex flex-col flex-1 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
+      <div className="h-full">
+          <Card className="border flex flex-col h-full cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusModalOpen(true)}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xs">BUILD STATUS</CardTitle>
             </CardHeader>

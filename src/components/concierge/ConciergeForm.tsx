@@ -501,7 +501,7 @@ export function ConciergeForm() {
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-xl font-semibold">Concierge Shift Report</CardTitle>
+            
             <div className="flex items-center gap-2">
               <Button
                 type="button"

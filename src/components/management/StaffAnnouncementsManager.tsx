@@ -7,7 +7,7 @@ import {
   Trash2,
   Edit,
   Eye,
-  EyeOff,
+  Upload,
   Upload,
   X,
   Clock,

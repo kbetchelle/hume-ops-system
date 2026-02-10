@@ -8,57 +8,32 @@ drop trigger if exists "trigger_refresh_daily_schedule_on_reservations_insert" o
 
 drop trigger if exists "trigger_refresh_daily_schedule_on_reservations_update" on "public"."arketa_reservations_history";
 
-drop trigger if exists "update_daily_schedule_updated_at" on "public"."daily_schedule";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    DROP TRIGGER IF EXISTS "update_daily_schedule_updated_at" ON "public"."daily_schedule";
+  END IF;
+END $$;
 
 drop trigger if exists "trigger_auto_match_sling_user" on "public"."profiles";
 
-drop policy "Managers can view api_sync_skipped_records" on "public"."api_sync_skipped_records";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'api_sync_skipped_records') THEN
+    DROP POLICY IF EXISTS "Managers can view api_sync_skipped_records" ON "public"."api_sync_skipped_records";
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."api_sync_skipped_records" FROM "anon";
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."api_sync_skipped_records" FROM "authenticated";
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."api_sync_skipped_records" FROM "service_role";
+  END IF;
+END $$;
 
-drop policy "Concierges can view daily_schedule" on "public"."daily_schedule";
-
-drop policy "Managers can manage daily_schedule" on "public"."daily_schedule";
-
-revoke delete on table "public"."api_sync_skipped_records" from "anon";
-
-revoke insert on table "public"."api_sync_skipped_records" from "anon";
-
-revoke references on table "public"."api_sync_skipped_records" from "anon";
-
-revoke select on table "public"."api_sync_skipped_records" from "anon";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "anon";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "anon";
-
-revoke update on table "public"."api_sync_skipped_records" from "anon";
-
-revoke delete on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke insert on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke references on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke select on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke update on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke delete on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke insert on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke references on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke select on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke update on table "public"."api_sync_skipped_records" from "service_role";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    DROP POLICY IF EXISTS "Concierges can view daily_schedule" ON "public"."daily_schedule";
+    DROP POLICY IF EXISTS "Managers can manage daily_schedule" ON "public"."daily_schedule";
+  END IF;
+END $$;
 
 revoke delete on table "public"."checklist_migrations_log" from "anon";
 
@@ -102,51 +77,30 @@ revoke truncate on table "public"."checklist_migrations_log" from "service_role"
 
 revoke update on table "public"."checklist_migrations_log" from "service_role";
 
-revoke delete on table "public"."daily_schedule" from "anon";
-
-revoke insert on table "public"."daily_schedule" from "anon";
-
-revoke references on table "public"."daily_schedule" from "anon";
-
-revoke select on table "public"."daily_schedule" from "anon";
-
-revoke trigger on table "public"."daily_schedule" from "anon";
-
-revoke truncate on table "public"."daily_schedule" from "anon";
-
-revoke update on table "public"."daily_schedule" from "anon";
-
-revoke delete on table "public"."daily_schedule" from "authenticated";
-
-revoke insert on table "public"."daily_schedule" from "authenticated";
-
-revoke references on table "public"."daily_schedule" from "authenticated";
-
-revoke select on table "public"."daily_schedule" from "authenticated";
-
-revoke trigger on table "public"."daily_schedule" from "authenticated";
-
-revoke truncate on table "public"."daily_schedule" from "authenticated";
-
-revoke update on table "public"."daily_schedule" from "authenticated";
-
-revoke delete on table "public"."daily_schedule" from "service_role";
-
-revoke insert on table "public"."daily_schedule" from "service_role";
-
-revoke references on table "public"."daily_schedule" from "service_role";
-
-revoke select on table "public"."daily_schedule" from "service_role";
-
-revoke trigger on table "public"."daily_schedule" from "service_role";
-
-revoke truncate on table "public"."daily_schedule" from "service_role";
-
-revoke update on table "public"."daily_schedule" from "service_role";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."daily_schedule" FROM "anon";
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."daily_schedule" FROM "authenticated";
+    REVOKE delete, insert, references, select, trigger, truncate, update ON table "public"."daily_schedule" FROM "service_role";
+  END IF;
+END $$;
 
 alter table "public"."arketa_classes" drop constraint "arketa_classes_external_id_class_date_key";
 
-alter table "public"."daily_schedule" drop constraint "daily_schedule_schedule_date_class_id_key";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'api_sync_skipped_records') THEN
+    ALTER TABLE "public"."api_sync_skipped_records" DROP CONSTRAINT IF EXISTS "api_sync_skipped_records_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    ALTER TABLE "public"."daily_schedule" DROP CONSTRAINT IF EXISTS "daily_schedule_schedule_date_class_id_key";
+  END IF;
+END $$;
 
 alter table "public"."profiles" drop constraint "profiles_sling_id_fkey";
 
@@ -176,31 +130,41 @@ drop function if exists "public"."upsert_arketa_classes_from_staging"(p_sync_bat
 
 drop view if exists "public"."arketa_orphan_classes";
 
-alter table "public"."api_sync_skipped_records" drop constraint "api_sync_skipped_records_pkey";
-
 alter table "public"."checklist_migrations_log" drop constraint "checklist_migrations_log_pkey";
 
-alter table "public"."daily_schedule" drop constraint "daily_schedules_pkey";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    ALTER TABLE "public"."daily_schedule" DROP CONSTRAINT IF EXISTS "daily_schedules_pkey";
+  END IF;
+END $$;
 
-drop index if exists "public"."api_sync_skipped_records_pkey";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'api_sync_skipped_records') THEN
+    DROP INDEX IF EXISTS "public"."api_sync_skipped_records_pkey";
+    DROP INDEX IF EXISTS "public"."idx_api_sync_skipped_records_api_name";
+    DROP INDEX IF EXISTS "public"."idx_api_sync_skipped_records_created_at";
+  END IF;
+END $$;
 
 drop index if exists "public"."arketa_classes_external_id_class_date_key";
 
 drop index if exists "public"."checklist_migrations_log_pkey";
 
-drop index if exists "public"."daily_schedule_schedule_date_class_id_key";
-
-drop index if exists "public"."idx_api_sync_skipped_records_api_name";
-
-drop index if exists "public"."idx_api_sync_skipped_records_created_at";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    DROP INDEX IF EXISTS "public"."daily_schedule_schedule_date_class_id_key";
+    DROP INDEX IF EXISTS "public"."idx_daily_schedule_class_id";
+    DROP INDEX IF EXISTS "public"."idx_daily_schedule_date";
+    DROP INDEX IF EXISTS "public"."daily_schedules_pkey";
+  END IF;
+END $$;
 
 drop index if exists "public"."idx_arketa_classes_staging_class_date";
 
 drop index if exists "public"."idx_arketa_classes_staging_sync_batch_id";
-
-drop index if exists "public"."idx_daily_schedule_class_id";
-
-drop index if exists "public"."idx_daily_schedule_date";
 
 drop index if exists "public"."idx_profiles_sling_id";
 
@@ -208,13 +172,21 @@ drop index if exists "public"."toast_sales_order_guid_key";
 
 drop index if exists "public"."toast_staging_order_guid_key";
 
-drop index if exists "public"."daily_schedules_pkey";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    DROP TABLE "public"."daily_schedule";
+  END IF;
+END $$;
 
-drop table "public"."api_sync_skipped_records";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'api_sync_skipped_records') THEN
+    DROP TABLE "public"."api_sync_skipped_records";
+  END IF;
+END $$;
 
 drop table "public"."checklist_migrations_log";
-
-drop table "public"."daily_schedule";
 
 
   create table "public"."announcement_reads" (
@@ -325,7 +297,7 @@ alter table "public"."checklist_template_items" enable row level security;
 alter table "public"."concierge_drafts" enable row level security;
 
 
-  create table "public"."daily_schedules" (
+  CREATE TABLE IF NOT EXISTS "public"."daily_schedules" (
     "id" uuid not null default gen_random_uuid(),
     "schedule_date" date not null,
     "sling_user_id" integer not null,

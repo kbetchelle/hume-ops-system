@@ -66,10 +66,20 @@ interface SyncRequest {
   max_start_time?: string;
 }
 
+// Only sync this Calendly event type (tour event type UUID)
+const ALLOWED_EVENT_TYPE_UUID = 'a910dd08-6e90-43ea-8cbc-81350846deb1';
+const ALLOWED_EVENT_TYPE_URI = `https://api.calendly.com/event_types/${ALLOWED_EVENT_TYPE_UUID}`;
+
 // Extract UUID from Calendly URI
 function extractUuidFromUri(uri: string): string {
   const parts = uri.split('/');
   return parts[parts.length - 1];
+}
+
+function isAllowedEventType(event: CalendlyEvent): boolean {
+  const eventType = event.event_type;
+  if (!eventType) return false;
+  return eventType === ALLOWED_EVENT_TYPE_URI || eventType.endsWith(ALLOWED_EVENT_TYPE_UUID);
 }
 
 // Extract phone from questions and answers
@@ -181,7 +191,7 @@ Deno.serve(async (req) => {
     let totalAttempts = 0;
 
     while (true) {
-      let url = `https://api.calendly.com/scheduled_events?organization=${encodeURIComponent(CALENDLY_ORGANIZATION_URI)}&count=${limit}&min_start_time=${minStartTime}&max_start_time=${maxStartTime}`;
+      let url = `https://api.calendly.com/scheduled_events?organization=${encodeURIComponent(CALENDLY_ORGANIZATION_URI)}&event_type=${encodeURIComponent(ALLOWED_EVENT_TYPE_URI)}&count=${limit}&min_start_time=${minStartTime}&max_start_time=${maxStartTime}`;
       if (cursor) {
         url += `&page_token=${cursor}`;
       }
@@ -205,16 +215,17 @@ Deno.serve(async (req) => {
         }
 
         const data: EventsApiResponse = await response.json();
-        const events = data.collection || [];
+        const rawEvents = data.collection || [];
+        const events = rawEvents.filter(isAllowedEventType);
         
         if (events.length > 0) {
           allEvents = [...allEvents, ...events];
-          logger.info(`Fetched ${events.length} events (total: ${allEvents.length})`);
+          logger.info(`Fetched ${events.length} events of type ${ALLOWED_EVENT_TYPE_UUID} (total: ${allEvents.length})`);
         }
 
-        // Check for more pages
+        // Check for more pages (use rawEvents.length so we keep paginating when this page had no matching events)
         cursor = data.pagination?.next_page_token || null;
-        if (!cursor || events.length === 0) {
+        if (!cursor || rawEvents.length === 0) {
           break;
         }
       } catch (error) {

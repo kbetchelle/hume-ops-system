@@ -266,9 +266,6 @@ export function AnnouncementsBoard() {
             <Megaphone className="h-5 w-5" />
             Announcements
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Stay updated with announcements and weekly communications.
-          </p>
         </div>
       </div>
 

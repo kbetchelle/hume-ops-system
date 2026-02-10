@@ -311,7 +311,7 @@ export function AnnouncementsBoard() {
             <div className="space-y-3">
               {allItems.map((item) =>
                 item.announcement_type === 'weekly_update'
-                  ? renderWeeklyCard(item)
+                  ? renderWeeklyCard(item, item.id === thisWeekId)
                   : renderAnnouncementCard(item)
               )}
             </div>

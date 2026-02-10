@@ -14,10 +14,22 @@ export interface SystemIssue {
   photoUrl: string | null;
 }
 
+export type CelebratoryEventType =
+  | 'new_baby'
+  | 'new_job'
+  | 'new_house'
+  | 'marriage_engagement'
+  | 'personal_accomplishment'
+  | 'birthday'
+  | 'anniversary'
+  | 'other';
+
 export interface CelebratoryEvent {
   memberName: string;
-  eventType: 'birthday' | 'anniversary' | 'other';
+  eventType: CelebratoryEventType;
   date: string;
+  timing?: string; // e.g. "Upcoming"
+  accomplishmentDetails?: string;
 }
 
 export interface Tour {
@@ -25,12 +37,25 @@ export interface Tour {
   followupCompleted: boolean;
 }
 
+export type CancelPauseReason =
+  | 'moving'
+  | 'commute'
+  | 'financial'
+  | 'travel'
+  | 'illness'
+  | 'other';
+
 export interface MembershipCancelRequest {
   name: string;
   email: string;
   membershipType: string;
   requestType: 'cancel' | 'hold' | 'pause';
   endDate: string;
+  reason?: CancelPauseReason;
+  otherReasonText?: string;
+  paidPause?: boolean; // for pause: paid vs non-paid
+  pauseStartDate?: string;
+  pauseEndDate?: string;
 }
 
 export interface FutureNote {
@@ -73,7 +98,7 @@ export interface ConciergeDraft {
 
 export const INITIAL_FORM_DATA: FormDataType = {
   reportDate: new Date().toISOString().split('T')[0],
-  shiftTime: 'morning',
+  shiftTime: 'AM',
   staffName: '',
   memberFeedback: [],
   celebratoryEventsNA: false,

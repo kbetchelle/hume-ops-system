@@ -42,7 +42,7 @@ export function AnnouncementsBoard() {
   
   // Extract role names from user role objects
   const roles = userRoles?.map((r) => r.role) || [];
-  const [activeTab, setActiveTab] = useState<'alerts' | 'weekly'>('alerts');
+  const [activeTab, setActiveTab] = useState<'all' | 'weekly' | 'announcements'>('all');
   const [weekOffset, setWeekOffset] = useState(0);
   const [showAllWeekly, setShowAllWeekly] = useState(false);
 
@@ -154,7 +154,7 @@ export function AnnouncementsBoard() {
 
   const readSet = new Set(readAnnouncements || []);
 
-  const alerts = filteredAnnouncements
+  const announcementsList = filteredAnnouncements
     .filter(a => a.announcement_type === 'announcement')
     .map(a => ({ ...a, is_read: readSet.has(a.id) }));
 
@@ -184,8 +184,23 @@ export function AnnouncementsBoard() {
   };
 
   const currentWeekUpdate = getWeekUpdate();
-  const unreadAlerts = alerts.filter(a => !a.is_read).length;
+  const unreadAnnouncements = announcementsList.filter(a => !a.is_read).length;
   const unreadWeekly = weeklyUpdates.filter(w => !w.is_read).length;
+
+  // Combined list for "All" tab: announcements + weekly updates, sorted by date desc
+  const allItems = useMemo(() => {
+    const withRead = [...announcementsList, ...weeklyUpdates];
+    return withRead.sort((a, b) => {
+      const dateA = a.announcement_type === 'weekly_update' && a.week_start_date
+        ? new Date(a.week_start_date).getTime()
+        : new Date(a.created_at).getTime();
+      const dateB = b.announcement_type === 'weekly_update' && b.week_start_date
+        ? new Date(b.week_start_date).getTime()
+        : new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
+  }, [announcementsList, weeklyUpdates]);
+  const unreadAll = unreadAnnouncements + unreadWeekly;
 
   // Enhanced priority styles
   const priorityStyles: Record<string, string> = {
@@ -212,14 +227,14 @@ export function AnnouncementsBoard() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'alerts' | 'weekly')}>
-        <TabsList className="w-full max-w-md">
-          <TabsTrigger value="alerts" className="flex-1 gap-2">
-            <Bell className="h-4 w-4" />
-            Announcements
-            {unreadAlerts > 0 && (
-              <Badge variant="destructive" className="h-5 px-1.5 text-xs animate-pulse">
-                {unreadAlerts}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'weekly' | 'announcements')}>
+        <TabsList className="w-full max-w-2xl">
+          <TabsTrigger value="all" className="flex-1 gap-2">
+            <Megaphone className="h-4 w-4" />
+            All
+            {unreadAll > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {unreadAll}
               </Badge>
             )}
           </TabsTrigger>
@@ -232,21 +247,144 @@ export function AnnouncementsBoard() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="announcements" className="flex-1 gap-2">
+            <Bell className="h-4 w-4" />
+            Announcements
+            {unreadAnnouncements > 0 && (
+              <Badge variant="destructive" className="h-5 px-1.5 text-xs animate-pulse">
+                {unreadAnnouncements}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="alerts" className="mt-6">
+        <TabsContent value="all" className="mt-6">
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
             </div>
-          ) : alerts.length === 0 ? (
+          ) : allItems.length === 0 ? (
+            <div className="border bg-muted/30 p-8 text-center">
+              <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">No announcements or weekly updates</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {allItems.map((item) =>
+                item.announcement_type === 'weekly_update' ? (
+                  <div
+                    key={item.id}
+                    ref={(node) => setupReadObserver(node, item.id)}
+                    className={cn(
+                      'p-4 border w-full',
+                      weeklyUpdateStyle,
+                      !item.is_read && 'ring-1 ring-primary/20'
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
+                      {item.week_start_date && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Week of {format(parseISO(item.week_start_date), 'MMM d, yyyy')}
+                        </Badge>
+                      )}
+                      {!item.is_read && (
+                        <Badge variant="default" className="text-[10px] animate-pulse">Unread</Badge>
+                      )}
+                      <CommentCountBadge count={commentCounts?.[item.id] || 0} />
+                    </div>
+                    <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {item.content}
+                    </p>
+                    {item.photo_url && (
+                      <img
+                        src={item.photo_url}
+                        alt="Update attachment"
+                        className="mt-4 max-h-48 object-cover border"
+                      />
+                    )}
+                    <Separator className="my-4" />
+                    <div className="text-[10px] text-muted-foreground">
+                      Posted by {item.created_by} • {format(parseISO(item.created_at), 'MMM d, h:mm a')}
+                    </div>
+                    <AnnouncementComments
+                      announcementId={item.id}
+                      commentCount={commentCounts?.[item.id] || 0}
+                      className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    key={item.id}
+                    ref={(node) => setupReadObserver(node, item.id)}
+                    className={cn(
+                      'p-4 border transition-all w-full',
+                      priorityStyles[item.priority],
+                      !item.is_read && 'ring-1 ring-primary/20'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h4 className="font-medium text-sm flex-1">{item.title}</h4>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!item.is_read && (
+                          <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
+                        )}
+                        {item.priority !== 'normal' && (
+                          <Badge
+                            variant={item.priority === 'urgent' ? 'destructive' : 'secondary'}
+                            className={cn(
+                              "text-[10px] h-5",
+                              item.priority === 'high' && 'bg-amber-500 text-white'
+                            )}
+                          >
+                            {item.priority}
+                          </Badge>
+                        )}
+                        <CommentCountBadge count={commentCounts?.[item.id] || 0} />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {item.content}
+                    </p>
+                    {item.photo_url && (
+                      <img
+                        src={item.photo_url}
+                        alt="Attachment"
+                        className="mt-3 max-h-48 object-cover border"
+                      />
+                    )}
+                    <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {format(parseISO(item.created_at), 'MMM d, h:mm a')}
+                      <span>•</span>
+                      <span>{item.created_by}</span>
+                    </div>
+                    <AnnouncementComments
+                      announcementId={item.id}
+                      commentCount={commentCounts?.[item.id] || 0}
+                      className="mt-3 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
+                    />
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="announcements" className="mt-6">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
+            </div>
+          ) : announcementsList.length === 0 ? (
             <div className="border bg-muted/30 p-8 text-center">
               <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground">No active announcements</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {alerts
+              {announcementsList
                 .sort((a, b) => {
                   if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
                   const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -254,56 +392,56 @@ export function AnnouncementsBoard() {
                   if (priorityDiff !== 0) return priorityDiff;
                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                 })
-                .map((alert) => (
+                .map((announcement) => (
                   <div
-                    key={alert.id}
-                    ref={(node) => setupReadObserver(node, alert.id)}
+                    key={announcement.id}
+                    ref={(node) => setupReadObserver(node, announcement.id)}
                     className={cn(
                       'p-4 border transition-all w-full',
-                      priorityStyles[alert.priority],
-                      !alert.is_read && 'ring-1 ring-primary/20'
+                      priorityStyles[announcement.priority],
+                      !announcement.is_read && 'ring-1 ring-primary/20'
                     )}
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <h4 className="font-medium text-sm flex-1">{alert.title}</h4>
+                      <h4 className="font-medium text-sm flex-1">{announcement.title}</h4>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {!alert.is_read && (
+                        {!announcement.is_read && (
                           <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
                         )}
-                        {alert.priority !== 'normal' && (
+                        {announcement.priority !== 'normal' && (
                           <Badge
-                            variant={alert.priority === 'urgent' ? 'destructive' : 'secondary'}
+                            variant={announcement.priority === 'urgent' ? 'destructive' : 'secondary'}
                             className={cn(
                               "text-[10px] h-5",
-                              alert.priority === 'high' && 'bg-amber-500 text-white'
+                              announcement.priority === 'high' && 'bg-amber-500 text-white'
                             )}
                           >
-                            {alert.priority}
+                            {announcement.priority}
                           </Badge>
                         )}
-                        <CommentCountBadge count={commentCounts?.[alert.id] || 0} />
+                        <CommentCountBadge count={commentCounts?.[announcement.id] || 0} />
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {alert.content}
+                      {announcement.content}
                     </p>
-                    {alert.photo_url && (
+                    {announcement.photo_url && (
                       <img
-                        src={alert.photo_url}
+                        src={announcement.photo_url}
                         alt="Attachment"
                         className="mt-3 max-h-48 object-cover border"
                       />
                     )}
                     <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {format(parseISO(alert.created_at), 'MMM d, h:mm a')}
+                      {format(parseISO(announcement.created_at), 'MMM d, h:mm a')}
                       <span>•</span>
-                      <span>{alert.created_by}</span>
+                      <span>{announcement.created_by}</span>
                     </div>
                     
                     <AnnouncementComments
-                      announcementId={alert.id}
-                      commentCount={commentCounts?.[alert.id] || 0}
+                      announcementId={announcement.id}
+                      commentCount={commentCounts?.[announcement.id] || 0}
                       className="mt-3 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
                     />
                   </div>

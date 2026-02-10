@@ -255,7 +255,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             />
           </div>
 
-          {/* Priority (Alerts only) */}
+          {/* Priority (Announcements only) */}
           {type === "announcement" && (
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priority</Label>
@@ -297,7 +297,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             </div>
           )}
 
-          {/* Expiration (Alerts only) */}
+          {/* Expiration (Announcements only) */}
           {type === "announcement" && (
             <div className="space-y-2">
               <Label>Expires After</Label>
@@ -542,158 +542,407 @@ export function StaffAnnouncementsManager() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        <Button
-          variant={typeFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setTypeFilter("all")}
-        >
-          All
-        </Button>
-        <Button
-          variant={typeFilter === "announcement" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setTypeFilter("announcement")}
-        >
-          <Bell className="h-4 w-4 mr-2" />
-          Announcements
-        </Button>
-        <Button
-          variant={typeFilter === "weekly_update" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setTypeFilter("weekly_update")}
-        >
-          <Calendar className="h-4 w-4 mr-2" />
-          Weekly Updates
-        </Button>
-      </div>
+      {/* View tabs: All, Announcements, Weekly Updates */}
+      <Tabs
+        value={typeFilter}
+        onValueChange={(v) => setTypeFilter(v as "all" | "announcement" | "weekly_update")}
+      >
+        <TabsList className="w-full max-w-2xl">
+          <TabsTrigger value="all" className="flex-1 gap-2">
+            <Bell className="h-4 w-4" />
+            All
+          </TabsTrigger>
+          <TabsTrigger value="announcement" className="flex-1 gap-2">
+            <Bell className="h-4 w-4" />
+            Announcements
+          </TabsTrigger>
+          <TabsTrigger value="weekly_update" className="flex-1 gap-2">
+            <Calendar className="h-4 w-4" />
+            Weekly Updates
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Announcements List */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      ) : filteredAnnouncements.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No announcements found.</p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              Create your first announcement
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filteredAnnouncements.map((announcement) => (
-            <Card
-              key={announcement.id}
-              className={cn(!announcement.is_active && "opacity-60")}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge variant="outline">
-                        {announcement.announcement_type === "announcement" ? (
-                          <Bell className="h-3 w-3 mr-1" />
-                        ) : (
-                          <Calendar className="h-3 w-3 mr-1" />
-                        )}
-                        {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
-                      </Badge>
-                      {announcement.announcement_type === "announcement" &&
-                        getPriorityBadge(announcement.priority)}
-                      {!announcement.is_active && (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
-                      {announcement.scheduled_at &&
-                        new Date(announcement.scheduled_at) > new Date() && (
-                          <Badge variant="outline" className="gap-1">
-                            <Clock className="h-3 w-3" />
-                            Scheduled
-                          </Badge>
-                        )}
-                    </div>
-
-                    <h3 className="font-medium truncate">{announcement.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                      {announcement.content}
-                    </p>
-
-                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {getTargetLabel(announcement.target_departments)}
-                      </span>
-                      <span>
-                        Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
-                      </span>
-                      {announcement.week_start_date && (
-                        <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
-                      )}
-                      {(commentCounts?.[announcement.id] || 0) > 0 && (
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3" />
-                          {commentCounts?.[announcement.id]} comments
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`active-${announcement.id}`} className="text-xs">
-                        Active
-                      </Label>
-                      <Switch
-                        id={`active-${announcement.id}`}
-                        checked={announcement.is_active}
-                        onCheckedChange={(checked) =>
-                          toggleActiveMutation.mutate({
-                            id: announcement.id,
-                            is_active: checked,
-                          })
-                        }
-                      />
-                    </div>
-                    <Separator orientation="vertical" className="h-6" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setReceiptsAnnouncement(announcement)}
-                      title="View read receipts"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(announcement)}
-                      title="Edit"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteConfirmId(announcement.id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
+        <TabsContent value="all" className="mt-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : filteredAnnouncements.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No announcements found.</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  Create your first announcement
+                </Button>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="space-y-3">
+              {filteredAnnouncements.map((announcement) => (
+                <Card
+                  key={announcement.id}
+                  className={cn(!announcement.is_active && "opacity-60")}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <Badge variant="outline">
+                            {announcement.announcement_type === "announcement" ? (
+                              <Bell className="h-3 w-3 mr-1" />
+                            ) : (
+                              <Calendar className="h-3 w-3 mr-1" />
+                            )}
+                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                          </Badge>
+                          {announcement.announcement_type === "announcement" &&
+                            getPriorityBadge(announcement.priority)}
+                          {!announcement.is_active && (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                          {announcement.scheduled_at &&
+                            new Date(announcement.scheduled_at) > new Date() && (
+                              <Badge variant="outline" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Scheduled
+                              </Badge>
+                            )}
+                        </div>
+
+                        <h3 className="font-medium truncate">{announcement.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          {announcement.content}
+                        </p>
+
+                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {getTargetLabel(announcement.target_departments)}
+                          </span>
+                          <span>
+                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
+                          </span>
+                          {announcement.week_start_date && (
+                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
+                          )}
+                          {(commentCounts?.[announcement.id] || 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="h-3 w-3" />
+                              {commentCounts?.[announcement.id]} comments
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`active-${announcement.id}`} className="text-xs">
+                            Active
+                          </Label>
+                          <Switch
+                            id={`active-${announcement.id}`}
+                            checked={announcement.is_active}
+                            onCheckedChange={(checked) =>
+                              toggleActiveMutation.mutate({
+                                id: announcement.id,
+                                is_active: checked,
+                              })
+                            }
+                          />
+                        </div>
+                        <Separator orientation="vertical" className="h-6" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setReceiptsAnnouncement(announcement)}
+                          title="View read receipts"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(announcement)}
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(announcement.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="announcement" className="mt-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : filteredAnnouncements.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No announcements found.</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  Create your first announcement
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredAnnouncements.map((announcement) => (
+                <Card
+                  key={announcement.id}
+                  className={cn(!announcement.is_active && "opacity-60")}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <Badge variant="outline">
+                            {announcement.announcement_type === "announcement" ? (
+                              <Bell className="h-3 w-3 mr-1" />
+                            ) : (
+                              <Calendar className="h-3 w-3 mr-1" />
+                            )}
+                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                          </Badge>
+                          {announcement.announcement_type === "announcement" &&
+                            getPriorityBadge(announcement.priority)}
+                          {!announcement.is_active && (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                          {announcement.scheduled_at &&
+                            new Date(announcement.scheduled_at) > new Date() && (
+                              <Badge variant="outline" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Scheduled
+                              </Badge>
+                            )}
+                        </div>
+
+                        <h3 className="font-medium truncate">{announcement.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          {announcement.content}
+                        </p>
+
+                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {getTargetLabel(announcement.target_departments)}
+                          </span>
+                          <span>
+                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
+                          </span>
+                          {announcement.week_start_date && (
+                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
+                          )}
+                          {(commentCounts?.[announcement.id] || 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="h-3 w-3" />
+                              {commentCounts?.[announcement.id]} comments
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`active-ann-${announcement.id}`} className="text-xs">
+                            Active
+                          </Label>
+                          <Switch
+                            id={`active-ann-${announcement.id}`}
+                            checked={announcement.is_active}
+                            onCheckedChange={(checked) =>
+                              toggleActiveMutation.mutate({
+                                id: announcement.id,
+                                is_active: checked,
+                              })
+                            }
+                          />
+                        </div>
+                        <Separator orientation="vertical" className="h-6" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setReceiptsAnnouncement(announcement)}
+                          title="View read receipts"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(announcement)}
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(announcement.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="weekly_update" className="mt-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : filteredAnnouncements.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No weekly updates found.</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  Create your first weekly update
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredAnnouncements.map((announcement) => (
+                <Card
+                  key={announcement.id}
+                  className={cn(!announcement.is_active && "opacity-60")}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <Badge variant="outline">
+                            {announcement.announcement_type === "announcement" ? (
+                              <Bell className="h-3 w-3 mr-1" />
+                            ) : (
+                              <Calendar className="h-3 w-3 mr-1" />
+                            )}
+                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                          </Badge>
+                          {announcement.announcement_type === "announcement" &&
+                            getPriorityBadge(announcement.priority)}
+                          {!announcement.is_active && (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                          {announcement.scheduled_at &&
+                            new Date(announcement.scheduled_at) > new Date() && (
+                              <Badge variant="outline" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Scheduled
+                              </Badge>
+                            )}
+                        </div>
+
+                        <h3 className="font-medium truncate">{announcement.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          {announcement.content}
+                        </p>
+
+                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {getTargetLabel(announcement.target_departments)}
+                          </span>
+                          <span>
+                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
+                          </span>
+                          {announcement.week_start_date && (
+                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
+                          )}
+                          {(commentCounts?.[announcement.id] || 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="h-3 w-3" />
+                              {commentCounts?.[announcement.id]} comments
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`active-wk-${announcement.id}`} className="text-xs">
+                            Active
+                          </Label>
+                          <Switch
+                            id={`active-wk-${announcement.id}`}
+                            checked={announcement.is_active}
+                            onCheckedChange={(checked) =>
+                              toggleActiveMutation.mutate({
+                                id: announcement.id,
+                                is_active: checked,
+                              })
+                            }
+                          />
+                        </div>
+                        <Separator orientation="vertical" className="h-6" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setReceiptsAnnouncement(announcement)}
+                          title="View read receipts"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(announcement)}
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(announcement.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create/Edit Dialog */}
       <CreateEditDialog

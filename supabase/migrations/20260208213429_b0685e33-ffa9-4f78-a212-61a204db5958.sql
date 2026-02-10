@@ -1,6 +1,6 @@
-
--- 1. Fix existing arketa_classes records: convert start_time to PST for class_date
-UPDATE arketa_classes
+-- 1. Fix existing arketa_classes records: add class_date if not present, then backfill from start_time (PST)
+ALTER TABLE public.arketa_classes ADD COLUMN IF NOT EXISTS class_date date;
+UPDATE public.arketa_classes
 SET class_date = (start_time AT TIME ZONE 'America/Los_Angeles')::date
 WHERE start_time IS NOT NULL;
 

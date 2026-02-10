@@ -1,4 +1,4 @@
-import { Search, LogOut, Clock } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -68,15 +68,6 @@ export function ConciergeHeader() {
           <Search className="h-4 w-4" />
         </Button>
 
-        {/* Logout */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-none"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
       </div>
     </header>
   );

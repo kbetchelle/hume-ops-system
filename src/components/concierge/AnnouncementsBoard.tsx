@@ -83,6 +83,26 @@ export function AnnouncementsBoard() {
     },
   });
 
+  // Real-time subscription: refresh on any insert/update/delete
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-announcements-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'staff_announcements' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['staff-announcements'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-announcements-manager'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-announcements-active'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const { data: readAnnouncements } = useQuery({
     queryKey: ['staff-announcement-reads', user?.id],
     queryFn: async () => {

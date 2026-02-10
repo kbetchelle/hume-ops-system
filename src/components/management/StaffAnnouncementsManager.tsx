@@ -245,22 +245,24 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Type Toggle */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
-            <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
-              <TabsList className="w-full">
-                <TabsTrigger value="announcement" className="flex-1 gap-2">
-                  <Bell className="h-4 w-4" />
-                  Announcement
-                </TabsTrigger>
-                <TabsTrigger value="weekly_update" className="flex-1 gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Weekly Update
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          {/* Type Toggle - disabled when editing */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
+              <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="announcement" className="flex-1 gap-2">
+                    <Bell className="h-4 w-4" />
+                    Announcement
+                  </TabsTrigger>
+                  <TabsTrigger value="weekly_update" className="flex-1 gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Weekly Update
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">

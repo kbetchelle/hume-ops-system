@@ -86,7 +86,7 @@ BEGIN
   END IF;
 END $$;
 
-alter table "public"."arketa_classes" drop constraint "arketa_classes_external_id_class_date_key";
+ALTER TABLE "public"."arketa_classes" DROP CONSTRAINT IF EXISTS "arketa_classes_external_id_class_date_key";
 
 DO $$
 BEGIN
@@ -102,13 +102,13 @@ BEGIN
   END IF;
 END $$;
 
-alter table "public"."profiles" drop constraint "profiles_sling_id_fkey";
+ALTER TABLE "public"."profiles" DROP CONSTRAINT IF EXISTS "profiles_sling_id_fkey";
 
-alter table "public"."toast_sales" drop constraint "toast_sales_order_guid_key";
+ALTER TABLE "public"."toast_sales" DROP CONSTRAINT IF EXISTS "toast_sales_order_guid_key";
 
-alter table "public"."toast_staging" drop constraint "toast_staging_order_guid_key";
+ALTER TABLE "public"."toast_staging" DROP CONSTRAINT IF EXISTS "toast_staging_order_guid_key";
 
-alter table "public"."backfill_jobs" drop constraint "valid_api_source";
+ALTER TABLE "public"."backfill_jobs" DROP CONSTRAINT IF EXISTS "valid_api_source";
 
 drop function if exists "public"."admin_get_users_with_sling_info"();
 
@@ -130,7 +130,7 @@ drop function if exists "public"."upsert_arketa_classes_from_staging"(p_sync_bat
 
 drop view if exists "public"."arketa_orphan_classes";
 
-alter table "public"."checklist_migrations_log" drop constraint "checklist_migrations_log_pkey";
+ALTER TABLE "public"."checklist_migrations_log" DROP CONSTRAINT IF EXISTS "checklist_migrations_log_pkey";
 
 DO $$
 BEGIN

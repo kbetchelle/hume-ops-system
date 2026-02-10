@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
+import { AppRole } from '@/types/roles';
 import { AnnouncementComments, CommentCountBadge } from './AnnouncementComments';
 import { useAnnouncementCommentCounts } from '@/hooks/useAnnouncementComments';
 
@@ -61,12 +62,17 @@ function ReadSentinel({ announcementId, onVisible }: { announcementId: string; o
   return <div ref={sentinelRef} className="h-1 w-full" />;
 }
 
-export function AnnouncementsBoard() {
+interface AnnouncementsBoardProps {
+  contextRole?: AppRole;
+}
+
+export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
   const { user } = useAuth();
   const { data: userRoles } = useUserRoles(user?.id);
   const queryClient = useQueryClient();
   
-  const roles = userRoles?.map((r) => r.role) || [];
+  // When contextRole is set, filter only by that role (dashboard-aware)
+  const roles = contextRole ? [contextRole] : (userRoles?.map((r) => r.role) || []);
   const [activeTab, setActiveTab] = useState<'all' | 'weekly' | 'announcements'>('all');
 
   const { data: announcements, isLoading } = useQuery({

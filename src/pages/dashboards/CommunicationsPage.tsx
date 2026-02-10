@@ -2,6 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useAuthContext } from "@/features/auth/AuthProvider";
+import { useActiveRole } from "@/hooks/useActiveRole";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Megaphone } from "lucide-react";
@@ -9,6 +10,7 @@ import { Megaphone } from "lucide-react";
 export default function CommunicationsPage() {
   const { user } = useAuthContext();
   const { data: userRoles = [] } = useUserRoles(user?.id);
+  const { activeRole } = useActiveRole();
   const isManager = userRoles.some((r) => r.role === "admin" || r.role === "manager");
 
   return (
@@ -27,7 +29,7 @@ export default function CommunicationsPage() {
             </Button>
           )}
         </div>
-        <AnnouncementsBoard />
+        <AnnouncementsBoard contextRole={activeRole ?? undefined} />
       </div>
     </DashboardLayout>
   );

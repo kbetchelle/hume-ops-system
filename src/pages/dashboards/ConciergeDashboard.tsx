@@ -76,7 +76,7 @@ export default function ConciergeDashboard() {
               Announcements
             </h2>
             <div className="max-w-3xl">
-              <AnnouncementsBoard />
+              <AnnouncementsBoard contextRole="concierge" />
             </div>
           </div>
         );

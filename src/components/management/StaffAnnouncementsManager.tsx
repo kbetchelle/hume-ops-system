@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
 import {
   Bell,
@@ -110,6 +110,39 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   const [scheduleTime, setScheduleTime] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(editingAnnouncement?.photo_url || null);
   const [uploading, setUploading] = useState(false);
+
+  // Sync form state when editingAnnouncement changes (dialog reopens)
+  useEffect(() => {
+    if (editingAnnouncement) {
+      setType(editingAnnouncement.announcement_type);
+      setTitle(editingAnnouncement.title);
+      setContent(editingAnnouncement.content);
+      setPriority((editingAnnouncement.priority as Priority) || "normal");
+      setTargetDepartments(editingAnnouncement.target_departments || null);
+      setWeekStartDate(editingAnnouncement.week_start_date || format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      setPhotoUrl(editingAnnouncement.photo_url || null);
+      if (editingAnnouncement.scheduled_at) {
+        const d = new Date(editingAnnouncement.scheduled_at);
+        setScheduleDate(format(d, "yyyy-MM-dd"));
+        setScheduleTime(format(d, "HH:mm"));
+      } else {
+        setScheduleDate("");
+        setScheduleTime("");
+      }
+      setExpiration("never");
+    } else {
+      setType("announcement");
+      setTitle("");
+      setContent("");
+      setPriority("normal");
+      setTargetDepartments(null);
+      setExpiration("never");
+      setWeekStartDate(format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      setScheduleDate("");
+      setScheduleTime("");
+      setPhotoUrl(null);
+    }
+  }, [editingAnnouncement]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -212,22 +245,24 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Type Toggle */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
-            <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
-              <TabsList className="w-full">
-                <TabsTrigger value="announcement" className="flex-1 gap-2">
-                  <Bell className="h-4 w-4" />
-                  Announcement
-                </TabsTrigger>
-                <TabsTrigger value="weekly_update" className="flex-1 gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Weekly Update
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          {/* Type Toggle - disabled when editing */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
+              <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="announcement" className="flex-1 gap-2">
+                    <Bell className="h-4 w-4" />
+                    Announcement
+                  </TabsTrigger>
+                  <TabsTrigger value="weekly_update" className="flex-1 gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Weekly Update
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">

@@ -196,6 +196,9 @@ export function AnnouncementsBoard() {
       )}
     >
       <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {isThisWeek && (
+          <Badge className="bg-green-600 text-white border-green-600">This Week</Badge>
+        )}
         <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
         {item.week_start_date && (
           <Badge variant="outline" className="text-[10px]">

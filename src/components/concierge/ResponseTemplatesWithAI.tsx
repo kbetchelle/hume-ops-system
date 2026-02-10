@@ -1055,7 +1055,7 @@ export function ResponseTemplatesWithAI() {
           )}
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0">
-          <Tabs defaultValue="browse" className="w-full flex-1 flex flex-col">
+          <Tabs defaultValue="browse" className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-none">
               <TabsTrigger value="browse" className="rounded-none text-xs">
                 Browse Templates

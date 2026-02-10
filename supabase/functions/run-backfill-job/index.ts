@@ -85,16 +85,30 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     cur.setDate(cur.getDate() + CHUNK_DAYS);
   }
 
-  const existingResults: SyncResult[] = job.results || [];
-  const completedChunks = new Set(existingResults.filter((r: SyncResult) => r.success).map((r: SyncResult) => r.date));
+  // Deduplicate results by chunk key, keeping latest entry per chunk
+  const rawResults: SyncResult[] = job.results || [];
+  const resultsByKey = new Map<string, SyncResult>();
+  for (const r of rawResults) {
+    resultsByKey.set(r.date, r);
+  }
+
+  // Identify successfully completed chunks
+  const completedChunks = new Set<string>();
+  for (const [key, r] of resultsByKey) {
+    if (r.success) completedChunks.add(key);
+  }
   
-  // Re-sync last successful chunk on restart
-  const successResults = existingResults.filter((r: SyncResult) => r.success);
-  const lastSuccessChunk = successResults.length > 0 ? successResults[successResults.length - 1]?.date : null;
+  // Re-sync last successful chunk on restart to catch missed records
+  const successKeys = [...completedChunks];
+  const lastSuccessChunk = successKeys.length > 0 ? successKeys[successKeys.length - 1] : null;
   if (lastSuccessChunk) {
     completedChunks.delete(lastSuccessChunk);
-    const idx = existingResults.findIndex((r: SyncResult) => r.date === lastSuccessChunk && r.success);
-    if (idx !== -1) existingResults.splice(idx, 1);
+    resultsByKey.delete(lastSuccessChunk);
+  }
+
+  // Remove failed entries so they get retried (don't count toward completion)
+  for (const [key, r] of resultsByKey) {
+    if (!r.success) resultsByKey.delete(key);
   }
 
   const remainingChunks = chunks.filter(c => !completedChunks.has(`${c.start}_${c.end}`));
@@ -108,9 +122,10 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
 
   // Process one chunk at a time (each is already a wide-range API call)
   const chunk = remainingChunks[0];
-  const results: SyncResult[] = [...existingResults];
+  const results: SyncResult[] = [...resultsByKey.values()];
   let totalRecords = job.total_records || 0;
   let totalNewRecords = job.total_new_records || 0;
+  const chunkKey = `${chunk.start}_${chunk.end}`;
 
   const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
   if (currentJob?.status === "cancelled") {
@@ -125,6 +140,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   const { count: existingBefore } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true }).gte("class_date", chunk.start).lte("class_date", chunk.end);
   const existingCount = existingBefore || 0;
 
+  let chunkResult: SyncResult;
   try {
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-arketa-classes`, {
       method: "POST",
@@ -134,7 +150,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     const syncData = await syncResponse.json();
 
     if (!syncResponse.ok) {
-      results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
+      chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" };
     } else {
       const recordCount = syncData?.syncedCount ?? syncData?.totalFetched ?? 0;
       const totalFetched = syncData?.totalFetched ?? 0;
@@ -145,39 +161,54 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       totalNewRecords += newRecords;
 
       const hitPageLimit = totalFetched > 0 && totalFetched % 400 === 0;
-      results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit });
+      chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit };
 
       if (hitPageLimit) {
         console.log(`[run-backfill-job] Classes chunk ${chunk.start}-${chunk.end} hit 400 page limit (fetched ${totalFetched}). Scheduling 2-min cooldown.`);
-        await supabase.from("backfill_jobs").update({
-          retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
-          completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results,
-        }).eq("id", jobId);
-        await new Promise(resolve => setTimeout(resolve, 120_000));
       }
     }
   } catch (err) {
-    results.push({ date: `${chunk.start}_${chunk.end}`, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 
-  await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+  // Upsert result by chunk key (replace any previous entry for this chunk)
+  const existingIdx = results.findIndex(r => r.date === chunkKey);
+  if (existingIdx !== -1) {
+    results[existingIdx] = chunkResult;
+  } else {
+    results.push(chunkResult);
+  }
 
-  const isComplete = results.length >= chunks.length;
+  await supabase.from("backfill_jobs").update({ completed_dates: results.filter(r => r.success).length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+
+  // Completion = every chunk has a successful result
+  const successfulChunkKeys = new Set(results.filter(r => r.success).map(r => r.date));
+  const allChunkKeys = chunks.map(c => `${c.start}_${c.end}`);
+  const isComplete = allChunkKeys.every(k => successfulChunkKeys.has(k));
+
   if (isComplete) {
-    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null }).eq("id", jobId);
+    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null, completed_dates: chunks.length }).eq("id", jobId);
     return new Response(JSON.stringify({ success: true, completed: true, totalChunks: chunks.length, totalRecords, totalNewRecords }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Schedule next chunk
+  // Apply cooldown if page limit was hit
+  if (chunkResult.hitPageLimit) {
+    await supabase.from("backfill_jobs").update({
+      retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
+    }).eq("id", jobId);
+    await new Promise(resolve => setTimeout(resolve, 120_000));
+  }
+
+  // Schedule next chunk (includes retrying failed chunks)
   fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
     body: JSON.stringify({ jobId }),
   }).catch(err => console.error("Failed to trigger next chunk:", err));
 
-  return new Response(JSON.stringify({ success: true, completed: false, processedChunks: results.length, totalChunks: chunks.length }), {
+  return new Response(JSON.stringify({ success: true, completed: false, processedChunks: successfulChunkKeys.size, totalChunks: chunks.length }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

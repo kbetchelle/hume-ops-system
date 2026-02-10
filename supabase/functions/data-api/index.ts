@@ -57,6 +57,7 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'checklist_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'checklist_template_items': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'checklist_template_completions': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
+  'staff_shifts': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
 };
 
 function normalizeRole(role: string | undefined): string {

@@ -8,7 +8,6 @@ import {
   Edit,
   Eye,
   Upload,
-  Upload,
   X,
   Clock,
   Users,

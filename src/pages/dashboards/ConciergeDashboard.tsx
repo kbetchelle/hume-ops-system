@@ -28,6 +28,18 @@ export default function ConciergeDashboard() {
   // Placeholder for unread message count - will be replaced with real data
   const unreadCount = 3;
 
+  const viewTitles: Record<ConciergeView, string> = {
+    home: "Home",
+    report: "Shift Report",
+    messages: "Messages",
+    announcements: "Announcements",
+    "whos-working": "Who's Working",
+    templates: "Response Templates",
+    "quick-links": "Quick Links",
+    "lost-found": "Lost & Found",
+    "policies-qa": "Policies & Q&A",
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case "home":
@@ -133,7 +145,7 @@ export default function ConciergeDashboard() {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
-          <ConciergeHeader />
+          <ConciergeHeader title={viewTitles[activeView]} />
           <main className="flex-1 overflow-auto pb-20">
             {renderContent()}
           </main>
@@ -156,7 +168,7 @@ export default function ConciergeDashboard() {
           unreadCount={unreadCount}
         />
         <div className="flex-1 flex flex-col min-w-0">
-          <ConciergeHeader />
+          <ConciergeHeader title={viewTitles[activeView]} />
           <main className="flex-1 overflow-auto">
             {renderContent()}
           </main>

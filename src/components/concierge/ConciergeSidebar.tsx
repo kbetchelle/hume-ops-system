@@ -109,7 +109,7 @@ export function ConciergeSidebar({
           icon: MessageSquare,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { id: "announcements", label: "Announcements", icon: Megaphone },
+        { id: "announcements", label: "Announcements", icon: Megaphone, hasUnreadDot: hasUnreadAnnouncements },
       ],
     },
     {

@@ -1,15 +1,12 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
-import { Megaphone, Bell, Calendar, ChevronLeft, ChevronRight, Clock, Sparkles, Users } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { Megaphone, Bell, Calendar, Clock } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,16 +32,42 @@ interface Announcement {
   is_read?: boolean;
 }
 
+// Sentinel component that marks announcement as read when scrolled to bottom
+function ReadSentinel({ announcementId, onVisible }: { announcementId: string; onVisible: (id: string) => void }) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.9) {
+            const timeout = setTimeout(() => {
+              onVisible(announcementId);
+            }, 800);
+            return () => clearTimeout(timeout);
+          }
+        });
+      },
+      { threshold: 0.9 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [announcementId, onVisible]);
+
+  return <div ref={sentinelRef} className="h-1 w-full" />;
+}
+
 export function AnnouncementsBoard() {
   const { user } = useAuth();
   const { data: userRoles } = useUserRoles(user?.id);
   const queryClient = useQueryClient();
   
-  // Extract role names from user role objects
   const roles = userRoles?.map((r) => r.role) || [];
   const [activeTab, setActiveTab] = useState<'all' | 'weekly' | 'announcements'>('all');
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [showAllWeekly, setShowAllWeekly] = useState(false);
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['staff-announcements'],
@@ -75,40 +98,18 @@ export function AnnouncementsBoard() {
     enabled: !!user?.id,
   });
 
-  // Filter announcements based on role, schedule, and expiration
   const filteredAnnouncements = useMemo(() => {
     if (!announcements) return [];
-    
     const now = new Date();
-    
     return announcements.filter((a) => {
-      // Filter out scheduled announcements that haven't been published yet
-      if (a.scheduled_at && new Date(a.scheduled_at) > now) {
-        return false;
-      }
-      
-      // Filter out expired announcements
-      if (a.expires_at && new Date(a.expires_at) < now) {
-        return false;
-      }
-      
-      // Filter by target_departments (role-based filtering)
-      // If no targeting, show to everyone
-      if (!a.target_departments || a.target_departments.length === 0) {
-        return true;
-      }
-      
-      // If user has no roles, only show untargeted announcements
-      if (!roles || roles.length === 0) {
-        return false;
-      }
-      
-      // Check if any of user's roles match the target departments
+      if (a.scheduled_at && new Date(a.scheduled_at) > now) return false;
+      if (a.expires_at && new Date(a.expires_at) < now) return false;
+      if (!a.target_departments || a.target_departments.length === 0) return true;
+      if (!roles || roles.length === 0) return false;
       return roles.some((role) => a.target_departments?.includes(role));
     });
   }, [announcements, roles]);
 
-  // Get comment counts for all announcements
   const announcementIds = filteredAnnouncements.map((a) => a.id);
   const { data: commentCounts } = useAnnouncementCommentCounts(announcementIds);
 
@@ -126,31 +127,14 @@ export function AnnouncementsBoard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-announcement-reads'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-announcements-check'] });
     },
   });
 
-  const setupReadObserver = useCallback((node: HTMLElement | null, announcementId: string) => {
-    if (!node || !user?.id) return;
+  const handleSentinelVisible = useCallback((announcementId: string) => {
     if (readAnnouncements?.includes(announcementId)) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            setTimeout(() => {
-              if (entry.isIntersecting) {
-                markAsRead.mutate(announcementId);
-              }
-            }, 1500);
-          }
-        });
-      },
-      { threshold: 0.6 }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [user?.id, readAnnouncements, markAsRead]);
+    markAsRead.mutate(announcementId);
+  }, [readAnnouncements, markAsRead]);
 
   const readSet = new Set(readAnnouncements || []);
 
@@ -162,32 +146,14 @@ export function AnnouncementsBoard() {
     .filter(a => a.announcement_type === 'weekly_update')
     .map(a => ({ ...a, is_read: readSet.has(a.id) }))
     .sort((a, b) => {
-      // Sort by week_start_date descending
       const dateA = a.week_start_date ? new Date(a.week_start_date) : new Date(a.created_at);
       const dateB = b.week_start_date ? new Date(b.week_start_date) : new Date(b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
 
-  // Get week update for the current offset - more flexible matching
-  const getWeekUpdate = () => {
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + (weekOffset * 7));
-    const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
-    
-    // Find any update whose week_start_date falls within this week
-    return weeklyUpdates.find(u => {
-      if (!u.week_start_date) return false;
-      const updateDate = new Date(u.week_start_date);
-      return isWithinInterval(updateDate, { start: weekStart, end: weekEnd });
-    });
-  };
-
-  const currentWeekUpdate = getWeekUpdate();
   const unreadAnnouncements = announcementsList.filter(a => !a.is_read).length;
   const unreadWeekly = weeklyUpdates.filter(w => !w.is_read).length;
 
-  // Combined list for "All" tab: announcements + weekly updates, sorted by date desc
   const allItems = useMemo(() => {
     const withRead = [...announcementsList, ...weeklyUpdates];
     return withRead.sort((a, b) => {
@@ -200,9 +166,9 @@ export function AnnouncementsBoard() {
       return dateB - dateA;
     });
   }, [announcementsList, weeklyUpdates]);
+
   const unreadAll = unreadAnnouncements + unreadWeekly;
 
-  // Enhanced priority styles
   const priorityStyles: Record<string, string> = {
     urgent: 'border-destructive bg-destructive/5',
     high: 'border-amber-500 bg-amber-500/5',
@@ -212,9 +178,88 @@ export function AnnouncementsBoard() {
 
   const weeklyUpdateStyle = 'border-blue-500 bg-blue-500/5';
 
+  const renderWeeklyCard = (item: Announcement & { is_read?: boolean }) => (
+    <div
+      key={item.id}
+      className={cn(
+        'p-4 border w-full',
+        weeklyUpdateStyle,
+        !item.is_read && 'ring-1 ring-primary/20'
+      )}
+    >
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
+        {item.week_start_date && (
+          <Badge variant="outline" className="text-[10px]">
+            Week of {format(parseISO(item.week_start_date), 'MMM d, yyyy')}
+          </Badge>
+        )}
+        {!item.is_read && (
+          <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+        )}
+        <CommentCountBadge count={commentCounts?.[item.id] || 0} />
+      </div>
+      <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
+      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+        {item.content}
+      </p>
+      {item.photo_url && (
+        <img src={item.photo_url} alt="Update attachment" className="mt-4 max-h-48 object-cover border" />
+      )}
+      <Separator className="my-4" />
+      <div className="text-[10px] text-muted-foreground">
+        Posted by {item.created_by} • {format(parseISO(item.created_at), 'MMM d, h:mm a')}
+      </div>
+      <AnnouncementComments
+        announcementId={item.id}
+        commentCount={commentCounts?.[item.id] || 0}
+        className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
+      />
+      {!item.is_read && <ReadSentinel announcementId={item.id} onVisible={handleSentinelVisible} />}
+    </div>
+  );
+
+  const renderAnnouncementCard = (item: Announcement & { is_read?: boolean }) => (
+    <div
+      key={item.id}
+      className={cn(
+        'p-4 border transition-all w-full',
+        priorityStyles[item.priority],
+        !item.is_read && 'ring-1 ring-primary/20'
+      )}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h4 className="font-medium text-sm flex-1">{item.title}</h4>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!item.is_read && (
+            <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+          )}
+          <CommentCountBadge count={commentCounts?.[item.id] || 0} />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+        {item.content}
+      </p>
+      {item.photo_url && (
+        <img src={item.photo_url} alt="Attachment" className="mt-3 max-h-48 object-cover border" />
+      )}
+      <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        {format(parseISO(item.created_at), 'MMM d, h:mm a')}
+        <span>•</span>
+        <span>{item.created_by}</span>
+      </div>
+      <AnnouncementComments
+        announcementId={item.id}
+        commentCount={commentCounts?.[item.id] || 0}
+        className="mt-3 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
+      />
+      {!item.is_read && <ReadSentinel announcementId={item.id} onVisible={handleSentinelVisible} />}
+    </div>
+  );
+
   return (
     <div className="space-y-6 px-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -233,27 +278,21 @@ export function AnnouncementsBoard() {
             <Megaphone className="h-4 w-4" />
             All
             {unreadAll > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                {unreadAll}
-              </Badge>
+              <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
             )}
           </TabsTrigger>
           <TabsTrigger value="weekly" className="flex-1 gap-2">
             <Calendar className="h-4 w-4" />
             Weekly Updates
             {unreadWeekly > 0 && (
-              <Badge variant="default" className="h-5 px-1.5 text-xs">
-                {unreadWeekly}
-              </Badge>
+              <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
             )}
           </TabsTrigger>
           <TabsTrigger value="announcements" className="flex-1 gap-2">
             <Bell className="h-4 w-4" />
             Announcements
             {unreadAnnouncements > 0 && (
-              <Badge variant="destructive" className="h-5 px-1.5 text-xs animate-pulse">
-                {unreadAnnouncements}
-              </Badge>
+              <span className="h-2 w-2 bg-destructive rounded-full animate-pulse" />
             )}
           </TabsTrigger>
         </TabsList>
@@ -271,91 +310,9 @@ export function AnnouncementsBoard() {
           ) : (
             <div className="space-y-3">
               {allItems.map((item) =>
-                item.announcement_type === 'weekly_update' ? (
-                  <div
-                    key={item.id}
-                    ref={(node) => setupReadObserver(node, item.id)}
-                    className={cn(
-                      'p-4 border w-full',
-                      weeklyUpdateStyle,
-                      !item.is_read && 'ring-1 ring-primary/20'
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
-                      {item.week_start_date && (
-                        <Badge variant="outline" className="text-[10px]">
-                          Week of {format(parseISO(item.week_start_date), 'MMM d, yyyy')}
-                        </Badge>
-                      )}
-                      {!item.is_read && (
-                        <Badge variant="default" className="text-[10px] animate-pulse">Unread</Badge>
-                      )}
-                      <CommentCountBadge count={commentCounts?.[item.id] || 0} />
-                    </div>
-                    <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {item.content}
-                    </p>
-                    {item.photo_url && (
-                      <img
-                        src={item.photo_url}
-                        alt="Update attachment"
-                        className="mt-4 max-h-48 object-cover border"
-                      />
-                    )}
-                    <Separator className="my-4" />
-                    <div className="text-[10px] text-muted-foreground">
-                      Posted by {item.created_by} • {format(parseISO(item.created_at), 'MMM d, h:mm a')}
-                    </div>
-                    <AnnouncementComments
-                      announcementId={item.id}
-                      commentCount={commentCounts?.[item.id] || 0}
-                      className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    key={item.id}
-                    ref={(node) => setupReadObserver(node, item.id)}
-                    className={cn(
-                      'p-4 border transition-all w-full',
-                      priorityStyles[item.priority],
-                      !item.is_read && 'ring-1 ring-primary/20'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <h4 className="font-medium text-sm flex-1">{item.title}</h4>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {!item.is_read && (
-                          <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
-                        )}
-                        <CommentCountBadge count={commentCounts?.[item.id] || 0} />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {item.content}
-                    </p>
-                    {item.photo_url && (
-                      <img
-                        src={item.photo_url}
-                        alt="Attachment"
-                        className="mt-3 max-h-48 object-cover border"
-                      />
-                    )}
-                    <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {format(parseISO(item.created_at), 'MMM d, h:mm a')}
-                      <span>•</span>
-                      <span>{item.created_by}</span>
-                    </div>
-                    <AnnouncementComments
-                      announcementId={item.id}
-                      commentCount={commentCounts?.[item.id] || 0}
-                      className="mt-3 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
-                    />
-                  </div>
-                )
+                item.announcement_type === 'weekly_update'
+                  ? renderWeeklyCard(item)
+                  : renderAnnouncementCard(item)
               )}
             </div>
           )}
@@ -381,216 +338,25 @@ export function AnnouncementsBoard() {
                   if (priorityDiff !== 0) return priorityDiff;
                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                 })
-                .map((announcement) => (
-                  <div
-                    key={announcement.id}
-                    ref={(node) => setupReadObserver(node, announcement.id)}
-                    className={cn(
-                      'p-4 border transition-all w-full',
-                      priorityStyles[announcement.priority],
-                      !announcement.is_read && 'ring-1 ring-primary/20'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <h4 className="font-medium text-sm flex-1">{announcement.title}</h4>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {!announcement.is_read && (
-                          <Badge variant="default" className="text-[10px] h-5 animate-pulse">New</Badge>
-                        )}
-                        <CommentCountBadge count={commentCounts?.[announcement.id] || 0} />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {announcement.content}
-                    </p>
-                    {announcement.photo_url && (
-                      <img
-                        src={announcement.photo_url}
-                        alt="Attachment"
-                        className="mt-3 max-h-48 object-cover border"
-                      />
-                    )}
-                    <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {format(parseISO(announcement.created_at), 'MMM d, h:mm a')}
-                      <span>•</span>
-                      <span>{announcement.created_by}</span>
-                    </div>
-                    
-                    <AnnouncementComments
-                      announcementId={announcement.id}
-                      commentCount={commentCounts?.[announcement.id] || 0}
-                      className="mt-3 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
-                    />
-                  </div>
-                ))}
+                .map((announcement) => renderAnnouncementCard(announcement))}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="weekly" className="mt-6">
-          {/* Toggle between week navigation and all updates */}
-          <div className="flex items-center justify-end gap-2 mb-4">
-            <Label htmlFor="show-all" className="text-xs text-muted-foreground">
-              Show all updates
-            </Label>
-            <Switch
-              id="show-all"
-              checked={showAllWeekly}
-              onCheckedChange={setShowAllWeekly}
-            />
-          </div>
-
-          {!showAllWeekly ? (
-            <>
-              {/* Week Navigation */}
-              <div className="flex items-center justify-between mb-4 p-3 border bg-muted/30">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setWeekOffset(prev => prev - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <div className="text-center">
-                  <p className="text-xs font-medium">
-                    {format(
-                      startOfWeek(new Date(Date.now() + weekOffset * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 }),
-                      'MMM d'
-                    )}
-                    {' - '}
-                    {format(
-                      endOfWeek(new Date(Date.now() + weekOffset * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 }),
-                      'MMM d, yyyy'
-                    )}
-                  </p>
-                  {weekOffset === 0 && (
-                    <Badge variant="outline" className="mt-1 gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Current Week
-                    </Badge>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setWeekOffset(prev => prev + 1)}
-                  disabled={weekOffset >= 0}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-
-              {currentWeekUpdate ? (
-                <div
-                  ref={(node) => setupReadObserver(node, currentWeekUpdate.id)}
-                  className={cn(
-                    'p-4 border w-full',
-                    weeklyUpdateStyle,
-                    !currentWeekUpdate.is_read && 'ring-1 ring-primary/20'
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
-                    {!currentWeekUpdate.is_read && (
-                      <Badge variant="default" className="text-[10px] animate-pulse">Unread</Badge>
-                    )}
-                    <CommentCountBadge count={commentCounts?.[currentWeekUpdate.id] || 0} />
-                  </div>
-                  <h3 className="font-semibold text-sm mb-3">{currentWeekUpdate.title}</h3>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {currentWeekUpdate.content}
-                  </p>
-                  {currentWeekUpdate.photo_url && (
-                    <img
-                      src={currentWeekUpdate.photo_url}
-                      alt="Update attachment"
-                      className="mt-4 max-h-48 object-cover border"
-                    />
-                  )}
-                  <Separator className="my-4" />
-                  <div className="text-[10px] text-muted-foreground">
-                    Posted by {currentWeekUpdate.created_by} • {format(parseISO(currentWeekUpdate.created_at), 'MMM d, h:mm a')}
-                  </div>
-                  
-                  <AnnouncementComments
-                    announcementId={currentWeekUpdate.id}
-                    commentCount={commentCounts?.[currentWeekUpdate.id] || 0}
-                    className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
-                  />
-                </div>
-              ) : (
-                <div className="border bg-muted/30 p-8 text-center">
-                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">No weekly update for this week</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Use the arrows to navigate to other weeks, or toggle "Show all updates"
-                  </p>
-                </div>
-              )}
-            </>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
+            </div>
+          ) : weeklyUpdates.length === 0 ? (
+            <div className="border bg-muted/30 p-8 text-center">
+              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">No weekly updates available</p>
+            </div>
           ) : (
-            /* Show all weekly updates */
-            isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
-              </div>
-            ) : weeklyUpdates.length === 0 ? (
-              <div className="border bg-muted/30 p-8 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">No weekly updates available</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {weeklyUpdates.map((update) => (
-                  <div
-                    key={update.id}
-                    ref={(node) => setupReadObserver(node, update.id)}
-                    className={cn(
-                      'p-4 border w-full',
-                      weeklyUpdateStyle,
-                      !update.is_read && 'ring-1 ring-primary/20'
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
-                      {update.week_start_date && (
-                        <Badge variant="outline" className="text-[10px]">
-                          Week of {format(parseISO(update.week_start_date), 'MMM d, yyyy')}
-                        </Badge>
-                      )}
-                      {!update.is_read && (
-                        <Badge variant="default" className="text-[10px] animate-pulse">Unread</Badge>
-                      )}
-                      <CommentCountBadge count={commentCounts?.[update.id] || 0} />
-                    </div>
-                    <h3 className="font-semibold text-sm mb-3">{update.title}</h3>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {update.content}
-                    </p>
-                    {update.photo_url && (
-                      <img
-                        src={update.photo_url}
-                        alt="Update attachment"
-                        className="mt-4 max-h-48 object-cover border"
-                      />
-                    )}
-                    <Separator className="my-4" />
-                    <div className="text-[10px] text-muted-foreground">
-                      Posted by {update.created_by} • {format(parseISO(update.created_at), 'MMM d, h:mm a')}
-                    </div>
-                    
-                    <AnnouncementComments
-                      announcementId={update.id}
-                      commentCount={commentCounts?.[update.id] || 0}
-                      className="mt-4 -mx-4 -mb-4 px-4 pb-4 border-t bg-muted/20"
-                    />
-                  </div>
-                ))}
-              </div>
-            )
+            <div className="space-y-3">
+              {weeklyUpdates.map((update) => renderWeeklyCard(update))}
+            </div>
           )}
         </TabsContent>
       </Tabs>

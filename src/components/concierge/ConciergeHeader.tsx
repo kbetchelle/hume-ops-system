@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import humeLogo from "@/assets/hume-logo.png";
+import { NotificationBell } from "./NotificationBell";
 
 export function ConciergeHeader() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export function ConciergeHeader() {
         </h1>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"

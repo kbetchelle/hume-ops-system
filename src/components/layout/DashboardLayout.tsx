@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { NotificationBell } from "@/components/concierge/NotificationBell";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -532,6 +533,7 @@ function DashboardHeader({ title }: { title: string }) {
 
         <div className="flex items-center gap-2">
           {isBOH && <LanguageSelector />}
+          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"

@@ -54,7 +54,7 @@ export function RoleSwitcher() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full gap-2 rounded-none text-[10px] uppercase tracking-widest justify-start px-0 h-auto py-0"
+          className="w-full gap-2 rounded-none text-[13px] uppercase tracking-widest justify-start px-0 h-auto py-0"
         >
           <span className="truncate pl-2">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
           <ChevronDown className="h-3 w-3 shrink-0" />

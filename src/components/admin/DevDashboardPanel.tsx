@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RichTextEditor } from "@/components/shared/RichTextEditor";
-import { usePageStatuses, useUpdatePageStatus, useDevNotes, useUpdateDevNotes, useUpdatePageRole, useDeletePageStatus, PageStatus } from "@/hooks/useDevDashboard";
+import { usePageStatuses, useUpdatePageStatus, useUpdatePageRole, PageStatus } from "@/hooks/useDevDashboard";
 import { Loader2 } from "lucide-react";
-import { DevNotesModal } from "./DevNotesModal";
 import { BuildStatusModal } from "./BuildStatusModal";
 import { useActiveRole } from "@/hooks/useActiveRole";
 

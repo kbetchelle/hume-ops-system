@@ -714,12 +714,8 @@ export function StaffAnnouncementsManager() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
+                            <Bell className="h-3 w-3 mr-1" />
+                            Announcement
                           </Badge>
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>

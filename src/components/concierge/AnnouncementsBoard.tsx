@@ -260,14 +260,6 @@ export function AnnouncementsBoard() {
 
   return (
     <div className="space-y-6 px-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Megaphone className="h-5 w-5" />
-            Announcements
-          </h2>
-        </div>
-      </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'weekly' | 'announcements')}>
         <TabsList className="w-full max-w-2xl">

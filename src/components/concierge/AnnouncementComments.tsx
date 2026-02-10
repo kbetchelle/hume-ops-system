@@ -63,7 +63,7 @@ export function AnnouncementComments({
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-between p-0 h-auto"
+          className="w-full justify-between p-2 h-auto"
         >
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <MessageSquare className="h-3 w-3" />

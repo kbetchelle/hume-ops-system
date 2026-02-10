@@ -255,31 +255,6 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             />
           </div>
 
-          {/* Priority (Announcements only) */}
-          {type === "announcement" && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priority</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {(Object.entries(PRIORITY_CONFIG) as [Priority, typeof PRIORITY_CONFIG[Priority]][]).map(
-                  ([key, config]) => (
-                    <Button
-                      key={key}
-                      type="button"
-                      variant={priority === key ? "default" : "outline"}
-                      className={cn(
-                        "gap-2",
-                        priority === key && config.color
-                      )}
-                      onClick={() => setPriority(key)}
-                    >
-                      {config.icon}
-                      {config.label}
-                    </Button>
-                  )
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Week Date (Weekly Updates only) */}
           {type === "weekly_update" && (
@@ -600,8 +575,6 @@ export function StaffAnnouncementsManager() {
                             )}
                             {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
                           </Badge>
-                          {announcement.announcement_type === "announcement" &&
-                            getPriorityBadge(announcement.priority)}
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
@@ -727,8 +700,6 @@ export function StaffAnnouncementsManager() {
                             )}
                             {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
                           </Badge>
-                          {announcement.announcement_type === "announcement" &&
-                            getPriorityBadge(announcement.priority)}
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
@@ -854,8 +825,6 @@ export function StaffAnnouncementsManager() {
                             )}
                             {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
                           </Badge>
-                          {announcement.announcement_type === "announcement" &&
-                            getPriorityBadge(announcement.priority)}
                           {!announcement.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
                           )}

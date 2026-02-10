@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -194,7 +195,8 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) return;
+    const strippedContent = content.replace(/<[^>]*>/g, '').trim();
+    if (!title.trim() || !strippedContent) return;
 
     // Calculate expires_at for announcements
     let expiresAt: string | null = null;
@@ -275,15 +277,13 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             />
           </div>
 
-          {/* Content */}
           <div className="space-y-2">
-            <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
+            <Label>Content</Label>
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder="Enter announcement content..."
-              rows={5}
+              minHeight="150px"
             />
           </div>
 
@@ -417,7 +417,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!title.trim() || !content.trim() || isSubmitting}
+            disabled={!title.trim() || !content.replace(/<[^>]*>/g, '').trim() || isSubmitting}
           >
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? "Update" : "Create"} Announcement
@@ -554,12 +554,13 @@ function AnnouncementCard({
             </div>
 
             <h3 className="font-medium truncate text-sm">{announcement.title}</h3>
-            <p className={cn(
-              "text-sm text-muted-foreground mt-1 whitespace-pre-wrap",
-              !expanded && "line-clamp-2"
-            )}>
-              {announcement.content}
-            </p>
+            <div
+              className={cn(
+                "text-sm text-muted-foreground mt-1 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
+                !expanded && "line-clamp-2"
+              )}
+              dangerouslySetInnerHTML={{ __html: announcement.content }}
+            />
 
             {announcement.photo_url && expanded && (
               <img src={announcement.photo_url} alt="Attachment" className="max-h-48 object-cover border mt-2" />

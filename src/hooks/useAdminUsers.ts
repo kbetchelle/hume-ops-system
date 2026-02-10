@@ -37,8 +37,9 @@ export function useUpdateUserRoles() {
       if (error) throw error;
       return { success: true };
     },
-    onSuccess: () => {
+    onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["userRoles", userId] });
     },
   });
 }

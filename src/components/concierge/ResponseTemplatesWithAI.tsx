@@ -1185,7 +1185,7 @@ export function ResponseTemplatesWithAI() {
                   onClick={() => setAiWriterMode("compose")}
                 >
                   <PenLine className="h-3 w-3 mr-1" />
-                  Compose New
+                  Compose Response
                 </Button>
                 <Button
                   variant={aiWriterMode === "polish" ? "default" : "outline"}

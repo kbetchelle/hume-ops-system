@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import {
   Sidebar,
   SidebarContent,
@@ -58,6 +59,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: number;
+  hasUnreadDot?: boolean;
 }
 
 interface NavSection {
@@ -81,6 +83,7 @@ export function ConciergeSidebar({
   const { data: profile } = useUserProfile(user?.id);
   const { signOut } = useAuth();
   const [showBugReport, setShowBugReport] = useState(false);
+  const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
 
   const getFirstName = (fullName: string | null | undefined) => {
     if (!fullName) return "there";
@@ -108,7 +111,7 @@ export function ConciergeSidebar({
           icon: MessageSquare,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { id: "announcements", label: "Announcements", icon: Megaphone },
+        { id: "announcements", label: "Announcements", icon: Megaphone, hasUnreadDot: hasUnreadAnnouncements },
       ],
     },
     {
@@ -156,7 +159,10 @@ export function ConciergeSidebar({
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
-                        {item.badge !== undefined && (
+                        {item.hasUnreadDot && (
+                          <span className="ml-auto h-2 w-2 bg-primary rounded-full animate-pulse shrink-0" />
+                        )}
+                        {item.badge !== undefined && !item.hasUnreadDot && (
                           <SidebarMenuBadge className="ml-auto bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none">
                             {item.badge}
                           </SidebarMenuBadge>

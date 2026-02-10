@@ -414,14 +414,10 @@ function RoleSwitcher({
   };
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0", collapsed ? "h-8 w-8 p-0" : "h-8 w-full")}>
-          <ArrowLeftRight className="h-4 w-4 shrink-0" />
-          {!collapsed && <>
-              <span className="text-[10px] uppercase tracking-widest">
-                {currentViewRole ? getRoleLabel(currentViewRole) : "Select Role"}
-              </span>
-              <ChevronDown className="h-3 w-3" />
-            </>}
+        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-8 w-full")}>
+          {!collapsed && <span className="text-[10px] uppercase tracking-widest">
+                {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
+              </span>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">

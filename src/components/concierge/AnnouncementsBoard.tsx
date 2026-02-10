@@ -211,7 +211,7 @@ export function AnnouncementsBoard() {
         <CommentCountBadge count={commentCounts?.[item.id] || 0} />
       </div>
       <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
-      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
         {item.content}
       </p>
       {item.photo_url && (

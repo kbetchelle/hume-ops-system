@@ -18,10 +18,12 @@ import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
+import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const isMobile = useIsMobile();
+  const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
 
   // Placeholder for unread message count - will be replaced with real data
   const unreadCount = 3;

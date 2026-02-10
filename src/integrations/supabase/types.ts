@@ -2316,6 +2316,54 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_schedule: {
+        Row: {
+          canceled: boolean | null
+          class_id: string | null
+          class_name: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          instructor: string | null
+          max_capacity: number | null
+          schedule_date: string
+          start_time: string | null
+          total_booked: number | null
+          updated_at: string
+        }
+        Insert: {
+          canceled?: boolean | null
+          class_id?: string | null
+          class_name?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          instructor?: string | null
+          max_capacity?: number | null
+          schedule_date: string
+          start_time?: string | null
+          total_booked?: number | null
+          updated_at?: string
+        }
+        Update: {
+          canceled?: boolean | null
+          class_id?: string | null
+          class_name?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          instructor?: string | null
+          max_capacity?: number | null
+          schedule_date?: string
+          start_time?: string | null
+          total_booked?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dev_notes: {
         Row: {
           content: string

@@ -151,6 +151,14 @@ export function AnnouncementsBoard() {
       return dateB.getTime() - dateA.getTime();
     });
 
+  const thisWeekId = useMemo(() => {
+    if (weeklyUpdates.length === 0) return null;
+    const sixDaysAgo = new Date();
+    sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+    const newest = weeklyUpdates[0];
+    return new Date(newest.created_at) >= sixDaysAgo ? newest.id : null;
+  }, [weeklyUpdates]);
+
   const unreadAnnouncements = announcementsList.filter(a => !a.is_read).length;
   const unreadWeekly = weeklyUpdates.filter(w => !w.is_read).length;
 
@@ -178,7 +186,7 @@ export function AnnouncementsBoard() {
 
   const weeklyUpdateStyle = 'border-blue-500 bg-blue-500/5';
 
-  const renderWeeklyCard = (item: Announcement & { is_read?: boolean }) => (
+  const renderWeeklyCard = (item: Announcement & { is_read?: boolean }, isThisWeek = false) => (
     <div
       key={item.id}
       className={cn(
@@ -188,6 +196,9 @@ export function AnnouncementsBoard() {
       )}
     >
       <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {isThisWeek && (
+          <Badge className="bg-green-600 text-white border-green-600">This Week</Badge>
+        )}
         <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
         {item.week_start_date && (
           <Badge variant="outline" className="text-[10px]">
@@ -200,7 +211,7 @@ export function AnnouncementsBoard() {
         <CommentCountBadge count={commentCounts?.[item.id] || 0} />
       </div>
       <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
-      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
         {item.content}
       </p>
       {item.photo_url && (
@@ -237,7 +248,7 @@ export function AnnouncementsBoard() {
           <CommentCountBadge count={commentCounts?.[item.id] || 0} />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
         {item.content}
       </p>
       {item.photo_url && (
@@ -300,7 +311,7 @@ export function AnnouncementsBoard() {
             <div className="space-y-3">
               {allItems.map((item) =>
                 item.announcement_type === 'weekly_update'
-                  ? renderWeeklyCard(item)
+                  ? renderWeeklyCard(item, item.id === thisWeekId)
                   : renderAnnouncementCard(item)
               )}
             </div>
@@ -344,7 +355,7 @@ export function AnnouncementsBoard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {weeklyUpdates.map((update) => renderWeeklyCard(update))}
+              {weeklyUpdates.map((update) => renderWeeklyCard(update, update.id === thisWeekId))}
             </div>
           )}
         </TabsContent>

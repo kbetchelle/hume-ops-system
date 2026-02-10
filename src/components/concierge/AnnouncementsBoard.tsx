@@ -248,7 +248,7 @@ export function AnnouncementsBoard() {
           <CommentCountBadge count={commentCounts?.[item.id] || 0} />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
         {item.content}
       </p>
       {item.photo_url && (

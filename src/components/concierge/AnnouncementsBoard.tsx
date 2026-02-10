@@ -151,6 +151,14 @@ export function AnnouncementsBoard() {
       return dateB.getTime() - dateA.getTime();
     });
 
+  const thisWeekId = useMemo(() => {
+    if (weeklyUpdates.length === 0) return null;
+    const sixDaysAgo = new Date();
+    sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+    const newest = weeklyUpdates[0];
+    return new Date(newest.created_at) >= sixDaysAgo ? newest.id : null;
+  }, [weeklyUpdates]);
+
   const unreadAnnouncements = announcementsList.filter(a => !a.is_read).length;
   const unreadWeekly = weeklyUpdates.filter(w => !w.is_read).length;
 

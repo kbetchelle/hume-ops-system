@@ -141,7 +141,6 @@ export function ConciergeSidebar({
             size="sm" 
             className="w-full justify-start gap-2 h-8 px-2 rounded-none pointer-events-none"
           >
-            <User className="h-4 w-4 shrink-0" />
             <span className="text-[10px] uppercase tracking-widest truncate">
               Hi, {getFirstName(profile?.full_name)}
             </span>

@@ -4,8 +4,15 @@
 -- 1) Rename table (skip if already renamed or source table missing)
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedules') THEN
+  -- Only rename if daily_schedules exists and daily_schedule does NOT exist
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedules')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
     ALTER TABLE public.daily_schedules RENAME TO daily_schedule;
+  -- If daily_schedule already exists but daily_schedules also exists, drop daily_schedules
+  ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedules') THEN
+    DROP TABLE public.daily_schedules CASCADE;
+  -- If neither exists, raise error
   ELSIF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
     RAISE EXCEPTION 'Table daily_schedules does not exist and daily_schedule does not exist - cannot run daily_schedule migration';
   END IF;
@@ -26,52 +33,141 @@ ALTER TABLE public.daily_schedule
   DROP COLUMN IF EXISTS is_currently_working,
   DROP COLUMN IF EXISTS last_synced_at;
 
--- 4) Add new columns
-ALTER TABLE public.daily_schedule
-  ADD COLUMN class_id text,
-  ADD COLUMN start_time timestamptz,
-  ADD COLUMN end_time timestamptz,
-  ADD COLUMN class_name text,
-  ADD COLUMN max_capacity integer,
-  ADD COLUMN total_booked integer DEFAULT 0,
-  ADD COLUMN instructor text,
-  ADD COLUMN description text,
-  ADD COLUMN updated_at timestamptz DEFAULT now(),
-  ADD COLUMN canceled boolean DEFAULT false;
+-- 4) Add new columns (only if they don't already exist)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'class_id') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN class_id text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'start_time') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN start_time timestamptz;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'end_time') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN end_time timestamptz;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'class_name') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN class_name text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'max_capacity') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN max_capacity integer;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'total_booked') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN total_booked integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'instructor') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN instructor text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'description') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN description text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'updated_at') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN updated_at timestamptz DEFAULT now();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'canceled') THEN
+    ALTER TABLE public.daily_schedule ADD COLUMN canceled boolean DEFAULT false;
+  END IF;
+END $$;
 
 -- 5) Clear existing rows (Sling data no longer applicable), then add NOT NULL
-TRUNCATE public.daily_schedule;
+-- Only truncate if table still has old Sling-related columns
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'daily_schedule' AND column_name = 'sling_user_id') THEN
+    TRUNCATE public.daily_schedule;
+  END IF;
+END $$;
 
-ALTER TABLE public.daily_schedule
-  ALTER COLUMN class_id SET NOT NULL,
-  ALTER COLUMN start_time SET NOT NULL,
-  ALTER COLUMN class_name SET NOT NULL;
+-- Set NOT NULL constraints only if they're not already set
+DO $$
+BEGIN
+  -- Check and set class_id NOT NULL
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule' 
+    AND column_name = 'class_id'
+    AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE public.daily_schedule ALTER COLUMN class_id SET NOT NULL;
+  END IF;
+  
+  -- Check and set start_time NOT NULL
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule' 
+    AND column_name = 'start_time'
+    AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE public.daily_schedule ALTER COLUMN start_time SET NOT NULL;
+  END IF;
+  
+  -- Check and set class_name NOT NULL
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule' 
+    AND column_name = 'class_name'
+    AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE public.daily_schedule ALTER COLUMN class_name SET NOT NULL;
+  END IF;
+END $$;
 
--- 6) Add unique constraint
-ALTER TABLE public.daily_schedule
-  ADD CONSTRAINT daily_schedule_schedule_date_class_id_key UNIQUE (schedule_date, class_id);
+-- 6) Add unique constraint (only if it doesn't already exist)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'daily_schedule_schedule_date_class_id_key'
+  ) THEN
+    ALTER TABLE public.daily_schedule
+      ADD CONSTRAINT daily_schedule_schedule_date_class_id_key UNIQUE (schedule_date, class_id);
+  END IF;
+END $$;
 
 -- 7) Drop old RLS policies (names referenced daily_schedules)
 DROP POLICY IF EXISTS "Managers can manage daily_schedules" ON public.daily_schedule;
 DROP POLICY IF EXISTS "Concierges can view daily_schedules" ON public.daily_schedule;
 
 -- 8) Create new RLS policies
-CREATE POLICY "Managers can manage daily_schedule"
-  ON public.daily_schedule FOR ALL
-  USING (is_manager_or_admin(auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'daily_schedule'
+    AND policyname = 'Managers can manage daily_schedule'
+  ) THEN
+    CREATE POLICY "Managers can manage daily_schedule"
+      ON public.daily_schedule FOR ALL
+      USING (is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
-CREATE POLICY "Concierges can view daily_schedule"
-  ON public.daily_schedule FOR SELECT
-  USING (user_has_role(auth.uid(), 'concierge'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'daily_schedule'
+    AND policyname = 'Concierges can view daily_schedule'
+  ) THEN
+    CREATE POLICY "Concierges can view daily_schedule"
+      ON public.daily_schedule FOR SELECT
+      USING (user_has_role(auth.uid(), 'concierge'));
+  END IF;
+END $$;
 
 -- 9) Drop old indexes and create new ones
 DROP INDEX IF EXISTS public.idx_daily_schedules_date;
 DROP INDEX IF EXISTS public.idx_daily_schedules_user;
 
-CREATE INDEX idx_daily_schedule_date ON public.daily_schedule(schedule_date);
-CREATE INDEX idx_daily_schedule_class_id ON public.daily_schedule(class_id);
+CREATE INDEX IF NOT EXISTS idx_daily_schedule_date ON public.daily_schedule(schedule_date);
+CREATE INDEX IF NOT EXISTS idx_daily_schedule_class_id ON public.daily_schedule(class_id);
 
 -- 10) updated_at trigger
+DROP TRIGGER IF EXISTS update_daily_schedule_updated_at ON public.daily_schedule;
 CREATE TRIGGER update_daily_schedule_updated_at
   BEFORE UPDATE ON public.daily_schedule
   FOR EACH ROW

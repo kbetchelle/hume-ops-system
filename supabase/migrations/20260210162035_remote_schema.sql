@@ -189,18 +189,33 @@ END $$;
 drop table "public"."checklist_migrations_log";
 
 
-  create table "public"."announcement_reads" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'announcement_reads'
+  ) THEN
+    CREATE TABLE "public"."announcement_reads" (
     "id" uuid not null default gen_random_uuid(),
     "announcement_id" uuid not null,
     "user_id" uuid not null,
     "read_at" timestamp with time zone not null default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."announcement_reads" enable row level security;
 
 
-  create table "public"."announcements" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'announcements'
+  ) THEN
+    CREATE TABLE "public"."announcements" (
     "id" uuid not null default gen_random_uuid(),
     "title" text not null,
     "content" text not null,
@@ -209,12 +224,20 @@ alter table "public"."announcement_reads" enable row level security;
     "created_at" timestamp with time zone not null default now(),
     "updated_at" timestamp with time zone not null default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."announcements" enable row level security;
 
 
-  create table "public"."celebratory_events" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'celebratory_events'
+  ) THEN
+    CREATE TABLE "public"."celebratory_events" (
     "id" uuid not null default gen_random_uuid(),
     "member_name" text not null,
     "event_type" text not null,
@@ -224,12 +247,20 @@ alter table "public"."announcements" enable row level security;
     "shift_type" text,
     "created_at" timestamp with time zone default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."celebratory_events" enable row level security;
 
 
-  create table "public"."checklist_comments" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'checklist_comments'
+  ) THEN
+    CREATE TABLE "public"."checklist_comments" (
     "id" uuid not null default gen_random_uuid(),
     "checklist_id" uuid,
     "item_id" uuid,
@@ -243,12 +274,20 @@ alter table "public"."celebratory_events" enable row level security;
     "shift_time" text not null,
     "department_table" text
       );
-
+  END IF;
+END $$;
 
 alter table "public"."checklist_comments" enable row level security;
 
 
-  create table "public"."checklist_template_completions" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'checklist_template_completions'
+  ) THEN
+    CREATE TABLE "public"."checklist_template_completions" (
     "id" uuid not null default gen_random_uuid(),
     "item_id" uuid,
     "template_id" uuid,
@@ -263,12 +302,20 @@ alter table "public"."checklist_comments" enable row level security;
     "signature_data" text,
     "submitted_at" timestamp with time zone
       );
-
+  END IF;
+END $$;
 
 alter table "public"."checklist_template_completions" enable row level security;
 
 
-  create table "public"."checklist_template_items" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'checklist_template_items'
+  ) THEN
+    CREATE TABLE "public"."checklist_template_items" (
     "id" uuid not null default gen_random_uuid(),
     "template_id" uuid,
     "item_text" text not null,
@@ -276,12 +323,20 @@ alter table "public"."checklist_template_completions" enable row level security;
     "is_required" boolean default false,
     "created_at" timestamp with time zone default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."checklist_template_items" enable row level security;
 
 
-  create table "public"."concierge_drafts" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'concierge_drafts'
+  ) THEN
+    CREATE TABLE "public"."concierge_drafts" (
     "id" uuid not null default gen_random_uuid(),
     "report_date" date not null,
     "shift_time" text not null,
@@ -292,7 +347,8 @@ alter table "public"."checklist_template_items" enable row level security;
     "created_at" timestamp with time zone default now(),
     "updated_at" timestamp with time zone default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."concierge_drafts" enable row level security;
 
@@ -315,7 +371,14 @@ alter table "public"."concierge_drafts" enable row level security;
 alter table "public"."daily_schedules" enable row level security;
 
 
-  create table "public"."facility_issues_tracker" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'facility_issues_tracker'
+  ) THEN
+    CREATE TABLE "public"."facility_issues_tracker" (
     "id" uuid not null default gen_random_uuid(),
     "description" text not null,
     "photo_url" text,
@@ -328,12 +391,20 @@ alter table "public"."daily_schedules" enable row level security;
     "created_at" timestamp with time zone default now(),
     "updated_at" timestamp with time zone default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."facility_issues_tracker" enable row level security;
 
 
-  create table "public"."foh_questions" (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'foh_questions'
+  ) THEN
+    CREATE TABLE "public"."foh_questions" (
     "id" uuid not null default gen_random_uuid(),
     "issue_type" text not null,
     "description" text not null,
@@ -348,47 +419,238 @@ alter table "public"."facility_issues_tracker" enable row level security;
     "created_at" timestamp with time zone default now(),
     "updated_at" timestamp with time zone default now()
       );
-
+  END IF;
+END $$;
 
 alter table "public"."foh_questions" enable row level security;
 
-alter table "public"."arketa_classes" drop column "description";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes' 
+    AND column_name = 'description'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes" DROP COLUMN "description";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes" drop column "updated_at";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes" DROP COLUMN "updated_at";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "booked_count";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'booked_count'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "booked_count";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "class_date";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'class_date'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "class_date";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "duration_minutes";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'duration_minutes'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "duration_minutes";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "external_id";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'external_id'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "external_id";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "is_cancelled";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'is_cancelled'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "is_cancelled";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "name";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'name'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "name";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "room_name";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'room_name'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "room_name";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "synced_at";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'synced_at'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "synced_at";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" drop column "waitlist_count";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'waitlist_count'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" DROP COLUMN "waitlist_count";
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "arketa_class_id" text not null;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'arketa_class_id'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "arketa_class_id" text not null;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "class_name" text not null;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'class_name'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "class_name" text not null;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "cursor_position" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'cursor_position'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "cursor_position" text;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "end_time" timestamp with time zone;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'end_time'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "end_time" timestamp with time zone;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "enrolled" integer;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'enrolled'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "enrolled" integer;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "instructor_id" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'instructor_id'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "instructor_id" text;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "location" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'location'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "location" text;
+  END IF;
+END $$;
 
-alter table "public"."arketa_classes_staging" add column "signups" integer default 0;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'arketa_classes_staging' 
+    AND column_name = 'signups'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD COLUMN "signups" integer default 0;
+  END IF;
+END $$;
 
 alter table "public"."arketa_payments_staging" alter column "stripe_fees" set default 0;
 
@@ -408,201 +670,547 @@ alter table "public"."arketa_payments_staging" alter column "transaction_fees" s
 
 alter table "public"."arketa_payments_staging" alter column "transaction_fees" set data type numeric(12,2) using "transaction_fees"::numeric(12,2);
 
-alter table "public"."checklist_templates" add column "department" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'checklist_templates' 
+    AND column_name = 'department'
+  ) THEN
+    ALTER TABLE "public"."checklist_templates" ADD COLUMN "department" text;
+  END IF;
+END $$;
 
-alter table "public"."checklist_templates" add column "position" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'checklist_templates' 
+    AND column_name = 'position'
+  ) THEN
+    ALTER TABLE "public"."checklist_templates" ADD COLUMN "position" text;
+  END IF;
+END $$;
 
 alter table "public"."checklist_templates" alter column "role" drop not null;
 
-alter table "public"."daily_report_history" add column "celebratory_events_na" boolean default false;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_report_history' 
+    AND column_name = 'celebratory_events_na'
+  ) THEN
+    ALTER TABLE "public"."daily_report_history" ADD COLUMN "celebratory_events_na" boolean default false;
+  END IF;
+END $$;
 
-alter table "public"."daily_report_history" add column "future_shift_notes_na" boolean default false;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_report_history' 
+    AND column_name = 'future_shift_notes_na'
+  ) THEN
+    ALTER TABLE "public"."daily_report_history" ADD COLUMN "future_shift_notes_na" boolean default false;
+  END IF;
+END $$;
 
-alter table "public"."daily_report_history" add column "screenshot" text;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_report_history' 
+    AND column_name = 'screenshot'
+  ) THEN
+    ALTER TABLE "public"."daily_report_history" ADD COLUMN "screenshot" text;
+  END IF;
+END $$;
 
-alter table "public"."daily_report_history" add column "system_issues_na" boolean default false;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_report_history' 
+    AND column_name = 'system_issues_na'
+  ) THEN
+    ALTER TABLE "public"."daily_report_history" ADD COLUMN "system_issues_na" boolean default false;
+  END IF;
+END $$;
 
-alter table "public"."profiles" drop column "sling_id";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'profiles' 
+    AND column_name = 'sling_id'
+  ) THEN
+    ALTER TABLE "public"."profiles" DROP COLUMN "sling_id";
+  END IF;
+END $$;
 
 alter table "public"."staff_announcements" alter column "announcement_type" set default 'alert'::text;
 
 alter table "public"."staff_announcements" alter column "announcement_type" set data type text using "announcement_type"::text;
 
-alter table "public"."toast_sales" drop column "order_count";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'toast_sales' 
+    AND column_name = 'order_count'
+  ) THEN
+    ALTER TABLE "public"."toast_sales" DROP COLUMN "order_count";
+  END IF;
+END $$;
 
-alter table "public"."toast_sales" drop column "order_guid";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'toast_sales' 
+    AND column_name = 'order_guid'
+  ) THEN
+    ALTER TABLE "public"."toast_sales" DROP COLUMN "order_guid";
+  END IF;
+END $$;
 
-alter table "public"."toast_staging" drop column "order_guid";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'toast_staging' 
+    AND column_name = 'order_guid'
+  ) THEN
+    ALTER TABLE "public"."toast_staging" DROP COLUMN "order_guid";
+  END IF;
+END $$;
 
-drop type "public"."staff_announcement_type";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'staff_announcement_type'
+    AND n.nspname = 'public'
+  ) THEN
+    DROP TYPE "public"."staff_announcement_type";
+  END IF;
+END $$;
 
-CREATE UNIQUE INDEX announcement_reads_announcement_id_user_id_key ON public.announcement_reads USING btree (announcement_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS announcement_reads_announcement_id_user_id_key ON public.announcement_reads USING btree (announcement_id, user_id);
 
-CREATE UNIQUE INDEX announcement_reads_pkey ON public.announcement_reads USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS announcement_reads_pkey ON public.announcement_reads USING btree (id);
 
-CREATE UNIQUE INDEX announcements_pkey ON public.announcements USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS announcements_pkey ON public.announcements USING btree (id);
 
-CREATE UNIQUE INDEX arketa_classes_external_id_key ON public.arketa_classes USING btree (external_id);
+CREATE UNIQUE INDEX IF NOT EXISTS arketa_classes_external_id_key ON public.arketa_classes USING btree (external_id);
 
-CREATE UNIQUE INDEX arketa_classes_staging_arketa_class_id_sync_batch_id_key ON public.arketa_classes_staging USING btree (arketa_class_id, sync_batch_id);
+CREATE UNIQUE INDEX IF NOT EXISTS arketa_classes_staging_arketa_class_id_sync_batch_id_key ON public.arketa_classes_staging USING btree (arketa_class_id, sync_batch_id);
 
-CREATE UNIQUE INDEX celebratory_events_pkey ON public.celebratory_events USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS celebratory_events_pkey ON public.celebratory_events USING btree (id);
 
-CREATE UNIQUE INDEX checklist_comments_pkey ON public.checklist_comments USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_comments_pkey ON public.checklist_comments USING btree (id);
 
-CREATE UNIQUE INDEX checklist_template_completions_item_date_shift_key ON public.checklist_template_completions USING btree (item_id, completion_date, shift_time);
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_template_completions_item_date_shift_key ON public.checklist_template_completions USING btree (item_id, completion_date, shift_time);
 
-CREATE UNIQUE INDEX checklist_template_completions_pkey ON public.checklist_template_completions USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_template_completions_pkey ON public.checklist_template_completions USING btree (id);
 
-CREATE UNIQUE INDEX checklist_template_items_pkey ON public.checklist_template_items USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_template_items_pkey ON public.checklist_template_items USING btree (id);
 
-CREATE UNIQUE INDEX checklist_templates_dept_shift_pos_key ON public.checklist_templates USING btree (department, shift_time, "position");
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_templates_dept_shift_pos_key ON public.checklist_templates USING btree (department, shift_time, "position");
 
-CREATE UNIQUE INDEX concierge_drafts_pkey ON public.concierge_drafts USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS concierge_drafts_pkey ON public.concierge_drafts USING btree (id);
 
-CREATE UNIQUE INDEX concierge_drafts_report_date_shift_time_key ON public.concierge_drafts USING btree (report_date, shift_time);
+CREATE UNIQUE INDEX IF NOT EXISTS concierge_drafts_report_date_shift_time_key ON public.concierge_drafts USING btree (report_date, shift_time);
 
-CREATE UNIQUE INDEX daily_schedules_schedule_date_sling_user_id_shift_start_key ON public.daily_schedules USING btree (schedule_date, sling_user_id, shift_start);
+CREATE UNIQUE INDEX IF NOT EXISTS daily_schedules_schedule_date_sling_user_id_shift_start_key ON public.daily_schedules USING btree (schedule_date, sling_user_id, shift_start);
 
-CREATE UNIQUE INDEX facility_issues_tracker_pkey ON public.facility_issues_tracker USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS facility_issues_tracker_pkey ON public.facility_issues_tracker USING btree (id);
 
-CREATE UNIQUE INDEX foh_questions_pkey ON public.foh_questions USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS foh_questions_pkey ON public.foh_questions USING btree (id);
 
-CREATE INDEX idx_arketa_classes_staging_batch ON public.arketa_classes_staging USING btree (sync_batch_id);
+CREATE INDEX IF NOT EXISTS idx_arketa_classes_staging_batch ON public.arketa_classes_staging USING btree (sync_batch_id);
 
-CREATE INDEX idx_arketa_classes_staging_time ON public.arketa_classes_staging USING btree (start_time);
+CREATE INDEX IF NOT EXISTS idx_arketa_classes_staging_time ON public.arketa_classes_staging USING btree (start_time);
 
-CREATE INDEX idx_celebratory_events_date ON public.celebratory_events USING btree (event_date);
+CREATE INDEX IF NOT EXISTS idx_celebratory_events_date ON public.celebratory_events USING btree (event_date);
 
-CREATE INDEX idx_celebratory_events_reported ON public.celebratory_events USING btree (reported_date);
+CREATE INDEX IF NOT EXISTS idx_celebratory_events_reported ON public.celebratory_events USING btree (reported_date);
 
-CREATE INDEX idx_classes_staging_batch ON public.arketa_classes_staging USING btree (sync_batch_id);
+CREATE INDEX IF NOT EXISTS idx_classes_staging_batch ON public.arketa_classes_staging USING btree (sync_batch_id);
 
-CREATE INDEX idx_comments_dept_shift ON public.checklist_comments USING btree (department_table, shift_time, completion_date);
+CREATE INDEX IF NOT EXISTS idx_comments_dept_shift ON public.checklist_comments USING btree (department_table, shift_time, completion_date);
 
-CREATE INDEX idx_comments_dept_table ON public.checklist_comments USING btree (department_table, completion_date);
+CREATE INDEX IF NOT EXISTS idx_comments_dept_table ON public.checklist_comments USING btree (department_table, completion_date);
 
-CREATE INDEX idx_completions_photo ON public.checklist_template_completions USING btree (photo_url) WHERE (photo_url IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_completions_photo ON public.checklist_template_completions USING btree (photo_url) WHERE (photo_url IS NOT NULL);
 
-CREATE INDEX idx_completions_shift ON public.checklist_template_completions USING btree (shift_time);
+CREATE INDEX IF NOT EXISTS idx_completions_shift ON public.checklist_template_completions USING btree (shift_time);
 
-CREATE INDEX idx_completions_submitted ON public.checklist_template_completions USING btree (submitted_at);
+CREATE INDEX IF NOT EXISTS idx_completions_submitted ON public.checklist_template_completions USING btree (submitted_at);
 
-CREATE INDEX idx_concierge_drafts_date_shift ON public.concierge_drafts USING btree (report_date, shift_time);
-
-CREATE INDEX idx_concierge_drafts_updated ON public.concierge_drafts USING btree (updated_at DESC);
-
-CREATE INDEX idx_daily_report_history_status ON public.daily_report_history USING btree (status);
-
-CREATE INDEX idx_daily_schedules_date ON public.daily_schedules USING btree (schedule_date);
-
-CREATE INDEX idx_daily_schedules_user ON public.daily_schedules USING btree (sling_user_id);
-
-CREATE INDEX idx_deletion_queue_processed ON public.storage_deletion_queue USING btree (processed_at) WHERE (processed_at IS NOT NULL);
-
-CREATE INDEX idx_facility_issues_date ON public.facility_issues_tracker USING btree (reported_date DESC);
-
-CREATE UNIQUE INDEX idx_facility_issues_dedup ON public.facility_issues_tracker USING btree (description, reported_date) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]));
-
-CREATE INDEX idx_facility_issues_status ON public.facility_issues_tracker USING btree (status);
-
-CREATE INDEX idx_foh_questions_date ON public.foh_questions USING btree (reported_date DESC);
-
-CREATE INDEX idx_foh_questions_resolved ON public.foh_questions USING btree (resolved);
-
-CREATE INDEX idx_foh_questions_type ON public.foh_questions USING btree (issue_type);
-
-CREATE UNIQUE INDEX toast_sales_business_date_key ON public.toast_sales USING btree (business_date);
-
-CREATE UNIQUE INDEX toast_staging_business_date_sync_batch_id_key ON public.toast_staging USING btree (business_date, sync_batch_id);
-
-CREATE UNIQUE INDEX daily_schedules_pkey ON public.daily_schedules USING btree (id);
-
-alter table "public"."announcement_reads" add constraint "announcement_reads_pkey" PRIMARY KEY using index "announcement_reads_pkey";
-
-alter table "public"."announcements" add constraint "announcements_pkey" PRIMARY KEY using index "announcements_pkey";
-
-alter table "public"."celebratory_events" add constraint "celebratory_events_pkey" PRIMARY KEY using index "celebratory_events_pkey";
-
-alter table "public"."checklist_comments" add constraint "checklist_comments_pkey" PRIMARY KEY using index "checklist_comments_pkey";
-
-alter table "public"."checklist_template_completions" add constraint "checklist_template_completions_pkey" PRIMARY KEY using index "checklist_template_completions_pkey";
-
-alter table "public"."checklist_template_items" add constraint "checklist_template_items_pkey" PRIMARY KEY using index "checklist_template_items_pkey";
-
-alter table "public"."concierge_drafts" add constraint "concierge_drafts_pkey" PRIMARY KEY using index "concierge_drafts_pkey";
-
-alter table "public"."daily_schedules" add constraint "daily_schedules_pkey" PRIMARY KEY using index "daily_schedules_pkey";
-
-alter table "public"."facility_issues_tracker" add constraint "facility_issues_tracker_pkey" PRIMARY KEY using index "facility_issues_tracker_pkey";
-
-alter table "public"."foh_questions" add constraint "foh_questions_pkey" PRIMARY KEY using index "foh_questions_pkey";
-
-alter table "public"."announcement_reads" add constraint "announcement_reads_announcement_id_fkey" FOREIGN KEY (announcement_id) REFERENCES public.announcements(id) ON DELETE CASCADE not valid;
-
-alter table "public"."announcement_reads" validate constraint "announcement_reads_announcement_id_fkey";
-
-alter table "public"."announcement_reads" add constraint "announcement_reads_announcement_id_user_id_key" UNIQUE using index "announcement_reads_announcement_id_user_id_key";
-
-alter table "public"."arketa_classes" add constraint "arketa_classes_external_id_key" UNIQUE using index "arketa_classes_external_id_key";
-
-alter table "public"."arketa_classes_staging" add constraint "arketa_classes_staging_arketa_class_id_sync_batch_id_key" UNIQUE using index "arketa_classes_staging_arketa_class_id_sync_batch_id_key";
-
-alter table "public"."celebratory_events" add constraint "celebratory_events_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
-
-alter table "public"."celebratory_events" validate constraint "celebratory_events_shift_type_check";
-
-alter table "public"."checklist_comments" add constraint "checklist_comments_target_check" CHECK (((checklist_id IS NOT NULL) OR (item_id IS NOT NULL) OR (completion_id IS NOT NULL) OR (department_table IS NOT NULL))) not valid;
-
-alter table "public"."checklist_comments" validate constraint "checklist_comments_target_check";
-
-alter table "public"."checklist_template_completions" add constraint "checklist_template_completions_item_date_shift_key" UNIQUE using index "checklist_template_completions_item_date_shift_key";
-
-alter table "public"."checklist_template_completions" add constraint "checklist_template_completions_item_id_fkey" FOREIGN KEY (item_id) REFERENCES public.checklist_template_items(id) ON DELETE CASCADE not valid;
-
-alter table "public"."checklist_template_completions" validate constraint "checklist_template_completions_item_id_fkey";
-
-alter table "public"."checklist_template_completions" add constraint "checklist_template_completions_template_id_fkey" FOREIGN KEY (template_id) REFERENCES public.checklist_templates(id) ON DELETE CASCADE not valid;
-
-alter table "public"."checklist_template_completions" validate constraint "checklist_template_completions_template_id_fkey";
-
-alter table "public"."checklist_template_items" add constraint "checklist_template_items_template_id_fkey" FOREIGN KEY (template_id) REFERENCES public.checklist_templates(id) ON DELETE CASCADE not valid;
-
-alter table "public"."checklist_template_items" validate constraint "checklist_template_items_template_id_fkey";
-
-alter table "public"."checklist_templates" add constraint "checklist_templates_dept_shift_pos_key" UNIQUE using index "checklist_templates_dept_shift_pos_key";
-
-alter table "public"."concierge_drafts" add constraint "concierge_drafts_report_date_shift_time_key" UNIQUE using index "concierge_drafts_report_date_shift_time_key";
-
-alter table "public"."concierge_drafts" add constraint "concierge_drafts_shift_time_check" CHECK ((shift_time = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
-
-alter table "public"."concierge_drafts" validate constraint "concierge_drafts_shift_time_check";
-
-alter table "public"."daily_schedules" add constraint "daily_schedules_schedule_date_sling_user_id_shift_start_key" UNIQUE using index "daily_schedules_schedule_date_sling_user_id_shift_start_key";
-
-alter table "public"."facility_issues_tracker" add constraint "facility_issues_tracker_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
-
-alter table "public"."facility_issues_tracker" validate constraint "facility_issues_tracker_shift_type_check";
-
-alter table "public"."facility_issues_tracker" add constraint "facility_issues_tracker_status_check" CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'resolved'::text, 'closed'::text]))) not valid;
-
-alter table "public"."facility_issues_tracker" validate constraint "facility_issues_tracker_status_check";
-
-alter table "public"."foh_questions" add constraint "foh_questions_issue_type_check" CHECK ((issue_type = ANY (ARRAY['arketa'::text, 'jolt'::text, 'database'::text, 'question'::text, 'other'::text]))) not valid;
-
-alter table "public"."foh_questions" validate constraint "foh_questions_issue_type_check";
-
-alter table "public"."foh_questions" add constraint "foh_questions_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
-
-alter table "public"."foh_questions" validate constraint "foh_questions_shift_type_check";
-
-alter table "public"."toast_sales" add constraint "toast_sales_business_date_key" UNIQUE using index "toast_sales_business_date_key";
-
-alter table "public"."toast_staging" add constraint "toast_staging_business_date_sync_batch_id_key" UNIQUE using index "toast_staging_business_date_sync_batch_id_key";
-
-alter table "public"."backfill_jobs" add constraint "valid_api_source" CHECK ((api_source = ANY (ARRAY['arketa'::text, 'sling'::text]))) not valid;
-
-alter table "public"."backfill_jobs" validate constraint "valid_api_source";
+CREATE INDEX IF NOT EXISTS idx_concierge_drafts_date_shift ON public.concierge_drafts USING btree (report_date, shift_time);
+
+CREATE INDEX IF NOT EXISTS idx_concierge_drafts_updated ON public.concierge_drafts USING btree (updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_daily_report_history_status ON public.daily_report_history USING btree (status);
+
+CREATE INDEX IF NOT EXISTS idx_daily_schedules_date ON public.daily_schedules USING btree (schedule_date);
+
+CREATE INDEX IF NOT EXISTS idx_daily_schedules_user ON public.daily_schedules USING btree (sling_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_deletion_queue_processed ON public.storage_deletion_queue USING btree (processed_at) WHERE (processed_at IS NOT NULL);
+
+CREATE INDEX IF NOT EXISTS idx_facility_issues_date ON public.facility_issues_tracker USING btree (reported_date DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_facility_issues_dedup ON public.facility_issues_tracker USING btree (description, reported_date) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]));
+
+CREATE INDEX IF NOT EXISTS idx_facility_issues_status ON public.facility_issues_tracker USING btree (status);
+
+CREATE INDEX IF NOT EXISTS idx_foh_questions_date ON public.foh_questions USING btree (reported_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_foh_questions_resolved ON public.foh_questions USING btree (resolved);
+
+CREATE INDEX IF NOT EXISTS idx_foh_questions_type ON public.foh_questions USING btree (issue_type);
+
+CREATE UNIQUE INDEX IF NOT EXISTS toast_sales_business_date_key ON public.toast_sales USING btree (business_date);
+
+CREATE UNIQUE INDEX IF NOT EXISTS toast_staging_business_date_sync_batch_id_key ON public.toast_staging USING btree (business_date, sync_batch_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS daily_schedules_pkey ON public.daily_schedules USING btree (id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'announcement_reads_pkey'
+  ) THEN
+    ALTER TABLE "public"."announcement_reads" ADD CONSTRAINT "announcement_reads_pkey" PRIMARY KEY USING INDEX "announcement_reads_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'announcements_pkey'
+  ) THEN
+    ALTER TABLE "public"."announcements" ADD CONSTRAINT "announcements_pkey" PRIMARY KEY USING INDEX "announcements_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'celebratory_events_pkey'
+  ) THEN
+    ALTER TABLE "public"."celebratory_events" ADD CONSTRAINT "celebratory_events_pkey" PRIMARY KEY USING INDEX "celebratory_events_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_comments_pkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_comments" ADD CONSTRAINT "checklist_comments_pkey" PRIMARY KEY USING INDEX "checklist_comments_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_completions_pkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_completions" ADD CONSTRAINT "checklist_template_completions_pkey" PRIMARY KEY USING INDEX "checklist_template_completions_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_items_pkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_items" ADD CONSTRAINT "checklist_template_items_pkey" PRIMARY KEY USING INDEX "checklist_template_items_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'concierge_drafts_pkey'
+  ) THEN
+    ALTER TABLE "public"."concierge_drafts" ADD CONSTRAINT "concierge_drafts_pkey" PRIMARY KEY USING INDEX "concierge_drafts_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'daily_schedules_pkey'
+  ) THEN
+    ALTER TABLE "public"."daily_schedules" ADD CONSTRAINT "daily_schedules_pkey" PRIMARY KEY USING INDEX "daily_schedules_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'facility_issues_tracker_pkey'
+  ) THEN
+    ALTER TABLE "public"."facility_issues_tracker" ADD CONSTRAINT "facility_issues_tracker_pkey" PRIMARY KEY USING INDEX "facility_issues_tracker_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'foh_questions_pkey'
+  ) THEN
+    ALTER TABLE "public"."foh_questions" ADD CONSTRAINT "foh_questions_pkey" PRIMARY KEY USING INDEX "foh_questions_pkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'announcement_reads_announcement_id_fkey'
+  ) THEN
+    ALTER TABLE "public"."announcement_reads" ADD CONSTRAINT "announcement_reads_announcement_id_fkey" FOREIGN KEY (announcement_id) REFERENCES public.announcements(id) ON DELETE CASCADE not valid;
+    ALTER TABLE "public"."announcement_reads" VALIDATE CONSTRAINT "announcement_reads_announcement_id_fkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'announcement_reads_announcement_id_user_id_key'
+  ) THEN
+    ALTER TABLE "public"."announcement_reads" ADD CONSTRAINT "announcement_reads_announcement_id_user_id_key" UNIQUE using index "announcement_reads_announcement_id_user_id_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'arketa_classes_external_id_key'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes" ADD CONSTRAINT "arketa_classes_external_id_key" UNIQUE using index "arketa_classes_external_id_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'arketa_classes_staging_arketa_class_id_sync_batch_id_key'
+  ) THEN
+    ALTER TABLE "public"."arketa_classes_staging" ADD CONSTRAINT "arketa_classes_staging_arketa_class_id_sync_batch_id_key" UNIQUE using index "arketa_classes_staging_arketa_class_id_sync_batch_id_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'celebratory_events_shift_type_check'
+  ) THEN
+    ALTER TABLE "public"."celebratory_events" ADD CONSTRAINT "celebratory_events_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
+    ALTER TABLE "public"."celebratory_events" VALIDATE CONSTRAINT "celebratory_events_shift_type_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_comments_target_check'
+  ) THEN
+    ALTER TABLE "public"."checklist_comments" ADD CONSTRAINT "checklist_comments_target_check" CHECK (((checklist_id IS NOT NULL) OR (item_id IS NOT NULL) OR (completion_id IS NOT NULL) OR (department_table IS NOT NULL))) not valid;
+    ALTER TABLE "public"."checklist_comments" VALIDATE CONSTRAINT "checklist_comments_target_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_completions_item_date_shift_key'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_completions" ADD CONSTRAINT "checklist_template_completions_item_date_shift_key" UNIQUE using index "checklist_template_completions_item_date_shift_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_completions_item_id_fkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_completions" ADD CONSTRAINT "checklist_template_completions_item_id_fkey" FOREIGN KEY (item_id) REFERENCES public.checklist_template_items(id) ON DELETE CASCADE not valid;
+    ALTER TABLE "public"."checklist_template_completions" VALIDATE CONSTRAINT "checklist_template_completions_item_id_fkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_completions_template_id_fkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_completions" ADD CONSTRAINT "checklist_template_completions_template_id_fkey" FOREIGN KEY (template_id) REFERENCES public.checklist_templates(id) ON DELETE CASCADE not valid;
+    ALTER TABLE "public"."checklist_template_completions" VALIDATE CONSTRAINT "checklist_template_completions_template_id_fkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_template_items_template_id_fkey'
+  ) THEN
+    ALTER TABLE "public"."checklist_template_items" ADD CONSTRAINT "checklist_template_items_template_id_fkey" FOREIGN KEY (template_id) REFERENCES public.checklist_templates(id) ON DELETE CASCADE not valid;
+    ALTER TABLE "public"."checklist_template_items" VALIDATE CONSTRAINT "checklist_template_items_template_id_fkey";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'checklist_templates_dept_shift_pos_key'
+  ) THEN
+    ALTER TABLE "public"."checklist_templates" ADD CONSTRAINT "checklist_templates_dept_shift_pos_key" UNIQUE using index "checklist_templates_dept_shift_pos_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'concierge_drafts_report_date_shift_time_key'
+  ) THEN
+    ALTER TABLE "public"."concierge_drafts" ADD CONSTRAINT "concierge_drafts_report_date_shift_time_key" UNIQUE using index "concierge_drafts_report_date_shift_time_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'concierge_drafts_shift_time_check'
+  ) THEN
+    ALTER TABLE "public"."concierge_drafts" ADD CONSTRAINT "concierge_drafts_shift_time_check" CHECK ((shift_time = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
+    ALTER TABLE "public"."concierge_drafts" VALIDATE CONSTRAINT "concierge_drafts_shift_time_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'daily_schedules_schedule_date_sling_user_id_shift_start_key'
+  ) THEN
+    ALTER TABLE "public"."daily_schedules" ADD CONSTRAINT "daily_schedules_schedule_date_sling_user_id_shift_start_key" UNIQUE using index "daily_schedules_schedule_date_sling_user_id_shift_start_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'facility_issues_tracker_shift_type_check'
+  ) THEN
+    ALTER TABLE "public"."facility_issues_tracker" ADD CONSTRAINT "facility_issues_tracker_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
+    ALTER TABLE "public"."facility_issues_tracker" VALIDATE CONSTRAINT "facility_issues_tracker_shift_type_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'facility_issues_tracker_status_check'
+  ) THEN
+    ALTER TABLE "public"."facility_issues_tracker" ADD CONSTRAINT "facility_issues_tracker_status_check" CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'resolved'::text, 'closed'::text]))) not valid;
+    ALTER TABLE "public"."facility_issues_tracker" VALIDATE CONSTRAINT "facility_issues_tracker_status_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'foh_questions_issue_type_check'
+  ) THEN
+    ALTER TABLE "public"."foh_questions" ADD CONSTRAINT "foh_questions_issue_type_check" CHECK ((issue_type = ANY (ARRAY['arketa'::text, 'jolt'::text, 'database'::text, 'question'::text, 'other'::text]))) not valid;
+    ALTER TABLE "public"."foh_questions" VALIDATE CONSTRAINT "foh_questions_issue_type_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'foh_questions_shift_type_check'
+  ) THEN
+    ALTER TABLE "public"."foh_questions" ADD CONSTRAINT "foh_questions_shift_type_check" CHECK ((shift_type = ANY (ARRAY['AM'::text, 'PM'::text]))) not valid;
+    ALTER TABLE "public"."foh_questions" VALIDATE CONSTRAINT "foh_questions_shift_type_check";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'toast_sales_business_date_key'
+  ) THEN
+    ALTER TABLE "public"."toast_sales" ADD CONSTRAINT "toast_sales_business_date_key" UNIQUE using index "toast_sales_business_date_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'toast_staging_business_date_sync_batch_id_key'
+  ) THEN
+    ALTER TABLE "public"."toast_staging" ADD CONSTRAINT "toast_staging_business_date_sync_batch_id_key" UNIQUE using index "toast_staging_business_date_sync_batch_id_key";
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'valid_api_source'
+  ) THEN
+    ALTER TABLE "public"."backfill_jobs" ADD CONSTRAINT "valid_api_source" CHECK ((api_source = ANY (ARRAY['arketa'::text, 'sling'::text]))) not valid;
+    ALTER TABLE "public"."backfill_jobs" VALIDATE CONSTRAINT "valid_api_source";
+  END IF;
+END $$;
 
 set check_function_bodies = off;
 
@@ -1185,308 +1793,628 @@ grant truncate on table "public"."foh_questions" to "service_role";
 grant update on table "public"."foh_questions" to "service_role";
 
 
-  create policy "Users can delete their own read status"
-  on "public"."announcement_reads"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcement_reads'
+    AND policyname = 'Users can delete their own read status'
+  ) THEN
+    CREATE POLICY "Users can delete their own read status"
+    ON "public"."announcement_reads"
+as permissive
   for delete
   to public
 using ((user_id = auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Users can mark announcements as read"
-  on "public"."announcement_reads"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcement_reads'
+    AND policyname = 'Users can mark announcements as read'
+  ) THEN
+    CREATE POLICY "Users can mark announcements as read"
+    ON "public"."announcement_reads"
+as permissive
   for insert
   to public
 with check ((user_id = auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Users can view their own read status"
-  on "public"."announcement_reads"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcement_reads'
+    AND policyname = 'Users can view their own read status'
+  ) THEN
+    CREATE POLICY "Users can view their own read status"
+    ON "public"."announcement_reads"
+as permissive
   for select
   to public
 using ((user_id = auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Creators can delete their announcements"
-  on "public"."announcements"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcements'
+    AND policyname = 'Creators can delete their announcements'
+  ) THEN
+    CREATE POLICY "Creators can delete their announcements"
+    ON "public"."announcements"
+as permissive
   for delete
   to public
 using (((created_by = auth.uid()) AND public.is_manager_or_admin(auth.uid())));
+  END IF;
+END $$;
 
 
 
-  create policy "Creators can update their announcements"
-  on "public"."announcements"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcements'
+    AND policyname = 'Creators can update their announcements'
+  ) THEN
+    CREATE POLICY "Creators can update their announcements"
+    ON "public"."announcements"
+as permissive
   for update
   to public
 using (((created_by = auth.uid()) AND public.is_manager_or_admin(auth.uid())));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can create announcements"
-  on "public"."announcements"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcements'
+    AND policyname = 'Managers can create announcements'
+  ) THEN
+    CREATE POLICY "Managers can create announcements"
+    ON "public"."announcements"
+as permissive
   for insert
   to public
 with check ((public.is_manager_or_admin(auth.uid()) AND (created_by = auth.uid())));
+  END IF;
+END $$;
 
 
 
-  create policy "Users can view announcements for their roles"
-  on "public"."announcements"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'announcements'
+    AND policyname = 'Users can view announcements for their roles'
+  ) THEN
+    CREATE POLICY "Users can view announcements for their roles"
+    ON "public"."announcements"
+as permissive
   for select
   to public
 using ((public.is_manager_or_admin(auth.uid()) OR public.user_has_any_role(auth.uid(), target_roles)));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can create celebratory events"
-  on "public"."celebratory_events"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'celebratory_events'
+    AND policyname = 'Concierges can create celebratory events'
+  ) THEN
+    CREATE POLICY "Concierges can create celebratory events"
+    ON "public"."celebratory_events"
+as permissive
   for insert
   to public
 with check (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can view celebratory events"
-  on "public"."celebratory_events"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'celebratory_events'
+    AND policyname = 'Concierges can view celebratory events'
+  ) THEN
+    CREATE POLICY "Concierges can view celebratory events"
+    ON "public"."celebratory_events"
+as permissive
   for select
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage celebratory events"
-  on "public"."celebratory_events"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'celebratory_events'
+    AND policyname = 'Managers can manage celebratory events'
+  ) THEN
+    CREATE POLICY "Managers can manage celebratory events"
+    ON "public"."celebratory_events"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers and admins can delete comments"
-  on "public"."checklist_comments"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_comments'
+    AND policyname = 'Managers and admins can delete comments'
+  ) THEN
+    CREATE POLICY "Managers and admins can delete comments"
+    ON "public"."checklist_comments"
+as permissive
   for delete
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Users can create comments"
-  on "public"."checklist_comments"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_comments'
+    AND policyname = 'Users can create comments'
+  ) THEN
+    CREATE POLICY "Users can create comments"
+    ON "public"."checklist_comments"
+as permissive
   for insert
   to public
 with check (((auth.uid() = staff_id) AND (auth.uid() IN ( SELECT user_roles.user_id
    FROM public.user_roles
   WHERE (user_roles.role = ANY (ARRAY['concierge'::public.app_role, 'floater'::public.app_role, 'male_spa_attendant'::public.app_role, 'female_spa_attendant'::public.app_role, 'cafe'::public.app_role, 'manager'::public.app_role, 'admin'::public.app_role]))))));
+  END IF;
+END $$;
 
 
 
-  create policy "Users can view non-private comments"
-  on "public"."checklist_comments"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_comments'
+    AND policyname = 'Users can view non-private comments'
+  ) THEN
+    CREATE POLICY "Users can view non-private comments"
+    ON "public"."checklist_comments"
+as permissive
   for select
   to public
 using (((NOT is_private) OR (auth.uid() IN ( SELECT user_roles.user_id
    FROM public.user_roles
   WHERE (user_roles.role = ANY (ARRAY['manager'::public.app_role, 'admin'::public.app_role]))))));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage all completions"
-  on "public"."checklist_template_completions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_completions'
+    AND policyname = 'Managers can manage all completions'
+  ) THEN
+    CREATE POLICY "Managers can manage all completions"
+    ON "public"."checklist_template_completions"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Staff can create their own completions"
-  on "public"."checklist_template_completions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_completions'
+    AND policyname = 'Staff can create their own completions'
+  ) THEN
+    CREATE POLICY "Staff can create their own completions"
+    ON "public"."checklist_template_completions"
+as permissive
   for insert
   to public
 with check ((completed_by_id = auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Staff can update their own completions"
-  on "public"."checklist_template_completions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_completions'
+    AND policyname = 'Staff can update their own completions'
+  ) THEN
+    CREATE POLICY "Staff can update their own completions"
+    ON "public"."checklist_template_completions"
+as permissive
   for update
   to public
 using ((completed_by_id = auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Staff can view completions"
-  on "public"."checklist_template_completions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_completions'
+    AND policyname = 'Staff can view completions'
+  ) THEN
+    CREATE POLICY "Staff can view completions"
+    ON "public"."checklist_template_completions"
+as permissive
   for select
   to public
 using ((auth.uid() IS NOT NULL));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage checklist template items"
-  on "public"."checklist_template_items"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_items'
+    AND policyname = 'Managers can manage checklist template items'
+  ) THEN
+    CREATE POLICY "Managers can manage checklist template items"
+    ON "public"."checklist_template_items"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Staff can view checklist template items"
-  on "public"."checklist_template_items"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'checklist_template_items'
+    AND policyname = 'Staff can view checklist template items'
+  ) THEN
+    CREATE POLICY "Staff can view checklist template items"
+    ON "public"."checklist_template_items"
+as permissive
   for select
   to public
 using ((EXISTS ( SELECT 1
    FROM public.checklist_templates ct
   WHERE ((ct.id = checklist_template_items.template_id) AND (ct.is_active = true)))));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can delete drafts"
-  on "public"."concierge_drafts"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'concierge_drafts'
+    AND policyname = 'Concierges can delete drafts'
+  ) THEN
+    CREATE POLICY "Concierges can delete drafts"
+    ON "public"."concierge_drafts"
+as permissive
   for delete
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can insert drafts"
-  on "public"."concierge_drafts"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'concierge_drafts'
+    AND policyname = 'Concierges can insert drafts'
+  ) THEN
+    CREATE POLICY "Concierges can insert drafts"
+    ON "public"."concierge_drafts"
+as permissive
   for insert
   to public
 with check (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can read drafts"
-  on "public"."concierge_drafts"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'concierge_drafts'
+    AND policyname = 'Concierges can read drafts'
+  ) THEN
+    CREATE POLICY "Concierges can read drafts"
+    ON "public"."concierge_drafts"
+as permissive
   for select
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can update drafts"
-  on "public"."concierge_drafts"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'concierge_drafts'
+    AND policyname = 'Concierges can update drafts'
+  ) THEN
+    CREATE POLICY "Concierges can update drafts"
+    ON "public"."concierge_drafts"
+as permissive
   for update
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage all drafts"
-  on "public"."concierge_drafts"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'concierge_drafts'
+    AND policyname = 'Managers can manage all drafts'
+  ) THEN
+    CREATE POLICY "Managers can manage all drafts"
+    ON "public"."concierge_drafts"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can view daily_schedules"
-  on "public"."daily_schedules"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'daily_schedules'
+    AND policyname = 'Concierges can view daily_schedules'
+  ) THEN
+    CREATE POLICY "Concierges can view daily_schedules"
+    ON "public"."daily_schedules"
+as permissive
   for select
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage daily_schedules"
-  on "public"."daily_schedules"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'daily_schedules'
+    AND policyname = 'Managers can manage daily_schedules'
+  ) THEN
+    CREATE POLICY "Managers can manage daily_schedules"
+    ON "public"."daily_schedules"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can create facility issues"
-  on "public"."facility_issues_tracker"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'facility_issues_tracker'
+    AND policyname = 'Concierges can create facility issues'
+  ) THEN
+    CREATE POLICY "Concierges can create facility issues"
+    ON "public"."facility_issues_tracker"
+as permissive
   for insert
   to public
 with check (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can view facility issues"
-  on "public"."facility_issues_tracker"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'facility_issues_tracker'
+    AND policyname = 'Concierges can view facility issues'
+  ) THEN
+    CREATE POLICY "Concierges can view facility issues"
+    ON "public"."facility_issues_tracker"
+as permissive
   for select
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage facility issues"
-  on "public"."facility_issues_tracker"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'facility_issues_tracker'
+    AND policyname = 'Managers can manage facility issues'
+  ) THEN
+    CREATE POLICY "Managers can manage facility issues"
+    ON "public"."facility_issues_tracker"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can create FOH questions"
-  on "public"."foh_questions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'foh_questions'
+    AND policyname = 'Concierges can create FOH questions'
+  ) THEN
+    CREATE POLICY "Concierges can create FOH questions"
+    ON "public"."foh_questions"
+as permissive
   for insert
   to public
 with check (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Concierges can view FOH questions"
-  on "public"."foh_questions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'foh_questions'
+    AND policyname = 'Concierges can view FOH questions'
+  ) THEN
+    CREATE POLICY "Concierges can view FOH questions"
+    ON "public"."foh_questions"
+as permissive
   for select
   to public
 using (public.user_has_role(auth.uid(), 'concierge'::public.app_role));
+  END IF;
+END $$;
 
 
 
-  create policy "Managers can manage FOH questions"
-  on "public"."foh_questions"
-  as permissive
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'foh_questions'
+    AND policyname = 'Managers can manage FOH questions'
+  ) THEN
+    CREATE POLICY "Managers can manage FOH questions"
+    ON "public"."foh_questions"
+as permissive
   for all
   to public
 using (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 
-CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON public.announcements FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_announcements_updated_at BEFORE UPDATE ON public.announcements FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER trigger_queue_photo_on_delete BEFORE DELETE ON public.checklist_template_completions FOR EACH ROW EXECUTE FUNCTION public.queue_photo_deletion();
+CREATE OR REPLACE TRIGGER trigger_queue_photo_on_delete BEFORE DELETE ON public.checklist_template_completions FOR EACH ROW EXECUTE FUNCTION public.queue_photo_deletion();
 
-CREATE TRIGGER increment_draft_version_trigger BEFORE UPDATE ON public.concierge_drafts FOR EACH ROW EXECUTE FUNCTION public.increment_draft_version();
+CREATE OR REPLACE TRIGGER increment_draft_version_trigger BEFORE UPDATE ON public.concierge_drafts FOR EACH ROW EXECUTE FUNCTION public.increment_draft_version();
 
-CREATE TRIGGER update_facility_issues_updated_at BEFORE UPDATE ON public.facility_issues_tracker FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_facility_issues_updated_at BEFORE UPDATE ON public.facility_issues_tracker FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER update_foh_questions_updated_at BEFORE UPDATE ON public.foh_questions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_foh_questions_updated_at BEFORE UPDATE ON public.foh_questions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 drop policy "Authenticated users can upload checklist photos" on "storage"."objects";
 
@@ -1496,8 +2424,20 @@ drop policy "Managers can delete checklist photos" on "storage"."objects";
 
 drop policy "Users can update their own checklist photos" on "storage"."objects";
 
-CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
-
-CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'protect_delete'
+    AND n.nspname = 'storage'
+  ) THEN
+    DROP TRIGGER IF EXISTS protect_buckets_delete ON storage.buckets;
+    CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+    
+    DROP TRIGGER IF EXISTS protect_objects_delete ON storage.objects;
+    CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+  END IF;
+END $$;
 
 

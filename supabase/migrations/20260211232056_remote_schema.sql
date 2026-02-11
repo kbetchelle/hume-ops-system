@@ -10,99 +10,96 @@ drop trigger if exists "update_daily_schedule_updated_at" on "public"."daily_sch
 
 drop trigger if exists "trg_auto_mark_old_announcements_read" on "public"."profiles";
 
-drop policy "Managers can view api_sync_skipped_records" on "public"."api_sync_skipped_records";
+-- Conditional drop policy for api_sync_skipped_records if table exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'api_sync_skipped_records'
+  ) THEN
+    drop policy if exists "Managers can view api_sync_skipped_records" on "public"."api_sync_skipped_records";
+  END IF;
+END $$;
 
-drop policy "Allow authenticated read" on "public"."daily_schedule";
+-- Conditional drop policies for daily_schedule if table exists  
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule'
+  ) THEN
+    drop policy if exists "Allow authenticated read" on "public"."daily_schedule";
+    drop policy if exists "Allow service role full access" on "public"."daily_schedule";
+    drop policy if exists "Concierges can view daily_schedule" on "public"."daily_schedule";
+    drop policy if exists "Managers can manage daily_schedule" on "public"."daily_schedule";
+  END IF;
+END $$;
 
-drop policy "Allow service role full access" on "public"."daily_schedule";
+-- Conditional revoke for api_sync_skipped_records if table exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'api_sync_skipped_records'
+  ) THEN
+    revoke delete on table "public"."api_sync_skipped_records" from "anon";
+    revoke insert on table "public"."api_sync_skipped_records" from "anon";
+    revoke references on table "public"."api_sync_skipped_records" from "anon";
+    revoke select on table "public"."api_sync_skipped_records" from "anon";
+    revoke trigger on table "public"."api_sync_skipped_records" from "anon";
+    revoke truncate on table "public"."api_sync_skipped_records" from "anon";
+    revoke update on table "public"."api_sync_skipped_records" from "anon";
+    revoke delete on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke insert on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke references on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke select on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke trigger on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke truncate on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke update on table "public"."api_sync_skipped_records" from "authenticated";
+    revoke delete on table "public"."api_sync_skipped_records" from "service_role";
+    revoke insert on table "public"."api_sync_skipped_records" from "service_role";
+    revoke references on table "public"."api_sync_skipped_records" from "service_role";
+    revoke select on table "public"."api_sync_skipped_records" from "service_role";
+    revoke trigger on table "public"."api_sync_skipped_records" from "service_role";
+    revoke truncate on table "public"."api_sync_skipped_records" from "service_role";
+    revoke update on table "public"."api_sync_skipped_records" from "service_role";
+  END IF;
+END $$;
 
-drop policy "Concierges can view daily_schedule" on "public"."daily_schedule";
-
-drop policy "Managers can manage daily_schedule" on "public"."daily_schedule";
-
-revoke delete on table "public"."api_sync_skipped_records" from "anon";
-
-revoke insert on table "public"."api_sync_skipped_records" from "anon";
-
-revoke references on table "public"."api_sync_skipped_records" from "anon";
-
-revoke select on table "public"."api_sync_skipped_records" from "anon";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "anon";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "anon";
-
-revoke update on table "public"."api_sync_skipped_records" from "anon";
-
-revoke delete on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke insert on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke references on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke select on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke update on table "public"."api_sync_skipped_records" from "authenticated";
-
-revoke delete on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke insert on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke references on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke select on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke trigger on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke truncate on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke update on table "public"."api_sync_skipped_records" from "service_role";
-
-revoke delete on table "public"."daily_schedule" from "anon";
-
-revoke insert on table "public"."daily_schedule" from "anon";
-
-revoke references on table "public"."daily_schedule" from "anon";
-
-revoke select on table "public"."daily_schedule" from "anon";
-
-revoke trigger on table "public"."daily_schedule" from "anon";
-
-revoke truncate on table "public"."daily_schedule" from "anon";
-
-revoke update on table "public"."daily_schedule" from "anon";
-
-revoke delete on table "public"."daily_schedule" from "authenticated";
-
-revoke insert on table "public"."daily_schedule" from "authenticated";
-
-revoke references on table "public"."daily_schedule" from "authenticated";
-
-revoke select on table "public"."daily_schedule" from "authenticated";
-
-revoke trigger on table "public"."daily_schedule" from "authenticated";
-
-revoke truncate on table "public"."daily_schedule" from "authenticated";
-
-revoke update on table "public"."daily_schedule" from "authenticated";
-
-revoke delete on table "public"."daily_schedule" from "service_role";
-
-revoke insert on table "public"."daily_schedule" from "service_role";
-
-revoke references on table "public"."daily_schedule" from "service_role";
-
-revoke select on table "public"."daily_schedule" from "service_role";
-
-revoke trigger on table "public"."daily_schedule" from "service_role";
-
-revoke truncate on table "public"."daily_schedule" from "service_role";
-
-revoke update on table "public"."daily_schedule" from "service_role";
+-- Conditional revoke for daily_schedule if table exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule'
+  ) THEN
+    revoke delete on table "public"."daily_schedule" from "anon";
+    revoke insert on table "public"."daily_schedule" from "anon";
+    revoke references on table "public"."daily_schedule" from "anon";
+    revoke select on table "public"."daily_schedule" from "anon";
+    revoke trigger on table "public"."daily_schedule" from "anon";
+    revoke truncate on table "public"."daily_schedule" from "anon";
+    revoke update on table "public"."daily_schedule" from "anon";
+    revoke delete on table "public"."daily_schedule" from "authenticated";
+    revoke insert on table "public"."daily_schedule" from "authenticated";
+    revoke references on table "public"."daily_schedule" from "authenticated";
+    revoke select on table "public"."daily_schedule" from "authenticated";
+    revoke trigger on table "public"."daily_schedule" from "authenticated";
+    revoke truncate on table "public"."daily_schedule" from "authenticated";
+    revoke update on table "public"."daily_schedule" from "authenticated";
+    revoke delete on table "public"."daily_schedule" from "service_role";
+    revoke insert on table "public"."daily_schedule" from "service_role";
+    revoke references on table "public"."daily_schedule" from "service_role";
+    revoke select on table "public"."daily_schedule" from "service_role";
+    revoke trigger on table "public"."daily_schedule" from "service_role";
+    revoke truncate on table "public"."daily_schedule" from "service_role";
+    revoke update on table "public"."daily_schedule" from "service_role";
+  END IF;
+END $$;
 
 alter table "public"."arketa_classes" drop constraint "arketa_classes_external_id_class_date_key";
 
@@ -146,9 +143,9 @@ drop index if exists "public"."idx_daily_schedule_class_id";
 
 drop index if exists "public"."idx_daily_schedule_date";
 
-drop table "public"."api_sync_skipped_records";
+drop table if exists "public"."api_sync_skipped_records";
 
-drop table "public"."daily_schedule";
+drop table if exists "public"."daily_schedule";
 
 
   create table "public"."announcement_reads" (

@@ -171,14 +171,14 @@ function MembersHeader({ title }: { title: string }) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem 
-                onClick={() => navigate("/profile")}
+                onClick={() => navigate("/dashboard/profile")}
                 className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
               >
                 <User className="mr-2 h-3 w-3" />
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => navigate("/settings")}
+                onClick={() => navigate("/dashboard/settings")}
                 className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
               >
                 <Settings className="mr-2 h-3 w-3" />

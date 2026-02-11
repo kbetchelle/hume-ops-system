@@ -5,10 +5,11 @@ import { useUserProfile } from "@/hooks/useUserRoles";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
+import { useUnreadBugReportCount } from "@/hooks/useUnreadBugReportCount";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
 import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle } from "lucide-react";
@@ -214,6 +215,10 @@ const settingsGroups: SettingsGroup[] = [{
     title: "Skipped Records",
     url: "/dashboard/sync-skipped-records",
     icon: AlertCircle
+  }, {
+    title: "Bug Reports",
+    url: "/dashboard/bug-reports",
+    icon: Bug
   }]
 }];
 const settingsDirectItems: SettingsSubItem[] = [{
@@ -234,6 +239,7 @@ function SidebarNav() {
     permissions
   } = usePermissions();
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const { count: unreadBugCount } = useUnreadBugReportCount();
 
   // Determine the effective role based on URL path for proper navigation rendering
   // This ensures admin/manager/BOH dashboards always show the correct nav even if activeRole hasn't updated
@@ -248,11 +254,11 @@ function SidebarNav() {
   const effectiveRole = getEffectiveRole();
   const navItems = getNavItems(effectiveRole, permissions);
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
-  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/backfill", "/dashboard/user-management"].some((p) => location.pathname.startsWith(p));
+  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports");
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         <SidebarGroup>
@@ -328,6 +334,11 @@ function SidebarNav() {
                             <span>{item.title}</span>
                           </NavLink>
                         </SidebarMenuButton>
+                        {item.url === "/dashboard/bug-reports" && unreadBugCount > 0 && (
+                          <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none">
+                            {unreadBugCount > 99 ? "99+" : unreadBugCount}
+                          </SidebarMenuBadge>
+                        )}
                       </SidebarMenuItem>)}
                   </CollapsibleContent>
                 </Collapsible>
@@ -492,11 +503,11 @@ function UserInfoDropdown({
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem onClick={() => navigate("/profile")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/settings")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
             Settings
           </DropdownMenuItem>

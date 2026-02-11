@@ -56,6 +56,9 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
 import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
+import BugReportsPage from "./pages/admin/BugReportsPage";
+import ProfilePage from "./pages/ProfilePage";
+import AccountSettingsPage from "./pages/AccountSettingsPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
@@ -489,6 +492,36 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <SyncSkippedRecordsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Bug Reports (Dev Tools) for Admin/Manager */}
+            <Route
+              path="/dashboard/bug-reports"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <BugReportsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Profile Page for all authenticated users */}
+            <Route
+              path="/dashboard/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Account Settings for all authenticated users */}
+            <Route
+              path="/dashboard/settings"
+              element={
+                <ProtectedRoute>
+                  <AccountSettingsPage />
                 </ProtectedRoute>
               }
             />

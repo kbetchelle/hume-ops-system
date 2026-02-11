@@ -7,6 +7,7 @@ import { NotificationBell } from "@/components/concierge/NotificationBell";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useUnreadBugReportCount } from "@/hooks/useUnreadBugReportCount";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -53,6 +54,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       url: "/dashboard",
       icon: Home
     }, {
+      title: "Messages",
+      url: "/dashboard/messages",
+      icon: MessageSquare
+    }, {
       title: "Membership",
       url: "/dashboard/members",
       icon: Users
@@ -82,6 +87,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       url: checklistUrl,
       icon: ClipboardList
     }, {
+      title: "Messages",
+      url: "/dashboard/messages",
+      icon: MessageSquare
+    }, {
       title: "Class Schedule",
       url: "/dashboard/class-schedule",
       icon: Calendar
@@ -107,6 +116,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     title: "Dashboard",
     url: "/dashboard",
     icon: Home
+  }, {
+    title: "Messages",
+    url: "/dashboard/messages",
+    icon: MessageSquare
   }];
   const allItems: NavItem[] = [{
     title: "Members",
@@ -241,6 +254,7 @@ function SidebarNav() {
   } = usePermissions();
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const { count: unreadBugCount } = useUnreadBugReportCount();
+  const { count: unreadMessageCount } = useUnreadMessageCount();
 
   // Determine the effective role based on URL path for proper navigation rendering
   // This ensures admin/manager/BOH dashboards always show the correct nav even if activeRole hasn't updated
@@ -280,6 +294,11 @@ function SidebarNav() {
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
+                  {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
+                    <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>)}
             </SidebarMenu>
           </SidebarGroupContent>

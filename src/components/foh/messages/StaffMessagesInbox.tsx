@@ -1,15 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { ArrowLeft, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import {
   useStaffMessages,
   useMessageReads,
   useMessagingRealtime,
 } from '@/hooks/useMessaging';
+import { useDrafts, useDeleteDraft } from '@/hooks/useMessageDrafts';
+import { useMessageGroups } from '@/hooks/useMessageGroups';
 import { groupMessagesIntoConversations, buildConversationKey } from './utils/conversationBuilder';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './ConversationView';
-import type { MessagingView, StaffMessagesInboxProps } from '@/types/messaging';
+import { MessageComposer } from './MessageComposer';
+import { MessagesOptionsMenu } from './MessagesOptionsMenu';
+import { GroupDialogs } from './GroupDialogs';
+import { format } from 'date-fns';
+import type { MessagingView, StaffMessagesInboxProps, StaffMessageGroup } from '@/types/messaging';
 
 export function StaffMessagesInbox({
   initialMessageId,
@@ -21,10 +31,17 @@ export function StaffMessagesInbox({
     string | null
   >(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showComposer, setShowComposer] = useState(false);
+  const [draftToEdit, setDraftToEdit] = useState<string | undefined>(undefined);
+  const [groupDialogMode, setGroupDialogMode] = useState<'create' | 'edit' | 'delete' | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<StaffMessageGroup | undefined>(undefined);
 
   // Data queries
   const { data: messages = [], isLoading: messagesLoading } = useStaffMessages();
   const { data: reads = [], isLoading: readsLoading } = useMessageReads();
+  const { data: drafts = [] } = useDrafts();
+  const { data: customGroups = [] } = useMessageGroups();
+  const { mutate: deleteDraft } = useDeleteDraft();
 
   // Realtime subscriptions
   useMessagingRealtime();
@@ -36,8 +53,12 @@ export function StaffMessagesInbox({
     user?.id || ''
   );
 
-  // Filter out archived conversations for main view
+  // Filter based on view
   const activeConversations = conversations.filter((c) => !c.isArchived);
+  const archivedConversations = conversations.filter((c) => c.isArchived);
+  const scheduledMessages = messages.filter(
+    (msg) => msg.scheduled_at && new Date(msg.scheduled_at) > new Date()
+  );
 
   // Find selected conversation
   const selectedConversation = selectedConversationKey
@@ -72,6 +93,40 @@ export function StaffMessagesInbox({
     setView('conversations');
   };
 
+  const handleViewChange = (newView: 'drafts' | 'scheduled' | 'archived' | 'groups') => {
+    setView(newView);
+    setSelectedConversationKey(null);
+  };
+
+  const handleNewMessage = () => {
+    setDraftToEdit(undefined);
+    setShowComposer(true);
+  };
+
+  const handleEditDraft = (draftId: string) => {
+    setDraftToEdit(draftId);
+    setShowComposer(true);
+  };
+
+  const handleDeleteDraft = (draftId: string) => {
+    deleteDraft(draftId);
+  };
+
+  const handleCreateGroup = () => {
+    setGroupDialogMode('create');
+    setSelectedGroup(undefined);
+  };
+
+  const handleEditGroup = (group: StaffMessageGroup) => {
+    setGroupDialogMode('edit');
+    setSelectedGroup(group);
+  };
+
+  const handleDeleteGroup = (group: StaffMessageGroup) => {
+    setGroupDialogMode('delete');
+    setSelectedGroup(group);
+  };
+
   const isLoading = messagesLoading || readsLoading;
 
   // Render based on view
@@ -85,17 +140,328 @@ export function StaffMessagesInbox({
     );
   }
 
+  // Drafts view
+  if (view === 'drafts') {
+    return (
+      <>
+        <Card className="rounded-none border h-full">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBack}
+                  className="rounded-none h-8 w-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <CardTitle className="text-sm uppercase tracking-wider">
+                  Drafts
+                </CardTitle>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleNewMessage}
+                className="rounded-none"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-200px)]">
+              {drafts.length === 0 ? (
+                <div className="flex items-center justify-center h-64 text-muted-foreground">
+                  <div className="text-center">
+                    <div className="text-sm">No drafts</div>
+                    <div className="text-xs mt-1">Your saved drafts will appear here</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {drafts.map((draft) => (
+                    <div
+                      key={draft.id}
+                      className="p-4 hover:bg-accent cursor-pointer"
+                      onClick={() => handleEditDraft(draft.id)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          {draft.subject && (
+                            <div className="text-sm font-medium truncate">
+                              {draft.subject}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            {draft.content || 'No content'}
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(draft.updated_at), 'MMM d, h:mm a')}
+                            </span>
+                            {draft.is_urgent && (
+                              <Badge variant="destructive" className="rounded-none text-[10px]">
+                                Urgent
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDraft(draft.id);
+                          }}
+                          className="rounded-none h-8 w-8"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+        <MessageComposer
+          isOpen={showComposer}
+          onClose={() => {
+            setShowComposer(false);
+            setDraftToEdit(undefined);
+          }}
+          draftId={draftToEdit}
+        />
+      </>
+    );
+  }
+
+  // Scheduled view
+  if (view === 'scheduled') {
+    return (
+      <Card className="rounded-none border h-full">
+        <CardHeader className="border-b">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBack}
+              className="rounded-none h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle className="text-sm uppercase tracking-wider">
+              Scheduled Messages
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[calc(100vh-200px)]">
+            {scheduledMessages.length === 0 ? (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center">
+                  <div className="text-sm">No scheduled messages</div>
+                  <div className="text-xs mt-1">Messages scheduled for later will appear here</div>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {scheduledMessages.map((msg) => (
+                  <div key={msg.id} className="p-4">
+                    <div className="text-sm font-medium">
+                      {msg.subject || 'No subject'}
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                      {msg.content}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="secondary" className="rounded-none text-[10px]">
+                        Sends {format(new Date(msg.scheduled_at!), 'MMM d, h:mm a')}
+                      </Badge>
+                      {msg.is_urgent && (
+                        <Badge variant="destructive" className="rounded-none text-[10px]">
+                          Urgent
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Archived view
+  if (view === 'archived') {
+    return (
+      <Card className="rounded-none border h-full">
+        <CardHeader className="border-b">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBack}
+              className="rounded-none h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle className="text-sm uppercase tracking-wider">
+              Archived Conversations
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ConversationList
+            conversations={archivedConversations}
+            selectedConversationKey={selectedConversationKey}
+            onSelectConversation={handleSelectConversation}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isLoading={isLoading}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Groups management view
+  if (view === 'groups') {
+    return (
+      <>
+        <Card className="rounded-none border h-full">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBack}
+                  className="rounded-none h-8 w-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <CardTitle className="text-sm uppercase tracking-wider">
+                  Manage Groups
+                </CardTitle>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleCreateGroup}
+                className="rounded-none"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-200px)]">
+              {customGroups.length === 0 ? (
+                <div className="flex items-center justify-center h-64 text-muted-foreground">
+                  <div className="text-center">
+                    <div className="text-sm">No custom groups</div>
+                    <div className="text-xs mt-1">Create groups to message multiple people</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {customGroups.map((group) => (
+                    <div key={group.id} className="p-4 hover:bg-accent">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{group.name}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {group.member_ids.length} members
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditGroup(group)}
+                            className="rounded-none h-8 w-8"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteGroup(group)}
+                            className="rounded-none h-8 w-8"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+        <GroupDialogs
+          mode={groupDialogMode}
+          group={selectedGroup}
+          onClose={() => {
+            setGroupDialogMode(null);
+            setSelectedGroup(undefined);
+          }}
+        />
+      </>
+    );
+  }
+
   // Default: conversations list
   return (
-    <Card className="rounded-none border h-full">
-      <ConversationList
-        conversations={activeConversations}
-        selectedConversationKey={selectedConversationKey}
-        onSelectConversation={handleSelectConversation}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        isLoading={isLoading}
+    <>
+      <Card className="rounded-none border h-full">
+        <CardHeader className="border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm uppercase tracking-wider">
+              Messages
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleNewMessage}
+                className="rounded-none"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New
+              </Button>
+              <MessagesOptionsMenu onViewChange={handleViewChange} />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ConversationList
+            conversations={activeConversations}
+            selectedConversationKey={selectedConversationKey}
+            onSelectConversation={handleSelectConversation}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isLoading={isLoading}
+          />
+        </CardContent>
+      </Card>
+      <MessageComposer
+        isOpen={showComposer}
+        onClose={() => {
+          setShowComposer(false);
+          setDraftToEdit(undefined);
+        }}
+        draftId={draftToEdit}
       />
-    </Card>
+    </>
   );
 }

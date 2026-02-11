@@ -42,6 +42,7 @@ import CancellationsPage from "./pages/members/CancellationsPage";
 import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
+import MessagesPage from "./pages/dashboards/MessagesPage";
 import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
 import ShiftReportPage from "./pages/dashboards/ShiftReportPage";
 import ReportsPage from "./pages/dashboards/ReportsPage";
@@ -288,6 +289,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommunicationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Staff Messages - accessible to all authenticated users */}
+            <Route
+              path="/dashboard/messages"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
                 </ProtectedRoute>
               }
             />

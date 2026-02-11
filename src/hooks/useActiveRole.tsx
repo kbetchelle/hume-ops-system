@@ -22,12 +22,26 @@ export function ActiveRoleProvider({ children }: { children: ReactNode }) {
 
   // Initialize active role from localStorage or primary role
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useActiveRole.tsx:24',message:'Active role initialization',data:{hasUserRoles:!!userRoles,rolesCount:userRoles?.length||0,userId:user?.id,isLoading},timestamp:Date.now(),hypothesisId:'H4,H5'})}).catch(()=>{});
+    // #endregion
+    
     if (userRoles && userRoles.length > 0) {
       const storedRole = localStorage.getItem(`activeRole_${user?.id}`);
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useActiveRole.tsx:27',message:'Role selection logic',data:{storedRole,availableRoles:userRoles.map(r=>r.role),hasMatchingRole:storedRole&&userRoles.some(r=>r.role===storedRole)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
+      
       if (storedRole && userRoles.some(r => r.role === storedRole)) {
         setActiveRoleState(storedRole as AppRole);
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useActiveRole.tsx:28',message:'Using stored role',data:{role:storedRole},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
       } else {
         const primary = getPrimaryRole(userRoles);
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useActiveRole.tsx:31',message:'Using primary role',data:{primaryRole:primary,allRoles:userRoles.map(r=>r.role)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
         if (primary) {
           setActiveRoleState(primary);
         }

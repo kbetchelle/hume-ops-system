@@ -117,6 +117,7 @@ export function useSendMessage() {
       groupName,
       threadId,
       replyToId,
+      scheduledAt,
     }: {
       recipientIds?: string[];
       recipientDepartments?: string[];
@@ -127,6 +128,7 @@ export function useSendMessage() {
       groupName?: string;
       threadId?: string;
       replyToId?: string;
+      scheduledAt?: string;
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
@@ -142,20 +144,21 @@ export function useSendMessage() {
           recipient_departments: recipientDepartments || null,
           subject: subject || null,
           content,
-          is_sent: true,
+          is_sent: scheduledAt ? false : true, // Not sent yet if scheduled
           is_urgent: isUrgent,
           group_id: groupId || null,
           group_name: groupName || null,
           thread_id: threadId || null,
           reply_to_id: replyToId || null,
+          scheduled_at: scheduledAt || null,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Send notifications to recipients
-      if (recipientIds && recipientIds.length > 0) {
+      // Only send notifications immediately if not scheduled
+      if (!scheduledAt && recipientIds && recipientIds.length > 0) {
         await Promise.all(
           recipientIds.map((recipientId) =>
             sendNotification({
@@ -173,9 +176,13 @@ export function useSendMessage() {
 
       return data as StaffMessage;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['staff-messages'] });
-      toast({ title: 'Message sent' });
+      if (variables.scheduledAt) {
+        toast({ title: 'Message scheduled' });
+      } else {
+        toast({ title: 'Message sent' });
+      }
     },
     onError: (error) => {
       toast({

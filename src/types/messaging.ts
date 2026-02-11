@@ -135,8 +135,8 @@ export interface ConversationViewProps {
   conversation: Conversation;
   currentUserId: string;
   onBack: () => void;
-  onSendMessage: (content: string, replyToId?: string) => void;
-  onOpenThread: (threadId: string) => void;
+  onSendMessage?: (content: string, replyToId?: string) => void;
+  onOpenThread?: (threadId: string) => void;
 }
 
 export interface MessageComposerProps {

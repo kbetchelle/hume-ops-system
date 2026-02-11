@@ -8,11 +8,19 @@ export function useUserProfile(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) return null;
       
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useUserRoles.ts:9',message:'Fetching user profile',data:{userId},timestamp:Date.now(),hypothesisId:'H8,H9'})}).catch(()=>{});
+      // #endregion
+      
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
         .single();
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useUserRoles.ts:17',message:'Profile fetch result',data:{userId,hasData:!!data,hasError:!!error,errorMsg:error?.message,onboardingCompleted:data?.onboarding_completed},timestamp:Date.now(),hypothesisId:'H8,H9'})}).catch(()=>{});
+      // #endregion
       
       if (error) throw error;
       return data as UserProfile;
@@ -27,10 +35,18 @@ export function useUserRoles(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) return [];
       
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useUserRoles.ts:28',message:'Fetching user roles',data:{userId},timestamp:Date.now(),hypothesisId:'H8,H9'})}).catch(()=>{});
+      // #endregion
+      
       const { data, error } = await supabase
         .from("user_roles")
         .select("*")
         .eq("user_id", userId);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useUserRoles.ts:35',message:'Roles fetch result',data:{userId,hasData:!!data,dataCount:data?.length||0,hasError:!!error,errorMsg:error?.message,roles:data?.map(r=>r.role)||[]},timestamp:Date.now(),hypothesisId:'H8,H9'})}).catch(()=>{});
+      // #endregion
       
       if (error) throw error;
       return data as UserRole[];

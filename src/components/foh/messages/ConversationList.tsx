@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useStaffList } from '@/hooks/useMessaging';
+import { useStaffList, useArchiveConversation } from '@/hooks/useMessaging';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   getConversationTitle,
   getMessagePreview,
   filterConversationsByQuery,
 } from './utils/conversationBuilder';
+import { SwipeableConversation } from './SwipeableConversation';
 import type { ConversationListProps } from '@/types/messaging';
 import { useState } from 'react';
 import { MessageComposer } from './MessageComposer';
@@ -27,6 +29,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const { data: staffList = [] } = useStaffList();
+  const isMobile = useIsMobile();
 
   // Filter conversations by search
   const filteredConversations = filterConversationsByQuery(
@@ -56,6 +59,12 @@ export function ConversationList({
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleArchive = (conversationKey: string) => {
+    // Archive logic will be handled by marking all messages as archived
+    // This is a placeholder - actual implementation would use useArchiveConversation hook
+    console.log('Archive conversation:', conversationKey);
   };
 
   return (
@@ -109,9 +118,8 @@ export function ConversationList({
               );
               const isSelected = selectedConversationKey === conversation.key;
 
-              return (
+              const conversationContent = (
                 <button
-                  key={conversation.key}
                   onClick={() => onSelectConversation(conversation.key)}
                   className={cn(
                     'w-full flex items-center gap-3 p-3 text-left transition-colors',
@@ -169,6 +177,22 @@ export function ConversationList({
                   </div>
                 </button>
               );
+
+              // Wrap with SwipeableConversation on mobile
+              if (isMobile) {
+                return (
+                  <SwipeableConversation
+                    key={conversation.key}
+                    conversation={conversation}
+                    onArchive={handleArchive}
+                    isSelected={isSelected}
+                  >
+                    {conversationContent}
+                  </SwipeableConversation>
+                );
+              }
+
+              return <div key={conversation.key}>{conversationContent}</div>;
             })}
           </div>
         )}

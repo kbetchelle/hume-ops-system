@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_approval_requests: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          justification: string | null
+          requested_roles: Database["public"]["Enums"]["app_role"][] | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          justification?: string | null
+          requested_roles?: Database["public"]["Enums"]["app_role"][] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          justification?: string | null
+          requested_roles?: Database["public"]["Enums"]["app_role"][] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           activity_date: string
@@ -2932,6 +2977,45 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_method: Json | null
+          dnd_enabled: boolean | null
+          dnd_manual_end: string | null
+          dnd_manual_start: string | null
+          dnd_sling_linked: boolean | null
+          id: string
+          type_enabled: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_method?: Json | null
+          dnd_enabled?: boolean | null
+          dnd_manual_end?: string | null
+          dnd_manual_start?: string | null
+          dnd_sling_linked?: boolean | null
+          id?: string
+          type_enabled?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_method?: Json | null
+          dnd_enabled?: boolean | null
+          dnd_manual_end?: string | null
+          dnd_manual_start?: string | null
+          dnd_sling_linked?: boolean | null
+          id?: string
+          type_enabled?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       page_dev_status: {
         Row: {
           created_at: string
@@ -2994,34 +3078,49 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approval_notes: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           deactivated: boolean
           email: string
           full_name: string | null
           id: string
           onboarding_completed: boolean | null
+          preferred_language: string | null
           sling_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           deactivated?: boolean
           email: string
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
+          preferred_language?: string | null
           sling_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           deactivated?: boolean
           email?: string
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
+          preferred_language?: string | null
           sling_id?: string | null
           updated_at?: string
           user_id?: string
@@ -3700,21 +3799,133 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_message_drafts: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          group_id: string | null
+          id: string
+          is_urgent: boolean | null
+          recipient_departments: string[] | null
+          recipient_staff_ids: string[] | null
+          staff_id: string
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          group_id?: string | null
+          id?: string
+          is_urgent?: boolean | null
+          recipient_departments?: string[] | null
+          recipient_staff_ids?: string[] | null
+          staff_id: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          group_id?: string | null
+          id?: string
+          is_urgent?: boolean | null
+          recipient_departments?: string[] | null
+          recipient_staff_ids?: string[] | null
+          staff_id?: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_message_drafts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "staff_message_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_message_groups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          member_ids: string[]
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          member_ids: string[]
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          member_ids?: string[]
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      staff_message_reactions: {
+        Row: {
+          created_at: string | null
+          emoji: string
+          id: string
+          message_id: string
+          staff_id: string
+          staff_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          emoji: string
+          id?: string
+          message_id: string
+          staff_id: string
+          staff_name: string
+        }
+        Update: {
+          created_at?: string | null
+          emoji?: string
+          id?: string
+          message_id?: string
+          staff_id?: string
+          staff_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_message_reads: {
         Row: {
           id: string
+          is_archived: boolean | null
           message_id: string | null
           read_at: string | null
           staff_id: string | null
         }
         Insert: {
           id?: string
+          is_archived?: boolean | null
           message_id?: string | null
           read_at?: string | null
           staff_id?: string | null
         }
         Update: {
           id?: string
+          is_archived?: boolean | null
           message_id?: string | null
           read_at?: string | null
           staff_id?: string | null
@@ -3733,40 +3944,73 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          edited_at: string | null
+          group_id: string | null
+          group_name: string | null
           id: string
           is_sent: boolean | null
+          is_urgent: boolean | null
+          recipient_departments: string[] | null
           recipient_ids: string[] | null
+          reply_to_id: string | null
+          scheduled_at: string | null
           sender_id: string | null
           sender_name: string | null
           subject: string | null
+          thread_id: string | null
         }
         Insert: {
           content: string
           created_at?: string | null
+          edited_at?: string | null
+          group_id?: string | null
+          group_name?: string | null
           id?: string
           is_sent?: boolean | null
+          is_urgent?: boolean | null
+          recipient_departments?: string[] | null
           recipient_ids?: string[] | null
+          reply_to_id?: string | null
+          scheduled_at?: string | null
           sender_id?: string | null
           sender_name?: string | null
           subject?: string | null
+          thread_id?: string | null
         }
         Update: {
           content?: string
           created_at?: string | null
+          edited_at?: string | null
+          group_id?: string | null
+          group_name?: string | null
           id?: string
           is_sent?: boolean | null
+          is_urgent?: boolean | null
+          recipient_departments?: string[] | null
           recipient_ids?: string[] | null
+          reply_to_id?: string | null
+          scheduled_at?: string | null
           sender_id?: string | null
           sender_name?: string | null
           subject?: string | null
+          thread_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "staff_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_notifications: {
         Row: {
           body: string | null
           created_at: string | null
           data: Json | null
+          dismissed_at: string | null
           id: string
           is_read: boolean | null
           title: string
@@ -3777,6 +4021,7 @@ export type Database = {
           body?: string | null
           created_at?: string | null
           data?: Json | null
+          dismissed_at?: string | null
           id?: string
           is_read?: boolean | null
           title: string
@@ -3787,6 +4032,7 @@ export type Database = {
           body?: string | null
           created_at?: string | null
           data?: Json | null
+          dismissed_at?: string | null
           id?: string
           is_read?: boolean | null
           title?: string
@@ -4578,6 +4824,23 @@ export type Database = {
           record_count: number
         }[]
       }
+      get_pending_approvals: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          requested_roles: Database["public"]["Enums"]["app_role"][]
+          sling_id: string
+          sling_matched: boolean
+          suggested_roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
+      get_sling_roles_for_user: {
+        Args: { _sling_id: string }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
       get_trainer_member_ids: {
         Args: { _trainer_id: string }
         Returns: string[]
@@ -4596,6 +4859,19 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_trainer: { Args: { _user_id: string }; Returns: boolean }
+      manager_approve_account: {
+        Args: {
+          _approved_roles: Database["public"]["Enums"]["app_role"][]
+          _notes?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      manager_reject_account: {
+        Args: { _reason: string; _user_id: string }
+        Returns: undefined
+      }
+      process_scheduled_messages: { Args: never; Returns: undefined }
       refresh_daily_schedule: {
         Args: { p_schedule_date: string }
         Returns: number

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AppRole, UserProfile, UserRole } from "@/types/roles";
+import { AppRole, UserProfile, UserRole, SlingUser } from "@/types/roles";
 
 export function useUserProfile(userId: string | undefined) {
   return useQuery({
@@ -158,4 +158,42 @@ export function getRoleDashboardPath(role: AppRole): string {
   };
   
   return paths[role];
+}
+
+// Hook to get Sling user info for profile
+export function useSlingUser(slingId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["slingUser", slingId],
+    queryFn: async () => {
+      if (!slingId) return null;
+      
+      const { data, error } = await supabase
+        .from("sling_users")
+        .select("*")
+        .eq("id", slingId)
+        .single();
+      
+      if (error) throw error;
+      return data as SlingUser;
+    },
+    enabled: !!slingId,
+  });
+}
+
+// Hook to get suggested roles from Sling positions
+export function useSlingRoles(slingId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["slingRoles", slingId],
+    queryFn: async () => {
+      if (!slingId) return [];
+      
+      const { data, error } = await supabase.rpc("get_sling_roles_for_user", {
+        _sling_id: slingId,
+      });
+      
+      if (error) throw error;
+      return (data as AppRole[]) || [];
+    },
+    enabled: !!slingId,
+  });
 }

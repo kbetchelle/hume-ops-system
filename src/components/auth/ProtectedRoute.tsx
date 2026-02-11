@@ -41,12 +41,36 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  // Deactivated users - takes precedence over everything
+  if (profile?.deactivated) {
+    if (location.pathname !== "/account-disabled") {
+      return <Navigate to="/account-disabled" replace />;
+    }
+  }
+
   // Authenticated but hasn't completed onboarding
   if (profile && !profile.onboarding_completed && location.pathname !== "/onboarding") {
     // #region agent log
     fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:35',message:'Redirecting to onboarding',data:{pathname:location.pathname,userId:user.id},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
     // #endregion
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // Completed onboarding but pending approval
+  if (
+    profile?.onboarding_completed &&
+    profile?.approval_status === "pending" &&
+    location.pathname !== "/pending-approval"
+  ) {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
+  // Rejected accounts
+  if (
+    profile?.approval_status === "rejected" &&
+    location.pathname !== "/account-disabled"
+  ) {
+    return <Navigate to="/account-disabled" replace />;
   }
 
   // Check role requirements if specified

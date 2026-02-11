@@ -67,6 +67,8 @@ export const ROLES: RoleInfo[] = [
   },
 ];
 
+export type ApprovalStatus = 'pending' | 'auto_approved' | 'manager_approved' | 'rejected';
+
 export interface UserProfile {
   id: string;
   user_id: string;
@@ -76,8 +78,35 @@ export interface UserProfile {
   preferred_language?: string | null;
   sling_id?: string | null;
   deactivated?: boolean;
+  approval_status?: ApprovalStatus;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  approval_notes?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SlingUser {
+  id: string;
+  sling_user_id: number;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  positions: string[] | null;
+  is_active: boolean;
+  linked_staff_id: string | null;
+  created_at: string;
+}
+
+export interface PendingApproval {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  requested_roles: AppRole[];
+  sling_id: string | null;
+  sling_matched: boolean;
+  suggested_roles: AppRole[];
+  created_at: string;
 }
 
 export interface UserRole {

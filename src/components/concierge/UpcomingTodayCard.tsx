@@ -236,16 +236,6 @@ export function UpcomingTodayCard() {
             <Calendar className="h-5 w-5" />
             Upcoming Today
           </CardTitle>
-          {minutesToNext !== null && minutesToNext >= 0 && (
-            <Badge variant="outline" className="gap-1">
-              <Clock className="h-3 w-3" />
-              {minutesToNext === 0
-                ? "Now"
-                : minutesToNext < 60
-                ? `${minutesToNext}m`
-                : `${Math.floor(minutesToNext / 60)}h ${minutesToNext % 60}m`}
-            </Badge>
-          )}
         </div>
       </CardHeader>
       <CardContent>

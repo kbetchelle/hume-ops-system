@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeftRight, Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -52,19 +52,16 @@ export function RoleSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="gap-2 rounded-none text-[10px] uppercase tracking-widest"
+          className="w-full gap-2 rounded-none text-[13px] uppercase tracking-widest justify-start px-0 h-auto py-0"
         >
-          <ArrowLeftRight className="h-4 w-4" />
-          {currentViewRole ? getRoleLabel(currentViewRole) : "Switch View"}
+          <span className="truncate pl-2">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
+          <ChevronDown className="h-3 w-3 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="rounded-none w-48 bg-background border border-border z-50">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Role Views
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        
         {availableRoles.map((userRole) => {
           const isCurrentView = currentViewRole === userRole.role || 
             (currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant") ||

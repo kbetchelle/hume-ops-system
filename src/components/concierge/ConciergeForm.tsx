@@ -331,7 +331,11 @@ export function ConciergeForm() {
     }
   }
   
+  const isSubmittingRef = useRef(false);
+
   async function handleSubmit() {
+    if (isSubmittingRef.current) return;
+    
     if (!hasMeaningfulContent(formData)) {
       toast({
         title: 'Cannot submit empty report',
@@ -341,14 +345,34 @@ export function ConciergeForm() {
       return;
     }
     
+    isSubmittingRef.current = true;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('submit-concierge-report', {
-        body: {
-          reportDate,
-          shiftTime: shiftType,
-          formData,
-        },
-      });
+      const payload = {
+        report_date: reportDate,
+        shift_type: shiftType,
+        staff_user_id: user?.id || '',
+        staff_name: formData.staffName || user?.user_metadata?.full_name || '',
+        member_feedback: formData.memberFeedback as any,
+        membership_requests: formData.membershipCancelRequests as any,
+        celebratory_events: formData.celebratoryEvents as any,
+        scheduled_tours: formData.tours as any,
+        tour_notes: formData.tours as any,
+        facility_issues: formData.facilityIssues as any,
+        busiest_areas: formData.busiestAreas || '',
+        system_issues: formData.systemIssues as any,
+        management_notes: formData.managementNotes || '',
+        future_shift_notes: formData.futureNotes as any,
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+      };
+
+      // Try upsert based on date + shift
+      const { error } = await supabase
+        .from('daily_report_history')
+        .upsert(payload as any, {
+          onConflict: 'report_date,shift_type',
+        });
       
       if (error) throw error;
       
@@ -364,6 +388,8 @@ export function ConciergeForm() {
         description: 'Please try again',
         variant: 'destructive',
       });
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
   
@@ -475,7 +501,7 @@ export function ConciergeForm() {
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-xl font-semibold">Concierge Shift Report</CardTitle>
+            
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -527,12 +553,6 @@ export function ConciergeForm() {
               Auto-submit in {timeUntilSubmitFormatted}
             </Badge>
           )}
-          {isSubmitted && (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              Submitted
-            </Badge>
-          )}
         </CardHeader>
 
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -571,31 +591,6 @@ export function ConciergeForm() {
         </Dialog>
         
         <CardContent className="space-y-6">
-          {/* Notes for this shift (alert banners) */}
-          {notesForShift.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm">Notes for this shift:</Label>
-              {notesForShift.map((note) => (
-                <div
-                  key={note.id}
-                  className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm"
-                >
-                  <span className="font-medium shrink-0">From {note.from}:</span>
-                  <span className="flex-1">{note.text}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => setNotesForShift(prev => prev.filter(n => n.id !== note.id))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Date & Shift row */}
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm font-medium">
@@ -628,6 +623,31 @@ export function ConciergeForm() {
               </Select>
             </div>
           </div>
+
+          {/* Notes for this shift (alert banners) */}
+          {notesForShift.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">Notes for this shift:</Label>
+              {notesForShift.map((note) => (
+                <div
+                  key={note.id}
+                  className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm"
+                >
+                  <span className="font-medium shrink-0">From {note.from}:</span>
+                  <span className="flex-1">{note.text}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setNotesForShift(prev => prev.filter(n => n.id !== note.id))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <Separator />
         

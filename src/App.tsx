@@ -336,7 +336,7 @@ const App = () => (
             <Route
               path="/dashboard/announcements"
               element={
-                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
                   <AnnouncementsPage />
                 </ProtectedRoute>
               }

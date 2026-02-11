@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown } from "lucide-react";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -476,7 +476,11 @@ export function ResponseTemplatesWithAI() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [inquiry, setInquiry] = useState("");
+  const [aiWriterMode, setAiWriterMode] = useState<"compose" | "polish">("compose");
+  const [aiInput, setAiInput] = useState("");
+  const [aiTemplateGuide, setAiTemplateGuide] = useState<string>("none");
+  const [aiOutput, setAiOutput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const [suggestedTemplate, setSuggestedTemplate] = useState<ResponseTemplate | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -739,46 +743,50 @@ export function ResponseTemplatesWithAI() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const findBestTemplate = () => {
-    if (!inquiry.trim()) {
-      toast.error("Please enter a member inquiry");
+  const handleAiGenerate = async () => {
+    if (!aiInput.trim()) {
+      toast.error(aiWriterMode === "compose" ? "Describe what you need to respond to" : "Paste your draft response");
       return;
     }
 
-    const inquiryWords = inquiry.toLowerCase().split(/\s+/);
-    let bestMatch: ResponseTemplate | null = null;
-    let bestScore = 0;
+    setAiLoading(true);
+    setAiOutput("");
 
-    templates.forEach((template) => {
-      let score = 0;
-      const searchableText = `${template.title} ${template.content} ${template.tags.join(" ")}`.toLowerCase();
-
-      inquiryWords.forEach((word) => {
-        if (word.length > 2 && searchableText.includes(word)) {
-          score += 1;
+    try {
+      // Find template context if selected
+      let templateContext: string | undefined;
+      if (aiTemplateGuide !== "none") {
+        const guide = templates.find(t => t.id === aiTemplateGuide);
+        if (guide) {
+          // Strip HTML tags for clean context
+          const div = document.createElement("div");
+          div.innerHTML = guide.content;
+          templateContext = `Title: ${guide.title}\nCategory: ${guide.category}\n\n${div.textContent || div.innerText}`;
         }
-      });
-
-      // Bonus for tag matches
-      template.tags.forEach((tag) => {
-        if (inquiry.toLowerCase().includes(tag.toLowerCase())) {
-          score += 3;
-        }
-      });
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = template;
       }
-    });
 
-    if (bestMatch && bestScore > 0) {
-      setSuggestedTemplate(bestMatch);
-      toast.success("Found a matching template!");
-    } else {
-      setSuggestedTemplate(null);
-      toast.info("No matching template found. Try different keywords.");
+      const { data, error } = await supabase.functions.invoke("hume-voice-writer", {
+        body: { mode: aiWriterMode, input: aiInput, templateContext },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setAiOutput(data.response);
+    } catch (err: any) {
+      console.error("AI writer error:", err);
+      toast.error(err?.message || "Failed to generate response");
+    } finally {
+      setAiLoading(false);
     }
+  };
+
+  const handleCopyAiOutput = () => {
+    navigator.clipboard.writeText(aiOutput);
+    toast.success("Copied to clipboard");
   };
 
   const handleOpenDialog = (template?: ResponseTemplate) => {
@@ -1047,14 +1055,14 @@ export function ResponseTemplatesWithAI() {
           )}
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0">
-          <Tabs defaultValue="browse" className="w-full flex-1 flex flex-col">
+          <Tabs defaultValue="browse" className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-none">
               <TabsTrigger value="browse" className="rounded-none text-xs">
                 Browse Templates
               </TabsTrigger>
               <TabsTrigger value="ai" className="rounded-none text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI Suggester
+                <Wand2 className="h-3 w-3 mr-1" />
+                AI Writer
               </TabsTrigger>
             </TabsList>
 
@@ -1167,52 +1175,120 @@ export function ResponseTemplatesWithAI() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="ai" className="mt-4 space-y-4 flex-1">
-              <div className="space-y-3">
-                <label className="text-xs text-muted-foreground">
-                  Paste the member's inquiry below
-                </label>
-                <Textarea
-                  placeholder="e.g., Hi, I'm interested in learning about your membership options and pricing..."
-                  value={inquiry}
-                  onChange={(e) => setInquiry(e.target.value)}
-                  className="min-h-[120px] rounded-none text-xs"
-                />
+            <TabsContent value="ai" className="space-y-4">
+              {/* Mode Toggle */}
+              <div className="flex gap-2">
                 <Button
-                  onClick={findBestTemplate}
-                  className="w-full rounded-none"
-                  disabled={!inquiry.trim()}
+                  variant={aiWriterMode === "compose" ? "default" : "outline"}
+                  size="sm"
+                  className="rounded-none flex-1 text-xs"
+                  onClick={() => setAiWriterMode("compose")}
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Find Best Template
+                  <PenLine className="h-3 w-3 mr-1" />
+                  Compose Response
+                </Button>
+                <Button
+                  variant={aiWriterMode === "polish" ? "default" : "outline"}
+                  size="sm"
+                  className="rounded-none flex-1 text-xs"
+                  onClick={() => setAiWriterMode("polish")}
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Polish My Draft
                 </Button>
               </div>
 
-              {suggestedTemplate && (
-                <div className="border p-4 bg-primary/5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <Badge className="rounded-none text-xs mb-2">Suggested</Badge>
-                      <h4 className="text-xs font-medium">{suggestedTemplate.title}</h4>
-                      <p className="text-xs text-muted-foreground">{suggestedTemplate.category}</p>
+              {/* Template Guide Selector */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  Template guide (optional)
+                </label>
+                <Select value={aiTemplateGuide} onValueChange={setAiTemplateGuide}>
+                  <SelectTrigger className="rounded-none text-xs">
+                    <SelectValue placeholder="None — write freely" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none max-h-[200px]">
+                    <SelectItem value="none" className="text-xs">None — write freely</SelectItem>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id} className="text-xs">
+                        {t.category} → {t.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Input Area */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  {aiWriterMode === "compose"
+                    ? "Describe the situation or paste the member's inquiry"
+                    : "Paste your draft response to polish"}
+                </label>
+                <Textarea
+                  placeholder={
+                    aiWriterMode === "compose"
+                      ? "e.g., A member is asking about guest pass policies for their visiting family..."
+                      : "e.g., Hi there, your guest passes allow up to 3 guests per visit..."
+                  }
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  className="min-h-[120px] rounded-none text-xs"
+                />
+              </div>
+
+              {/* Generate Button */}
+              <Button
+                onClick={handleAiGenerate}
+                className="w-full rounded-none"
+                disabled={!aiInput.trim() || aiLoading}
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    {aiWriterMode === "compose" ? "Generate Response" : "Polish Response"}
+                  </>
+                )}
+              </Button>
+
+              {/* Output Area */}
+              {aiOutput && (
+                <div className="border p-4 bg-primary/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge className="rounded-none text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      HUME Voice
+                    </Badge>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyAiOutput}
+                        className="h-7 rounded-none text-xs"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleAiGenerate}
+                        disabled={aiLoading}
+                        className="h-7 rounded-none text-xs"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Regenerate
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopy(suggestedTemplate)}
-                      className="h-8 rounded-none"
-                    >
-                      {copiedId === suggestedTemplate.id ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
                   </div>
-                  <div 
-                    className="text-xs mt-3 border-t pt-3 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
-                    dangerouslySetInnerHTML={{ __html: suggestedTemplate.content }}
-                  />
+                  <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed border-t pt-3">
+                    {aiOutput}
+                  </div>
                 </div>
               )}
             </TabsContent>

@@ -181,36 +181,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_sync_skipped_records: {
-        Row: {
-          api_name: string
-          created_at: string
-          details: Json | null
-          id: string
-          reason: string
-          record_id: string
-          secondary_id: string | null
-        }
-        Insert: {
-          api_name: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          reason: string
-          record_id: string
-          secondary_id?: string | null
-        }
-        Update: {
-          api_name?: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          reason?: string
-          record_id?: string
-          secondary_id?: string | null
-        }
-        Relationships: []
-      }
       api_sync_status: {
         Row: {
           api_name: string
@@ -2349,45 +2319,48 @@ export type Database = {
       daily_schedule: {
         Row: {
           canceled: boolean | null
-          class_id: string
-          class_name: string
+          class_id: string | null
+          class_name: string | null
+          created_at: string
           description: string | null
           end_time: string | null
           id: string
           instructor: string | null
           max_capacity: number | null
           schedule_date: string
-          start_time: string
+          start_time: string | null
           total_booked: number | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
           canceled?: boolean | null
-          class_id: string
-          class_name: string
+          class_id?: string | null
+          class_name?: string | null
+          created_at?: string
           description?: string | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
           schedule_date: string
-          start_time: string
+          start_time?: string | null
           total_booked?: number | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
           canceled?: boolean | null
-          class_id?: string
-          class_name?: string
+          class_id?: string | null
+          class_name?: string | null
+          created_at?: string
           description?: string | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
           schedule_date?: string
-          start_time?: string
+          start_time?: string | null
           total_booked?: number | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

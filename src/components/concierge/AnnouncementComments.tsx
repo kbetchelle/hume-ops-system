@@ -58,7 +58,7 @@ export function AnnouncementComments({
   const displayCount = comments?.length ?? commentCount;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("p-0", className)}>
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"

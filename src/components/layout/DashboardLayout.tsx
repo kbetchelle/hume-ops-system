@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { NotificationBell } from "@/components/concierge/NotificationBell";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useUnreadBugReportCount } from "@/hooks/useUnreadBugReportCount";
@@ -128,7 +129,7 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     icon: ClipboardList,
     roles: ["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]
   }, {
-    title: "Communications",
+    title: "Announcements",
     url: "/dashboard/communications",
     icon: Bell
   }, {
@@ -261,6 +262,11 @@ function SidebarNav() {
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports");
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
+        {/* User greeting and role switcher at top */}
+        <div className={cn("px-3 pb-3 space-y-0", collapsed && "px-2")}>
+          <UserInfoDropdown collapsed={collapsed} />
+          <RoleSwitcher collapsed={collapsed} />
+        </div>
         <SidebarGroup>
           <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
             Navigation
@@ -362,11 +368,7 @@ function SidebarNav() {
           </SidebarGroup>}
       </SidebarContent>
       
-      {/* Role Switcher and User Info at bottom of sidebar */}
-      <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
-        <RoleSwitcher collapsed={collapsed} />
-        <UserInfoDropdown collapsed={collapsed} />
-      </div>
+      {/* Bottom spacer removed - greeting and role switcher moved to top */}
     </Sidebar>;
 }
 function RoleSwitcher({
@@ -423,21 +425,17 @@ function RoleSwitcher({
   };
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("gap-2 rounded-none", collapsed ? "h-8 w-8 p-0" : "h-8")}>
-          <ArrowLeftRight className="h-4 w-4 shrink-0" />
+        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-auto py-0 w-full px-0")}>
           {!collapsed && <>
-              <span className="text-[10px] uppercase tracking-widest">
-                {currentViewRole ? getRoleLabel(currentViewRole) : "Select Role"}
+              <span className="text-[13px] uppercase tracking-widest flex-1 text-left pl-2">
+                {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
               </span>
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3 w-3 shrink-0" />
             </>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Switch Role
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        
         {availableRoles.map(userRole => {
         const roleInfo = ROLES.find(r => r.value === userRole.role);
         const isCurrentView = currentViewRole === userRole.role || currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant" || currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant";
@@ -484,9 +482,8 @@ function UserInfoDropdown({
   return <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 mt-2 rounded-none", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
-            <User className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="text-[10px] uppercase tracking-widest truncate">
+          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
+            {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
                 Hi, {getFirstName(profile?.full_name)}
               </span>}
           </Button>

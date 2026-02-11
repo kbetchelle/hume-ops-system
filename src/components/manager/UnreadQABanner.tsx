@@ -22,11 +22,9 @@ export function UnreadQABanner({ className }: UnreadQABannerProps) {
         <CardContent className="flex items-center gap-3 py-3">
           <HelpCircle className="h-5 w-5 text-amber-600 shrink-0" />
           <span className="text-sm font-medium">
-            You have {count} unread Q&A question{count !== 1 ? "s" : ""}
+            You have unread Q&A questions
           </span>
-          <Badge variant="secondary" className="ml-auto animate-pulse">
-            {count}
-          </Badge>
+          <span className="ml-auto h-2.5 w-2.5 bg-amber-500 rounded-full animate-pulse shrink-0" />
         </CardContent>
       </Card>
     </Link>

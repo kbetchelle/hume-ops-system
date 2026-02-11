@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
 import {
   Bell,
@@ -7,7 +7,6 @@ import {
   Trash2,
   Edit,
   Eye,
-  EyeOff,
   Upload,
   X,
   Clock,
@@ -25,10 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+
 import {
   Dialog,
   DialogContent,
@@ -61,7 +60,6 @@ import {
   useCreateStaffAnnouncement,
   useUpdateStaffAnnouncement,
   useDeleteStaffAnnouncement,
-  useToggleStaffAnnouncementActive,
   useAnnouncementReadReceipts,
   uploadAnnouncementPhoto,
   deleteAnnouncementPhoto,
@@ -113,6 +111,39 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   const [scheduleTime, setScheduleTime] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(editingAnnouncement?.photo_url || null);
   const [uploading, setUploading] = useState(false);
+
+  // Sync form state when editingAnnouncement changes (dialog reopens)
+  useEffect(() => {
+    if (editingAnnouncement) {
+      setType(editingAnnouncement.announcement_type);
+      setTitle(editingAnnouncement.title);
+      setContent(editingAnnouncement.content);
+      setPriority((editingAnnouncement.priority as Priority) || "normal");
+      setTargetDepartments(editingAnnouncement.target_departments || null);
+      setWeekStartDate(editingAnnouncement.week_start_date || format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      setPhotoUrl(editingAnnouncement.photo_url || null);
+      if (editingAnnouncement.scheduled_at) {
+        const d = new Date(editingAnnouncement.scheduled_at);
+        setScheduleDate(format(d, "yyyy-MM-dd"));
+        setScheduleTime(format(d, "HH:mm"));
+      } else {
+        setScheduleDate("");
+        setScheduleTime("");
+      }
+      setExpiration("never");
+    } else {
+      setType("announcement");
+      setTitle("");
+      setContent("");
+      setPriority("normal");
+      setTargetDepartments(null);
+      setExpiration("never");
+      setWeekStartDate(format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      setScheduleDate("");
+      setScheduleTime("");
+      setPhotoUrl(null);
+    }
+  }, [editingAnnouncement]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -164,7 +195,8 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) return;
+    const strippedContent = content.replace(/<[^>]*>/g, '').trim();
+    if (!title.trim() || !strippedContent) return;
 
     // Calculate expires_at for announcements
     let expiresAt: string | null = null;
@@ -215,22 +247,24 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Type Toggle */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
-            <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
-              <TabsList className="w-full">
-                <TabsTrigger value="announcement" className="flex-1 gap-2">
-                  <Bell className="h-4 w-4" />
-                  Announcement
-                </TabsTrigger>
-                <TabsTrigger value="weekly_update" className="flex-1 gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Weekly Update
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          {/* Type Toggle - disabled when editing */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
+              <Tabs value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="announcement" className="flex-1 gap-2">
+                    <Bell className="h-4 w-4" />
+                    Announcement
+                  </TabsTrigger>
+                  <TabsTrigger value="weekly_update" className="flex-1 gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Weekly Update
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">
@@ -243,15 +277,13 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
             />
           </div>
 
-          {/* Content */}
           <div className="space-y-2">
-            <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
+            <Label>Content</Label>
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder="Enter announcement content..."
-              rows={5}
+              minHeight="150px"
             />
           </div>
 
@@ -385,7 +417,7 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!title.trim() || !content.trim() || isSubmitting}
+            disabled={!title.trim() || !content.replace(/<[^>]*>/g, '').trim() || isSubmitting}
           >
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? "Update" : "Create"} Announcement
@@ -460,16 +492,145 @@ function ReadReceiptsDialog({
   );
 }
 
+function AnnouncementCard({
+  announcement,
+  thisWeekId,
+  commentCounts,
+  expanded,
+  onToggleExpand,
+  onEdit,
+  onDelete,
+  onViewReceipts,
+}: {
+  announcement: StaffAnnouncement;
+  thisWeekId: string | null;
+  commentCounts: Record<string, number> | undefined;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onViewReceipts: () => void;
+}) {
+  const isWeekly = announcement.announcement_type === "weekly_update";
+  const isScheduled = announcement.scheduled_at && new Date(announcement.scheduled_at) > new Date();
+
+  return (
+    <Card
+      className={cn(
+        "cursor-pointer transition-colors hover:bg-muted/30",
+        !announcement.is_active && "opacity-60",
+        isWeekly && "border-blue-500 bg-blue-500/5"
+      )}
+      onClick={onToggleExpand}
+    >
+      <CardContent className="p-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {isWeekly && announcement.id === thisWeekId && (
+                <Badge className="bg-green-600 text-white border-green-600 text-[10px]">This Week</Badge>
+              )}
+              {isWeekly ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px]">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  Weekly Update
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px]">
+                  <Bell className="h-3 w-3 mr-1" />
+                  Announcement
+                </Badge>
+              )}
+              {isScheduled ? (
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <Clock className="h-3 w-3" />
+                  Scheduled {format(new Date(announcement.scheduled_at!), "MMM d, h:mm a")}
+                </Badge>
+              ) : announcement.is_active ? (
+                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px]">Active</Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
+              )}
+            </div>
+
+            <h3 className="font-medium truncate text-sm">{announcement.title}</h3>
+            <div
+              className={cn(
+                "text-sm text-muted-foreground mt-1 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
+                !expanded && "line-clamp-2"
+              )}
+              dangerouslySetInnerHTML={{ __html: announcement.content }}
+            />
+
+            {announcement.photo_url && expanded && (
+              <img src={announcement.photo_url} alt="Attachment" className="max-h-48 object-cover border mt-2" />
+            )}
+
+            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {getTargetLabel(announcement.target_departments)}
+              </span>
+              <span>
+                Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
+              </span>
+              {announcement.week_start_date && (
+                <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
+              )}
+              {(commentCounts?.[announcement.id] || 0) > 0 && (
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {commentCounts?.[announcement.id]} comments
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onViewReceipts}
+              title="View read receipts"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onEdit}
+              title="Edit"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onDelete}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function StaffAnnouncementsManager() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<StaffAnnouncement | null>(null);
   const [receiptsAnnouncement, setReceiptsAnnouncement] = useState<StaffAnnouncement | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | "announcement" | "weekly_update">("all");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const { data: announcements, isLoading } = useStaffAnnouncements();
   const deleteMutation = useDeleteStaffAnnouncement();
-  const toggleActiveMutation = useToggleStaffAnnouncementActive();
 
   const announcementIds = announcements?.map((a) => a.id) || [];
   const { data: commentCounts } = useAnnouncementCommentCounts(announcementIds);
@@ -478,6 +639,27 @@ export function StaffAnnouncementsManager() {
     if (typeFilter === "all") return true;
     return a.announcement_type === typeFilter;
   });
+
+  const weeklyUpdates = (announcements || [])
+    .filter((a) => a.announcement_type === "weekly_update")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const thisWeekId = useMemo(() => {
+    if (weeklyUpdates.length === 0) return null;
+    const sixDaysAgo = new Date();
+    sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+    const newest = weeklyUpdates[0];
+    return new Date(newest.created_at) >= sixDaysAgo ? newest.id : null;
+  }, [weeklyUpdates]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleEdit = (announcement: StaffAnnouncement) => {
     setEditingAnnouncement(announcement);
@@ -491,13 +673,43 @@ export function StaffAnnouncementsManager() {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const config = PRIORITY_CONFIG[priority as Priority] || PRIORITY_CONFIG.normal;
+  const renderCards = (items: StaffAnnouncement[], emptyIcon: React.ReactNode, emptyText: string) => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      );
+    }
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="py-12 text-center">
+            {emptyIcon}
+            <p className="text-muted-foreground">{emptyText}</p>
+            <Button variant="outline" className="mt-4" onClick={() => setCreateDialogOpen(true)}>
+              Create your first {typeFilter === "weekly_update" ? "weekly update" : "announcement"}
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
     return (
-      <Badge className={cn("gap-1", config.color)}>
-        {config.icon}
-        {config.label}
-      </Badge>
+      <div className="space-y-2">
+        {items.map((announcement) => (
+          <AnnouncementCard
+            key={announcement.id}
+            announcement={announcement}
+            thisWeekId={thisWeekId}
+            commentCounts={commentCounts}
+            expanded={expandedIds.has(announcement.id)}
+            onToggleExpand={() => toggleExpand(announcement.id)}
+            onEdit={() => handleEdit(announcement)}
+            onDelete={() => setDeleteConfirmId(announcement.id)}
+            onViewReceipts={() => setReceiptsAnnouncement(announcement)}
+          />
+        ))}
+      </div>
     );
   };
 
@@ -517,7 +729,7 @@ export function StaffAnnouncementsManager() {
         </Button>
       </div>
 
-      {/* View tabs: All, Announcements, Weekly Updates */}
+      {/* View tabs */}
       <Tabs
         value={typeFilter}
         onValueChange={(v) => setTypeFilter(v as "all" | "announcement" | "weekly_update")}
@@ -538,378 +750,13 @@ export function StaffAnnouncementsManager() {
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : filteredAnnouncements.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No announcements found.</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  Create your first announcement
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredAnnouncements.map((announcement) => (
-                <Card
-                  key={announcement.id}
-                  className={cn(!announcement.is_active && "opacity-60")}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
-                          </Badge>
-                          {!announcement.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                          {announcement.scheduled_at &&
-                            new Date(announcement.scheduled_at) > new Date() && (
-                              <Badge variant="outline" className="gap-1">
-                                <Clock className="h-3 w-3" />
-                                Scheduled
-                              </Badge>
-                            )}
-                        </div>
-
-                        <h3 className="font-medium truncate">{announcement.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {announcement.content}
-                        </p>
-
-                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {getTargetLabel(announcement.target_departments)}
-                          </span>
-                          <span>
-                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
-                          </span>
-                          {announcement.week_start_date && (
-                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
-                          )}
-                          {(commentCounts?.[announcement.id] || 0) > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
-                              {commentCounts?.[announcement.id]} comments
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`active-${announcement.id}`} className="text-xs">
-                            Active
-                          </Label>
-                          <Switch
-                            id={`active-${announcement.id}`}
-                            checked={announcement.is_active}
-                            onCheckedChange={(checked) =>
-                              toggleActiveMutation.mutate({
-                                id: announcement.id,
-                                is_active: checked,
-                              })
-                            }
-                          />
-                        </div>
-                        <Separator orientation="vertical" className="h-6" />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setReceiptsAnnouncement(announcement)}
-                          title="View read receipts"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(announcement)}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteConfirmId(announcement.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {renderCards(filteredAnnouncements, <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />, "No announcements found.")}
         </TabsContent>
-
         <TabsContent value="announcement" className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : filteredAnnouncements.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No announcements found.</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  Create your first announcement
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredAnnouncements.map((announcement) => (
-                <Card
-                  key={announcement.id}
-                  className={cn(!announcement.is_active && "opacity-60")}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
-                          </Badge>
-                          {!announcement.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                          {announcement.scheduled_at &&
-                            new Date(announcement.scheduled_at) > new Date() && (
-                              <Badge variant="outline" className="gap-1">
-                                <Clock className="h-3 w-3" />
-                                Scheduled
-                              </Badge>
-                            )}
-                        </div>
-
-                        <h3 className="font-medium truncate">{announcement.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {announcement.content}
-                        </p>
-
-                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {getTargetLabel(announcement.target_departments)}
-                          </span>
-                          <span>
-                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
-                          </span>
-                          {announcement.week_start_date && (
-                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
-                          )}
-                          {(commentCounts?.[announcement.id] || 0) > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
-                              {commentCounts?.[announcement.id]} comments
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`active-ann-${announcement.id}`} className="text-xs">
-                            Active
-                          </Label>
-                          <Switch
-                            id={`active-ann-${announcement.id}`}
-                            checked={announcement.is_active}
-                            onCheckedChange={(checked) =>
-                              toggleActiveMutation.mutate({
-                                id: announcement.id,
-                                is_active: checked,
-                              })
-                            }
-                          />
-                        </div>
-                        <Separator orientation="vertical" className="h-6" />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setReceiptsAnnouncement(announcement)}
-                          title="View read receipts"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(announcement)}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteConfirmId(announcement.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {renderCards(filteredAnnouncements, <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />, "No announcements found.")}
         </TabsContent>
-
         <TabsContent value="weekly_update" className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : filteredAnnouncements.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No weekly updates found.</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  Create your first weekly update
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredAnnouncements.map((announcement) => (
-                <Card
-                  key={announcement.id}
-                  className={cn(!announcement.is_active && "opacity-60")}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Badge variant="outline">
-                            {announcement.announcement_type === "announcement" ? (
-                              <Bell className="h-3 w-3 mr-1" />
-                            ) : (
-                              <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            {announcement.announcement_type === "announcement" ? "Announcement" : "Weekly Update"}
-                          </Badge>
-                          {!announcement.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                          {announcement.scheduled_at &&
-                            new Date(announcement.scheduled_at) > new Date() && (
-                              <Badge variant="outline" className="gap-1">
-                                <Clock className="h-3 w-3" />
-                                Scheduled
-                              </Badge>
-                            )}
-                        </div>
-
-                        <h3 className="font-medium truncate">{announcement.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {announcement.content}
-                        </p>
-
-                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {getTargetLabel(announcement.target_departments)}
-                          </span>
-                          <span>
-                            Created {format(new Date(announcement.created_at), "MMM d, h:mm a")}
-                          </span>
-                          {announcement.week_start_date && (
-                            <span>Week of {format(new Date(announcement.week_start_date), "MMM d")}</span>
-                          )}
-                          {(commentCounts?.[announcement.id] || 0) > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
-                              {commentCounts?.[announcement.id]} comments
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`active-wk-${announcement.id}`} className="text-xs">
-                            Active
-                          </Label>
-                          <Switch
-                            id={`active-wk-${announcement.id}`}
-                            checked={announcement.is_active}
-                            onCheckedChange={(checked) =>
-                              toggleActiveMutation.mutate({
-                                id: announcement.id,
-                                is_active: checked,
-                              })
-                            }
-                          />
-                        </div>
-                        <Separator orientation="vertical" className="h-6" />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setReceiptsAnnouncement(announcement)}
-                          title="View read receipts"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(announcement)}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteConfirmId(announcement.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {renderCards(filteredAnnouncements, <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />, "No weekly updates found.")}
         </TabsContent>
       </Tabs>
 

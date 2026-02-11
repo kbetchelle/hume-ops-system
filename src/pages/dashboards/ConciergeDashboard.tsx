@@ -18,23 +18,35 @@ import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
+import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const isMobile = useIsMobile();
+  const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
 
   // Placeholder for unread message count - will be replaced with real data
   const unreadCount = 3;
+
+  const viewTitles: Record<ConciergeView, string> = {
+    home: "Home",
+    report: "Shift Report",
+    messages: "Messages",
+    announcements: "Announcements",
+    "whos-working": "Who's Working",
+    templates: "Response Templates",
+    "quick-links": "Quick Links",
+    "lost-found": "Lost & Found",
+    "policies-qa": "Policies & Q&A",
+  };
 
   const renderContent = () => {
     switch (activeView) {
       case "home":
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-            <div className="lg:col-span-2 space-y-4">
-              <UpcomingTodayCard />
-              <EmbeddedChecklist />
-            </div>
+          <div className="space-y-4 p-4">
+            <UpcomingTodayCard />
+            <EmbeddedChecklist />
           </div>
         );
       case "whos-working":
@@ -74,7 +86,7 @@ export default function ConciergeDashboard() {
               Announcements
             </h2>
             <div className="max-w-3xl">
-              <AnnouncementsBoard />
+              <AnnouncementsBoard contextRole="concierge" />
             </div>
           </div>
         );
@@ -129,34 +141,38 @@ export default function ConciergeDashboard() {
     }
   };
 
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full bg-background">
-        <ConciergeHeader />
-        
-        <div className="flex flex-1 w-full">
-          {/* Desktop Sidebar */}
-          {!isMobile && (
-            <ConciergeSidebar
-              activeView={activeView}
-              onViewChange={setActiveView}
-              unreadCount={unreadCount}
-            />
-          )}
-
-          {/* Main Content */}
-          <main className={`flex-1 overflow-auto ${isMobile ? "pb-20" : ""}`}>
+  if (isMobile) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full bg-background">
+          <ConciergeHeader title={viewTitles[activeView]} />
+          <main className="flex-1 overflow-auto pb-20">
             {renderContent()}
           </main>
-        </div>
-
-        {/* Mobile Bottom Nav */}
-        {isMobile && (
           <ConciergeBottomNav
             activeView={activeView}
             onViewChange={setActiveView}
+            hasUnreadAnnouncements={!!hasUnreadAnnouncements}
           />
-        )}
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <ConciergeSidebar
+          activeView={activeView}
+          onViewChange={setActiveView}
+          unreadCount={unreadCount}
+        />
+        <div className="flex-1 flex flex-col min-w-0">
+          <ConciergeHeader title={viewTitles[activeView]} />
+          <main className="flex-1 overflow-auto">
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );

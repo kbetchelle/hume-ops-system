@@ -561,6 +561,9 @@ const App = () => (
               }
             />
 
+            {/* OAuth callback - must not be caught by React Router */}
+            <Route path="/~oauth" element={null} />
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

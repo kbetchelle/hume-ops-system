@@ -84,6 +84,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Never intercept OAuth callback - let the auth bridge handle it
+  if (url.pathname.startsWith('/~oauth')) {
+    return;
+  }
+
   // Skip cross-origin requests except for Supabase
   if (url.origin !== self.location.origin && !url.hostname.includes('supabase')) {
     return;

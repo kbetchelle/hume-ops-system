@@ -504,10 +504,6 @@ function UserInfoDropdown({
             <User className="mr-2 h-3 w-3" />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
-            <Settings className="mr-2 h-3 w-3" />
-            Settings
-          </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bug className="mr-2 h-3 w-3" />

@@ -1415,6 +1415,35 @@ export type Database = {
           },
         ]
       }
+      bug_report_reads: {
+        Row: {
+          bug_report_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          bug_report_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          bug_report_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_reads_bug_report_id_fkey"
+            columns: ["bug_report_id"]
+            isOneToOne: false
+            referencedRelation: "bug_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bug_reports: {
         Row: {
           category: string | null
@@ -4401,6 +4430,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          bug_report_badge_enabled: boolean | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bug_report_badge_enabled?: boolean | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bug_report_badge_enabled?: boolean | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

@@ -59,6 +59,7 @@ import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import BugReportsPage from "./pages/admin/BugReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
@@ -522,6 +523,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AccountSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Notifications for all authenticated users */}
+            <Route
+              path="/dashboard/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
                 </ProtectedRoute>
               }
             />

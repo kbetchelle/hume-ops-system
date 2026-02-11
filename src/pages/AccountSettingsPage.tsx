@@ -14,6 +14,7 @@ import { PREFERRED_LANGUAGE_PENDING_KEY } from "@/components/shared/SyncProfileL
 import { User, Globe, Bell, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { NotificationPreferencesPanel } from "@/components/notifications/NotificationPreferencesPanel";
 
 export default function AccountSettingsPage() {
   const { user } = useAuthContext();
@@ -22,7 +23,7 @@ export default function AccountSettingsPage() {
   const { data: preferences, isLoading: prefsLoading } = useUserPreferences();
   const updateProfile = useUpdateProfile();
   const updatePreferences = useUpdateUserPreferences();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   // Local state for profile form
   const [fullName, setFullName] = useState("");
@@ -49,9 +50,9 @@ export default function AccountSettingsPage() {
         fullName: fullName.trim(),
       });
       setNameChanged(false);
-      toast.success("Name updated successfully");
+      toast.success(t("Name updated successfully", "Nombre actualizado correctamente"));
     } catch {
-      toast.error("Failed to update name");
+      toast.error(t("Failed to update name", "Error al actualizar el nombre"));
     }
   };
 
@@ -75,7 +76,7 @@ export default function AccountSettingsPage() {
   const isLoading = profileLoading || prefsLoading;
 
   return (
-    <DashboardLayout title="Account Settings">
+    <DashboardLayout title={t("Account Settings", "Configuración de Cuenta")}>
       <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6">
         {isLoading ? (
           <div className="space-y-4">
@@ -90,10 +91,10 @@ export default function AccountSettingsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Profile Information
+                  {t("Profile Information", "Información del Perfil")}
                 </CardTitle>
                 <CardDescription className="text-[10px] tracking-wide">
-                  Update your display name and personal information.
+                  {t("Update your display name and personal information.", "Actualiza tu nombre y datos personales.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -102,7 +103,7 @@ export default function AccountSettingsPage() {
                     htmlFor="email"
                     className="text-[10px] uppercase tracking-widest"
                   >
-                    Email
+                    {t("Email", "Correo Electrónico")}
                   </Label>
                   <Input
                     id="email"
@@ -111,7 +112,7 @@ export default function AccountSettingsPage() {
                     className="rounded-none text-xs bg-muted"
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Email cannot be changed.
+                    {t("Email cannot be changed.", "El correo no se puede cambiar.")}
                   </p>
                 </div>
 
@@ -120,14 +121,14 @@ export default function AccountSettingsPage() {
                     htmlFor="fullName"
                     className="text-[10px] uppercase tracking-widest"
                   >
-                    Full Name
+                    {t("Full Name", "Nombre Completo")}
                   </Label>
                   <div className="flex gap-2">
                     <Input
                       id="fullName"
                       value={fullName}
                       onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="Your full name"
+                      placeholder={t("Your full name", "Tu nombre completo")}
                       className="rounded-none text-xs flex-1"
                     />
                     <Button
@@ -146,7 +147,7 @@ export default function AccountSettingsPage() {
                       ) : (
                         <>
                           <Save className="h-3 w-3 mr-1" />
-                          Save
+                          {t("Save", "Guardar")}
                         </>
                       )}
                     </Button>
@@ -160,10 +161,10 @@ export default function AccountSettingsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
                   <Globe className="h-4 w-4" />
-                  Language Preference
+                  {t("Language Preference", "Preferencia de Idioma")}
                 </CardTitle>
                 <CardDescription className="text-[10px] tracking-wide">
-                  Choose your preferred language for the application.
+                  {t("Choose your preferred language for the application.", "Elige tu idioma preferido para la aplicación.")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -193,35 +194,35 @@ export default function AccountSettingsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
                   <Bell className="h-4 w-4" />
-                  Notification Preferences
+                  {t("Notification Preferences", "Preferencias de Notificaciones")}
                 </CardTitle>
                 <CardDescription className="text-[10px] tracking-wide">
-                  Control which notifications and badges you see.
+                  {t("Control which notifications you receive and how.", "Controla qué notificaciones recibes y cómo.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <NotificationPreferencesPanel isAdminOrManager={isAdminOrManager} />
+
                 {/* Bug Report Badge Toggle - only for admin/manager */}
                 {isAdminOrManager && (
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs">Bug Report Badges</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Show unread bug report count in the Dev Tools
-                        navigation.
-                      </p>
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-xs">{t("Bug Report Badges", "Insignias de Reportes de Bugs")}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t(
+                            "Show unread bug report count in the Dev Tools navigation.",
+                            "Mostrar el conteo de reportes de bugs no leídos en la navegación de Dev Tools."
+                          )}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={preferences?.bug_report_badge_enabled ?? true}
+                        onCheckedChange={handleBugBadgeToggle}
+                        disabled={updatePreferences.isPending}
+                      />
                     </div>
-                    <Switch
-                      checked={preferences?.bug_report_badge_enabled ?? true}
-                      onCheckedChange={handleBugBadgeToggle}
-                      disabled={updatePreferences.isPending}
-                    />
                   </div>
-                )}
-
-                {!isAdminOrManager && (
-                  <p className="text-xs text-muted-foreground">
-                    No notification preferences available for your role.
-                  </p>
                 )}
               </CardContent>
             </Card>

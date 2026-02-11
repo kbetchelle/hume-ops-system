@@ -1,0 +1,242 @@
+import { differenceInMinutes, differenceInHours } from 'date-fns';
+import type {
+  StaffMessage,
+  StaffMessageRead,
+  Conversation,
+  ConversationParticipant,
+  EDIT_WINDOW_HOURS,
+  TIMESTAMP_COLLAPSE_MINUTES,
+} from '@/types/messaging';
+
+/**
+ * Generate a unique conversation key for grouping messages
+ */
+export function buildConversationKey(
+  message: StaffMessage,
+  currentUserId: string
+): string {
+  // Group messages are identified by group_id
+  if (message.group_id) {
+    return `group:${message.group_id}`;
+  }
+
+  // Thread messages are grouped by thread_id
+  if (message.thread_id) {
+    return `thread:${message.thread_id}`;
+  }
+
+  // For direct messages, create a stable key by sorting participant IDs
+  const participants = [
+    message.sender_id,
+    ...(message.recipient_ids || []),
+  ].filter((id): id is string => id !== null);
+
+  const uniqueParticipants = Array.from(new Set(participants));
+  const sortedIds = uniqueParticipants.sort();
+
+  return `direct:${sortedIds.join(',')}`;
+}
+
+/**
+ * Transform flat message array into conversation objects
+ */
+export function groupMessagesIntoConversations(
+  messages: StaffMessage[],
+  reads: StaffMessageRead[],
+  currentUserId: string
+): Conversation[] {
+  const conversationMap = new Map<string, Conversation>();
+  const readSet = new Set(reads.map((r) => r.message_id));
+  const archivedSet = new Set(
+    reads.filter((r) => r.is_archived).map((r) => r.message_id)
+  );
+
+  // Group messages by conversation key
+  messages.forEach((message) => {
+    const key = buildConversationKey(message, currentUserId);
+
+    if (!conversationMap.has(key)) {
+      // Determine participants
+      const participantIds = message.group_id
+        ? [] // Group participants fetched separately
+        : Array.from(
+            new Set(
+              [message.sender_id, ...(message.recipient_ids || [])].filter(
+                (id): id is string => id !== null && id !== currentUserId
+              )
+            )
+          );
+
+      const participants: ConversationParticipant[] = participantIds.map(
+        (id) => ({
+          userId: id,
+          name: '', // Will be populated by component
+          isGroup: false,
+        })
+      );
+
+      conversationMap.set(key, {
+        key,
+        participants,
+        messages: [],
+        lastMessage: message,
+        unreadCount: 0,
+        hasUnread: false,
+        isArchived: archivedSet.has(message.id),
+        isGroup: !!message.group_id,
+        groupId: message.group_id,
+        groupName: message.group_name,
+        threadId: message.thread_id,
+      });
+    }
+
+    const conversation = conversationMap.get(key)!;
+    conversation.messages.push(message);
+
+    // Update last message if this is more recent
+    if (
+      new Date(message.created_at) > new Date(conversation.lastMessage.created_at)
+    ) {
+      conversation.lastMessage = message;
+    }
+
+    // Count unread messages for current user
+    if (!readSet.has(message.id) && message.sender_id !== currentUserId) {
+      conversation.unreadCount++;
+      conversation.hasUnread = true;
+    }
+  });
+
+  // Sort messages within each conversation by date
+  conversationMap.forEach((conversation) => {
+    conversation.messages.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  });
+
+  // Convert to array and sort by last message time (most recent first)
+  const conversations = Array.from(conversationMap.values());
+  conversations.sort(
+    (a, b) =>
+      new Date(b.lastMessage.created_at).getTime() -
+      new Date(a.lastMessage.created_at).getTime()
+  );
+
+  return conversations;
+}
+
+/**
+ * Generate conversation title based on participants and context
+ */
+export function getConversationTitle(
+  conversation: Conversation,
+  currentUserName: string
+): string {
+  if (conversation.groupName) {
+    return conversation.groupName;
+  }
+
+  if (conversation.participants.length === 0) {
+    return 'New Conversation';
+  }
+
+  if (conversation.participants.length === 1) {
+    return conversation.participants[0].name || 'Unknown';
+  }
+
+  // Multiple participants: show "Name, Name, and N others"
+  const names = conversation.participants.slice(0, 2).map((p) => p.name);
+  const remaining = conversation.participants.length - 2;
+
+  if (remaining > 0) {
+    return `${names.join(', ')}, and ${remaining} other${remaining > 1 ? 's' : ''}`;
+  }
+
+  return names.join(', ');
+}
+
+/**
+ * Determine which messages should show timestamps (15-min collapsing)
+ */
+export function collapseTimestamps(messages: StaffMessage[]): Set<string> {
+  const showTimestampIds = new Set<string>();
+
+  if (messages.length === 0) return showTimestampIds;
+
+  // Always show first message timestamp
+  showTimestampIds.add(messages[0].id);
+
+  for (let i = 1; i < messages.length; i++) {
+    const prevMessage = messages[i - 1];
+    const currentMessage = messages[i];
+
+    const minutesDiff = differenceInMinutes(
+      new Date(currentMessage.created_at),
+      new Date(prevMessage.created_at)
+    );
+
+    // Show timestamp if more than 15 minutes apart or different sender
+    if (
+      minutesDiff >= 15 ||
+      currentMessage.sender_id !== prevMessage.sender_id
+    ) {
+      showTimestampIds.add(currentMessage.id);
+    }
+  }
+
+  return showTimestampIds;
+}
+
+/**
+ * Check if a message is within the edit window (12 hours)
+ */
+export function isWithinEditWindow(
+  messageTimestamp: string,
+  editWindowHours: typeof EDIT_WINDOW_HOURS = 12
+): boolean {
+  const hoursDiff = differenceInHours(new Date(), new Date(messageTimestamp));
+  return hoursDiff < editWindowHours;
+}
+
+/**
+ * Get message preview text (truncated)
+ */
+export function getMessagePreview(content: string, maxLength: number = 60): string {
+  if (content.length <= maxLength) return content;
+  return content.substring(0, maxLength - 3) + '...';
+}
+
+/**
+ * Check if user is participant in conversation
+ */
+export function isParticipant(
+  conversation: Conversation,
+  userId: string
+): boolean {
+  return conversation.participants.some((p) => p.userId === userId);
+}
+
+/**
+ * Filter conversations by search query
+ */
+export function filterConversationsByQuery(
+  conversations: Conversation[],
+  query: string
+): Conversation[] {
+  if (!query.trim()) return conversations;
+
+  const lowerQuery = query.toLowerCase();
+
+  return conversations.filter((conversation) => {
+    // Search in title
+    const title = getConversationTitle(conversation, '');
+    if (title.toLowerCase().includes(lowerQuery)) return true;
+
+    // Search in message content
+    return conversation.messages.some((msg) =>
+      msg.content.toLowerCase().includes(lowerQuery) ||
+      msg.subject?.toLowerCase().includes(lowerQuery)
+    );
+  });
+}

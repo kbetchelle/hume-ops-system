@@ -101,9 +101,31 @@ BEGIN
   END IF;
 END $$;
 
-alter table "public"."arketa_classes" drop constraint "arketa_classes_external_id_class_date_key";
+-- Conditional drop constraint for arketa_classes
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'arketa_classes_external_id_class_date_key'
+  ) THEN
+    alter table "public"."arketa_classes" drop constraint "arketa_classes_external_id_class_date_key";
+  END IF;
+END $$;
 
-alter table "public"."daily_schedule" drop constraint "daily_schedule_schedule_date_class_id_key";
+-- Conditional drop constraint for daily_schedule
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule'
+  ) AND EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'daily_schedule_schedule_date_class_id_key'
+  ) THEN
+    alter table "public"."daily_schedule" drop constraint "daily_schedule_schedule_date_class_id_key";
+  END IF;
+END $$;
 
 drop function if exists "public"."auto_mark_old_announcements_read"();
 
@@ -119,9 +141,35 @@ drop function if exists "public"."upsert_arketa_classes_from_staging"(p_sync_bat
 
 drop view if exists "public"."arketa_orphan_classes";
 
-alter table "public"."api_sync_skipped_records" drop constraint "api_sync_skipped_records_pkey";
+-- Conditional drop constraint for api_sync_skipped_records primary key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'api_sync_skipped_records'
+  ) AND EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'api_sync_skipped_records_pkey'
+  ) THEN
+    alter table "public"."api_sync_skipped_records" drop constraint "api_sync_skipped_records_pkey";
+  END IF;
+END $$;
 
-alter table "public"."daily_schedule" drop constraint "daily_schedule_pkey";
+-- Conditional drop constraint for daily_schedule primary key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'daily_schedule'
+  ) AND EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'daily_schedule_pkey'
+  ) THEN
+    alter table "public"."daily_schedule" drop constraint "daily_schedule_pkey";
+  END IF;
+END $$;
 
 drop index if exists "public"."api_sync_skipped_records_pkey";
 

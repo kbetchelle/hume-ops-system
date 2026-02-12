@@ -26,8 +26,14 @@ export default function UserManagementPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="approvals" className="space-y-6">
+        <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
+            <TabsTrigger
+              value="users"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+            >
+              Users & Roles
+            </TabsTrigger>
             <TabsTrigger
               value="approvals"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
@@ -40,12 +46,6 @@ export default function UserManagementPage() {
                   </Badge>
                 )}
               </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-            >
-              Users & Roles
             </TabsTrigger>
             <TabsTrigger
               value="sling"

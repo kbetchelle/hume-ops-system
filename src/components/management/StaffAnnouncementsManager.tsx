@@ -54,7 +54,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { cn } from "@/lib/utils";
+import { cn, sanitizeHtml } from "@/lib/utils";
 import {
   useStaffAnnouncements,
   useCreateStaffAnnouncement,
@@ -559,7 +559,7 @@ function AnnouncementCard({
                 "text-sm text-muted-foreground mt-1 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
                 !expanded && "line-clamp-2"
               )}
-              dangerouslySetInnerHTML={{ __html: announcement.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.content) }}
             />
 
             {announcement.photo_url && expanded && (

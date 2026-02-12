@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { cn } from '@/lib/utils';
+import { cn, sanitizeHtml } from '@/lib/utils';
 import { AppRole } from '@/types/roles';
 import { AnnouncementComments, CommentCountBadge } from './AnnouncementComments';
 import { useAnnouncementCommentCounts } from '@/hooks/useAnnouncementComments';
@@ -239,7 +239,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
       <h3 className="font-semibold text-sm mb-3">{item.title}</h3>
       <div
         className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
-        dangerouslySetInnerHTML={{ __html: item.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
       />
       {item.photo_url && (
         <img src={item.photo_url} alt="Update attachment" className="mt-4 max-h-48 object-cover border" />
@@ -277,7 +277,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
       </div>
       <div
         className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
-        dangerouslySetInnerHTML={{ __html: item.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
       />
       {item.photo_url && (
         <img src={item.photo_url} alt="Attachment" className="mt-3 max-h-48 object-cover border" />

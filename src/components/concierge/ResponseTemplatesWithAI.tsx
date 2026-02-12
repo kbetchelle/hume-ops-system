@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useAuth } from "@/hooks/useAuth";
@@ -334,7 +335,7 @@ function TemplateList({
           
           <div 
             className="text-sm text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
-            dangerouslySetInnerHTML={{ __html: template.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(template.content) }}
           />
         </div>
       ))}

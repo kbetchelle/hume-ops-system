@@ -16,34 +16,16 @@ export function useUnreadMessageCount() {
     queryFn: async () => {
       if (!user?.id) return 0;
 
-      // Get all messages where user is recipient
-      const { data: messages, error: msgError } = await supabase
-        .from('staff_messages')
-        .select('id')
-        .eq('is_sent', true)
-        .contains('recipient_ids', [user.id]);
+      // Single DB function call replaces the previous two-query N+1 pattern
+      const { data, error } = await supabase.rpc('get_unread_message_count' as any, {
+        p_user_id: user.id,
+      });
 
-      if (msgError) throw msgError;
-
-      const messageIds = (messages || []).map((m) => m.id);
-      if (messageIds.length === 0) return 0;
-
-      // Get reads
-      const { data: reads, error: readError } = await supabase
-        .from('staff_message_reads')
-        .select('message_id')
-        .eq('staff_id', user.id)
-        .in('message_id', messageIds);
-
-      if (readError) throw readError;
-
-      const readIds = new Set((reads || []).map((r) => r.message_id));
-      const unreadCount = messageIds.filter((id) => !readIds.has(id)).length;
-
-      return unreadCount;
+      if (error) throw error;
+      return (data as number) ?? 0;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000,
+    // Realtime subscription (below) handles live updates; no polling needed.
   });
 
   // Subscribe to realtime updates

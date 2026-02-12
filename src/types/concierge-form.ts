@@ -1,14 +1,17 @@
 export interface FeedbackItem {
+  id: string;
   sentiment: 'positive' | 'neutral' | 'negative';
   text: string;
 }
 
 export interface FacilityIssue {
+  id: string;
   description: string;
   photoUrl: string | null;
 }
 
 export interface SystemIssue {
+  id: string;
   issueType: string;
   description: string;
   photoUrl: string | null;
@@ -25,6 +28,7 @@ export type CelebratoryEventType =
   | 'other';
 
 export interface CelebratoryEvent {
+  id: string;
   memberName: string;
   eventType: CelebratoryEventType;
   date: string;
@@ -33,6 +37,7 @@ export interface CelebratoryEvent {
 }
 
 export interface Tour {
+  id: string;
   name: string;
   followupCompleted: boolean;
 }
@@ -46,6 +51,7 @@ export type CancelPauseReason =
   | 'other';
 
 export interface MembershipCancelRequest {
+  id: string;
   name: string;
   email: string;
   membershipType: string;
@@ -59,6 +65,7 @@ export interface MembershipCancelRequest {
 }
 
 export interface FutureNote {
+  id: string;
   targetDate: string;
   targetShift: string;
   note: string;

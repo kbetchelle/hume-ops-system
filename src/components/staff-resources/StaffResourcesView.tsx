@@ -12,6 +12,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/utils";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import {
   useQuickLinkGroupsByRole,
@@ -63,7 +64,7 @@ function QuickLinksTab({ groups, isLoading }: { groups: QuickLinkGroupWithItems[
             {group.description && (
               <div
                 className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-3"
-                dangerouslySetInnerHTML={{ __html: group.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(group.description) }}
               />
             )}
             {group.items.length > 0 && (
@@ -162,7 +163,7 @@ function ResourcePagesTab({ pages, isLoading }: { pages: ResourcePage[]; isLoadi
               {isExpanded && page.content && (
                 <div
                   className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: page.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
                 />
               )}
             </CardContent>

@@ -41,6 +41,9 @@ export function useSendNotification() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-notifications'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to send notification:', error);
+    },
   });
 }
 
@@ -86,6 +89,9 @@ export function useNotifyManagers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-notifications'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to notify managers:', error);
     },
   });
 }

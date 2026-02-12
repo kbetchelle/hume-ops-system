@@ -441,27 +441,28 @@ export function ConciergeForm() {
   
   // Array field handlers
   const addMemberFeedback = () => {
-    updateFormField('memberFeedback', [...formData.memberFeedback, { sentiment: 'neutral', text: '' }]);
+    updateFormField('memberFeedback', [...formData.memberFeedback, { id: crypto.randomUUID(), sentiment: 'neutral', text: '' }]);
   };
   
   const addFacilityIssue = () => {
-    updateFormField('facilityIssues', [...formData.facilityIssues, { description: '', photoUrl: null }]);
+    updateFormField('facilityIssues', [...formData.facilityIssues, { id: crypto.randomUUID(), description: '', photoUrl: null }]);
   };
   
   const addSystemIssue = () => {
-    updateFormField('systemIssues', [...formData.systemIssues, { issueType: '', description: '', photoUrl: null }]);
+    updateFormField('systemIssues', [...formData.systemIssues, { id: crypto.randomUUID(), issueType: '', description: '', photoUrl: null }]);
   };
   
   const addCelebratoryEvent = () => {
-    updateFormField('celebratoryEvents', [...formData.celebratoryEvents, { memberName: '', eventType: 'birthday', date: '' }]);
+    updateFormField('celebratoryEvents', [...formData.celebratoryEvents, { id: crypto.randomUUID(), memberName: '', eventType: 'birthday', date: '' }]);
   };
   
   const addTour = () => {
-    updateFormField('tours', [...formData.tours, { name: '', followupCompleted: false }]);
+    updateFormField('tours', [...formData.tours, { id: crypto.randomUUID(), name: '', followupCompleted: false }]);
   };
   
   const addCancelRequest = () => {
     updateFormField('membershipCancelRequests', [...formData.membershipCancelRequests, { 
+      id: crypto.randomUUID(),
       name: '', 
       email: '', 
       membershipType: '', 
@@ -472,6 +473,7 @@ export function ConciergeForm() {
   
   const addFutureNote = () => {
     updateFormField('futureNotes', [...formData.futureNotes, { 
+      id: crypto.randomUUID(),
       targetDate: '', 
       targetShift: 'AM', 
       note: '' 
@@ -677,7 +679,7 @@ export function ConciergeForm() {
               Please report any feedback or issues from members or staff/ general shift notes. For general notes, please select neutral:
             </p>
             {formData.memberFeedback.map((feedback, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={feedback.id ?? i} className="flex gap-2">
                 <Select
                   value={feedback.sentiment}
                   onValueChange={(v) => {
@@ -732,7 +734,7 @@ export function ConciergeForm() {
           <div className="space-y-3">
             <Label className="text-sm">Were there any requests to cancel or pause membership?</Label>
             {formData.membershipCancelRequests.map((request, i) => (
-              <div key={i} className="space-y-2 p-3 border rounded-lg">
+              <div key={request.id ?? i} className="space-y-2 p-3 border rounded-lg">
                 <div className="flex flex-wrap gap-2 items-center">
                   <Select
                     value={request.requestType}
@@ -870,7 +872,7 @@ export function ConciergeForm() {
             </div>
             <p className="text-xs text-muted-foreground">Add any special/giftable events to tracker.</p>
             {!formData.celebratoryEventsNA && formData.celebratoryEvents.map((event, i) => (
-              <div key={i} className="flex flex-wrap gap-2">
+              <div key={event.id ?? i} className="flex flex-wrap gap-2">
                 <Input
                   value={event.memberName}
                   onChange={(e) => {
@@ -961,7 +963,7 @@ export function ConciergeForm() {
             <div className="space-y-3">
               <Label className="text-sm">Did you tour anyone? (Add notes)</Label>
               {formData.tours.map((tour, i) => (
-                <div key={i} className="flex flex-wrap gap-2 items-center">
+                <div key={tour.id ?? i} className="flex flex-wrap gap-2 items-center">
                   <Input
                     value={tour.name}
                     onChange={(e) => {
@@ -1012,7 +1014,7 @@ export function ConciergeForm() {
             <h3 className="text-sm font-semibold uppercase tracking-wider">Facilities</h3>
             <Label className="text-sm">Any facility issues? (maintenance, equipment, etc.)</Label>
             {formData.facilityIssues.map((issue, i) => (
-              <div key={i} className="flex gap-2 items-start">
+              <div key={issue.id ?? i} className="flex gap-2 items-start">
                 <Textarea
                   value={issue.description}
                   onChange={(e) => {
@@ -1084,7 +1086,7 @@ export function ConciergeForm() {
               <span className="text-sm text-muted-foreground">N/A</span>
             </div>
             {!formData.systemIssuesNA && formData.systemIssues.map((issue, i) => (
-              <div key={i} className="flex flex-wrap gap-2 items-start">
+              <div key={issue.id ?? i} className="flex flex-wrap gap-2 items-start">
                 <Select
                   value={issue.issueType}
                   onValueChange={(v) => {
@@ -1178,7 +1180,7 @@ export function ConciergeForm() {
               <span className="text-sm text-muted-foreground">N/A</span>
             </div>
             {!formData.futureShiftNotesNA && formData.futureNotes.map((note, i) => (
-              <div key={i} className="flex flex-wrap gap-2 items-center">
+              <div key={note.id ?? i} className="flex flex-wrap gap-2 items-center">
                 <Input
                   type="date"
                   value={note.targetDate}

@@ -22,7 +22,12 @@ export interface CurrentWorkerDetail {
   shiftEnd: string;
 }
 
-export interface SlingUser {
+/**
+ * Shape of a user returned by the Sling API (camelCase fields).
+ * Not to be confused with `SlingUser` in `src/types/roles.ts` which
+ * represents the DB row shape (snake_case fields from the sling_users table).
+ */
+export interface SlingApiUser {
   slingUserId: number;
   name: string;
   email: string | null;
@@ -89,7 +94,7 @@ export function useSyncSlingUsers() {
       const result = await callSlingApi("sync-users");
       return result as {
         success: boolean;
-        users: SlingUser[];
+        users: SlingApiUser[];
         matchedCount: number;
         totalSlingUsers: number;
       };

@@ -1,12 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 
-type EventDrink = Database['public']['Tables']['event_drinks']['Row'];
-type EventDrinkInsert = Database['public']['Tables']['event_drinks']['Insert'];
-type EventDrinkUpdate = Database['public']['Tables']['event_drinks']['Update'];
+export interface EventDrink {
+  id: string;
+  drink_name: string;
+  event_name: string | null;
+  event_date: string | null;
+  event_type: string | null;
+  event_type_notes: string | null;
+  recipe: string | null;
+  food: string | null;
+  staff: string[];
+  supplies_needed: string | null;
+  supplies_ordered: boolean;
+  supplies_ordered_at: string | null;
+  staff_notified: boolean;
+  staff_notified_at: string | null;
+  menu_printed: string | null;
+  menu_printed_at: string | null;
+  photoshoot: string | null;
+  photoshoot_at: string | null;
+  needs_followup: boolean;
+  additional_notes: string | null;
+  email_thread_path: string | null;
+  email_thread_filename: string | null;
+  is_archived: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export type { EventDrink, EventDrinkInsert, EventDrinkUpdate };
+export type EventDrinkInsert = Partial<EventDrink> & { drink_name: string };
+export type EventDrinkUpdate = Partial<EventDrink>;
+
+
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -16,8 +43,8 @@ export function useEventDrinks(isArchived: boolean) {
   return useQuery({
     queryKey: ['event-drinks', isArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .select('*')
         .eq('is_archived', isArchived);
 
@@ -113,8 +140,8 @@ export function useEventDrinkMutations() {
 
   const createEventDrink = useMutation({
     mutationFn: async (drink: EventDrinkInsert) => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .insert(drink)
         .select()
         .single();
@@ -126,8 +153,8 @@ export function useEventDrinkMutations() {
 
   const updateEventDrink = useMutation({
     mutationFn: async ({ id, ...updates }: EventDrinkUpdate & { id: string }) => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -140,8 +167,8 @@ export function useEventDrinkMutations() {
 
   const archiveEventDrink = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('event_drinks')
+      const { error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({ is_archived: true })
         .eq('id', id);
       if (error) throw error;
@@ -151,8 +178,8 @@ export function useEventDrinkMutations() {
 
   const restoreEventDrink = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('event_drinks')
+      const { error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({ is_archived: false })
         .eq('id', id);
       if (error) throw error;
@@ -169,8 +196,8 @@ export function useEventDrinkMutations() {
         .upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { error: updateError } = await supabase
-        .from('event_drinks')
+      const { error: updateError } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({
           email_thread_path: filePath,
           email_thread_filename: file.name,

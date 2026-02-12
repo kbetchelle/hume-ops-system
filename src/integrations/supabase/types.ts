@@ -3087,6 +3087,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          must_change_password: boolean
           onboarding_completed: boolean | null
           preferred_language: string | null
           sling_id: string | null
@@ -3103,6 +3104,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
           sling_id?: string | null
@@ -3119,6 +3121,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
           sling_id?: string | null

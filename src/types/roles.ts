@@ -78,6 +78,7 @@ export interface UserProfile {
   preferred_language?: string | null;
   sling_id?: string | null;
   deactivated?: boolean;
+  must_change_password?: boolean;
   approval_status?: ApprovalStatus;
   approved_by?: string | null;
   approved_at?: string | null;

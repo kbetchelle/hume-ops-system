@@ -99,6 +99,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Flag the user so they are forced to change password on next login
+    const { error: flagError } = await supabaseAdmin
+      .from('profiles')
+      .update({ must_change_password: true })
+      .eq('user_id', userId);
+
+    if (flagError) {
+      console.error('Failed to set must_change_password flag:', flagError);
+      // Password was already reset, so still return success but note the flag issue
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: 'Password reset successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -27,7 +27,7 @@ export function useUnreadNotificationCount() {
       return count ?? 0;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000,
+    // Realtime subscription (below) handles live updates; no polling needed.
   });
 
   // Subscribe to realtime INSERT events for instant badge updates

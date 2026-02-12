@@ -138,7 +138,7 @@ export function useBackfillJobs() {
       if (error) throw error;
       return data as BackfillJob[];
     },
-    refetchInterval: 2000, // Poll every 2 seconds for live updates
+    // Realtime subscription (below) handles live updates; no polling needed.
   });
 
   // Continue a job (run-backfill-job self-continues; this is for backwards compat only)

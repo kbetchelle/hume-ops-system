@@ -52,7 +52,7 @@ export type ConciergeView =
   | "templates"
   | "resources"
   | "lost-found"
-  | "policies-qa";
+  | "qa";
 
 interface NavItem {
   id: ConciergeView;
@@ -126,7 +126,7 @@ export function ConciergeSidebar({
       title: "Reference",
       items: [
         { id: "whos-working", label: "Who's Working", icon: Users },
-        { id: "policies-qa", label: "Policies & Q&A", icon: HelpCircle },
+        { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
     },
   ];

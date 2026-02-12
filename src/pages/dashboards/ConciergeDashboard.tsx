@@ -37,7 +37,7 @@ export default function ConciergeDashboard() {
     templates: "Response Templates",
     resources: "Resources",
     "lost-found": "Lost & Found",
-    "policies-qa": "Policies & Q&A",
+    qa: "Q&A",
   };
 
   const renderContent = () => {
@@ -90,7 +90,7 @@ export default function ConciergeDashboard() {
             </div>
           </div>
         );
-      case "policies-qa":
+      case "qa":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
             <div className="flex-1 flex flex-col min-h-0 w-full">

@@ -54,13 +54,12 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
   'arketa-payments': {
     apiSource: 'arketa',
     dataType: 'payments',
-    endpointPath: '/purchases',
-    // API returns snake_case: client_id, payment_type, created_at, etc.
-    fieldsToFetch: ['id', 'client_id', 'amount', 'price', 'currency', 'status', 'type', 'created_at', 'description', 'name'],
+    endpointPath: '/payments',
+    fieldsToFetch: ['id', 'amount', 'status', 'created_at', 'currency', 'amount_refunded', 'description', 'invoice_id', 'normalized_category', 'net_sales', 'transaction_fees', 'tax', 'location_name', 'source', 'payment_type', 'promo_code', 'offering_name', 'seller_name', 'client'],
     stagingTable: 'arketa_payments_staging',
     targetTable: 'arketa_payments',
-    uniqueKey: 'external_id',
-    batchSize: 400
+    uniqueKey: 'payment_id',
+    batchSize: 25
   },
   'arketa-instructors': {
     apiSource: 'arketa',

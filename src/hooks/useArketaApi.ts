@@ -41,13 +41,29 @@ export interface ArketaReservation {
 
 export interface ArketaPayment {
   id: string;
-  external_id: string;
-  client_id: string | null;
-  amount: number;
-  payment_type: string | null;
+  payment_id: string;
+  amount: number | null;
   status: string | null;
-  payment_date: string;
-  synced_at: string;
+  created_at_api: string | null;
+  currency: string | null;
+  amount_refunded: number | null;
+  description: string | null;
+  invoice_id: string | null;
+  net_sales: number | null;
+  transaction_fees: number | null;
+  tax: number | null;
+  location_name: string | null;
+  source: string | null;
+  payment_type: string | null;
+  promo_code: string | null;
+  offering_name: string[] | null;
+  seller_name: string | null;
+  client_id: string | null;
+  client_first_name: string | null;
+  client_last_name: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  synced_at: string | null;
 }
 
 export interface ArketaInstructor {
@@ -160,8 +176,8 @@ export function useTodaysPayments(date?: string) {
       const { data, error } = await supabase
         .from("arketa_payments")
         .select("*")
-        .gte("payment_date", startOfDay)
-        .lte("payment_date", endOfDay);
+        .gte("created_at_api", startOfDay)
+        .lte("created_at_api", endOfDay);
 
       if (error) throw error;
       

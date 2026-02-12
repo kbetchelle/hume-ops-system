@@ -35,7 +35,7 @@ const RPC_MAP: Record<BackfillCalendarType, string> = {
 /** Threshold below which a day is considered "partially" synced. */
 const PARTIAL_THRESHOLD: Record<BackfillCalendarType, number> = {
   reservations: 3,
-  payments: 3,
+  payments: 1,
   classes: 2,
   toast: 5,
 };

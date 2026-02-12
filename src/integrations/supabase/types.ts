@@ -2531,6 +2531,93 @@ export type Database = {
         }
         Relationships: []
       }
+      event_drinks: {
+        Row: {
+          additional_notes: string | null
+          created_at: string | null
+          created_by: string | null
+          drink_name: string
+          email_thread_filename: string | null
+          email_thread_path: string | null
+          event_date: string | null
+          event_name: string | null
+          event_type: string | null
+          event_type_notes: string | null
+          food: string | null
+          id: string
+          is_archived: boolean | null
+          menu_printed: string | null
+          menu_printed_at: string | null
+          needs_followup: boolean | null
+          photoshoot: string | null
+          photoshoot_at: string | null
+          recipe: string | null
+          staff: string[] | null
+          staff_notified: boolean | null
+          staff_notified_at: string | null
+          supplies_needed: string | null
+          supplies_ordered: boolean | null
+          supplies_ordered_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          drink_name: string
+          email_thread_filename?: string | null
+          email_thread_path?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          event_type_notes?: string | null
+          food?: string | null
+          id?: string
+          is_archived?: boolean | null
+          menu_printed?: string | null
+          menu_printed_at?: string | null
+          needs_followup?: boolean | null
+          photoshoot?: string | null
+          photoshoot_at?: string | null
+          recipe?: string | null
+          staff?: string[] | null
+          staff_notified?: boolean | null
+          staff_notified_at?: string | null
+          supplies_needed?: string | null
+          supplies_ordered?: boolean | null
+          supplies_ordered_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          drink_name?: string
+          email_thread_filename?: string | null
+          email_thread_path?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          event_type_notes?: string | null
+          food?: string | null
+          id?: string
+          is_archived?: boolean | null
+          menu_printed?: string | null
+          menu_printed_at?: string | null
+          needs_followup?: boolean | null
+          photoshoot?: string | null
+          photoshoot_at?: string | null
+          recipe?: string | null
+          staff?: string[] | null
+          staff_notified?: boolean | null
+          staff_notified_at?: string | null
+          supplies_needed?: string | null
+          supplies_ordered?: boolean | null
+          supplies_ordered_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -3105,6 +3192,77 @@ export type Database = {
           },
         ]
       }
+      quick_link_groups: {
+        Row: {
+          assigned_roles: Database["public"]["Enums"]["app_role"][]
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_roles?: Database["public"]["Enums"]["app_role"][]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_roles?: Database["public"]["Enums"]["app_role"][]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quick_link_items: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          group_id: string
+          id: string
+          name: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          group_id: string
+          id?: string
+          name: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          group_id?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_link_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "quick_link_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_links: {
         Row: {
           category: string
@@ -3135,6 +3293,39 @@ export type Database = {
           sort_order?: number | null
           title?: string
           url?: string
+        }
+        Relationships: []
+      }
+      resource_pages: {
+        Row: {
+          assigned_roles: Database["public"]["Enums"]["app_role"][]
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_published: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_roles?: Database["public"]["Enums"]["app_role"][]
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_published?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_roles?: Database["public"]["Enums"]["app_role"][]
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_published?: boolean | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

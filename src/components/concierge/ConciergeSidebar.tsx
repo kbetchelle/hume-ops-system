@@ -6,7 +6,7 @@ import {
   Megaphone,
   Users,
   FileCode,
-  Link,
+  FolderOpen,
   Package,
   HelpCircle,
   User,
@@ -50,7 +50,7 @@ export type ConciergeView =
   | "announcements"
   | "whos-working"
   | "templates"
-  | "quick-links"
+  | "resources"
   | "lost-found"
   | "policies-qa";
 
@@ -118,7 +118,7 @@ export function ConciergeSidebar({
       title: "Resources",
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
-        { id: "quick-links", label: "Quick Links", icon: Link },
+        { id: "resources", label: "Resources", icon: FolderOpen },
         { id: "lost-found", label: "Lost & Found", icon: Package },
       ],
     },

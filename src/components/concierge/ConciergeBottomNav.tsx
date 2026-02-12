@@ -24,7 +24,7 @@ export function ConciergeBottomNav({
     if (tabs.some((t) => t.id === activeView)) return activeView;
     if (["announcements"].includes(activeView)) return "messages";
     if (
-      ["whos-working", "quick-links", "knowledge-base", "lost-found", "policies-qa"].includes(
+      ["whos-working", "resources", "knowledge-base", "lost-found", "policies-qa"].includes(
         activeView
       )
     )

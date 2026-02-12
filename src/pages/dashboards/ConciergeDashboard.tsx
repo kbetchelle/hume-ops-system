@@ -12,7 +12,7 @@ import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
 import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplatesWithAI";
-import { QuickLinks } from "@/components/concierge/QuickLinks";
+import { StaffResourcesView } from "@/components/staff-resources/StaffResourcesView";
 import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
@@ -35,7 +35,7 @@ export default function ConciergeDashboard() {
     announcements: "Announcements",
     "whos-working": "Who's Working",
     templates: "Response Templates",
-    "quick-links": "Quick Links",
+    resources: "Resources",
     "lost-found": "Lost & Found",
     "policies-qa": "Policies & Q&A",
   };
@@ -104,14 +104,11 @@ export default function ConciergeDashboard() {
             <ResponseTemplatesWithAI />
           </div>
         );
-      case "quick-links":
+      case "resources":
         return (
           <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Quick Links
-            </h2>
-            <div className="max-w-2xl">
-              <QuickLinks />
+            <div className="max-w-3xl">
+              <StaffResourcesView />
             </div>
           </div>
         );

@@ -106,8 +106,8 @@ export default function ConciergeDashboard() {
         );
       case "resources":
         return (
-          <div className="p-6 md:p-8">
-            <div className="max-w-3xl">
+          <div className="p-6 md:p-8 flex flex-col h-full">
+            <div className="flex-1">
               <StaffResourcesView />
             </div>
           </div>

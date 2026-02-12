@@ -6,7 +6,8 @@ import { CafeChecklistItem } from './CafeChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Calendar, ChevronDown } from 'lucide-react';
 
 interface CafeChecklistWithItems {
   id: string;
@@ -137,23 +138,36 @@ export function CafeChecklistView() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Render items grouped by category */}
-          {groupedItems && Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              <h3 className="font-semibold text-lg border-b pb-2">{category}</h3>
-              {(items as any[])
-                .sort((a: any, b: any) => a.sort_order - b.sort_order)
-                .map((item: any) => (
-                  <CafeChecklistItem
-                    key={item.id}
-                    item={item}
-                    completion={completionMap.get(item.id)}
-                    checklistId={checklist.id}
-                    completionDate={selectedDate}
-                    shiftTime={shiftTime}
-                  />
-                ))}
-            </div>
-          ))}
+          {groupedItems && Object.entries(groupedItems).map(([category, items]) => {
+            const categoryItems = (items as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+            const categoryCompleted = categoryItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
+            const allDone = categoryCompleted === categoryItems.length;
+            return (
+              <Collapsible key={category} defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                  <span className="font-semibold text-sm">{category}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">
+                      {categoryCompleted}/{categoryItems.length}
+                    </Badge>
+                    <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                  {categoryItems.map((item: any) => (
+                    <CafeChecklistItem
+                      key={item.id}
+                      item={item}
+                      completion={completionMap.get(item.id)}
+                      checklistId={checklist.id}
+                      completionDate={selectedDate}
+                      shiftTime={shiftTime}
+                    />
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </CardContent>
       </Card>
     </div>

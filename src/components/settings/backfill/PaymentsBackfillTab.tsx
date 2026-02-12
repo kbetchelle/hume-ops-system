@@ -17,7 +17,7 @@ export default function PaymentsBackfillTab() {
   const { data: totalCount } = useQuery({
     queryKey: ["total-payments-count"],
     queryFn: async () => {
-      const { count, error } = await supabase.from("arketa_payments_history").select("*", { count: "exact", head: true });
+      const { count, error } = await supabase.from("arketa_payments").select("*", { count: "exact", head: true });
       if (error) throw error;
       return count || 0;
     },
@@ -40,8 +40,8 @@ export default function PaymentsBackfillTab() {
       />
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">History Table</CardTitle>
-          <CardDescription>arketa_payments_history</CardDescription>
+          <CardTitle className="text-base">Payments Table</CardTitle>
+          <CardDescription>arketa_payments</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">

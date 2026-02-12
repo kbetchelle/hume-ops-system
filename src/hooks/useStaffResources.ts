@@ -102,7 +102,7 @@ export function useQuickLinkGroups() {
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      return (data ?? []) as QuickLinkGroup[];
+      return (data ?? []) as unknown as QuickLinkGroup[];
     },
   });
 }
@@ -128,8 +128,8 @@ export function useQuickLinkGroupsWithItems() {
       if (groupsResult.error) throw groupsResult.error;
       if (itemsResult.error) throw itemsResult.error;
 
-      const groups = (groupsResult.data ?? []) as QuickLinkGroup[];
-      const items = (itemsResult.data ?? []) as QuickLinkItem[];
+      const groups = (groupsResult.data ?? []) as unknown as QuickLinkGroup[];
+      const items = (itemsResult.data ?? []) as unknown as QuickLinkItem[];
 
       return groups.map((group) => ({
         ...group,
@@ -162,7 +162,7 @@ export function useQuickLinkGroupsByRole(role: AppRole) {
       const { data: groupsData, error: groupsError } = await groupsQuery;
       if (groupsError) throw groupsError;
 
-      const groups = (groupsData ?? []) as QuickLinkGroup[];
+      const groups = (groupsData ?? []) as unknown as QuickLinkGroup[];
 
       if (groups.length === 0) return [] as QuickLinkGroupWithItems[];
 
@@ -176,7 +176,7 @@ export function useQuickLinkGroupsByRole(role: AppRole) {
 
       if (itemsError) throw itemsError;
 
-      const items = (itemsData ?? []) as QuickLinkItem[];
+      const items = (itemsData ?? []) as unknown as QuickLinkItem[];
 
       return groups.map((group) => ({
         ...group,
@@ -208,7 +208,7 @@ export function useCreateQuickLinkGroup() {
         .single();
 
       if (error) throw error;
-      return data as QuickLinkGroup;
+      return data as unknown as QuickLinkGroup;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUICK_LINK_GROUPS_KEY] });
@@ -237,7 +237,7 @@ export function useUpdateQuickLinkGroup() {
         .single();
 
       if (error) throw error;
-      return data as QuickLinkGroup;
+      return data as unknown as QuickLinkGroup;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUICK_LINK_GROUPS_KEY] });
@@ -293,7 +293,7 @@ export function useQuickLinkItems(groupId: string) {
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      return (data ?? []) as QuickLinkItem[];
+      return (data ?? []) as unknown as QuickLinkItem[];
     },
     enabled: !!groupId,
   });
@@ -319,7 +319,7 @@ export function useCreateQuickLinkItem() {
         .single();
 
       if (error) throw error;
-      return data as QuickLinkItem;
+      return data as unknown as QuickLinkItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUICK_LINK_ITEMS_KEY] });
@@ -349,7 +349,7 @@ export function useUpdateQuickLinkItem() {
         .single();
 
       if (error) throw error;
-      return data as QuickLinkItem;
+      return data as unknown as QuickLinkItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUICK_LINK_ITEMS_KEY] });
@@ -410,7 +410,7 @@ export function useResourcePages(publishedOnly?: boolean) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as ResourcePage[];
+      return (data ?? []) as unknown as ResourcePage[];
     },
   });
 }
@@ -438,7 +438,7 @@ export function useResourcePagesByRole(role: AppRole) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as ResourcePage[];
+      return (data ?? []) as unknown as ResourcePage[];
     },
   });
 }
@@ -465,7 +465,7 @@ export function useCreateResourcePage() {
         .single();
 
       if (error) throw error;
-      return data as ResourcePage;
+      return data as unknown as ResourcePage;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [RESOURCE_PAGES_KEY] });
@@ -494,7 +494,7 @@ export function useUpdateResourcePage() {
         .single();
 
       if (error) throw error;
-      return data as ResourcePage;
+      return data as unknown as ResourcePage;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [RESOURCE_PAGES_KEY] });

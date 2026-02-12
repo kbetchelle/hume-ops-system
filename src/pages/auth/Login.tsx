@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthContext } from "@/features/auth/AuthProvider";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,14 +69,26 @@ export default function Login() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Login.tsx:72',message:'handleGoogleSignIn called (supabase native)',data:{origin:window.location.origin,href:window.location.href},timestamp:Date.now(),runId:'post-fix',hypothesisId:'FIX'})}).catch(()=>{});
+    // #endregion
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Login.tsx:83',message:'supabase signInWithOAuth result',data:{hasError:!!error,errorMsg:error?.message,hasData:!!data,url:data?.url?.substring(0,80)},timestamp:Date.now(),runId:'post-fix',hypothesisId:'FIX'})}).catch(()=>{});
+      // #endregion
       if (error) {
         toast.error(error.message || "Failed to sign in with Google");
       }
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Login.tsx:91',message:'handleGoogleSignIn caught error',data:{errorMsg:error instanceof Error?error.message:String(error)},timestamp:Date.now(),runId:'post-fix',hypothesisId:'FIX'})}).catch(()=>{});
+      // #endregion
       toast.error("An unexpected error occurred");
     } finally {
       setIsGoogleLoading(false);

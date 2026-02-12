@@ -7,9 +7,15 @@ const lovableAuth = createLovableAuth({});
 export const lovable = {
   auth: {
     signInWithOAuth: async (provider: "google" | "apple", opts?: { redirect_uri?: string }) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lovable/index.ts:10',message:'signInWithOAuth called',data:{provider,opts,isInIframe:window.self!==window.top},timestamp:Date.now(),hypothesisId:'H1,H4'})}).catch(()=>{});
+      // #endregion
       const result = await lovableAuth.signInWithOAuth(provider, {
         ...opts,
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lovable/index.ts:17',message:'lovableAuth result',data:{redirected:result.redirected,hasError:!!result.error,errorMsg:result.error?.message,hasTokens:!!result.tokens},timestamp:Date.now(),hypothesisId:'H1,H3,H5'})}).catch(()=>{});
+      // #endregion
 
       if (result.redirected) {
         return result;

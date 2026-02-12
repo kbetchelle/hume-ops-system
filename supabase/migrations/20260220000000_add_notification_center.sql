@@ -17,11 +17,21 @@ CREATE INDEX IF NOT EXISTS idx_staff_notifications_created
   ON public.staff_notifications(user_id, created_at DESC);
 
 -- 3. RLS DELETE policy on staff_notifications
-CREATE POLICY "Users can delete own notifications"
-  ON public.staff_notifications
-  FOR DELETE
-  TO authenticated
-  USING (user_id = auth.uid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'staff_notifications'
+      AND policyname = 'Users can delete own notifications'
+  ) THEN
+    CREATE POLICY "Users can delete own notifications"
+      ON public.staff_notifications
+      FOR DELETE
+      TO authenticated
+      USING (user_id = auth.uid());
+  END IF;
+END $$;
 
 -- 4. Create notification_preferences table
 CREATE TABLE IF NOT EXISTS public.notification_preferences (
@@ -48,35 +58,33 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
 -- 5. Enable RLS + policies on notification_preferences
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own notification preferences"
-  ON public.notification_preferences
-  FOR SELECT
-  TO authenticated
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Users can insert own notification preferences"
-  ON public.notification_preferences
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Users can update own notification preferences"
-  ON public.notification_preferences
-  FOR UPDATE
-  TO authenticated
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Managers can read all notification preferences"
-  ON public.notification_preferences
-  FOR SELECT
-  TO authenticated
-  USING (public.is_manager_or_admin(auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='notification_preferences' AND policyname='Users can read own notification preferences') THEN
+    CREATE POLICY "Users can read own notification preferences" ON public.notification_preferences FOR SELECT TO authenticated USING (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='notification_preferences' AND policyname='Users can insert own notification preferences') THEN
+    CREATE POLICY "Users can insert own notification preferences" ON public.notification_preferences FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='notification_preferences' AND policyname='Users can update own notification preferences') THEN
+    CREATE POLICY "Users can update own notification preferences" ON public.notification_preferences FOR UPDATE TO authenticated USING (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='notification_preferences' AND policyname='Managers can read all notification preferences') THEN
+    CREATE POLICY "Managers can read all notification preferences" ON public.notification_preferences FOR SELECT TO authenticated USING (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
 -- 6. Trigger: auto-update updated_at on notification_preferences
+DROP TRIGGER IF EXISTS set_notification_preferences_updated_at ON public.notification_preferences;
 CREATE TRIGGER set_notification_preferences_updated_at
   BEFORE UPDATE ON public.notification_preferences
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- 7. Enable Realtime on staff_notifications
-ALTER PUBLICATION supabase_realtime ADD TABLE staff_notifications;
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE staff_notifications;
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;

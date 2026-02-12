@@ -7,8 +7,8 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Inbox,
-} from "lucide-react";
+  Inbox } from
+"lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -18,19 +18,19 @@ import {
   useQuickLinkGroupsByRole,
   useResourcePagesByRole,
   type QuickLinkGroupWithItems,
-  type ResourcePage,
-} from "@/hooks/useStaffResources";
+  type ResourcePage } from
+"@/hooks/useStaffResources";
 
 // ---------------------------------------------------------------------------
 // Quick Links Tab
 // ---------------------------------------------------------------------------
-function QuickLinksTab({ groups, isLoading }: { groups: QuickLinkGroupWithItems[]; isLoading: boolean }) {
+function QuickLinksTab({ groups, isLoading }: {groups: QuickLinkGroupWithItems[];isLoading: boolean;}) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (groups.length === 0) {
@@ -42,8 +42,8 @@ function QuickLinksTab({ groups, isLoading }: { groups: QuickLinkGroupWithItems[
             No quick links assigned to your role yet.
           </p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   const handleCopy = async (url: string) => {
@@ -57,55 +57,55 @@ function QuickLinksTab({ groups, isLoading }: { groups: QuickLinkGroupWithItems[
 
   return (
     <div className="space-y-4">
-      {groups.map((group) => (
-        <Card key={group.id} className="rounded-none">
+      {groups.map((group) =>
+      <Card key={group.id} className="rounded-none">
           <CardContent className="p-4">
             <h3 className="font-medium mb-1">{group.title}</h3>
-            {group.description && (
-              <div
-                className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-3"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(group.description) }}
-              />
-            )}
-            {group.items.length > 0 && (
-              <div className="space-y-1">
-                {group.items.map((link) => (
-                  <div
-                    key={link.id}
-                    className="group flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 rounded-sm"
-                  >
+            {group.description &&
+          <div
+            className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-3"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(group.description) }} />
+
+          }
+            {group.items.length > 0 &&
+          <div className="space-y-1">
+                {group.items.map((link) =>
+            <div
+              key={link.id}
+              className="group flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 rounded-sm">
+
                     <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
                     <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary underline underline-offset-2 hover:text-primary/80 truncate"
-                    >
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary underline underline-offset-2 hover:text-primary/80 truncate">
+
                       {link.name}
                     </a>
                     <button
-                      type="button"
-                      onClick={() => handleCopy(link.url)}
-                      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
-                      title="Copy URL"
-                    >
+                type="button"
+                onClick={() => handleCopy(link.url)}
+                className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
+                title="Copy URL">
+
                       <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   </div>
-                ))}
-              </div>
             )}
+              </div>
+          }
           </CardContent>
         </Card>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 // ---------------------------------------------------------------------------
 // Resource Pages Tab
 // ---------------------------------------------------------------------------
-function ResourcePagesTab({ pages, isLoading }: { pages: ResourcePage[]; isLoading: boolean }) {
+function ResourcePagesTab({ pages, isLoading }: {pages: ResourcePage[];isLoading: boolean;}) {
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
 
   const toggleExpand = (id: string) => {
@@ -124,8 +124,8 @@ function ResourcePagesTab({ pages, isLoading }: { pages: ResourcePage[]; isLoadi
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (pages.length === 0) {
@@ -137,8 +137,8 @@ function ResourcePagesTab({ pages, isLoading }: { pages: ResourcePage[]; isLoadi
             No resource pages assigned to your role yet.
           </p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
@@ -151,27 +151,27 @@ function ResourcePagesTab({ pages, isLoading }: { pages: ResourcePage[]; isLoadi
               <button
                 type="button"
                 className="flex items-center gap-2 w-full text-left hover:text-foreground/80"
-                onClick={() => toggleExpand(page.id)}
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 shrink-0" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 shrink-0" />
-                )}
+                onClick={() => toggleExpand(page.id)}>
+
+                {isExpanded ?
+                <ChevronDown className="h-4 w-4 shrink-0" /> :
+
+                <ChevronRight className="h-4 w-4 shrink-0" />
+                }
                 <h3 className="font-medium">{page.title}</h3>
               </button>
-              {isExpanded && page.content && (
-                <div
-                  className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
-                />
-              )}
+              {isExpanded && page.content &&
+              <div
+                className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }} />
+
+              }
             </CardContent>
-          </Card>
-        );
+          </Card>);
+
       })}
-    </div>
-  );
+    </div>);
+
 }
 
 // ---------------------------------------------------------------------------
@@ -182,33 +182,33 @@ export function StaffResourcesView() {
 
   const {
     data: groups = [],
-    isLoading: groupsLoading,
+    isLoading: groupsLoading
   } = useQuickLinkGroupsByRole(activeRole ?? "concierge");
 
   const {
     data: pages = [],
-    isLoading: pagesLoading,
+    isLoading: pagesLoading
   } = useResourcePagesByRole(activeRole ?? "concierge");
 
   return (
     <div className="space-y-6">
       <h2 className="text-sm uppercase tracking-[0.15em] font-normal">
-        Resources
+
       </h2>
 
       <Tabs defaultValue="quick-links" className="w-full">
         <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
           <TabsTrigger
             value="quick-links"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3">
+
             <Link2 className="h-3.5 w-3.5 mr-1.5" />
             Quick Links
           </TabsTrigger>
           <TabsTrigger
             value="resource-pages"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3">
+
             <FileText className="h-3.5 w-3.5 mr-1.5" />
             Resource Pages
           </TabsTrigger>
@@ -220,6 +220,6 @@ export function StaffResourcesView() {
           <ResourcePagesTab pages={pages} isLoading={pagesLoading} />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>);
+
 }

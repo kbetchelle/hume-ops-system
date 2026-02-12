@@ -134,17 +134,68 @@ export function ConciergeSidebar({
   return (
     <Sidebar className="w-60 border-r border-border flex flex-col">
       <SidebarContent className="pt-4 flex-1">
-        {/* User greeting and role switcher at top */}
+        {/* User greeting dropdown and role switcher at top */}
         <div className="px-3 pb-3 space-y-0">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full justify-start gap-2 h-8 px-2 rounded-none pointer-events-none"
-          >
-            <span className="text-[15px] uppercase tracking-widest truncate font-bold">
-              Hi, {getFirstName(profile?.full_name)}
-            </span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 px-2 rounded-none"
+              >
+                <span className="text-[15px] uppercase tracking-widest truncate font-bold">
+                  Hi, {getFirstName(profile?.full_name)}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              className="w-56 rounded-none border-border bg-background z-50" 
+              align="start" 
+              side="bottom"
+            >
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-[10px] uppercase tracking-widest font-normal">
+                    {profile?.full_name || "User"}
+                  </p>
+                  <p className="text-[10px] tracking-wide text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem 
+                onClick={() => navigate("/dashboard/profile")} 
+                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+              >
+                <User className="mr-2 h-3 w-3" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => navigate("/dashboard/settings")} 
+                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+              >
+                <Settings className="mr-2 h-3 w-3" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem 
+                onClick={() => setShowBugReport(true)} 
+                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+              >
+                <Bug className="mr-2 h-3 w-3" />
+                Report a Bug
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleSignOut} 
+                className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
+              >
+                <LogOut className="mr-2 h-3 w-3" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
           <RoleSwitcher />
         </div>
         {sections.map((section) => (
@@ -190,70 +241,7 @@ export function ConciergeSidebar({
         ))}
       </SidebarContent>
       
-      {/* User dropdown and bug report at bottom */}
-      <div className="p-3 border-t border-border">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 px-2 rounded-none"
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="text-[10px] uppercase tracking-widest truncate">
-                Settings
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            className="w-56 rounded-none border-border bg-background z-50" 
-            align="start" 
-            side="top"
-          >
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-[10px] uppercase tracking-widest font-normal">
-                  {profile?.full_name || "User"}
-                </p>
-                <p className="text-[10px] tracking-wide text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem 
-              onClick={() => navigate("/dashboard/profile")} 
-              className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-            >
-              <User className="mr-2 h-3 w-3" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => navigate("/dashboard/settings")} 
-              className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-            >
-              <Settings className="mr-2 h-3 w-3" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem 
-              onClick={() => setShowBugReport(true)} 
-              className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-            >
-              <Bug className="mr-2 h-3 w-3" />
-              Report a Bug
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={handleSignOut} 
-              className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-            >
-              <LogOut className="mr-2 h-3 w-3" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
-      </div>
+      {/* Bottom spacer removed - settings moved to top greeting */}
     </Sidebar>
   );
 }

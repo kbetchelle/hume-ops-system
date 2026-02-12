@@ -104,15 +104,25 @@ async function transferReservations(
   let recordsUpdated = 0;
 
   try {
+    // Paginate staging reads to avoid Supabase's 1000-row default limit
     const stagingSelect = "id, reservation_id, class_id, client_id, purchase_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, experience_type, late_cancel, gross_amount_paid, net_amount_paid, raw_data, sync_batch_id";
-    let query = supabase.from("arketa_reservations_staging").select(stagingSelect);
-    if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
-    const { data: rows, error: fetchError } = await query;
-
-    if (fetchError) {
-      return { api: "arketa_reservations", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+    let allRows: Record<string, unknown>[] = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    while (true) {
+      let query = supabase.from("arketa_reservations_staging").select(stagingSelect).range(offset, offset + PAGE_SIZE - 1);
+      if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
+      const { data: rows, error: fetchError } = await query;
+      if (fetchError) {
+        return { api: "arketa_reservations", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+      }
+      if (!rows?.length) break;
+      allRows = allRows.concat(rows);
+      if (rows.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
     }
-    if (!rows?.length) {
+    const rows = allRows;
+    if (!rows.length) {
       return { api: "arketa_reservations", records_processed: 0, records_inserted: 0, records_updated: 0 };
     }
 
@@ -160,8 +170,10 @@ async function transferReservations(
 
     if (clearStaging && rows.length) {
       const ids = rows.map((r: { id?: string }) => r.id).filter(Boolean);
-      if (ids.length) {
-        await supabase.from("arketa_reservations_staging").delete().in("id", ids);
+      const DEL_BATCH = 500;
+      for (let i = 0; i < ids.length; i += DEL_BATCH) {
+        const batch = ids.slice(i, i + DEL_BATCH);
+        await supabase.from("arketa_reservations_staging").delete().in("id", batch);
       }
     }
 
@@ -192,14 +204,25 @@ async function transferPayments(
   let recordsUpdated = 0;
 
   try {
-    let query = supabase.from("arketa_payments_staging").select("*");
-    if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
-    const { data: rows, error: fetchError } = await query;
-
-    if (fetchError) {
-      return { api: "arketa_payments", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+    // Paginate staging reads to avoid Supabase's 1000-row default limit
+    let allRows: Record<string, unknown>[] = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    let keepFetching = true;
+    while (keepFetching) {
+      let query = supabase.from("arketa_payments_staging").select("*").range(offset, offset + PAGE_SIZE - 1);
+      if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
+      const { data: rows, error: fetchError } = await query;
+      if (fetchError) {
+        return { api: "arketa_payments", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+      }
+      if (!rows?.length) break;
+      allRows = allRows.concat(rows);
+      if (rows.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
     }
-    if (!rows?.length) {
+    const rows = allRows;
+    if (!rows.length) {
       return { api: "arketa_payments", records_processed: 0, records_inserted: 0, records_updated: 0 };
     }
 
@@ -252,8 +275,11 @@ async function transferPayments(
 
     if (clearStaging && rows.length) {
       const ids = rows.map((r: { id?: string }) => r.id).filter(Boolean);
-      if (ids.length) {
-        await supabase.from("arketa_payments_staging").delete().in("id", ids);
+      // Batch deletes to avoid exceeding query size limits
+      const DEL_BATCH = 500;
+      for (let i = 0; i < ids.length; i += DEL_BATCH) {
+        const batch = ids.slice(i, i + DEL_BATCH);
+        await supabase.from("arketa_payments_staging").delete().in("id", batch);
       }
     }
 

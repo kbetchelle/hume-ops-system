@@ -115,7 +115,7 @@ export function EventDrinkRow({ drink, isArchived }: EventDrinkRowProps) {
               />
             </Button>
             {menuWarning && (
-              <AlertTriangle className="h-4 w-4 text-amber-500" title="Event within 14 days — menu not printed" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
             )}
           </div>
         </TableCell>

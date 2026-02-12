@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2 } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen } from "lucide-react";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -81,6 +81,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package
+    }, {
+      title: "Resources",
+      url: "/dashboard/resources",
+      icon: FolderOpen
     }];
   }
   // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
@@ -114,6 +118,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Who's Working",
       url: "/dashboard/whos-working",
       icon: Users
+    }, {
+      title: "Resources",
+      url: "/dashboard/resources",
+      icon: FolderOpen
     }];
   }
   // Cafe role: Checklist + Event Drinks + shared items
@@ -134,6 +142,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Announcements",
       url: "/dashboard/announcements",
       icon: Bell
+    }, {
+      title: "Resources",
+      url: "/dashboard/resources",
+      icon: FolderOpen
     }];
   }
   const baseItems: NavItem[] = [{
@@ -194,6 +206,11 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     url: "/dashboard/analytics",
     icon: BarChart3,
     permission: PERMISSIONS.VIEW_ANALYTICS
+  }, {
+    title: "Resources",
+    url: "/dashboard/resources",
+    icon: FolderOpen,
+    roles: ["concierge"]
   }, {
     title: "Admin",
     url: "/dashboard/admin",

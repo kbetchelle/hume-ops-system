@@ -69,6 +69,7 @@ import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
+import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
 import LostAndFoundPage from "./pages/dashboards/LostAndFoundPage";
 import ClassSchedulePage from "./pages/dashboards/ClassSchedulePage";
 import AnnouncementsPage from "./pages/dashboards/AnnouncementsPage";
@@ -486,6 +487,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <StaffResourcesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Staff Resources View (read-only for staff) */}
+            <Route
+              path="/dashboard/resources"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
+                  <StaffResourcesViewPage />
                 </ProtectedRoute>
               }
             />

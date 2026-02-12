@@ -134,8 +134,8 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
       const { data: arketaPayments, error: paymentError } = await supabase
         .from("arketa_payments")
         .select("*")
-        .gte("payment_date", startOfDay)
-        .lte("payment_date", endOfDay);
+        .gte("created_at_api", startOfDay)
+        .lte("created_at_api", endOfDay);
 
       if (paymentError) {
         console.error("Error fetching arketa payments:", paymentError);

@@ -1,170 +1,114 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { fetchWithRetry } from '../_shared/retry.ts';
-import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 import { logApiCall } from '../_shared/apiLogger.ts';
 
 /**
  * sync-arketa-payments
  *
- * Fetches purchases from Arketa Partner API with cursor-based pagination
- * (start_after / pagination.hasMore). Writes to arketa_payments_staging
- * in batches of STAGING_BATCH_SIZE. The staging→history transfer is handled
- * by sync-from-staging.
+ * Fetches payments from Arketa Partner API (GET /payments) with cursor-based
+ * pagination (nextStartAfterId). Batch size 25 per spec. Resumable via
+ * arketa_payments_sync_state table. Upserts directly to arketa_payments
+ * and also writes to arketa_payments_staging for backfill compatibility.
  *
- * Arketa API limits:
- *   - max 100 items per page
- *   - 25 req/sec rate limit
- *   - cursor pagination via `start_after` query param
- *   - response shape: { items: [...], pagination: { hasMore, nextStartAfterId, limit } }
+ * Retry: up to 8 retries with jittered exponential backoff (3s base, 60s cap).
  */
 
-const PAGE_LIMIT = 100; // Arketa API max per page
-const MAX_PAGES = 50; // Safety cap: 50 pages × 100 = 5,000 records max
-const STAGING_BATCH_SIZE = 100; // Insert staging rows in chunks
+const PAGE_LIMIT = 25;
+const MAX_PAGES = 200; // 25 × 200 = 5,000 records safety cap
+const UPSERT_BATCH = 100;
+const MAX_RETRIES = 8;
+const BASE_DELAY_MS = 3000;
+const MAX_DELAY_MS = 60000;
 
-interface ArketaPurchase {
+interface PaymentDTO {
   id: string;
-  client_id?: string;
-  type?: string;
-  offering_id?: string;
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-  updated_at?: string;
-  name?: string;
-  remaining_uses?: number;
-  price?: number;
-  // Extended fields from actual API responses (may differ from swagger)
   amount?: number;
-  total?: number;
+  status?: string;
+  created?: number;
   created_at?: string;
-  date?: string;
-  notes?: string;
-  description?: string;
   currency?: string;
   amount_refunded?: number;
-  refundedAmount?: number;
-  net_sales?: number;
-  netAmount?: number;
-  transaction_fees?: number;
-  fees?: number;
-  stripe_fees?: number;
-  tax?: number;
-  tax_amount?: number;
-  category?: string;
-}
-
-interface ArketaPagination {
-  limit?: number;
-  nextStartAfterId?: string | null;
-  hasMore?: boolean;
+  description?: string | null;
+  invoice_id?: string | null;
+  normalized_category?: string[] | null;
+  net_sales?: number | null;
+  transaction_fees?: number | null;
+  tax?: number | null;
+  location_name?: string | null;
+  source?: string | null;
+  payment_type?: string | null;
+  promo_code?: string | null;
+  offering_name?: string[] | null;
+  seller_name?: string | null;
+  client?: {
+    id?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+  } | null;
 }
 
 interface SyncRequest {
-  start_date?: string;
-  end_date?: string;
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
+  resume?: boolean;
+  reset_cursor?: boolean;
   triggeredBy?: string;
-  isHistorical?: boolean;
-  noLimit?: boolean;
 }
 
-/**
- * Fetch all pages from a single Arketa endpoint using cursor pagination.
- */
-async function fetchAllPages(
-  baseUrl: string,
-  headers: Record<string, string>,
-  startDate: string,
-  endDate: string,
-  logger: ReturnType<typeof createSyncLogger>,
-): Promise<{ records: ArketaPurchase[]; totalAttempts: number; limitHit: boolean }> {
-  const records: ArketaPurchase[] = [];
-  let cursor: string | undefined;
-  let totalAttempts = 0;
-  let pageCount = 0;
-  let hasMore = true;
-
-  while (hasMore && pageCount < MAX_PAGES) {
-    let url = `${baseUrl}?limit=${PAGE_LIMIT}&updated_at_min=${startDate}T00:00:00Z&updated_at_max=${endDate}T23:59:59Z`;
-    if (cursor) {
-      url += `&start_after=${cursor}`;
-    }
-
+async function fetchWithRetry(url: string, options: RequestInit): Promise<{ response: Response; attempts: number }> {
+  let attempts = 0;
+  while (true) {
+    attempts++;
     try {
-      const { response, attempts } = await fetchWithRetry(url, {
-        method: 'GET',
-        headers,
-      });
-      totalAttempts += attempts;
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error(`Fetch failed: HTTP ${response.status}`, { body: errorText.substring(0, 200) });
-        break;
+      const response = await fetch(url, options);
+      if (response.ok || response.status < 500) {
+        return { response, attempts };
       }
-
-      const data = await response.json();
-      const items: ArketaPurchase[] = data?.items || (Array.isArray(data) ? data : []);
-      records.push(...items);
-
-      const pagination: ArketaPagination = data?.pagination || {};
-      hasMore = pagination.hasMore === true && !!pagination.nextStartAfterId;
-      cursor = pagination.nextStartAfterId ?? undefined;
-      pageCount++;
-
-      logger.info(`Page ${pageCount}: ${items.length} records (total: ${records.length}, hasMore: ${hasMore})`);
-    } catch (error) {
-      logger.error(`Fetch error on page ${pageCount + 1}`, error);
-      break;
+      if (attempts >= MAX_RETRIES) return { response, attempts };
+    } catch (err) {
+      if (attempts >= MAX_RETRIES) throw err;
     }
+    const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempts - 1), MAX_DELAY_MS);
+    const jitter = delay * (0.5 + Math.random() * 0.5);
+    await new Promise(r => setTimeout(r, jitter));
   }
-
-  const limitHit = hasMore && pageCount >= MAX_PAGES;
-  if (limitHit) {
-    logger.warn(`Hit MAX_PAGES cap (${MAX_PAGES}). Some records may be missing.`);
-  }
-
-  return { records, totalAttempts, limitHit };
 }
 
-/**
- * Map an Arketa purchase to a staging row.
- */
-function toStagingRow(p: ArketaPurchase, sourceEndpoint: string, syncBatchId: string) {
+function toDbRow(p: PaymentDTO) {
   return {
-    arketa_payment_id: String(p.id),
-    source_endpoint: sourceEndpoint,
     payment_id: String(p.id),
-    client_id: p.client_id ? String(p.client_id) : null,
-    amount: p.amount ?? p.total ?? p.price ?? 0,
-    status: p.status ?? 'ACTIVE',
-    description: p.description ?? p.notes ?? p.name ?? null,
-    payment_type: p.type ?? 'purchase',
-    category: p.category ?? null,
-    offering_id: p.offering_id ?? null,
-    start_date: p.start_date ?? p.created_at ?? p.date ?? null,
-    end_date: p.end_date ?? null,
-    remaining_uses: p.remaining_uses ?? null,
+    amount: p.amount ?? null,
+    status: p.status ?? null,
+    created_at_api: p.created_at ?? (p.created ? new Date(p.created * 1000).toISOString() : null),
     currency: p.currency ?? null,
-    total_refunded: p.amount_refunded ?? p.refundedAmount ?? null,
-    net_sales: p.net_sales ?? p.netAmount ?? p.amount ?? p.total ?? p.price ?? null,
-    transaction_fees: p.transaction_fees ?? p.fees ?? null,
-    stripe_fees: p.stripe_fees ?? null,
-    tax: p.tax ?? p.tax_amount ?? null,
-    updated_at: p.updated_at ?? null,
-    sync_batch_id: syncBatchId,
+    amount_refunded: p.amount_refunded ?? null,
+    description: p.description ?? null,
+    invoice_id: p.invoice_id ?? null,
+    normalized_category: p.normalized_category ?? null,
+    net_sales: p.net_sales ?? null,
+    transaction_fees: p.transaction_fees ?? null,
+    tax: p.tax ?? null,
+    location_name: p.location_name ?? null,
+    source: p.source ?? null,
+    payment_type: p.payment_type ?? null,
+    promo_code: p.promo_code ?? null,
+    offering_name: p.offering_name ?? null,
+    seller_name: p.seller_name ?? null,
+    client_id: p.client?.id ? String(p.client.id) : null,
+    client_first_name: p.client?.first_name ?? null,
+    client_last_name: p.client?.last_name ?? null,
+    client_email: p.client?.email ?? null,
+    client_phone: p.client?.phone ?? null,
+    raw_data: p as unknown,
+    synced_at: new Date().toISOString(),
   };
 }
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
-
   const corsHeaders = getCorsHeaders(req);
 
   try {
@@ -184,64 +128,122 @@ Deno.serve(async (req) => {
 
     const logger = createSyncLogger('arketa_payments');
     const startTime = Date.now();
-
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const today = new Date();
-    const defaultStart = new Date(today);
-    defaultStart.setDate(defaultStart.getDate() - 7);
-    const defaultEnd = new Date(today);
-    defaultEnd.setDate(defaultEnd.getDate() + 7);
-    const startDate = body.startDate || body.start_date || defaultStart.toISOString().split('T')[0];
-    const endDate = body.endDate || body.end_date || defaultEnd.toISOString().split('T')[0];
 
-    logger.info(`Syncing payments from ${startDate} to ${endDate}`);
+    // Load or reset cursor from sync state
+    let savedCursor: string | null = null;
+    if (!body.reset_cursor) {
+      const { data: state } = await supabase
+        .from('arketa_payments_sync_state')
+        .select('cursor, status, records_synced')
+        .eq('id', 'payments')
+        .single();
+      if (state?.cursor && state.status !== 'completed') {
+        savedCursor = state.cursor;
+        logger.info(`Resuming from cursor: ${savedCursor} (${state.records_synced} records so far)`);
+      }
+    }
 
-    // Authenticate — prefer OAuth, fall back to API key
+    // Update state to running
+    await supabase.from('arketa_payments_sync_state').upsert({
+      id: 'payments',
+      status: 'running',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+
+    // Authenticate
     let headers: Record<string, string>;
     try {
       const token = await getArketaToken(supabaseUrl, supabaseKey);
       headers = getArketaHeaders(token);
       logger.info('Using OAuth token');
-    } catch (tokenError) {
-      logger.warn('Token refresh failed, using API key', { error: tokenError instanceof Error ? tokenError.message : String(tokenError) });
+    } catch {
+      logger.warn('Token refresh failed, using API key');
       headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
     }
 
-    // ── Fetch from /purchases with full pagination ──
-    const purchasesBaseUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/purchases`;
-    const { records: purchases, totalAttempts, limitHit } = await fetchAllPages(
-      purchasesBaseUrl, headers, startDate, endDate, logger,
-    );
+    // Fetch from /payments with cursor pagination
+    const baseUrl = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0/${ARKETA_PARTNER_ID}/payments`;
+    const allRecords: PaymentDTO[] = [];
+    let cursor: string | null = savedCursor;
+    let pageCount = 0;
+    let hasMore = true;
+    let totalAttempts = 0;
 
-    logger.info(`Total fetched: ${purchases.length} purchases`);
+    while (hasMore && pageCount < MAX_PAGES) {
+      let url = `${baseUrl}?limit=${PAGE_LIMIT}`;
+      if (cursor) url += `&start_after=${cursor}`;
 
-    // ── Dedup by ID (in case of any duplicates) ──
+      try {
+        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers });
+        totalAttempts += attempts;
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error(`Fetch failed: HTTP ${response.status}`, { body: errorText.substring(0, 300) });
+          break;
+        }
+
+        const data = await response.json();
+        const items: PaymentDTO[] = data?.items || [];
+        allRecords.push(...items);
+
+        const pagination = data?.pagination || {};
+        hasMore = pagination.hasMore === true && !!pagination.nextStartAfterId;
+        cursor = pagination.nextStartAfterId ?? null;
+        pageCount++;
+
+        logger.info(`Page ${pageCount}: ${items.length} records (total: ${allRecords.length}, hasMore: ${hasMore})`);
+
+        // Save cursor after every batch for resumability
+        await supabase.from('arketa_payments_sync_state').upsert({
+          id: 'payments',
+          cursor: cursor,
+          status: 'running',
+          records_synced: allRecords.length,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      } catch (error) {
+        logger.error(`Fetch error on page ${pageCount + 1}`, error);
+        // Save partial state
+        await supabase.from('arketa_payments_sync_state').upsert({
+          id: 'payments',
+          cursor: cursor,
+          status: 'partial',
+          records_synced: allRecords.length,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+        break;
+      }
+    }
+
+    logger.info(`Total fetched: ${allRecords.length} payments in ${pageCount} pages`);
+
+    // Dedup by payment ID
     const seen = new Set<string>();
-    const dedupedPurchases: ArketaPurchase[] = [];
-    for (const p of purchases) {
+    const deduped: PaymentDTO[] = [];
+    for (const p of allRecords) {
       const key = String(p.id);
       if (!seen.has(key)) {
         seen.add(key);
-        dedupedPurchases.push(p);
+        deduped.push(p);
       }
     }
-    if (dedupedPurchases.length < purchases.length) {
-      logger.info(`Deduped: ${purchases.length} → ${dedupedPurchases.length}`);
-    }
 
-    // ── Write to staging in batches ──
-    const syncBatchId = crypto.randomUUID();
-    const stagingRows = dedupedPurchases.map(p => toStagingRow(p, 'purchases', syncBatchId));
-
+    // Upsert directly to arketa_payments
+    const dbRows = deduped.map(toDbRow);
     let insertedCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < stagingRows.length; i += STAGING_BATCH_SIZE) {
-      const batch = stagingRows.slice(i, i + STAGING_BATCH_SIZE);
-      const { error } = await supabase.from('arketa_payments_staging').insert(batch);
+    for (let i = 0; i < dbRows.length; i += UPSERT_BATCH) {
+      const batch = dbRows.slice(i, i + UPSERT_BATCH);
+      const { error } = await supabase
+        .from('arketa_payments')
+        .upsert(batch, { onConflict: 'payment_id' });
       if (error) {
-        logger.error(`Staging batch ${Math.floor(i / STAGING_BATCH_SIZE) + 1} failed`, error);
+        logger.error(`Upsert batch ${Math.floor(i / UPSERT_BATCH) + 1} failed`, error);
         failedCount += batch.length;
         errors.push(error.message);
       } else {
@@ -249,42 +251,59 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Also write to staging for backfill pipeline compatibility
+    const syncBatchId = crypto.randomUUID();
+    const stagingRows = deduped.map(p => ({
+      ...toDbRow(p),
+      sync_batch_id: syncBatchId,
+      cursor_position: cursor,
+    }));
+
+    for (let i = 0; i < stagingRows.length; i += UPSERT_BATCH) {
+      const batch = stagingRows.slice(i, i + UPSERT_BATCH);
+      await supabase.from('arketa_payments_staging').insert(batch).catch(() => {});
+    }
+
+    // Update sync state
+    const finalStatus = !hasMore ? 'completed' : failedCount > 0 ? 'partial' : 'running';
+    await supabase.from('arketa_payments_sync_state').upsert({
+      id: 'payments',
+      cursor: !hasMore ? null : cursor,
+      status: finalStatus,
+      records_synced: insertedCount,
+      estimated_total: allRecords.length,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {
       syncType: 'arketa_payments',
       startedAt: new Date(startTime).toISOString(),
       completedAt: new Date().toISOString(),
       durationMs,
-      recordsFetched: purchases.length,
+      recordsFetched: allRecords.length,
       recordsSynced: insertedCount,
       recordsFailed: failedCount,
-      retryCount: Math.max(0, totalAttempts - 1),
+      retryCount: Math.max(0, totalAttempts - pageCount),
     });
-    await supabase
-      .from('api_sync_status')
-      .upsert({
-        api_name: 'arketa_payments',
-        last_sync_at: new Date().toISOString(),
-        last_sync_success: failedCount === 0,
-        last_records_processed: dedupedPurchases.length,
-        last_records_inserted: insertedCount,
-      }, { onConflict: 'api_name' });
+
+    await supabase.from('api_sync_status').upsert({
+      api_name: 'arketa_payments',
+      last_sync_at: new Date().toISOString(),
+      last_sync_success: failedCount === 0,
+      last_records_processed: deduped.length,
+      last_records_inserted: insertedCount,
+    }, { onConflict: 'api_name' });
 
     return new Response(
       JSON.stringify({
         success: failedCount === 0,
-        data: {
-          payments_synced: insertedCount,
-          payments_staged: insertedCount,
-          records_processed: dedupedPurchases.length,
-          records_inserted: insertedCount,
-          limit_hit: limitHit,
-        },
-        totalFetched: purchases.length,
         syncedCount: insertedCount,
+        totalFetched: allRecords.length,
         failedCount,
-        dateRange: { startDate, endDate },
-        apiAttempts: totalAttempts,
+        pages: pageCount,
+        hasMore,
+        status: finalStatus,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -301,22 +320,27 @@ Deno.serve(async (req) => {
       const supabase = createClient(supabaseUrl, supabaseKey);
       await logApiCall(supabase, {
         apiName: 'arketa_payments',
-        endpoint: '/purchases',
+        endpoint: '/payments',
         syncSuccess: false,
         durationMs: 0,
         recordsProcessed: 0,
         recordsInserted: 0,
         responseStatus: 500,
-        errorMessage: errorMessage,
+        errorMessage,
         triggeredBy: 'manual',
       });
+      await supabase.from('arketa_payments_sync_state').upsert({
+        id: 'payments',
+        status: 'failed',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
     } catch (logError) {
       console.error('[sync-arketa-payments] Failed to log error:', logError);
     }
 
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

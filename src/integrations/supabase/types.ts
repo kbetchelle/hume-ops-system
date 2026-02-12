@@ -599,20 +599,26 @@ export type Database = {
         Row: {
           amount: number | null
           amount_refunded: number | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
+          client_last_name: string | null
+          client_phone: string | null
           created_at: string | null
+          created_at_api: string | null
           currency: string | null
           description: string | null
-          external_id: string
           id: string
+          invoice_id: string | null
           location_name: string | null
           net_sales: number | null
-          notes: string | null
-          offering_name: string | null
-          payment_date: string | null
+          normalized_category: string[] | null
+          offering_name: string[] | null
+          payment_id: string
           payment_type: string | null
           promo_code: string | null
           raw_data: Json | null
+          seller_name: string | null
           source: string | null
           status: string | null
           synced_at: string | null
@@ -623,20 +629,26 @@ export type Database = {
         Insert: {
           amount?: number | null
           amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
           created_at?: string | null
+          created_at_api?: string | null
           currency?: string | null
           description?: string | null
-          external_id: string
           id?: string
+          invoice_id?: string | null
           location_name?: string | null
           net_sales?: number | null
-          notes?: string | null
-          offering_name?: string | null
-          payment_date?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
+          payment_id: string
           payment_type?: string | null
           promo_code?: string | null
           raw_data?: Json | null
+          seller_name?: string | null
           source?: string | null
           status?: string | null
           synced_at?: string | null
@@ -647,20 +659,26 @@ export type Database = {
         Update: {
           amount?: number | null
           amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
           created_at?: string | null
+          created_at_api?: string | null
           currency?: string | null
           description?: string | null
-          external_id?: string
           id?: string
+          invoice_id?: string | null
           location_name?: string | null
           net_sales?: number | null
-          notes?: string | null
-          offering_name?: string | null
-          payment_date?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
+          payment_id?: string
           payment_type?: string | null
           promo_code?: string | null
           raw_data?: Json | null
+          seller_name?: string | null
           source?: string | null
           status?: string | null
           synced_at?: string | null
@@ -673,73 +691,91 @@ export type Database = {
       arketa_payments_history: {
         Row: {
           amount: number | null
-          category: string | null
+          amount_refunded: number | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at_api: string | null
           currency: string | null
           description: string | null
-          end_date: string | null
+          id: string
+          invoice_id: string | null
+          location_name: string | null
           net_sales: number | null
-          offering_id: string | null
+          normalized_category: string[] | null
+          offering_name: string[] | null
           payment_id: string
           payment_type: string | null
-          record_id: string
-          remaining_uses: number | null
-          source_endpoint: string
-          start_date: string | null
+          promo_code: string | null
+          raw_data: Json | null
+          seller_name: string | null
+          source: string | null
           status: string | null
-          stripe_fees: number | null
           sync_batch_id: string | null
           synced_at: string | null
           tax: number | null
-          total_refunded: number | null
           transaction_fees: number | null
           updated_at: string | null
         }
         Insert: {
           amount?: number | null
-          category?: string | null
+          amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           currency?: string | null
           description?: string | null
-          end_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
-          offering_id?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
           payment_id: string
           payment_type?: string | null
-          record_id?: string
-          remaining_uses?: number | null
-          source_endpoint: string
-          start_date?: string | null
+          promo_code?: string | null
+          raw_data?: Json | null
+          seller_name?: string | null
+          source?: string | null
           status?: string | null
-          stripe_fees?: number | null
           sync_batch_id?: string | null
           synced_at?: string | null
           tax?: number | null
-          total_refunded?: number | null
           transaction_fees?: number | null
           updated_at?: string | null
         }
         Update: {
           amount?: number | null
-          category?: string | null
+          amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           currency?: string | null
           description?: string | null
-          end_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
-          offering_id?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
           payment_id?: string
           payment_type?: string | null
-          record_id?: string
-          remaining_uses?: number | null
-          source_endpoint?: string
-          start_date?: string | null
+          promo_code?: string | null
+          raw_data?: Json | null
+          seller_name?: string | null
+          source?: string | null
           status?: string | null
-          stripe_fees?: number | null
           sync_batch_id?: string | null
           synced_at?: string | null
           tax?: number | null
-          total_refunded?: number | null
           transaction_fees?: number | null
           updated_at?: string | null
         }
@@ -748,92 +784,119 @@ export type Database = {
       arketa_payments_staging: {
         Row: {
           amount: number | null
-          arketa_payment_id: string
-          category: string | null
+          amount_refunded: number | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
-          created_at: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at_api: string | null
           currency: string | null
           cursor_position: string | null
           description: string | null
-          end_date: string | null
           id: string
+          invoice_id: string | null
+          location_name: string | null
           net_sales: number | null
-          offering_id: string | null
-          payment_id: string | null
+          normalized_category: string[] | null
+          offering_name: string[] | null
+          payment_id: string
           payment_type: string | null
+          promo_code: string | null
           raw_data: Json | null
-          record_id: string | null
-          remaining_uses: number | null
-          source_endpoint: string | null
+          seller_name: string | null
+          source: string | null
           staged_at: string | null
-          start_date: string | null
           status: string | null
-          stripe_fees: number | null
           sync_batch_id: string
-          synced_at: string | null
           tax: number | null
-          total_refunded: number | null
           transaction_fees: number | null
-          updated_at: string | null
         }
         Insert: {
           amount?: number | null
-          arketa_payment_id: string
-          category?: string | null
+          amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
-          created_at?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
-          end_date?: string | null
           id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
-          offering_id?: string | null
-          payment_id?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
+          payment_id: string
           payment_type?: string | null
+          promo_code?: string | null
           raw_data?: Json | null
-          record_id?: string | null
-          remaining_uses?: number | null
-          source_endpoint?: string | null
+          seller_name?: string | null
+          source?: string | null
           staged_at?: string | null
-          start_date?: string | null
           status?: string | null
-          stripe_fees?: number | null
           sync_batch_id: string
-          synced_at?: string | null
           tax?: number | null
-          total_refunded?: number | null
           transaction_fees?: number | null
-          updated_at?: string | null
         }
         Update: {
           amount?: number | null
-          arketa_payment_id?: string
-          category?: string | null
+          amount_refunded?: number | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
-          created_at?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
-          end_date?: string | null
           id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
-          offering_id?: string | null
-          payment_id?: string | null
+          normalized_category?: string[] | null
+          offering_name?: string[] | null
+          payment_id?: string
           payment_type?: string | null
+          promo_code?: string | null
           raw_data?: Json | null
-          record_id?: string | null
-          remaining_uses?: number | null
-          source_endpoint?: string | null
+          seller_name?: string | null
+          source?: string | null
           staged_at?: string | null
-          start_date?: string | null
           status?: string | null
-          stripe_fees?: number | null
           sync_batch_id?: string
-          synced_at?: string | null
           tax?: number | null
-          total_refunded?: number | null
           transaction_fees?: number | null
+        }
+        Relationships: []
+      }
+      arketa_payments_sync_state: {
+        Row: {
+          cursor: string | null
+          estimated_total: number | null
+          id: string
+          records_synced: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cursor?: string | null
+          estimated_total?: number | null
+          id?: string
+          records_synced?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cursor?: string | null
+          estimated_total?: number | null
+          id?: string
+          records_synced?: number | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: []

@@ -204,12 +204,10 @@ async function transferPayments(
   let recordsUpdated = 0;
 
   try {
-    // Paginate staging reads to avoid Supabase's 1000-row default limit
     let allRows: Record<string, unknown>[] = [];
     const PAGE_SIZE = 1000;
     let offset = 0;
-    let keepFetching = true;
-    while (keepFetching) {
+    while (true) {
       let query = supabase.from("arketa_payments_staging").select("*").range(offset, offset + PAGE_SIZE - 1);
       if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
       const { data: rows, error: fetchError } = await query;
@@ -228,34 +226,39 @@ async function transferPayments(
 
     const countBefore = await getHistoryCount(supabase, "arketa_payments_history");
     const toUpsert = rows.map((r: Record<string, unknown>) => ({
-      source_endpoint: r.source_endpoint ?? "purchases",
-      payment_id: r.payment_id ?? r.arketa_payment_id ?? r.id,
-      client_id: r.client_id ?? null,
+      payment_id: r.payment_id ?? r.id,
       amount: r.amount ?? null,
       status: r.status ?? null,
-      description: r.description ?? null,
-      payment_type: r.payment_type ?? null,
-      category: r.category ?? null,
-      offering_id: r.offering_id ?? null,
-      start_date: r.start_date ?? null,
-      end_date: r.end_date ?? null,
-      remaining_uses: r.remaining_uses ?? null,
+      created_at_api: r.created_at_api ?? null,
       currency: r.currency ?? null,
-      total_refunded: r.total_refunded ?? null,
+      amount_refunded: r.amount_refunded ?? null,
+      description: r.description ?? null,
+      invoice_id: r.invoice_id ?? null,
+      normalized_category: r.normalized_category ?? null,
       net_sales: r.net_sales ?? null,
       transaction_fees: r.transaction_fees ?? null,
-      stripe_fees: r.stripe_fees ?? null,
       tax: r.tax ?? null,
-      updated_at: r.updated_at ?? null,
+      location_name: r.location_name ?? null,
+      source: r.source ?? null,
+      payment_type: r.payment_type ?? null,
+      promo_code: r.promo_code ?? null,
+      offering_name: r.offering_name ?? null,
+      seller_name: r.seller_name ?? null,
+      client_id: r.client_id ?? null,
+      client_first_name: r.client_first_name ?? null,
+      client_last_name: r.client_last_name ?? null,
+      client_email: r.client_email ?? null,
+      client_phone: r.client_phone ?? null,
+      raw_data: r.raw_data ?? null,
       synced_at: new Date().toISOString(),
       sync_batch_id: r.sync_batch_id ?? null,
-    })).filter((r: any) => r.payment_id && r.source_endpoint);
+    })).filter((r: any) => r.payment_id);
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
       const { error: upsertError } = await (supabase as any)
         .from("arketa_payments_history")
-        .upsert(batch, { onConflict: "payment_id,source_endpoint" });
+        .upsert(batch, { onConflict: "payment_id" });
       if (upsertError) {
         return {
           api: "arketa_payments",
@@ -275,7 +278,6 @@ async function transferPayments(
 
     if (clearStaging && rows.length) {
       const ids = rows.map((r: { id?: string }) => r.id).filter(Boolean);
-      // Batch deletes to avoid exceeding query size limits
       const DEL_BATCH = 500;
       for (let i = 0; i < ids.length; i += DEL_BATCH) {
         const batch = ids.slice(i, i + DEL_BATCH);

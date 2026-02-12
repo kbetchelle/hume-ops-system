@@ -1,7 +1,7 @@
 /**
- * sync-from-staging: Transfer staging tables to history (target) tables.
+ * sync-from-staging: Transfer staging tables to target tables.
  * - arketa_reservations_staging -> arketa_reservations_history (unique: reservation_id, class_id)
- * - arketa_payments_staging -> arketa_payments_history (unique: payment_id, source_endpoint)
+ * - arketa_payments_staging -> arketa_payments (unique: payment_id)
  * - order_checks_staging -> order_checks (unique: check_guid)
  * Logs to api_logs and optionally clears staging after transfer.
  */
@@ -224,7 +224,7 @@ async function transferPayments(
       return { api: "arketa_payments", records_processed: 0, records_inserted: 0, records_updated: 0 };
     }
 
-    const countBefore = await getHistoryCount(supabase, "arketa_payments_history");
+    const countBefore = await getHistoryCount(supabase, "arketa_payments");
     const toUpsert = rows.map((r: Record<string, unknown>) => ({
       payment_id: r.payment_id ?? r.id,
       amount: r.amount ?? null,
@@ -257,7 +257,7 @@ async function transferPayments(
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
       const { error: upsertError } = await (supabase as any)
-        .from("arketa_payments_history")
+        .from("arketa_payments")
         .upsert(batch, { onConflict: "payment_id" });
       if (upsertError) {
         return {
@@ -271,7 +271,7 @@ async function transferPayments(
       recordsProcessed += batch.length;
     }
 
-    const countAfter = await getHistoryCount(supabase, "arketa_payments_history");
+    const countAfter = await getHistoryCount(supabase, "arketa_payments");
     recordsInserted = Math.max(0, countAfter - countBefore);
     recordsUpdated = recordsProcessed - recordsInserted;
     if (recordsUpdated < 0) recordsUpdated = 0;

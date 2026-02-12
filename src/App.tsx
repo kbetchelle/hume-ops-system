@@ -501,11 +501,11 @@ const App = () => (
               }
             />
 
-            {/* User Management for Admins */}
+            {/* User Management for Admins and Managers */}
             <Route
               path="/dashboard/user-management"
               element={
-                <ProtectedRoute requiredRoles={["admin"]}>
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <UserManagementPage />
                 </ProtectedRoute>
               }

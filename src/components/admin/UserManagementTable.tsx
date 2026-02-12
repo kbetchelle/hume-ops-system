@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminUser, useUpdateUserRoles, useToggleUserDeactivation } from "@/hooks/useAdminUsers";
+import { AdminUser, useUpdateUserRoles, useToggleUserDeactivation, useResetUserPassword } from "@/hooks/useAdminUsers";
 import { AppRole, ROLES } from "@/types/roles";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserRoleEditor } from "./UserRoleEditor";
 import { toast } from "sonner";
-import { Pencil, UserX, UserCheck, Loader2 } from "lucide-react";
+import { Pencil, UserX, UserCheck, KeyRound, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UserManagementTableProps {
@@ -42,9 +42,11 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deactivatingUser, setDeactivatingUser] = useState<AdminUser | null>(null);
+  const [resettingPasswordUser, setResettingPasswordUser] = useState<AdminUser | null>(null);
   
   const updateRoles = useUpdateUserRoles();
   const toggleDeactivation = useToggleUserDeactivation();
+  const resetPassword = useResetUserPassword();
 
   const filteredUsers = roleFilter === "all"
     ? users
@@ -82,6 +84,18 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
       setDeactivatingUser(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to update user status");
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resettingPasswordUser) return;
+    
+    try {
+      await resetPassword.mutateAsync({ userId: resettingPasswordUser.user_id });
+      toast.success(`Password reset successfully for ${resettingPasswordUser.full_name || resettingPasswordUser.email}`);
+      setResettingPasswordUser(null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reset password");
     }
   };
 
@@ -212,6 +226,16 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => setResettingPasswordUser(user)}
+                      disabled={user.user_id === currentUserId}
+                      className="h-8 w-8"
+                      title="Reset password"
+                    >
+                      <KeyRound className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setDeactivatingUser(user)}
                       disabled={user.user_id === currentUserId}
                       className="h-8 w-8"
@@ -269,6 +293,34 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                 "Reactivate"
               ) : (
                 "Deactivate"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={!!resettingPasswordUser} onOpenChange={(open) => !open && setResettingPasswordUser(null)}>
+        <AlertDialogContent className="rounded-none border-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm uppercase tracking-[0.15em] font-normal">
+              Reset Password
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs tracking-wide">
+              {`Are you sure you want to reset the password for ${resettingPasswordUser?.full_name || resettingPasswordUser?.email}? Their password will be set to the default.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetPassword}
+              disabled={resetPassword.isPending}
+              className="rounded-none"
+            >
+              {resetPassword.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                "Reset Password"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

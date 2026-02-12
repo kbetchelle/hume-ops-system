@@ -43,8 +43,8 @@ export function useEventDrinks(isArchived: boolean) {
   return useQuery({
     queryKey: ['event-drinks', isArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .select('*')
         .eq('is_archived', isArchived);
 
@@ -140,8 +140,8 @@ export function useEventDrinkMutations() {
 
   const createEventDrink = useMutation({
     mutationFn: async (drink: EventDrinkInsert) => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .insert(drink)
         .select()
         .single();
@@ -153,8 +153,8 @@ export function useEventDrinkMutations() {
 
   const updateEventDrink = useMutation({
     mutationFn: async ({ id, ...updates }: EventDrinkUpdate & { id: string }) => {
-      const { data, error } = await supabase
-        .from('event_drinks')
+      const { data, error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -167,8 +167,8 @@ export function useEventDrinkMutations() {
 
   const archiveEventDrink = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('event_drinks')
+      const { error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({ is_archived: true })
         .eq('id', id);
       if (error) throw error;
@@ -178,8 +178,8 @@ export function useEventDrinkMutations() {
 
   const restoreEventDrink = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('event_drinks')
+      const { error } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({ is_archived: false })
         .eq('id', id);
       if (error) throw error;
@@ -196,8 +196,8 @@ export function useEventDrinkMutations() {
         .upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { error: updateError } = await supabase
-        .from('event_drinks')
+      const { error: updateError } = await (supabase
+        .from('event_drinks' as any) as any)
         .update({
           email_thread_path: filePath,
           email_thread_filename: file.name,

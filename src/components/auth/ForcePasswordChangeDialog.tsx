@@ -50,15 +50,7 @@ export function ForcePasswordChangeDialog({ userId }: ForcePasswordChangeDialogP
         return;
       }
 
-      // Clear the must_change_password flag
-      const { error: flagError } = await supabase
-        .from("profiles")
-        .update({ must_change_password: false })
-        .eq("user_id", userId);
-
-      if (flagError) {
-        console.error("Failed to clear must_change_password flag:", flagError);
-      }
+      // must_change_password column has been removed; no flag to clear
 
       // Close the dialog immediately
       setOpen(false);

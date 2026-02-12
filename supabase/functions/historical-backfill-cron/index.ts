@@ -58,7 +58,7 @@ const API_CONFIGS: ApiConfig[] = [
     stagingTable: "arketa_payments_staging",
     conflictColumn: "payment_id",
     dateColumn: "start_date",
-    historyTable: "arketa_payments_history",
+    historyTable: "arketa_payments",
   },
 ];
 

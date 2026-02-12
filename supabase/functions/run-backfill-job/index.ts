@@ -51,8 +51,8 @@ function getSyncConfig(jobType: JobType) {
     case "arketa_payments":
       return {
         syncFunction: "sync-arketa-payments",
-        historyTable: "arketa_payments_history",
-        dateColumn: "start_date",
+        historyTable: "arketa_payments",
+        dateColumn: "created_at_api",
         transferApi: "arketa_payments" as const,
         needsTransfer: true,
       };

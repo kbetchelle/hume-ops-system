@@ -261,7 +261,8 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < stagingRows.length; i += UPSERT_BATCH) {
       const batch = stagingRows.slice(i, i + UPSERT_BATCH);
-      await supabase.from('arketa_payments_staging').insert(batch).catch(() => {});
+      const { error: stagingErr } = await supabase.from('arketa_payments_staging').insert(batch);
+      if (stagingErr) console.warn('Staging insert error:', stagingErr.message);
     }
 
     // Update sync state

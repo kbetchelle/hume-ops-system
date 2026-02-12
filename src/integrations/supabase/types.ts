@@ -2608,6 +2608,93 @@ export type Database = {
           },
         ]
       }
+      event_drinks: {
+        Row: {
+          additional_notes: string | null
+          created_at: string
+          created_by: string | null
+          drink_name: string
+          email_thread_filename: string | null
+          email_thread_path: string | null
+          event_date: string | null
+          event_name: string | null
+          event_type: string | null
+          event_type_notes: string | null
+          food: string | null
+          id: string
+          is_archived: boolean
+          menu_printed: string | null
+          menu_printed_at: string | null
+          needs_followup: boolean
+          photoshoot: string | null
+          photoshoot_at: string | null
+          recipe: string | null
+          staff: string[]
+          staff_notified: boolean
+          staff_notified_at: string | null
+          supplies_needed: string | null
+          supplies_ordered: boolean
+          supplies_ordered_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          drink_name: string
+          email_thread_filename?: string | null
+          email_thread_path?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          event_type_notes?: string | null
+          food?: string | null
+          id?: string
+          is_archived?: boolean
+          menu_printed?: string | null
+          menu_printed_at?: string | null
+          needs_followup?: boolean
+          photoshoot?: string | null
+          photoshoot_at?: string | null
+          recipe?: string | null
+          staff?: string[]
+          staff_notified?: boolean
+          staff_notified_at?: string | null
+          supplies_needed?: string | null
+          supplies_ordered?: boolean
+          supplies_ordered_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          drink_name?: string
+          email_thread_filename?: string | null
+          email_thread_path?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          event_type_notes?: string | null
+          food?: string | null
+          id?: string
+          is_archived?: boolean
+          menu_printed?: string | null
+          menu_printed_at?: string | null
+          needs_followup?: boolean
+          photoshoot?: string | null
+          photoshoot_at?: string | null
+          recipe?: string | null
+          staff?: string[]
+          staff_notified?: boolean
+          staff_notified_at?: string | null
+          supplies_needed?: string | null
+          supplies_ordered?: boolean
+          supplies_ordered_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       facility_issues_tracker: {
         Row: {
           created_at: string | null

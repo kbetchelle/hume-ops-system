@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine } from "lucide-react";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -74,6 +74,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       url: "/dashboard/master-calendar",
       icon: Calendar
     }, {
+      title: "Event Drinks",
+      url: "/dashboard/cafe/event-drinks",
+      icon: Wine
+    }, {
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package
@@ -110,6 +114,26 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Who's Working",
       url: "/dashboard/whos-working",
       icon: Users
+    }];
+  }
+  // Cafe role: Checklist + Event Drinks + shared items
+  if (role === "cafe") {
+    return [{
+      title: "Checklist",
+      url: "/dashboard/cafe",
+      icon: ClipboardList
+    }, {
+      title: "Event Drinks",
+      url: "/dashboard/cafe/event-drinks",
+      icon: Wine
+    }, {
+      title: "Messages",
+      url: "/dashboard/messages",
+      icon: MessageSquare
+    }, {
+      title: "Announcements",
+      url: "/dashboard/announcements",
+      icon: Bell
     }];
   }
   const baseItems: NavItem[] = [{

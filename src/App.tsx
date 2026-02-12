@@ -30,6 +30,7 @@ import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
 import SpaDashboard from "./pages/dashboards/SpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
 import CafeDashboard from "./pages/dashboards/CafeDashboard";
+import EventDrinksPage from "./pages/dashboards/EventDrinksPage";
 import MembersPage from "./pages/dashboards/MembersPage";
 
 // Member sub-pages
@@ -191,6 +192,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "cafe"]}>
                   <CafeDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/cafe/event-drinks"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "cafe"]}>
+                  <EventDrinksPage />
                 </ProtectedRoute>
               }
             />

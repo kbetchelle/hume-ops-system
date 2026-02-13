@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
@@ -15,6 +15,12 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupCon
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
 import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen } from "lucide-react";
+
+const RESOURCE_SUB_ITEMS = [
+  { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
+  { title: "Resource Pages", url: "/dashboard/resources/pages", icon: FileText },
+  { title: "Policies", url: "/dashboard/resources/policies", icon: BookOpen },
+];
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
@@ -281,6 +287,83 @@ const settingsDirectItems: SettingsSubItem[] = [{
   url: "/dashboard/user-management",
   icon: Users
 }];
+// Resources nav item with 3-second hover expand and click toggle
+function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isResourcesActive = location.pathname.startsWith("/dashboard/resources");
+
+  // Auto-open when on a resources sub-page
+  useEffect(() => {
+    if (isResourcesActive) setIsOpen(true);
+  }, [isResourcesActive]);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverTimerRef.current = setTimeout(() => setIsOpen(true), 3000);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // Navigate to resources landing AND toggle sub-menu
+    setIsOpen((prev) => !prev);
+  }, []);
+
+  return (
+    <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild>
+          <NavLink
+            to={item.url}
+            end
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors",
+              "hover:bg-muted/50"
+            )}
+            activeClassName="bg-muted text-foreground font-medium"
+            onClick={handleClick}
+          >
+            <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
+            {!collapsed && (
+              <>
+                <span className="flex-1">{item.title}</span>
+                <ChevronRight className={cn("h-3 w-3 transition-transform", isOpen && "rotate-90")} />
+              </>
+            )}
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      {isOpen && !collapsed && (
+        <div className="animate-fade-in">
+          {RESOURCE_SUB_ITEMS.map((sub) => (
+            <SidebarMenuItem key={sub.url}>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to={sub.url}
+                  className={cn(
+                    "flex items-center gap-3 pl-10 pr-3 py-1.5 text-[11px] uppercase tracking-widest transition-colors",
+                    "hover:bg-muted/50"
+                  )}
+                  activeClassName="bg-muted text-foreground font-medium"
+                >
+                  <sub.icon className="h-3 w-3 shrink-0 stroke-[1.5]" />
+                  <span>{sub.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SidebarNav() {
   const location = useLocation();
   const {
@@ -328,19 +411,26 @@ function SidebarNav() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map(item => <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
-                      <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                  {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
-                    <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
-                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-                    </SidebarMenuBadge>
-                  )}
-                </SidebarMenuItem>)}
+             {navItems.map(item => {
+                if (item.url === "/dashboard/resources") {
+                  return <ResourcesNavItem key={item.url} item={item} collapsed={collapsed} />;
+                }
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                        <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                    {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
+                      <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+                        {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

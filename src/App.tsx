@@ -70,6 +70,9 @@ import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
 import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
+import ResourcesQuickLinksPage from "./pages/dashboards/ResourcesQuickLinksPage";
+import ResourcesPagesPage from "./pages/dashboards/ResourcesPagesPage";
+import ResourcesPoliciesPage from "./pages/dashboards/ResourcesPoliciesPage";
 import LostAndFoundPage from "./pages/dashboards/LostAndFoundPage";
 import ClassSchedulePage from "./pages/dashboards/ClassSchedulePage";
 import AnnouncementsPage from "./pages/dashboards/AnnouncementsPage";
@@ -497,6 +500,30 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
                   <StaffResourcesViewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/resources/quick-links"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
+                  <ResourcesQuickLinksPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/resources/pages"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
+                  <ResourcesPagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/resources/policies"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
+                  <ResourcesPoliciesPage />
                 </ProtectedRoute>
               }
             />

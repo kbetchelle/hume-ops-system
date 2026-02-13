@@ -90,7 +90,7 @@ export function useManagementInbox(searchTerm?: string) {
         .eq("user_id", user.id);
 
       if (error) throw error;
-      return (data ?? []) as { item_type: string; item_id: string }[];
+      return (data ?? []) as unknown as { item_type: string; item_id: string }[];
     },
     enabled: !!user?.id,
   });
@@ -251,7 +251,7 @@ export function useUnreadInboxCount() {
       if (readsResult.error) throw readsResult.error;
 
       const readSet = new Set(
-        ((readsResult.data ?? []) as { item_type: string; item_id: string }[]).map(
+        ((readsResult.data ?? []) as unknown as { item_type: string; item_id: string }[]).map(
           (r) => `${r.item_type}:${r.item_id}`
         )
       );
@@ -260,7 +260,7 @@ export function useUnreadInboxCount() {
       for (const qa of qaResult.data ?? []) {
         if (!readSet.has(`qa:${qa.id}`)) unread++;
       }
-      for (const flag of (flagResult.data ?? []) as { id: string }[]) {
+      for (const flag of (flagResult.data ?? []) as unknown as { id: string }[]) {
         if (!readSet.has(`flag:${flag.id}`)) unread++;
       }
       for (const report of shiftResult.data ?? []) {

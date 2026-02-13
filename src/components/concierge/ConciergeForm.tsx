@@ -72,7 +72,7 @@ export function ConciergeForm() {
   const shiftType = formData.shiftTime;
   
   // Concierge shift staff hook - fetches AM and PM staff names from Sling
-  const { staffNames: conciergeStaffNames, shiftBoundaryMinutes } = useConciergeShiftStaff(reportDate, shiftType);
+  const { staffNames: conciergeStaffNames, shiftBoundaryMinutes } = useConciergeShiftStaff(reportDate, shiftType as 'AM' | 'PM');
   
   // Current shift hook - uses dynamic boundary from Sling data
   const { currentShift: autoDetectedShift, setShift } = useCurrentShift({

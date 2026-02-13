@@ -528,7 +528,7 @@ export function ConciergeForm() {
           
 
 
-          <div className="border-b border-foreground mt-2 mb-4" />
+          
 
           {/* Info row: AM/PM toggle | Date | Staff names */}
           <div className="flex items-center justify-between gap-4 py-3 border-b border-border">

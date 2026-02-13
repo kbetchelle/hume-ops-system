@@ -9,6 +9,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
+import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
+import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 
 interface Policy {
   id: string;
@@ -38,6 +41,9 @@ export function PoliciesTab({
         p.content.toLowerCase().includes(q)
     );
   }, [policies, searchTerm]);
+
+  const policyIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const { data: policyFlagsMap } = useActiveResourceFlags("club_policy", policyIds);
 
   const policiesByCategory = useMemo(() => {
     return filtered.reduce(
@@ -82,20 +88,33 @@ export function PoliciesTab({
             {category}
           </h4>
           {categoryPolicies.map((policy) => (
-            <AccordionItem key={policy.id} value={policy.id} className="border mb-1">
-              <AccordionTrigger className="px-3 py-2 text-xs hover:no-underline">
-                {policy.title}
-              </AccordionTrigger>
-              <AccordionContent className="px-3 pb-3">
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                  {policy.content}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t">
-                  Last updated by {policy.last_updated_by} &bull;{" "}
-                  {format(parseISO(policy.updated_at), "MMM d, yyyy")}
-                </p>
-              </AccordionContent>
-            </AccordionItem>
+            <ResourceFlagContextMenu
+              key={policy.id}
+              resourceType="club_policy"
+              resourceId={policy.id}
+              resourceLabel={policy.title}
+              hasPendingFlag={policyFlagsMap?.has(policy.id) ?? false}
+            >
+              <div data-resource-id={policy.id}>
+                <AccordionItem value={policy.id} className="border mb-1">
+                  <AccordionTrigger className="px-3 py-2 text-xs hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      {policy.title}
+                      {policyFlagsMap?.has(policy.id) && <UnderReviewBadge />}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pb-3">
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {policy.content}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t">
+                      Last updated by {policy.last_updated_by} &bull;{" "}
+                      {format(parseISO(policy.updated_at), "MMM d, yyyy")}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </div>
+            </ResourceFlagContextMenu>
           ))}
         </div>
       ))}

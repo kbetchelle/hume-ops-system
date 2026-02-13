@@ -4,6 +4,9 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { sanitizeHtml } from "@/lib/utils";
 import type { ResourcePage } from "@/hooks/useStaffResources";
+import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
+import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
+import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 
 export function ResourcePagesTab({
   pages,
@@ -25,6 +28,9 @@ export function ResourcePagesTab({
         (p.content ?? "").toLowerCase().includes(q)
     );
   }, [pages, searchTerm]);
+
+  const pageIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
 
   const toggleExpand = (id: string) => {
     setExpandedPages((prev) => {
@@ -66,30 +72,39 @@ export function ResourcePagesTab({
       {filtered.map((page) => {
         const isExpanded = expandedPages.has(page.id);
         return (
-          <Card key={page.id} className="rounded-none">
-            <CardContent className="p-4">
-              <button
-                type="button"
-                className="flex items-center gap-2 w-full text-left hover:text-foreground/80"
-                onClick={() => toggleExpand(page.id)}
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 shrink-0" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 shrink-0" />
+          <ResourceFlagContextMenu
+            key={page.id}
+            resourceType="resource_page"
+            resourceId={page.id}
+            resourceLabel={page.title}
+            hasPendingFlag={pageFlagsMap?.has(page.id) ?? false}
+          >
+            <Card data-resource-id={page.id} className="rounded-none">
+              <CardContent className="p-4">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 w-full text-left hover:text-foreground/80"
+                  onClick={() => toggleExpand(page.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                  )}
+                  <h3 className="font-medium">{page.title}</h3>
+                  {pageFlagsMap?.has(page.id) && <UnderReviewBadge />}
+                </button>
+                {isExpanded && page.content && (
+                  <div
+                    className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(page.content),
+                    }}
+                  />
                 )}
-                <h3 className="font-medium">{page.title}</h3>
-              </button>
-              {isExpanded && page.content && (
-                <div
-                  className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(page.content),
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </ResourceFlagContextMenu>
         );
       })}
     </div>

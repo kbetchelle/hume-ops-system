@@ -1,11 +1,11 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ManagerQAPanel } from "@/components/manager/ManagerQAPanel";
+import { ManagementInbox } from "@/components/manager/ManagementInbox";
 
 export default function StaffQAPage() {
   return (
-    <DashboardLayout title="Staff Q&A">
+    <DashboardLayout title="Management Inbox">
       <div className="p-6 md:p-8">
-        <ManagerQAPanel />
+        <ManagementInbox />
       </div>
     </DashboardLayout>
   );

@@ -464,9 +464,17 @@ const App = () => (
               }
             />
 
-            {/* Staff Q&A for Managers */}
+            {/* Staff Q&A / Management Inbox for Managers */}
             <Route
               path="/dashboard/staff-qa"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <StaffQAPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/inbox"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <StaffQAPage />

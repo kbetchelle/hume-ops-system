@@ -6,8 +6,9 @@ export function getNotificationRoute(
   data: Record<string, unknown> | null
 ): string {
   const routes: Record<string, string> = {
-    qa_answered: '/dashboard/staff-qa',
-    qa_new_question: '/dashboard/staff-qa',
+    qa_answered: '/dashboard/inbox',
+    qa_new_question: '/dashboard/inbox',
+    resource_outdated: '/dashboard/inbox',
     announcement: '/dashboard/communications',
     message: data?.messageId 
       ? `/dashboard/messages?messageId=${data.messageId}` 

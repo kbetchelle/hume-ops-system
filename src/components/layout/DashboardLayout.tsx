@@ -14,7 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox } from "lucide-react";
+import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
@@ -243,9 +244,9 @@ const managerToolsItems: SettingsSubItem[] = [{
   url: "/dashboard/staff-announcements",
   icon: Bell
 }, {
-  title: "Staff Q&A",
-  url: "/dashboard/staff-qa",
-  icon: HelpCircle
+  title: "Inbox",
+  url: "/dashboard/inbox",
+  icon: Inbox
 }, {
   title: "Policy Management",
   url: "/dashboard/policies",
@@ -379,6 +380,7 @@ function SidebarNav() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const { count: unreadBugCount } = useUnreadBugReportCount();
   const { count: unreadMessageCount } = useUnreadMessageCount();
+  const { data: unreadInboxCount } = useUnreadInboxCount();
 
   // Determine the effective role based on URL path for proper navigation rendering
   // This ensures admin/manager/BOH dashboards always show the correct nav even if activeRole hasn't updated
@@ -449,6 +451,11 @@ function SidebarNav() {
                         <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
+                    {item.url === "/dashboard/inbox" && (unreadInboxCount ?? 0) > 0 && (
+                      <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+                        {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
+                      </SidebarMenuBadge>
+                    )}
                   </SidebarMenuItem>)}
               </SidebarMenu>
             </SidebarGroupContent>

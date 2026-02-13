@@ -10,3 +10,9 @@ export function cn(...inputs: ClassValue[]) {
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html);
 }
+
+/** Strip HTML tags from a string for plain-text search. */
+export function stripHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
+}

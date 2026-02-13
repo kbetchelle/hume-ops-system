@@ -2,6 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useScrollToResource } from "@/hooks/useScrollToResource";
 
 interface Policy {
   id: string;
@@ -14,6 +15,7 @@ interface Policy {
 }
 
 export default function ResourcesPoliciesPage() {
+  useScrollToResource();
   const { data: policies = [], isLoading } = useQuery({
     queryKey: ["club-policies"],
     queryFn: async () => {

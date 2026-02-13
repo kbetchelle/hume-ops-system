@@ -295,6 +295,18 @@ async function runSync(
   } else if (syncType === 'calendly_events') {
     // Sync 7 days past to 90 days future
     requestBody = { limit: 400 };
+  } else if (syncType === 'arketa_classes') {
+    // Combined classes + reservations sync: -7 to +7 days
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
+    requestBody = {
+      start_date: start.toISOString().split('T')[0],
+      end_date: end.toISOString().split('T')[0],
+      triggeredBy: 'scheduled',
+    };
   }
 
   // Call the appropriate edge function

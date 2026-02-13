@@ -1,8 +1,14 @@
 /**
  * sync-arketa-classes-and-reservations: Run classes sync then reservations sync with the same date range.
- * Use for manual "one-click" Arketa sync; same startDate/endDate (default -7 to +7) for both.
+ * After reservations sync, calls sync-from-staging to transfer reservations from staging to history,
+ * then refreshes the daily schedule. Logs results to api_logs/api_sync_status.
+ *
+ * Used by the scheduled-sync-runner (every 20 min) and for manual "one-click" Arketa sync.
+ * Default date range: -7 to +7 days.
  */
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 interface WrapperRequest {
   start_date?: string;
@@ -19,9 +25,13 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const startTime = Date.now();
+  const body = (await req.json().catch(() => ({}))) as WrapperRequest;
+  const triggeredBy = body.triggeredBy ?? 'manual';
 
   try {
-    const body = (await req.json().catch(() => ({}))) as WrapperRequest;
     const today = new Date();
     const defaultStart = new Date(today);
     defaultStart.setDate(defaultStart.getDate() - 7);
@@ -30,69 +40,144 @@ Deno.serve(async (req) => {
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
-    const payload = { startDate, endDate, triggeredBy: body.triggeredBy ?? 'manual' };
+    const payload = { startDate, endDate, triggeredBy };
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseKey}`,
+    };
 
-    // 1) Classes first
-    const classesUrl = `${supabaseUrl}/functions/v1/sync-arketa-classes`;
-    const classesRes = await fetch(classesUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const classesData = classesRes.ok
-      ? (await classesRes.json().catch(() => ({})))
-      : { success: false, error: await classesRes.text() };
-
-    if (!classesRes.ok) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Classes sync failed',
-          classes: classesData,
-          reservations: null,
-        }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // ── 1) Classes first ──────────────────────────────────────────────
+    let classesData: Record<string, unknown> = {};
+    let classesOk = false;
+    try {
+      const classesUrl = `${supabaseUrl}/functions/v1/sync-arketa-classes`;
+      const classesRes = await fetch(classesUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      });
+      classesData = classesRes.ok
+        ? (await classesRes.json().catch(() => ({})))
+        : { success: false, error: await classesRes.text() };
+      classesOk = classesRes.ok && classesData.success !== false;
+    } catch (classesErr) {
+      classesData = { success: false, error: classesErr instanceof Error ? classesErr.message : String(classesErr) };
     }
 
-    // 2) Reservations with same range
-    const reservationsUrl = `${supabaseUrl}/functions/v1/sync-arketa-reservations`;
-    const reservationsRes = await fetch(reservationsUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const reservationsData = reservationsRes.ok
-      ? (await reservationsRes.json().catch(() => ({})))
-      : { success: false, error: await reservationsRes.text() };
+    if (!classesOk) {
+      console.warn('[sync-arketa-classes-and-reservations] Classes sync failed, continuing to reservations:', classesData.error);
+    }
 
-    const success = classesData.success !== false && reservationsData.success !== false && !reservationsData.error;
+    // ── 2) Reservations with same range ───────────────────────────────
+    let reservationsData: Record<string, unknown> = {};
+    let reservationsOk = false;
+    try {
+      const reservationsUrl = `${supabaseUrl}/functions/v1/sync-arketa-reservations`;
+      const reservationsRes = await fetch(reservationsUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      });
+      reservationsData = reservationsRes.ok
+        ? (await reservationsRes.json().catch(() => ({})))
+        : { success: false, error: await reservationsRes.text() };
+      reservationsOk = reservationsRes.ok && reservationsData.success !== false && !reservationsData.error;
+    } catch (resErr) {
+      reservationsData = { success: false, error: resErr instanceof Error ? resErr.message : String(resErr) };
+    }
+
+    if (!reservationsOk) {
+      console.warn('[sync-arketa-classes-and-reservations] Reservations sync failed:', reservationsData.error);
+    }
+
+    // ── 3) Sync reservations from staging → arketa_reservations_history ─
+    let stagingData: Record<string, unknown> = {};
+    let stagingOk = false;
+    try {
+      const syncFromStagingUrl = `${supabaseUrl}/functions/v1/sync-from-staging`;
+      const stagingRes = await fetch(syncFromStagingUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ api: 'arketa_reservations', clear_staging: true }),
+      });
+      stagingData = stagingRes.ok
+        ? (await stagingRes.json().catch(() => ({})))
+        : { success: false, error: await stagingRes.text() };
+      stagingOk = stagingRes.ok && stagingData.success !== false;
+    } catch (stagingErr) {
+      stagingData = { success: false, error: stagingErr instanceof Error ? stagingErr.message : String(stagingErr) };
+    }
+
+    if (!stagingOk) {
+      console.warn('[sync-arketa-classes-and-reservations] Sync-from-staging failed:', stagingData.error);
+    }
+
+    // ── 4) Refresh daily schedule for synced range ────────────────────
+    try {
+      const refreshUrl = `${supabaseUrl}/functions/v1/refresh-daily-schedule`;
+      await fetch(refreshUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+      });
+    } catch (refreshErr) {
+      console.warn('[sync-arketa-classes-and-reservations] Failed to refresh daily schedule:', refreshErr);
+    }
+
+    // ── Build response ────────────────────────────────────────────────
+    const success = classesOk && reservationsOk;
+    const durationMs = Date.now() - startTime;
+
+    const classesSyncedCount = (classesData.syncedCount as number) ?? 0;
+    const reservationsSyncedCount =
+      (reservationsData.syncedCount as number) ??
+      ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
+    const totalSyncedCount = classesSyncedCount + reservationsSyncedCount;
+
+    const errors: string[] = [];
+    if (!classesOk && classesData.error) errors.push(`classes: ${classesData.error}`);
+    if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
+    if (!stagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
+
+    // ── 5) Log to api_logs / api_sync_status ──────────────────────────
+    await logApiCall(supabase, {
+      apiName: 'arketa_classes',
+      endpoint: '/classes+reservations',
+      syncSuccess: success,
+      durationMs,
+      recordsProcessed: ((classesData.totalFetched as number) ?? 0) +
+        ((reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0),
+      recordsInserted: totalSyncedCount,
+      responseStatus: success ? 200 : 502,
+      errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
+      triggeredBy,
+    });
+
+    const responseBody = {
+      success,
+      syncedCount: totalSyncedCount,
+      dateRange: { startDate, endDate },
+      durationMs,
+      classes: {
+        success: classesOk,
+        syncedCount: classesSyncedCount,
+        totalFetched: (classesData.totalFetched as number) ?? 0,
+        error: classesData.error ?? null,
+      },
+      reservations: {
+        success: reservationsOk,
+        syncedCount: reservationsSyncedCount,
+        totalFetched: (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0,
+        error: reservationsData.error ?? null,
+      },
+      syncFromStaging: {
+        success: stagingOk,
+        error: stagingData.error ?? null,
+      },
+    };
 
     return new Response(
-      JSON.stringify({
-        success,
-        dateRange: { startDate, endDate },
-        classes: {
-          success: classesData.success !== false,
-          syncedCount: classesData.syncedCount ?? 0,
-          totalFetched: classesData.totalFetched ?? 0,
-          error: classesData.error ?? null,
-        },
-        reservations: reservationsData.error
-          ? { success: false, error: reservationsData.error }
-          : {
-              success: reservationsData.success !== false,
-              syncedCount: reservationsData.syncedCount ?? reservationsData.data?.reservations_synced ?? 0,
-              totalFetched: reservationsData.totalFetched ?? reservationsData.records_processed ?? 0,
-              error: reservationsData.error ?? null,
-            },
-      }),
+      JSON.stringify(responseBody),
       {
         status: success ? 200 : 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -100,6 +185,21 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const durationMs = Date.now() - startTime;
+
+    // Log the failure
+    await logApiCall(supabase, {
+      apiName: 'arketa_classes',
+      endpoint: '/classes+reservations',
+      syncSuccess: false,
+      durationMs,
+      recordsProcessed: 0,
+      recordsInserted: 0,
+      responseStatus: 500,
+      errorMessage: message,
+      triggeredBy,
+    });
+
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

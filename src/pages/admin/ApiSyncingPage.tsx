@@ -42,12 +42,12 @@ import {
   type SyncSchedule,
 } from "@/hooks/useSyncSchedule";
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
-import { useSyncArketaClasses, useSyncArketaClassesAndReservations } from "@/hooks/useArketaApi";
+import { useSyncArketaClassesAndReservations } from "@/hooks/useArketaApi";
 import { Input } from "@/components/ui/input";
 
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
-  arketa_classes: { stagingTable: "arketa_classes_staging", targetTable: "arketa_classes" },
+  arketa_classes: { stagingTable: "arketa_classes_staging + arketa_reservations_staging", targetTable: "arketa_classes + arketa_reservations_history" },
   arketa_clients: { stagingTable: "arketa_clients_staging", targetTable: "arketa_clients" },
   arketa_reservations: { stagingTable: "arketa_reservations_staging", targetTable: "arketa_reservations" },
   arketa_payments: { stagingTable: "arketa_payments_staging", targetTable: "arketa_payments" },
@@ -191,10 +191,8 @@ function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
   const updateSchedule = useUpdateSyncSchedule();
   const runSync = useRunSync();
-  const syncArketaClasses = useSyncArketaClasses();
   const intervalOptions = getIntervalOptions();
   const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
-  const defaultArketaRange = getDefaultArketaDateRange();
 
   const handleIntervalChange = (id: string, value: string) => {
     updateSchedule.mutate({
@@ -206,12 +204,7 @@ function SyncOverviewTable() {
   const handleRunNow = async (syncType: string) => {
     setRunningSyncType(syncType);
     try {
-      if (syncType === "arketa_classes") {
-        await syncArketaClasses.mutateAsync(defaultArketaRange);
-        refetch();
-      } else {
-        await runSync.mutateAsync(syncType);
-      }
+      await runSync.mutateAsync(syncType);
     } finally {
       setRunningSyncType(null);
     }
@@ -254,63 +247,6 @@ function SyncOverviewTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {/* Arketa Classes: manual-only row (not in sync_schedule), same format as other endpoints */}
-          {(() => {
-            const config = API_CONFIG["arketa_classes"] || { stagingTable: null, targetTable: "—" };
-            const isRunning = runningSyncType === "arketa_classes";
-            return (
-              <TableRow key="arketa_classes">
-                <TableCell className="font-medium">Arketa Classes</TableCell>
-                <TableCell>
-                  <StatusBadge status={null} isHealthy={true} />
-                </TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground">—</span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-muted-foreground">Manual</span>
-                </TableCell>
-                <TableCell className="text-sm">
-                  <span className="text-muted-foreground">—</span>
-                </TableCell>
-                <TableCell>
-                  {config.stagingTable ? (
-                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                      {config.stagingTable}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                    {config.targetTable}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRunNow("arketa_classes")}
-                    disabled={runningSyncType !== null}
-                    className="gap-1"
-                  >
-                    {isRunning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-xs">Syncing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-4 w-4" />
-                        <span className="text-xs">Sync Now</span>
-                      </>
-                    )}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })()}
           {schedules
             ?.filter((sync) => sync.is_enabled) // Only show enabled syncs
             .map((sync) => {

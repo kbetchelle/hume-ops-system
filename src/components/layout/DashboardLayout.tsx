@@ -248,10 +248,6 @@ const managerToolsItems: SettingsSubItem[] = [{
   url: "/dashboard/inbox",
   icon: Inbox
 }, {
-  title: "Policy Management",
-  url: "/dashboard/policies",
-  icon: BookOpen
-}, {
   title: "Staff Resources",
   url: "/dashboard/staff-resources",
   icon: Link2

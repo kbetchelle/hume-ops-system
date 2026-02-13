@@ -9,8 +9,8 @@ import {
   ChevronRight,
   ExternalLink,
   Inbox,
-  Search,
-} from "lucide-react";
+  Search } from
+"lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,8 +20,8 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  AccordionTrigger } from
+"@/components/ui/accordion";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/utils";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -30,8 +30,8 @@ import {
   useQuickLinkGroupsByRole,
   useResourcePagesByRole,
   type QuickLinkGroupWithItems,
-  type ResourcePage,
-} from "@/hooks/useStaffResources";
+  type ResourcePage } from
+"@/hooks/useStaffResources";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,36 +52,36 @@ interface Policy {
 function QuickLinksTab({
   groups,
   isLoading,
-  searchTerm,
-}: {
-  groups: QuickLinkGroupWithItems[];
-  isLoading: boolean;
-  searchTerm: string;
-}) {
+  searchTerm
+
+
+
+
+}: {groups: QuickLinkGroupWithItems[];isLoading: boolean;searchTerm: string;}) {
   const filtered = useMemo(() => {
     if (!searchTerm) return groups;
     const q = searchTerm.toLowerCase();
-    return groups
-      .map((group) => {
-        const groupMatches =
-          group.title.toLowerCase().includes(q) ||
-          (group.description ?? "").toLowerCase().includes(q);
-        const matchingItems = group.items.filter((item) =>
-          item.name.toLowerCase().includes(q)
-        );
-        if (groupMatches) return group;
-        if (matchingItems.length > 0) return { ...group, items: matchingItems };
-        return null;
-      })
-      .filter(Boolean) as QuickLinkGroupWithItems[];
+    return groups.
+    map((group) => {
+      const groupMatches =
+      group.title.toLowerCase().includes(q) ||
+      (group.description ?? "").toLowerCase().includes(q);
+      const matchingItems = group.items.filter((item) =>
+      item.name.toLowerCase().includes(q)
+      );
+      if (groupMatches) return group;
+      if (matchingItems.length > 0) return { ...group, items: matchingItems };
+      return null;
+    }).
+    filter(Boolean) as QuickLinkGroupWithItems[];
   }, [groups, searchTerm]);
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (filtered.length === 0) {
@@ -90,13 +90,13 @@ function QuickLinksTab({
         <CardContent className="py-12 text-center">
           <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm
-              ? "No quick links match your search."
-              : "No quick links assigned to your role yet."}
+            {searchTerm ?
+            "No quick links match your search." :
+            "No quick links assigned to your role yet."}
           </p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   const handleCopy = async (url: string) => {
@@ -110,53 +110,53 @@ function QuickLinksTab({
 
   return (
     <div className="space-y-4">
-      {filtered.map((group) => (
-        <Card key={group.id} className="rounded-none">
+      {filtered.map((group) =>
+      <Card key={group.id} className="rounded-none">
           <CardContent className="p-4">
             <h3 className="font-medium mb-1">{group.title}</h3>
-            {group.description && (
-              <div
-                className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-3"
-                dangerouslySetInnerHTML={{
-                  __html: sanitizeHtml(group.description),
-                }}
-              />
-            )}
-            {group.items.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {group.items.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-2 p-3 border hover:bg-muted/50 rounded-sm transition-colors"
-                  >
+            {group.description &&
+          <div
+            className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-3"
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(group.description)
+            }} />
+
+          }
+            {group.items.length > 0 &&
+          <div className="grid grid-cols-2 gap-2">
+                {group.items.map((link) =>
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2 p-3 border hover:bg-muted/50 rounded-sm transition-colors">
+
                     <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="text-sm text-primary underline underline-offset-2 hover:text-primary/80 truncate">
                       {link.name}
                     </span>
                     <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleCopy(link.url);
-                      }}
-                      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
-                      title="Copy URL"
-                    >
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCopy(link.url);
+                }}
+                className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
+                title="Copy URL">
+
                       <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   </a>
-                ))}
-              </div>
             )}
+              </div>
+          }
           </CardContent>
         </Card>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 // ---------------------------------------------------------------------------
@@ -165,12 +165,12 @@ function QuickLinksTab({
 function ResourcePagesTab({
   pages,
   isLoading,
-  searchTerm,
-}: {
-  pages: ResourcePage[];
-  isLoading: boolean;
-  searchTerm: string;
-}) {
+  searchTerm
+
+
+
+
+}: {pages: ResourcePage[];isLoading: boolean;searchTerm: string;}) {
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
@@ -178,8 +178,8 @@ function ResourcePagesTab({
     const q = searchTerm.toLowerCase();
     return pages.filter(
       (p) =>
-        p.title.toLowerCase().includes(q) ||
-        (p.content ?? "").toLowerCase().includes(q)
+      p.title.toLowerCase().includes(q) ||
+      (p.content ?? "").toLowerCase().includes(q)
     );
   }, [pages, searchTerm]);
 
@@ -199,8 +199,8 @@ function ResourcePagesTab({
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (filtered.length === 0) {
@@ -209,13 +209,13 @@ function ResourcePagesTab({
         <CardContent className="py-12 text-center">
           <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm
-              ? "No resource pages match your search."
-              : "No resource pages assigned to your role yet."}
+            {searchTerm ?
+            "No resource pages match your search." :
+            "No resource pages assigned to your role yet."}
           </p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
@@ -228,29 +228,29 @@ function ResourcePagesTab({
               <button
                 type="button"
                 className="flex items-center gap-2 w-full text-left hover:text-foreground/80"
-                onClick={() => toggleExpand(page.id)}
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 shrink-0" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 shrink-0" />
-                )}
+                onClick={() => toggleExpand(page.id)}>
+
+                {isExpanded ?
+                <ChevronDown className="h-4 w-4 shrink-0" /> :
+
+                <ChevronRight className="h-4 w-4 shrink-0" />
+                }
                 <h3 className="font-medium">{page.title}</h3>
               </button>
-              {isExpanded && page.content && (
-                <div
-                  className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(page.content),
-                  }}
-                />
-              )}
+              {isExpanded && page.content &&
+              <div
+                className="mt-4 pt-4 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(page.content)
+                }} />
+
+              }
             </CardContent>
-          </Card>
-        );
+          </Card>);
+
       })}
-    </div>
-  );
+    </div>);
+
 }
 
 // ---------------------------------------------------------------------------
@@ -259,19 +259,19 @@ function ResourcePagesTab({
 function PoliciesTab({
   policies,
   isLoading,
-  searchTerm,
-}: {
-  policies: Policy[];
-  isLoading: boolean;
-  searchTerm: string;
-}) {
+  searchTerm
+
+
+
+
+}: {policies: Policy[];isLoading: boolean;searchTerm: string;}) {
   const filtered = useMemo(() => {
     if (!searchTerm) return policies;
     const q = searchTerm.toLowerCase();
     return policies.filter(
       (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.content.toLowerCase().includes(q)
+      p.title.toLowerCase().includes(q) ||
+      p.content.toLowerCase().includes(q)
     );
   }, [policies, searchTerm]);
 
@@ -291,8 +291,8 @@ function PoliciesTab({
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (Object.keys(policiesByCategory).length === 0) {
@@ -301,29 +301,29 @@ function PoliciesTab({
         <CardContent className="py-12 text-center">
           <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm
-              ? "No policies match your search."
-              : "No policies available."}
+            {searchTerm ?
+            "No policies match your search." :
+            "No policies available."}
           </p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
     <Accordion type="multiple" className="space-y-2">
       {Object.entries(policiesByCategory).map(
-        ([category, categoryPolicies]) => (
-          <div key={category}>
+        ([category, categoryPolicies]) =>
+        <div key={category}>
             <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {category}
             </h4>
-            {categoryPolicies.map((policy) => (
-              <AccordionItem
-                key={policy.id}
-                value={policy.id}
-                className="border mb-1"
-              >
+            {categoryPolicies.map((policy) =>
+          <AccordionItem
+            key={policy.id}
+            value={policy.id}
+            className="border mb-1">
+
                 <AccordionTrigger className="px-3 py-2 text-xs hover:no-underline">
                   {policy.title}
                 </AccordionTrigger>
@@ -337,12 +337,12 @@ function PoliciesTab({
                   </p>
                 </AccordionContent>
               </AccordionItem>
-            ))}
+          )}
           </div>
-        )
+
       )}
-    </Accordion>
-  );
+    </Accordion>);
+
 }
 
 // ---------------------------------------------------------------------------
@@ -353,30 +353,30 @@ export function StaffResourcesView() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: groups = [], isLoading: groupsLoading } =
-    useQuickLinkGroupsByRole(activeRole ?? "concierge");
+  useQuickLinkGroupsByRole(activeRole ?? "concierge");
 
   const { data: pages = [], isLoading: pagesLoading } =
-    useResourcePagesByRole(activeRole ?? "concierge");
+  useResourcePagesByRole(activeRole ?? "concierge");
 
   const { data: policies = [], isLoading: policiesLoading } = useQuery({
     queryKey: ["club-policies"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("club_policies")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+      const { data, error } = await supabase.
+      from("club_policies").
+      select("*").
+      eq("is_active", true).
+      order("sort_order", { ascending: true });
 
       if (error) throw error;
       return (data || []) as Policy[];
-    },
+    }
   });
 
   return (
     <div className="space-y-6">
-      <h2 className="text-sm uppercase tracking-[0.15em] font-normal">
-        Resources
-      </h2>
+      
+
+
 
       {/* Search bar */}
       <div className="relative">
@@ -385,30 +385,30 @@ export function StaffResourcesView() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search resources..."
-          className="pl-10 rounded-none"
-        />
+          className="pl-10 rounded-none" />
+
       </div>
 
       <Tabs defaultValue="quick-links" className="w-full">
         <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
           <TabsTrigger
             value="quick-links"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3">
+
             <Link2 className="h-3.5 w-3.5 mr-1.5" />
             Quick Links
           </TabsTrigger>
           <TabsTrigger
             value="resource-pages"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3">
+
             <FileText className="h-3.5 w-3.5 mr-1.5" />
             Resource Pages
           </TabsTrigger>
           <TabsTrigger
             value="policies"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3">
+
             <BookOpen className="h-3.5 w-3.5 mr-1.5" />
             Policies
           </TabsTrigger>
@@ -417,24 +417,24 @@ export function StaffResourcesView() {
           <QuickLinksTab
             groups={groups}
             isLoading={groupsLoading}
-            searchTerm={searchTerm}
-          />
+            searchTerm={searchTerm} />
+
         </TabsContent>
         <TabsContent value="resource-pages" className="pt-6">
           <ResourcePagesTab
             pages={pages}
             isLoading={pagesLoading}
-            searchTerm={searchTerm}
-          />
+            searchTerm={searchTerm} />
+
         </TabsContent>
         <TabsContent value="policies" className="pt-6">
           <PoliciesTab
             policies={policies}
             isLoading={policiesLoading}
-            searchTerm={searchTerm}
-          />
+            searchTerm={searchTerm} />
+
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>);
+
 }

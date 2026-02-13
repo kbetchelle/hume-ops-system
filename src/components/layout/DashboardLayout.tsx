@@ -74,10 +74,6 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       url: "/dashboard/master-calendar",
       icon: Calendar
     }, {
-      title: "Event Drinks",
-      url: "/dashboard/cafe/event-drinks",
-      icon: Wine
-    }, {
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package

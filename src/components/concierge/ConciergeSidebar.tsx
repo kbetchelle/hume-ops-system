@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useAuth } from "@/hooks/useAuth";
@@ -213,13 +214,11 @@ export function ConciergeSidebar({
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
                         onClick={() => onViewChange(item.id)}
-                        className={`
-                          flex items-center gap-3 px-3 py-2
-                          text-xs uppercase tracking-widest
-                          transition-colors
-                          hover:bg-muted/50
-                          ${isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"}
-                        `}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "hover:bg-muted/50",
+                          isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
+                        )}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>

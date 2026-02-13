@@ -56,7 +56,7 @@ export function RoleSwitcher() {
           size="sm"
           className="w-full gap-2 rounded-none text-[13px] uppercase tracking-widest justify-start px-0 h-auto py-0"
         >
-          <span className="truncate pl-2">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
+          <span className="pl-2 whitespace-normal text-left leading-tight">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
           <ChevronDown className="h-3 w-3 shrink-0" />
         </Button>
       </DropdownMenuTrigger>

@@ -16,8 +16,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  DialogDescription } from
+'@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,7 +47,7 @@ function normalizeShiftType(st: string): 'AM' | 'PM' {
 export function ConciergeForm() {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   // Form state
   const [formData, setFormData] = useState<FormDataType>(INITIAL_FORM_DATA);
   const [localVersion, setLocalVersion] = useState(1);
@@ -59,41 +59,41 @@ export function ConciergeForm() {
   const [conflictData, setConflictData] = useState<ConciergeDraft | null>(null);
   const [arketaCheckIns, setArketaCheckIns] = useState<any[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [reportHistory, setReportHistory] = useState<{ report_date: string; shift_type: string; staff_name: string | null; status: string | null; submitted_at: string | null }[]>([]);
-  const [notesForShift, setNotesForShift] = useState<{ id: string; from: string; text: string }[]>([]);
-  const [photoUploadOpen, setPhotoUploadOpen] = useState<{ type: 'facility' | 'system'; index: number } | null>(null);
-  
+  const [reportHistory, setReportHistory] = useState<{report_date: string;shift_type: string;staff_name: string | null;status: string | null;submitted_at: string | null;}[]>([]);
+  const [notesForShift, setNotesForShift] = useState<{id: string;from: string;text: string;}[]>([]);
+  const [photoUploadOpen, setPhotoUploadOpen] = useState<{type: 'facility' | 'system';index: number;} | null>(null);
+
   // Click-to-edit state for staff names
   const [isEditingStaffName, setIsEditingStaffName] = useState(false);
   const [staffNameWasAutoPopulated, setStaffNameWasAutoPopulated] = useState(false);
   const staffNameInputRef = useRef<HTMLInputElement>(null);
-  
+
   const reportDate = formData.reportDate;
   const shiftType = formData.shiftTime;
-  
+
   // Concierge shift staff hook - fetches AM and PM staff names from Sling
   const { staffNames: conciergeStaffNames, shiftBoundaryMinutes } = useConciergeShiftStaff(reportDate, shiftType as 'AM' | 'PM');
-  
+
   // Current shift hook - uses dynamic boundary from Sling data
   const { currentShift: autoDetectedShift, setShift } = useCurrentShift({
-    dynamicBoundaryMinutes: shiftBoundaryMinutes,
+    dynamicBoundaryMinutes: shiftBoundaryMinutes
   });
-  
+
   // Custom hooks
   const { activeEditors, typingFields, broadcastTyping, sessionId } = useEditorPresence(reportDate, shiftType);
   const { broadcastUpdate, broadcastSaved } = useBroadcastSync({
     reportDate,
     shiftType,
     sessionId,
-    onRemoteUpdate: handleRemoteUpdate,
+    onRemoteUpdate: handleRemoteUpdate
   });
   const { isOnline, queueSize, addToQueue, processQueue } = useOfflineQueue();
-  
+
   // Debounced form data for auto-save
   const [debouncedFormData] = useDebounce(formData, 1500);
   // Track whether the initial user-specific shift lookup has completed
   const [userShiftResolved, setUserShiftResolved] = useState(false);
-  
+
   // On mount: look up the *current user's* scheduled shift first.
   // Fall back to the wall-clock auto-detected shift only when the user
   // has no shift in staff_shifts for today.
@@ -102,32 +102,32 @@ export function ConciergeForm() {
     async function resolveUserShift() {
       if (!user?.email) {
         // No user yet – use wall-clock shift as fallback
-        setFormData(prev => ({ ...prev, shiftTime: autoDetectedShift }));
+        setFormData((prev) => ({ ...prev, shiftTime: autoDetectedShift }));
         setUserShiftResolved(true);
         return;
       }
       try {
         // 1. Map email → sling_user_id
-        const { data: slingUser } = await supabase
-          .from('sling_users')
-          .select('sling_user_id')
-          .eq('email', user.email)
-          .maybeSingle();
+        const { data: slingUser } = await supabase.
+        from('sling_users').
+        select('sling_user_id').
+        eq('email', user.email).
+        maybeSingle();
 
         if (slingUser) {
           // 2. Find today's shift for this specific user
           const today = new Date().toISOString().split('T')[0];
-          const { data: shift } = await supabase
-            .from('staff_shifts' as any)
-            .select('shift_start, position')
-            .eq('sling_user_id', slingUser.sling_user_id)
-            .eq('schedule_date', today)
-            .maybeSingle() as { data: { shift_start: string; position: string } | null };
+          const { data: shift } = (await supabase.
+          from('staff_shifts' as any).
+          select('shift_start, position').
+          eq('sling_user_id', slingUser.sling_user_id).
+          eq('schedule_date', today).
+          maybeSingle()) as {data: {shift_start: string;position: string;} | null;};
 
           if (!cancelled && shift?.shift_start) {
             const startHour = new Date(shift.shift_start).getHours();
             const shiftAmPm: 'AM' | 'PM' = startHour < 12 ? 'AM' : 'PM';
-            setFormData(prev => ({ ...prev, shiftTime: shiftAmPm }));
+            setFormData((prev) => ({ ...prev, shiftTime: shiftAmPm }));
             setShift(shiftAmPm);
             setUserShiftResolved(true);
             return;
@@ -138,26 +138,26 @@ export function ConciergeForm() {
       }
       // Fallback: no scheduled shift found – use wall-clock detection
       if (!cancelled) {
-        setFormData(prev => ({ ...prev, shiftTime: autoDetectedShift }));
+        setFormData((prev) => ({ ...prev, shiftTime: autoDetectedShift }));
         setUserShiftResolved(true);
       }
     }
     resolveUserShift();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [user?.email]);
-  
+
   // Auto-populate staff names from Sling when shift changes and name is empty or was auto-populated
   useEffect(() => {
     if (conciergeStaffNames.length > 0) {
-      const formatted = conciergeStaffNames.map(n => n.toUpperCase()).join(' + ');
+      const formatted = conciergeStaffNames.map((n) => n.toUpperCase()).join(' + ');
       // Only auto-populate if staff name is empty or was previously auto-populated
       if (!formData.staffName || staffNameWasAutoPopulated) {
-        setFormData(prev => ({ ...prev, staffName: formatted }));
+        setFormData((prev) => ({ ...prev, staffName: formatted }));
         setStaffNameWasAutoPopulated(true);
       }
     }
   }, [conciergeStaffNames.join(','), shiftType]);
-  
+
   // Load existing draft or report (wait until user shift is resolved so we
   // load the correct shift's draft on first render)
   useEffect(() => {
@@ -165,31 +165,31 @@ export function ConciergeForm() {
       loadDraft();
     }
   }, [reportDate, shiftType, userShiftResolved]);
-  
+
   // Auto-save when form changes
   useEffect(() => {
     if (isDirty && !isSubmitted) {
       saveDraft();
     }
   }, [debouncedFormData]);
-  
+
   // Supabase Realtime subscription for database changes
   useEffect(() => {
-    const channel = supabase
-      .channel(`draft-${reportDate}-${shiftType}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'concierge_drafts',
-        filter: `report_date=eq.${reportDate},shift_time=eq.${shiftType}`,
-      }, handleDatabaseChange)
-      .subscribe();
-    
+    const channel = supabase.
+    channel(`draft-${reportDate}-${shiftType}`).
+    on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'concierge_drafts',
+      filter: `report_date=eq.${reportDate},shift_time=eq.${shiftType}`
+    }, handleDatabaseChange).
+    subscribe();
+
     return () => {
       channel.unsubscribe();
     };
   }, [reportDate, shiftType, sessionId]);
-  
+
   // Auto-submit hook
   const { willAutoSubmit, timeUntilSubmitFormatted } = useAutoSubmitConcierge(
     reportDate,
@@ -198,38 +198,38 @@ export function ConciergeForm() {
     handleSubmit,
     isSubmitted
   );
-  
+
   async function loadDraft() {
     try {
       // Check for submitted report first
-      const { data: report } = await supabase
-        .from('daily_report_history')
-        .select('*')
-        .eq('report_date', reportDate)
-        .eq('shift_type', shiftType)
-        .maybeSingle();
-      
+      const { data: report } = await supabase.
+      from('daily_report_history').
+      select('*').
+      eq('report_date', reportDate).
+      eq('shift_type', shiftType).
+      maybeSingle();
+
       if (report && report.status === 'submitted') {
         setIsSubmitted(true);
         // Load read-only data from report
         return;
       }
-      
+
       // Load draft
-      const { data: draft } = await supabase
-        .from('concierge_drafts')
-        .select('*')
-        .eq('report_date', reportDate)
-        .eq('shift_time', shiftType)
-        .maybeSingle();
-      
+      const { data: draft } = await supabase.
+      from('concierge_drafts').
+      select('*').
+      eq('report_date', reportDate).
+      eq('shift_time', shiftType).
+      maybeSingle();
+
       if (draft) {
         const loadedFormData = draft.form_data as unknown as FormDataType;
         const shift = loadedFormData.shiftTime;
         setFormData({
           ...loadedFormData,
           shiftTime: normalizeShiftType(shift),
-          _sessionId: sessionId,
+          _sessionId: sessionId
         });
         setLocalVersion(draft.version);
         setLastSaved(new Date(draft.updated_at));
@@ -243,11 +243,11 @@ export function ConciergeForm() {
       toast({
         title: 'Error loading draft',
         description: 'Please refresh the page',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   }
-  
+
   async function fetchArketaCheckIns() {
     try {
       // Calculate shift start and end times
@@ -268,11 +268,11 @@ export function ConciergeForm() {
       shiftEnd.setHours(endHour, 0, 0, 0);
 
       // Reservations only have class_date; use arketa_classes for time range and ordering
-      const { data: classes, error: classError } = await supabase
-        .from('arketa_classes')
-        .select('external_id, start_time')
-        .gte('start_time', shiftStart.toISOString())
-        .lte('start_time', shiftEnd.toISOString());
+      const { data: classes, error: classError } = await supabase.
+      from('arketa_classes').
+      select('external_id, start_time').
+      gte('start_time', shiftStart.toISOString()).
+      lte('start_time', shiftEnd.toISOString());
 
       if (classError) throw classError;
       const classIds = (classes || []).map((c) => c.external_id);
@@ -281,12 +281,12 @@ export function ConciergeForm() {
         return;
       }
 
-      const { data: reservations, error } = await supabase
-        .from('arketa_reservations')
-        .select('*')
-        .eq('checked_in', true)
-        .eq('class_date', reportDate)
-        .in('class_id', classIds);
+      const { data: reservations, error } = await supabase.
+      from('arketa_reservations').
+      select('*').
+      eq('checked_in', true).
+      eq('class_date', reportDate).
+      in('class_id', classIds);
 
       if (error) throw error;
 
@@ -302,36 +302,36 @@ export function ConciergeForm() {
       console.error('[ConciergeForm] Failed to fetch Arketa check-ins:', error);
     }
   }
-  
+
   async function saveDraft() {
     if (isSaving || isSubmitted) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       const draftData = {
         report_date: reportDate,
         shift_time: shiftType,
         form_data: formData as unknown as Record<string, unknown>,
         last_updated_by: user?.email || null,
-        last_updated_by_session: sessionId,
+        last_updated_by_session: sessionId
       };
-      
+
       if (isOnline) {
-        const { data, error } = await supabase
-          .from('concierge_drafts')
-          .upsert(draftData as any, {
-            onConflict: 'report_date,shift_time',
-          })
-          .select()
-          .single();
-        
+        const { data, error } = await supabase.
+        from('concierge_drafts').
+        upsert(draftData as any, {
+          onConflict: 'report_date,shift_time'
+        }).
+        select().
+        single();
+
         if (error) throw error;
-        
+
         setLocalVersion(data.version);
         setLastSaved(new Date());
         setIsDirty(false);
-        
+
         // Broadcast update to other clients
         await broadcastUpdate(formData);
         await broadcastSaved();
@@ -345,29 +345,29 @@ export function ConciergeForm() {
       toast({
         title: 'Failed to save',
         description: 'Your changes will be saved when you reconnect',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsSaving(false);
     }
   }
-  
+
   const isSubmittingRef = useRef(false);
 
   async function handleSubmit() {
     if (isSubmittingRef.current) return;
-    
+
     if (!hasMeaningfulContent(formData)) {
       toast({
         title: 'Cannot submit empty report',
         description: 'Please add some content before submitting',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
-    
+
     isSubmittingRef.current = true;
-    
+
     try {
       const payload = {
         report_date: reportDate,
@@ -385,41 +385,41 @@ export function ConciergeForm() {
         management_notes: formData.managementNotes || '',
         future_shift_notes: formData.futureNotes as any,
         status: 'submitted',
-        submitted_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString()
       };
 
       // Try upsert based on date + shift
-      const { error } = await supabase
-        .from('daily_report_history')
-        .upsert(payload as any, {
-          onConflict: 'report_date,shift_type',
-        });
-      
+      const { error } = await supabase.
+      from('daily_report_history').
+      upsert(payload as any, {
+        onConflict: 'report_date,shift_type'
+      });
+
       if (error) throw error;
-      
+
       setIsSubmitted(true);
       toast({
         title: 'Report submitted',
-        description: 'Your shift report has been submitted successfully',
+        description: 'Your shift report has been submitted successfully'
       });
     } catch (error) {
       console.error('[ConciergeForm] Failed to submit:', error);
       toast({
         title: 'Submission failed',
         description: 'Please try again',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       isSubmittingRef.current = false;
     }
   }
-  
+
   function handleDatabaseChange(payload: any) {
     const change = payload.new as ConciergeDraft;
-    
+
     // Ignore changes from same session
     if (change?.last_updated_by_session === sessionId) return;
-    
+
     // Check for version conflict
     if (change && change.version > localVersion) {
       if (isDirty) {
@@ -433,12 +433,12 @@ export function ConciergeForm() {
       }
     }
   }
-  
+
   function handleRemoteUpdate(data: Partial<FormDataType>) {
     // Handle broadcast updates from other clients
     console.log('[ConciergeForm] Remote update received');
   }
-  
+
   function handleAcceptRemote() {
     if (conflictData) {
       setFormData(conflictData.form_data);
@@ -447,60 +447,60 @@ export function ConciergeForm() {
       setShowConflictModal(false);
     }
   }
-  
+
   function handleKeepLocal() {
     setShowConflictModal(false);
     // Force save local version
     saveDraft();
   }
-  
+
   function updateFormField<K extends keyof FormDataType>(field: K, value: FormDataType[K]) {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
     broadcastTyping(field as string);
   }
-  
+
   // Array field handlers
   const addMemberFeedback = () => {
     updateFormField('memberFeedback', [...formData.memberFeedback, { id: crypto.randomUUID(), sentiment: 'neutral', text: '' }]);
   };
-  
+
   const addFacilityIssue = () => {
     updateFormField('facilityIssues', [...formData.facilityIssues, { id: crypto.randomUUID(), description: '', photoUrl: null }]);
   };
-  
+
   const addSystemIssue = () => {
     updateFormField('systemIssues', [...formData.systemIssues, { id: crypto.randomUUID(), issueType: '', description: '', photoUrl: null }]);
   };
-  
+
   const addCelebratoryEvent = () => {
     updateFormField('celebratoryEvents', [...formData.celebratoryEvents, { id: crypto.randomUUID(), memberName: '', eventType: 'birthday', date: '' }]);
   };
-  
+
   const addTour = () => {
     updateFormField('tours', [...formData.tours, { id: crypto.randomUUID(), name: '', followupCompleted: false }]);
   };
-  
+
   const addCancelRequest = () => {
-    updateFormField('membershipCancelRequests', [...formData.membershipCancelRequests, { 
+    updateFormField('membershipCancelRequests', [...formData.membershipCancelRequests, {
       id: crypto.randomUUID(),
-      name: '', 
-      email: '', 
-      membershipType: '', 
+      name: '',
+      email: '',
+      membershipType: '',
       requestType: 'cancel',
       endDate: ''
     }]);
   };
-  
+
   const addFutureNote = () => {
-    updateFormField('futureNotes', [...formData.futureNotes, { 
+    updateFormField('futureNotes', [...formData.futureNotes, {
       id: crypto.randomUUID(),
-      targetDate: '', 
-      targetShift: 'AM', 
-      note: '' 
+      targetDate: '',
+      targetShift: 'AM',
+      note: ''
     }]);
   };
-  
+
   return (
     <>
       {/* Offline banner */}
@@ -518,16 +518,16 @@ export function ConciergeForm() {
         localVersion={localVersion}
         remoteVersion={conflictData?.version || 0}
         onAcceptRemote={handleAcceptRemote}
-        onKeepLocal={handleKeepLocal}
-      />
+        onKeepLocal={handleKeepLocal} />
+
       
       <Card>
         {/* ── Shift Report Document Header ── */}
         <div className="px-6 pt-6 pb-0 space-y-0">
           {/* Title */}
-          <h2 className="text-[18px] uppercase tracking-[0.15em] font-normal">
-            Shift Report
-          </h2>
+          
+
+
           <div className="border-b border-foreground mt-2 mb-4" />
 
           {/* Info row: AM/PM toggle | Date | Staff names */}
@@ -543,11 +543,11 @@ export function ConciergeForm() {
                 }}
                 disabled={isSubmitted}
                 className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
-                  shiftType === 'AM'
-                    ? 'border border-foreground'
-                    : 'border border-transparent hover:text-foreground/80'
-                }`}
-              >
+                shiftType === 'AM' ?
+                'border border-foreground' :
+                'border border-transparent hover:text-foreground/80'}`
+                }>
+
                 AM
               </button>
               <button
@@ -559,11 +559,11 @@ export function ConciergeForm() {
                 }}
                 disabled={isSubmitted}
                 className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
-                  shiftType === 'PM'
-                    ? 'border border-foreground'
-                    : 'border border-transparent hover:text-foreground/80'
-                }`}
-              >
+                shiftType === 'PM' ?
+                'border border-foreground' :
+                'border border-transparent hover:text-foreground/80'}`
+                }>
+
                 PM
               </button>
             </div>
@@ -574,43 +574,43 @@ export function ConciergeForm() {
             </span>
 
             {/* Right: Staff names (click-to-edit) */}
-            {isEditingStaffName ? (
-              <Input
-                ref={staffNameInputRef}
-                value={formData.staffName}
-                onChange={(e) => {
-                  updateFormField('staffName', e.target.value);
-                  setStaffNameWasAutoPopulated(false);
-                }}
-                onBlur={() => setIsEditingStaffName(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setIsEditingStaffName(false);
-                  }
-                }}
-                disabled={isSubmitted}
-                placeholder="Staff names"
-                className="w-48 text-sm text-right"
-                autoFocus
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isSubmitted) {
-                    setIsEditingStaffName(true);
-                    // Focus input after render
-                    setTimeout(() => staffNameInputRef.current?.focus(), 0);
-                  }
-                }}
-                className="text-sm font-medium tracking-wider hover:opacity-70 transition-opacity cursor-text"
-                title="Click to edit staff names"
-              >
-                {formData.staffName
-                  ? formData.staffName.toUpperCase()
-                  : 'No staff scheduled'}
+            {isEditingStaffName ?
+            <Input
+              ref={staffNameInputRef}
+              value={formData.staffName}
+              onChange={(e) => {
+                updateFormField('staffName', e.target.value);
+                setStaffNameWasAutoPopulated(false);
+              }}
+              onBlur={() => setIsEditingStaffName(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setIsEditingStaffName(false);
+                }
+              }}
+              disabled={isSubmitted}
+              placeholder="Staff names"
+              className="w-48 text-sm text-right"
+              autoFocus /> :
+
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!isSubmitted) {
+                  setIsEditingStaffName(true);
+                  // Focus input after render
+                  setTimeout(() => staffNameInputRef.current?.focus(), 0);
+                }
+              }}
+              className="text-sm font-medium tracking-wider hover:opacity-70 transition-opacity cursor-text"
+              title="Click to edit staff names">
+
+                {formData.staffName ?
+              formData.staffName.toUpperCase() :
+              'No staff scheduled'}
               </button>
-            )}
+            }
           </div>
 
           {/* Secondary toolbar: History, Save indicator, Auto-submit */}
@@ -623,27 +623,27 @@ export function ConciergeForm() {
                 className="h-7 text-xs"
                 onClick={() => {
                   setHistoryOpen(true);
-                  supabase
-                    .from('daily_report_history')
-                    .select('report_date, shift_type, staff_name, status, submitted_at')
-                    .order('report_date', { ascending: false })
-                    .order('shift_type', { ascending: false })
-                    .limit(30)
-                    .then(({ data, error }) => {
-                      if (error) {
-                        console.error('[ConciergeForm] Failed to load report history:', error);
-                        toast({
-                          title: 'Could not load history',
-                          description: 'Please try again.',
-                          variant: 'destructive',
-                        });
-                        setReportHistory([]);
-                        return;
-                      }
-                      setReportHistory(data ?? []);
-                    });
-                }}
-              >
+                  supabase.
+                  from('daily_report_history').
+                  select('report_date, shift_type, staff_name, status, submitted_at').
+                  order('report_date', { ascending: false }).
+                  order('shift_type', { ascending: false }).
+                  limit(30).
+                  then(({ data, error }) => {
+                    if (error) {
+                      console.error('[ConciergeForm] Failed to load report history:', error);
+                      toast({
+                        title: 'Could not load history',
+                        description: 'Please try again.',
+                        variant: 'destructive'
+                      });
+                      setReportHistory([]);
+                      return;
+                    }
+                    setReportHistory(data ?? []);
+                  });
+                }}>
+
                 <History className="h-3 w-3 mr-1" />
                 History
               </Button>
@@ -656,15 +656,15 @@ export function ConciergeForm() {
                 lastSaved={lastSaved}
                 isDirty={isDirty}
                 isOnline={isOnline}
-                queueSize={queueSize}
-              />
+                queueSize={queueSize} />
+
             </div>
-            {willAutoSubmit && timeUntilSubmitFormatted && (
-              <Badge variant="secondary" className="gap-1 text-[10px]">
+            {willAutoSubmit && timeUntilSubmitFormatted &&
+            <Badge variant="secondary" className="gap-1 text-[10px]">
                 <Clock className="h-3 w-3" />
                 Auto-submit in {timeUntilSubmitFormatted}
               </Badge>
-            )}
+            }
           </div>
         </div>
 
@@ -677,17 +677,17 @@ export function ConciergeForm() {
             </DialogHeader>
             <ScrollArea className="h-[60vh] pr-4">
               <div className="space-y-2">
-                {reportHistory.map((r, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, reportDate: r.report_date, shiftTime: normalizeShiftType(r.shift_type) }));
-                      setStaffNameWasAutoPopulated(false); // Past date: use saved name
-                      setHistoryOpen(false);
-                    }}
-                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
+                {reportHistory.map((r, i) =>
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, reportDate: r.report_date, shiftTime: normalizeShiftType(r.shift_type) }));
+                    setStaffNameWasAutoPopulated(false); // Past date: use saved name
+                    setHistoryOpen(false);
+                  }}
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{format(new Date(r.report_date), 'EEE, MMM d, yyyy')}</span>
                       <Badge variant="outline">{normalizeShiftType(r.shift_type)}</Badge>
@@ -699,7 +699,7 @@ export function ConciergeForm() {
                       </Badge>
                     </p>
                   </button>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </DialogContent>
@@ -708,35 +708,35 @@ export function ConciergeForm() {
         <CardContent className="space-y-6 pt-4">
 
           {/* Notes for this shift (alert banners) */}
-          {notesForShift.length > 0 && (
-            <div className="space-y-2">
+          {notesForShift.length > 0 &&
+          <div className="space-y-2">
               <Label className="text-sm">Notes for this shift:</Label>
-              {notesForShift.map((note) => (
-                <div
-                  key={note.id}
-                  className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm"
-                >
+              {notesForShift.map((note) =>
+            <div
+              key={note.id}
+              className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
+
                   <span className="font-medium shrink-0">From {note.from}:</span>
                   <span className="flex-1">{note.text}</span>
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => setNotesForShift(prev => prev.filter(n => n.id !== note.id))}
-                  >
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setNotesForShift((prev) => prev.filter((n) => n.id !== note.id))}>
+
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
+            )}
             </div>
-          )}
+          }
 
           <Separator />
         
           {/* Arketa Check-ins Summary (Read-only info) */}
-          {arketaCheckIns.length > 0 && (
-            <>
+          {arketaCheckIns.length > 0 &&
+          <>
               <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -751,7 +751,7 @@ export function ConciergeForm() {
               </div>
               <Separator />
             </>
-          )}
+          }
           
           {/* MEMBERS — Feedback */}
           <div className="space-y-3">
@@ -759,17 +759,17 @@ export function ConciergeForm() {
             <p className="text-sm text-muted-foreground">
               Please report any feedback or issues from members or staff/ general shift notes. For general notes, please select neutral:
             </p>
-            {formData.memberFeedback.map((feedback, i) => (
-              <div key={feedback.id ?? i} className="flex gap-2">
+            {formData.memberFeedback.map((feedback, i) =>
+            <div key={feedback.id ?? i} className="flex gap-2">
                 <Select
-                  value={feedback.sentiment}
-                  onValueChange={(v) => {
-                    const updated = [...formData.memberFeedback];
-                    updated[i].sentiment = v as any;
-                    updateFormField('memberFeedback', updated);
-                  }}
-                  disabled={isSubmitted}
-                >
+                value={feedback.sentiment}
+                onValueChange={(v) => {
+                  const updated = [...formData.memberFeedback];
+                  updated[i].sentiment = v as any;
+                  updateFormField('memberFeedback', updated);
+                }}
+                disabled={isSubmitted}>
+
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Positive" />
                   </SelectTrigger>
@@ -780,52 +780,52 @@ export function ConciergeForm() {
                   </SelectContent>
                 </Select>
                 <Input
-                  value={feedback.text}
-                  onChange={(e) => {
-                    const updated = [...formData.memberFeedback];
-                    updated[i].text = e.target.value;
-                    updateFormField('memberFeedback', updated);
-                  }}
-                  disabled={isSubmitted}
-                  placeholder="Enter feedback or issue"
-                  className="flex-1"
-                />
-                {!isSubmitted && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      updateFormField('memberFeedback', formData.memberFeedback.filter((_, idx) => idx !== i));
-                    }}
-                  >
+                value={feedback.text}
+                onChange={(e) => {
+                  const updated = [...formData.memberFeedback];
+                  updated[i].text = e.target.value;
+                  updateFormField('memberFeedback', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Enter feedback or issue"
+                className="flex-1" />
+
+                {!isSubmitted &&
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  updateFormField('memberFeedback', formData.memberFeedback.filter((_, idx) => idx !== i));
+                }}>
+
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && (
-              <Button variant="ghost" size="sm" onClick={addMemberFeedback}>
+            )}
+            {!isSubmitted &&
+            <Button variant="ghost" size="sm" onClick={addMemberFeedback}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
 
           {/* MEMBERS — Cancel/Pause requests */}
           <div className="space-y-3">
             <Label className="text-sm">Were there any requests to cancel or pause membership?</Label>
-            {formData.membershipCancelRequests.map((request, i) => (
-              <div key={request.id ?? i} className="space-y-2 p-3 border rounded-lg">
+            {formData.membershipCancelRequests.map((request, i) =>
+            <div key={request.id ?? i} className="space-y-2 p-3 border rounded-lg">
                 <div className="flex flex-wrap gap-2 items-center">
                   <Select
-                    value={request.requestType}
-                    onValueChange={(v) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      updated[i].requestType = v as any;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                  >
+                  value={request.requestType}
+                  onValueChange={(v) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    updated[i].requestType = v as any;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted}>
+
                     <SelectTrigger className="w-28">
                       <SelectValue placeholder="Cancel" />
                     </SelectTrigger>
@@ -836,36 +836,36 @@ export function ConciergeForm() {
                     </SelectContent>
                   </Select>
                   <Input
-                    value={request.name}
-                    onChange={(e) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      updated[i].name = e.target.value;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                    placeholder="Name"
-                    className="w-40"
-                  />
+                  value={request.name}
+                  onChange={(e) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    updated[i].name = e.target.value;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted}
+                  placeholder="Name"
+                  className="w-40" />
+
                   <Input
-                    value={request.email || ''}
-                    onChange={(e) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      updated[i].email = e.target.value;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                    placeholder="Email (optional)"
-                    className="w-44"
-                  />
+                  value={request.email || ''}
+                  onChange={(e) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    updated[i].email = e.target.value;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted}
+                  placeholder="Email (optional)"
+                  className="w-44" />
+
                   <Select
-                    value={request.reason ?? ''}
-                    onValueChange={(v) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      updated[i].reason = v as any;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                  >
+                  value={request.reason ?? ''}
+                  onValueChange={(v) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    updated[i].reason = v as any;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted}>
+
                     <SelectTrigger className="w-36">
                       <SelectValue placeholder="Select reason" />
                     </SelectTrigger>
@@ -879,63 +879,63 @@ export function ConciergeForm() {
                     </SelectContent>
                   </Select>
                   <Input
-                    type="date"
-                    value={request.endDate || (request.requestType === 'pause' ? request.pauseEndDate ?? '' : request.endDate ?? '')}
-                    onChange={(e) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      if (updated[i].requestType === 'pause') updated[i].pauseEndDate = e.target.value;
-                      else updated[i].endDate = e.target.value;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                    placeholder="End date"
-                    className="w-36"
-                  />
-                  {!isSubmitted && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => updateFormField('membershipCancelRequests', formData.membershipCancelRequests.filter((_, idx) => idx !== i))}
-                    >
+                  type="date"
+                  value={request.endDate || (request.requestType === 'pause' ? request.pauseEndDate ?? '' : request.endDate ?? '')}
+                  onChange={(e) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    if (updated[i].requestType === 'pause') updated[i].pauseEndDate = e.target.value;else
+                    updated[i].endDate = e.target.value;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted}
+                  placeholder="End date"
+                  className="w-36" />
+
+                  {!isSubmitted &&
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateFormField('membershipCancelRequests', formData.membershipCancelRequests.filter((_, idx) => idx !== i))}>
+
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
+                }
                 </div>
-                {request.reason === 'other' && (
-                  <Input
-                    value={request.otherReasonText ?? ''}
-                    onChange={(e) => {
-                      const updated = [...formData.membershipCancelRequests];
-                      updated[i].otherReasonText = e.target.value;
-                      updateFormField('membershipCancelRequests', updated);
-                    }}
-                    disabled={isSubmitted}
-                    placeholder="Specify reason"
-                    className="max-w-xs"
-                  />
-                )}
-                {request.requestType === 'pause' && (
-                  <div className="flex items-center gap-2">
+                {request.reason === 'other' &&
+              <Input
+                value={request.otherReasonText ?? ''}
+                onChange={(e) => {
+                  const updated = [...formData.membershipCancelRequests];
+                  updated[i].otherReasonText = e.target.value;
+                  updateFormField('membershipCancelRequests', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Specify reason"
+                className="max-w-xs" />
+
+              }
+                {request.requestType === 'pause' &&
+              <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={request.paidPause ?? false}
-                      onCheckedChange={(c) => {
-                        const updated = [...formData.membershipCancelRequests];
-                        updated[i].paidPause = !!c;
-                        updateFormField('membershipCancelRequests', updated);
-                      }}
-                      disabled={isSubmitted}
-                    />
+                  checked={request.paidPause ?? false}
+                  onCheckedChange={(c) => {
+                    const updated = [...formData.membershipCancelRequests];
+                    updated[i].paidPause = !!c;
+                    updateFormField('membershipCancelRequests', updated);
+                  }}
+                  disabled={isSubmitted} />
+
                     <span className="text-sm text-muted-foreground">Paid pause</span>
                   </div>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && (
-              <Button variant="ghost" size="sm" onClick={addCancelRequest}>
+            )}
+            {!isSubmitted &&
+            <Button variant="ghost" size="sm" onClick={addCancelRequest}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
           
           <Separator />
@@ -947,33 +947,33 @@ export function ConciergeForm() {
               <Checkbox
                 checked={formData.celebratoryEventsNA}
                 onCheckedChange={(checked) => updateFormField('celebratoryEventsNA', !!checked)}
-                disabled={isSubmitted}
-              />
+                disabled={isSubmitted} />
+
               <span className="text-sm text-muted-foreground">N/A</span>
             </div>
             <p className="text-xs text-muted-foreground">Add any special/giftable events to tracker.</p>
-            {!formData.celebratoryEventsNA && formData.celebratoryEvents.map((event, i) => (
-              <div key={event.id ?? i} className="flex flex-wrap gap-2">
+            {!formData.celebratoryEventsNA && formData.celebratoryEvents.map((event, i) =>
+            <div key={event.id ?? i} className="flex flex-wrap gap-2">
                 <Input
-                  value={event.memberName}
-                  onChange={(e) => {
-                    const updated = [...formData.celebratoryEvents];
-                    updated[i].memberName = e.target.value;
-                    updateFormField('celebratoryEvents', updated);
-                  }}
-                  disabled={isSubmitted}
-                  placeholder="Member name"
-                  className="w-44"
-                />
+                value={event.memberName}
+                onChange={(e) => {
+                  const updated = [...formData.celebratoryEvents];
+                  updated[i].memberName = e.target.value;
+                  updateFormField('celebratoryEvents', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Member name"
+                className="w-44" />
+
                 <Select
-                  value={event.eventType}
-                  onValueChange={(v) => {
-                    const updated = [...formData.celebratoryEvents];
-                    updated[i].eventType = v as any;
-                    updateFormField('celebratoryEvents', updated);
-                  }}
-                  disabled={isSubmitted}
-                >
+                value={event.eventType}
+                onValueChange={(v) => {
+                  const updated = [...formData.celebratoryEvents];
+                  updated[i].eventType = v as any;
+                  updateFormField('celebratoryEvents', updated);
+                }}
+                disabled={isSubmitted}>
+
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Select event type" />
                   </SelectTrigger>
@@ -989,14 +989,14 @@ export function ConciergeForm() {
                   </SelectContent>
                 </Select>
                 <Select
-                  value={event.timing ?? ''}
-                  onValueChange={(v) => {
-                    const updated = [...formData.celebratoryEvents];
-                    updated[i].timing = v;
-                    updateFormField('celebratoryEvents', updated);
-                  }}
-                  disabled={isSubmitted}
-                >
+                value={event.timing ?? ''}
+                onValueChange={(v) => {
+                  const updated = [...formData.celebratoryEvents];
+                  updated[i].timing = v;
+                  updateFormField('celebratoryEvents', updated);
+                }}
+                disabled={isSubmitted}>
+
                   <SelectTrigger className="w-28">
                     <SelectValue placeholder="Upcoming" />
                   </SelectTrigger>
@@ -1006,33 +1006,33 @@ export function ConciergeForm() {
                   </SelectContent>
                 </Select>
                 <Input
-                  type="date"
-                  value={event.date || ''}
-                  onChange={(e) => {
-                    const updated = [...formData.celebratoryEvents];
-                    updated[i].date = e.target.value;
-                    updateFormField('celebratoryEvents', updated);
-                  }}
-                  disabled={isSubmitted}
-                  className="w-36"
-                />
-                {!isSubmitted && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => updateFormField('celebratoryEvents', formData.celebratoryEvents.filter((_, idx) => idx !== i))}
-                  >
+                type="date"
+                value={event.date || ''}
+                onChange={(e) => {
+                  const updated = [...formData.celebratoryEvents];
+                  updated[i].date = e.target.value;
+                  updateFormField('celebratoryEvents', updated);
+                }}
+                disabled={isSubmitted}
+                className="w-36" />
+
+                {!isSubmitted &&
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => updateFormField('celebratoryEvents', formData.celebratoryEvents.filter((_, idx) => idx !== i))}>
+
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && !formData.celebratoryEventsNA && (
-              <Button variant="ghost" size="sm" onClick={addCelebratoryEvent}>
+            )}
+            {!isSubmitted && !formData.celebratoryEventsNA &&
+            <Button variant="ghost" size="sm" onClick={addCelebratoryEvent}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
           
           <Separator />
@@ -1043,48 +1043,48 @@ export function ConciergeForm() {
             <ScheduledToursDisplay reportDate={reportDate} disabled={isSubmitted} />
             <div className="space-y-3">
               <Label className="text-sm">Did you tour anyone? (Add notes)</Label>
-              {formData.tours.map((tour, i) => (
-                <div key={tour.id ?? i} className="flex flex-wrap gap-2 items-center">
+              {formData.tours.map((tour, i) =>
+              <div key={tour.id ?? i} className="flex flex-wrap gap-2 items-center">
                   <Input
-                    value={tour.name}
-                    onChange={(e) => {
-                      const updated = [...formData.tours];
-                      updated[i].name = e.target.value;
-                      updateFormField('tours', updated);
-                    }}
-                    disabled={isSubmitted}
-                    placeholder="Name"
-                    className="w-48"
-                  />
+                  value={tour.name}
+                  onChange={(e) => {
+                    const updated = [...formData.tours];
+                    updated[i].name = e.target.value;
+                    updateFormField('tours', updated);
+                  }}
+                  disabled={isSubmitted}
+                  placeholder="Name"
+                  className="w-48" />
+
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={tour.followupCompleted}
-                      onCheckedChange={(checked) => {
-                        const updated = [...formData.tours];
-                        updated[i].followupCompleted = !!checked;
-                        updateFormField('tours', updated);
-                      }}
-                      disabled={isSubmitted}
-                    />
+                    checked={tour.followupCompleted}
+                    onCheckedChange={(checked) => {
+                      const updated = [...formData.tours];
+                      updated[i].followupCompleted = !!checked;
+                      updateFormField('tours', updated);
+                    }}
+                    disabled={isSubmitted} />
+
                     <span className="text-sm text-muted-foreground whitespace-nowrap">Notes filled out & follow up email sent</span>
                   </div>
-                  {!isSubmitted && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => updateFormField('tours', formData.tours.filter((_, idx) => idx !== i))}
-                    >
+                  {!isSubmitted &&
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateFormField('tours', formData.tours.filter((_, idx) => idx !== i))}>
+
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
+                }
                 </div>
-              ))}
-              {!isSubmitted && (
-                <Button variant="ghost" size="sm" onClick={addTour}>
+              )}
+              {!isSubmitted &&
+              <Button variant="ghost" size="sm" onClick={addTour}>
                   <Plus className="h-4 w-4 mr-1" />
                   Add
                 </Button>
-              )}
+              }
             </div>
           </div>
           
@@ -1094,49 +1094,49 @@ export function ConciergeForm() {
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider">Facilities</h3>
             <Label className="text-sm">Any facility issues? (maintenance, equipment, etc.)</Label>
-            {formData.facilityIssues.map((issue, i) => (
-              <div key={issue.id ?? i} className="flex gap-2 items-start">
+            {formData.facilityIssues.map((issue, i) =>
+            <div key={issue.id ?? i} className="flex gap-2 items-start">
                 <Textarea
-                  value={issue.description}
-                  onChange={(e) => {
-                    const updated = [...formData.facilityIssues];
-                    updated[i].description = e.target.value;
-                    updateFormField('facilityIssues', updated);
-                  }}
-                  disabled={isSubmitted}
-                  placeholder="Describe the facility issue"
-                  rows={2}
-                  className="flex-1 min-w-0"
-                />
-                {!isSubmitted && (
-                  <>
+                value={issue.description}
+                onChange={(e) => {
+                  const updated = [...formData.facilityIssues];
+                  updated[i].description = e.target.value;
+                  updateFormField('facilityIssues', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Describe the facility issue"
+                rows={2}
+                className="flex-1 min-w-0" />
+
+                {!isSubmitted &&
+              <>
                     <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPhotoUploadOpen({ type: 'facility', index: i })}
-                      className="shrink-0 gap-1"
-                    >
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPhotoUploadOpen({ type: 'facility', index: i })}
+                  className="shrink-0 gap-1">
+
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => updateFormField('facilityIssues', formData.facilityIssues.filter((_, idx) => idx !== i))}
-                    >
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateFormField('facilityIssues', formData.facilityIssues.filter((_, idx) => idx !== i))}>
+
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && (
-              <Button variant="ghost" size="sm" onClick={addFacilityIssue}>
+            )}
+            {!isSubmitted &&
+            <Button variant="ghost" size="sm" onClick={addFacilityIssue}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
           
           <Separator />
@@ -1149,8 +1149,8 @@ export function ConciergeForm() {
               onChange={(e) => updateFormField('busiestAreas', e.target.value)}
               disabled={isSubmitted}
               placeholder="Describe busy areas and times..."
-              rows={3}
-            />
+              rows={3} />
+
           </div>
           
           <Separator />
@@ -1162,21 +1162,21 @@ export function ConciergeForm() {
               <Checkbox
                 checked={formData.systemIssuesNA}
                 onCheckedChange={(checked) => updateFormField('systemIssuesNA', !!checked)}
-                disabled={isSubmitted}
-              />
+                disabled={isSubmitted} />
+
               <span className="text-sm text-muted-foreground">N/A</span>
             </div>
-            {!formData.systemIssuesNA && formData.systemIssues.map((issue, i) => (
-              <div key={issue.id ?? i} className="flex flex-wrap gap-2 items-start">
+            {!formData.systemIssuesNA && formData.systemIssues.map((issue, i) =>
+            <div key={issue.id ?? i} className="flex flex-wrap gap-2 items-start">
                 <Select
-                  value={issue.issueType}
-                  onValueChange={(v) => {
-                    const updated = [...formData.systemIssues];
-                    updated[i].issueType = v as any;
-                    updateFormField('systemIssues', updated);
-                  }}
-                  disabled={isSubmitted}
-                >
+                value={issue.issueType}
+                onValueChange={(v) => {
+                  const updated = [...formData.systemIssues];
+                  updated[i].issueType = v as any;
+                  updateFormField('systemIssues', updated);
+                }}
+                disabled={isSubmitted}>
+
                   <SelectTrigger className="w-36">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -1188,45 +1188,45 @@ export function ConciergeForm() {
                   </SelectContent>
                 </Select>
                 <Input
-                  value={issue.description}
-                  onChange={(e) => {
-                    const updated = [...formData.systemIssues];
-                    updated[i].description = e.target.value;
-                    updateFormField('systemIssues', updated);
-                  }}
-                  disabled={isSubmitted}
-                  placeholder="Describe the issue..."
-                  className="flex-1 min-w-[200px]"
-                />
-                {!isSubmitted && (
-                  <>
+                value={issue.description}
+                onChange={(e) => {
+                  const updated = [...formData.systemIssues];
+                  updated[i].description = e.target.value;
+                  updateFormField('systemIssues', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Describe the issue..."
+                className="flex-1 min-w-[200px]" />
+
+                {!isSubmitted &&
+              <>
                     <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPhotoUploadOpen({ type: 'system', index: i })}
-                      className="shrink-0 gap-1"
-                    >
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPhotoUploadOpen({ type: 'system', index: i })}
+                  className="shrink-0 gap-1">
+
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => updateFormField('systemIssues', formData.systemIssues.filter((_, idx) => idx !== i))}
-                    >
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateFormField('systemIssues', formData.systemIssues.filter((_, idx) => idx !== i))}>
+
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && !formData.systemIssuesNA && (
-              <Button variant="ghost" size="sm" onClick={addSystemIssue}>
+            )}
+            {!isSubmitted && !formData.systemIssuesNA &&
+            <Button variant="ghost" size="sm" onClick={addSystemIssue}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
           
           <Separator />
@@ -1241,8 +1241,8 @@ export function ConciergeForm() {
               disabled={isSubmitted}
               placeholder="Notes for management eyes only..."
               rows={4}
-              className="resize-y"
-            />
+              className="resize-y" />
+
           </div>
           
           <Separator />
@@ -1256,32 +1256,32 @@ export function ConciergeForm() {
               <Checkbox
                 checked={formData.futureShiftNotesNA}
                 onCheckedChange={(checked) => updateFormField('futureShiftNotesNA', !!checked)}
-                disabled={isSubmitted}
-              />
+                disabled={isSubmitted} />
+
               <span className="text-sm text-muted-foreground">N/A</span>
             </div>
-            {!formData.futureShiftNotesNA && formData.futureNotes.map((note, i) => (
-              <div key={note.id ?? i} className="flex flex-wrap gap-2 items-center">
+            {!formData.futureShiftNotesNA && formData.futureNotes.map((note, i) =>
+            <div key={note.id ?? i} className="flex flex-wrap gap-2 items-center">
                 <Input
-                  type="date"
-                  value={note.targetDate}
-                  onChange={(e) => {
-                    const updated = [...formData.futureNotes];
-                    updated[i].targetDate = e.target.value;
-                    updateFormField('futureNotes', updated);
-                  }}
-                  disabled={isSubmitted}
-                  className="w-36"
-                />
+                type="date"
+                value={note.targetDate}
+                onChange={(e) => {
+                  const updated = [...formData.futureNotes];
+                  updated[i].targetDate = e.target.value;
+                  updateFormField('futureNotes', updated);
+                }}
+                disabled={isSubmitted}
+                className="w-36" />
+
                 <Select
-                  value={note.targetShift}
-                  onValueChange={(v) => {
-                    const updated = [...formData.futureNotes];
-                    updated[i].targetShift = v as any;
-                    updateFormField('futureNotes', updated);
-                  }}
-                  disabled={isSubmitted}
-                >
+                value={note.targetShift}
+                onValueChange={(v) => {
+                  const updated = [...formData.futureNotes];
+                  updated[i].targetShift = v as any;
+                  updateFormField('futureNotes', updated);
+                }}
+                disabled={isSubmitted}>
+
                   <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
@@ -1291,83 +1291,83 @@ export function ConciergeForm() {
                   </SelectContent>
                 </Select>
                 <Input
-                  value={note.note}
-                  onChange={(e) => {
-                    const updated = [...formData.futureNotes];
-                    updated[i].note = e.target.value;
-                    updateFormField('futureNotes', updated);
-                  }}
-                  disabled={isSubmitted}
-                  placeholder="Enter notes for future shift"
-                  className="flex-1 min-w-[200px]"
-                />
-                {!isSubmitted && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => updateFormField('futureNotes', formData.futureNotes.filter((_, idx) => idx !== i))}
-                  >
+                value={note.note}
+                onChange={(e) => {
+                  const updated = [...formData.futureNotes];
+                  updated[i].note = e.target.value;
+                  updateFormField('futureNotes', updated);
+                }}
+                disabled={isSubmitted}
+                placeholder="Enter notes for future shift"
+                className="flex-1 min-w-[200px]" />
+
+                {!isSubmitted &&
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => updateFormField('futureNotes', formData.futureNotes.filter((_, idx) => idx !== i))}>
+
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                )}
+              }
               </div>
-            ))}
-            {!isSubmitted && !formData.futureShiftNotesNA && (
-              <Button variant="ghost" size="sm" onClick={addFutureNote}>
+            )}
+            {!isSubmitted && !formData.futureShiftNotesNA &&
+            <Button variant="ghost" size="sm" onClick={addFutureNote}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-            )}
+            }
           </div>
 
         </CardContent>
         
         <CardFooter className="flex gap-3 border-t pt-4">
-          {!isSubmitted && (
-            <>
+          {!isSubmitted &&
+          <>
               <Button
-                variant="outline"
-                onClick={() => saveDraft()}
-                disabled={isSaving || !isDirty}
-                className="flex-1"
-              >
+              variant="outline"
+              onClick={() => saveDraft()}
+              disabled={isSaving || !isDirty}
+              className="flex-1">
+
                 <Save className="h-4 w-4 mr-2" />
                 Save Draft
               </Button>
               <Button
-                onClick={handleSubmit}
-                disabled={isSaving}
-                className="flex-1"
-              >
+              onClick={handleSubmit}
+              disabled={isSaving}
+              className="flex-1">
+
                 <Send className="h-4 w-4 mr-2" />
                 Submit Shift Report
               </Button>
             </>
-          )}
+          }
         </CardFooter>
       </Card>
 
-      {photoUploadOpen && (
-        <PhotoUpload
-          isOpen={!!photoUploadOpen}
-          onSave={(url) => {
-            if (photoUploadOpen.type === 'facility') {
-              const updated = [...formData.facilityIssues];
-              updated[photoUploadOpen.index] = { ...updated[photoUploadOpen.index], photoUrl: url };
-              updateFormField('facilityIssues', updated);
-            } else {
-              const updated = [...formData.systemIssues];
-              updated[photoUploadOpen.index] = { ...updated[photoUploadOpen.index], photoUrl: url };
-              updateFormField('systemIssues', updated);
-            }
-            setPhotoUploadOpen(null);
-          }}
-          onCancel={() => setPhotoUploadOpen(null)}
-          storageBucket="checklist-photos"
-          storagePath="concierge-report"
-          title={photoUploadOpen.type === 'facility' ? 'Facility issue photo' : 'System issue photo'}
-        />
-      )}
-    </>
-  );
+      {photoUploadOpen &&
+      <PhotoUpload
+        isOpen={!!photoUploadOpen}
+        onSave={(url) => {
+          if (photoUploadOpen.type === 'facility') {
+            const updated = [...formData.facilityIssues];
+            updated[photoUploadOpen.index] = { ...updated[photoUploadOpen.index], photoUrl: url };
+            updateFormField('facilityIssues', updated);
+          } else {
+            const updated = [...formData.systemIssues];
+            updated[photoUploadOpen.index] = { ...updated[photoUploadOpen.index], photoUrl: url };
+            updateFormField('systemIssues', updated);
+          }
+          setPhotoUploadOpen(null);
+        }}
+        onCancel={() => setPhotoUploadOpen(null)}
+        storageBucket="checklist-photos"
+        storagePath="concierge-report"
+        title={photoUploadOpen.type === 'facility' ? 'Facility issue photo' : 'System issue photo'} />
+
+      }
+    </>);
+
 }

@@ -109,10 +109,10 @@ function QuickLinksTab({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 gap-4">
       {filtered.map((group) =>
       <Card key={group.id} className="rounded-none">
-          <CardContent className="p-4">
+          <CardContent className="p-2.5">
             <h3 className="font-medium mb-1">{group.title}</h3>
             {group.description &&
           <div

@@ -88,19 +88,7 @@
 
   /* Fear of God Typography - Uppercase, Tracked, Minimal */
   h1, h2, h3, h4, h5, h6 {
-    @apply uppercase tracking-[0.15em] font-normal;
-  }
-
-  h1 {
-    @apply text-sm;
-  }
-
-  h2 {
-    @apply text-xs;
-  }
-
-  h3, h4, h5, h6 {
-    @apply text-[11px];
+    @apply uppercase tracking-[0.15em] font-normal text-[16px];
   }
 }
 

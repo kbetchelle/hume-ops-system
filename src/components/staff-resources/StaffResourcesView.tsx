@@ -132,7 +132,7 @@ function QuickLinksTab({
               rel="noopener noreferrer"
               className="group flex items-center gap-2 px-1 py-1.5 hover:bg-muted/50 transition-colors">
 
-                    <span className="text-muted-foreground text-xs shrink-0">•</span>
+                    <span className="text-muted-foreground text-base shrink-0 leading-none">•</span>
                     <span className="text-sm text-primary hover:underline truncate">
                       {link.name}
                     </span>

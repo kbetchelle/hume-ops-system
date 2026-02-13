@@ -334,7 +334,7 @@ function SidebarNav() {
             <SidebarMenu>
               {navItems.map(item => <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                    <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-[12.5px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                       <item.icon className="h-2.5 w-2.5 shrink-0 stroke-[1.5]" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -358,7 +358,7 @@ function SidebarNav() {
               <SidebarMenu>
                 {managerToolsItems.map(item => <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[12.5px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                         <item.icon className="h-2.5 w-2.5 shrink-0 stroke-[1.5]" />
                         <span>{item.title}</span>
                       </NavLink>
@@ -378,7 +378,7 @@ function SidebarNav() {
                 {/* Direct Settings Items */}
                 {settingsDirectItems.map(item => <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[12.5px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                         <item.icon className="h-2.5 w-2.5 shrink-0 stroke-[1.5]" />
                         <span>{item.title}</span>
                       </NavLink>
@@ -389,7 +389,7 @@ function SidebarNav() {
                 <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={setDevToolsOpen}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton className={cn("flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-widest transition-colors w-full", "hover:bg-muted/50", isDevToolsActive && "bg-muted/70 text-foreground")}>
+                      <SidebarMenuButton className={cn("flex items-center gap-3 px-3 py-2 text-[12.5px] uppercase tracking-widest transition-colors w-full", "hover:bg-muted/50", isDevToolsActive && "bg-muted/70 text-foreground")}>
                         <Wrench className="h-2.5 w-2.5 shrink-0 stroke-[1.5]" />
                         <span className="flex-1 text-left">Dev Tools</span>
                         <ChevronRight className={cn("h-3 w-3 transition-transform", (devToolsOpen || isDevToolsActive) && "rotate-90")} />
@@ -399,7 +399,7 @@ function SidebarNav() {
                   <CollapsibleContent>
                     {settingsGroups[0].items.map(item => <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
-                          <NavLink to={item.url} className={cn("flex items-center gap-3 pl-8 pr-3 py-2 text-[10px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                          <NavLink to={item.url} className={cn("flex items-center gap-3 pl-8 pr-3 py-2 text-[12.5px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                             <item.icon className="h-2.5 w-2.5 shrink-0 stroke-[1.5]" />
                             <span>{item.title}</span>
                           </NavLink>

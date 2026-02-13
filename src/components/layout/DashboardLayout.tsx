@@ -89,6 +89,46 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       icon: FolderOpen
     }];
   }
+  // Concierge gets its own nav matching other role dashboards
+  if (role === "concierge") {
+    return [{
+      title: "Dashboard",
+      url: "/dashboard/concierge",
+      icon: Home
+    }, {
+      title: "Messages",
+      url: "/dashboard/messages",
+      icon: MessageSquare
+    }, {
+      title: "My Checklists",
+      url: "/dashboard/my-checklists",
+      icon: ClipboardList
+    }, {
+      title: "Announcements",
+      url: "/dashboard/announcements",
+      icon: Bell
+    }, {
+      title: "Member Communicati...",
+      url: "/dashboard/member-communications",
+      icon: MessageSquare
+    }, {
+      title: "Shift Report",
+      url: "/dashboard/shift-report",
+      icon: FileText
+    }, {
+      title: "Lost & Found",
+      url: "/dashboard/lost-and-found",
+      icon: Package
+    }, {
+      title: "Reports",
+      url: "/dashboard/reports",
+      icon: BarChart3
+    }, {
+      title: "Resources",
+      url: "/dashboard/resources",
+      icon: FolderOpen
+    }];
+  }
   // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
   if (role && BOH_ROLES.includes(role)) {
     const checklistUrl = role === "floater" ? "/dashboard/floater" : "/dashboard/spa";

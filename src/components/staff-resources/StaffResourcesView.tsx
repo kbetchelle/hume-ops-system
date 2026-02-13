@@ -7,7 +7,7 @@ import {
   Copy,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
+  
   Inbox,
   Search } from
 "lucide-react";
@@ -132,8 +132,8 @@ function QuickLinksTab({
               rel="noopener noreferrer"
               className="group flex items-center gap-2 px-1 py-1.5 hover:bg-muted/50 transition-colors">
 
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-sm text-primary hover:text-primary/80 truncate">
+                    <span className="text-muted-foreground text-sm shrink-0">–</span>
+                    <span className="text-sm text-primary hover:underline truncate">
                       {link.name}
                     </span>
                     <button

@@ -2815,6 +2815,30 @@ export type Database = {
         }
         Relationships: []
       }
+      inbox_reads: {
+        Row: {
+          id: string
+          item_id: string
+          item_type: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          item_type: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          item_type?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       lost_and_found: {
         Row: {
           claimed_by: string | null
@@ -3293,6 +3317,57 @@ export type Database = {
           sort_order?: number | null
           title?: string
           url?: string
+        }
+        Relationships: []
+      }
+      resource_outdated_flags: {
+        Row: {
+          created_at: string | null
+          flagged_by_id: string
+          flagged_by_name: string
+          id: string
+          note: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_id: string | null
+          resolved_by_name: string | null
+          resource_id: string
+          resource_label: string
+          resource_type: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          flagged_by_id: string
+          flagged_by_name: string
+          id?: string
+          note: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_id?: string | null
+          resolved_by_name?: string | null
+          resource_id: string
+          resource_label: string
+          resource_type: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          flagged_by_id?: string
+          flagged_by_name?: string
+          id?: string
+          note?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_id?: string | null
+          resolved_by_name?: string | null
+          resource_id?: string
+          resource_label?: string
+          resource_type?: string
+          status?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

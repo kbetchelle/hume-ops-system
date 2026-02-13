@@ -84,10 +84,6 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package
-    }, {
-      title: "Resources",
-      url: "/dashboard/resources",
-      icon: FolderOpen
     }];
   }
   // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
@@ -247,10 +243,6 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Inbox",
   url: "/dashboard/inbox",
   icon: Inbox
-}, {
-  title: "Policy Management",
-  url: "/dashboard/policies",
-  icon: BookOpen
 }, {
   title: "Staff Resources",
   url: "/dashboard/staff-resources",

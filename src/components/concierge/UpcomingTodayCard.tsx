@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore } from "date-fns";
-import { Calendar, Clock, Users, Dumbbell, Briefcase, MapPin } from "lucide-react";
+import { Calendar, Clock, Users, Dumbbell, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -88,21 +88,7 @@ export function UpcomingTodayCard() {
     refetchInterval: 60000,
   });
 
-  // Fetch staff shifts (from staff_shifts)
-  const { data: shifts, isLoading: shiftsLoading } = useQuery({
-    queryKey: ["staff-shifts-upcoming", today],
-    queryFn: async () => {
-      const { data, error } = await selectFrom<StaffShift>("staff_shifts", {
-        filters: [{ type: "eq", column: "shift_date", value: today }],
-        order: { column: "shift_start", ascending: true },
-      });
-      if (error) throw error;
-      return data || [];
-    },
-    refetchInterval: 60000,
-  });
-
-  const isLoading = toursLoading || classesLoading || shiftsLoading;
+  const isLoading = toursLoading || classesLoading;
 
   const filterByShift = (startTime: string): boolean => {
     try {
@@ -155,29 +141,12 @@ export function UpcomingTodayCard() {
         };
       });
 
-    const shiftEvents: UnifiedEvent[] = (shifts || [])
-      .filter((s) => filterByShift(s.shift_start))
-      .map((s) => {
-        const startTime = parseISO(s.shift_start);
-        return {
-          id: s.id,
-          type: "shift" as const,
-          title: s.user_name || "Staff Member",
-          subtitle: s.position || undefined,
-          time: format(startTime, "h:mm a"),
-          endTime: format(parseISO(s.shift_end), "h:mm a"),
-          details: undefined,
-          icon: <Briefcase className="h-4 w-4" />,
-          sortTime: startTime,
-          color: "text-purple-500",
-        };
-      });
 
     // Combine and sort all events
-    return [...tourEvents, ...classEvents, ...shiftEvents].sort(
+    return [...tourEvents, ...classEvents].sort(
       (a, b) => a.sortTime.getTime() - b.sortTime.getTime()
     );
-  }, [tours, classes, shifts, currentShift]);
+  }, [tours, classes, currentShift]);
 
   // Filter to only show upcoming events (future or within last 30 minutes)
   const upcomingEvents = unifiedEvents.filter((event) => {

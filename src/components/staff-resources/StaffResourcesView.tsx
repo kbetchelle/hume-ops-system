@@ -123,17 +123,17 @@ function QuickLinksTab({
 
           }
             {group.items.length > 0 &&
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col">
                 {group.items.map((link) =>
             <a
               key={link.id}
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-2 p-3 border hover:bg-muted/50 rounded-sm transition-colors">
+              className="group flex items-center gap-2 px-1 py-1.5 hover:bg-muted/50 transition-colors">
 
                     <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-sm text-primary underline underline-offset-2 hover:text-primary/80 truncate">
+                    <span className="text-sm text-primary hover:text-primary/80 truncate">
                       {link.name}
                     </span>
                     <button
@@ -143,7 +143,7 @@ function QuickLinksTab({
                   e.stopPropagation();
                   handleCopy(link.url);
                 }}
-                className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
+                className="ml-[10px] opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
                 title="Copy URL">
 
                       <Copy className="h-3.5 w-3.5 text-muted-foreground" />

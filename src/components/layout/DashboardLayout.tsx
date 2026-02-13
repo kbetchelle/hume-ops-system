@@ -191,7 +191,7 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     roles: ["manager", "concierge", "trainer"]
   }, {
     title: "Shift Report",
-    url: "/dashboard/shift-report",
+    url: "/dashboard/concierge",
     icon: FileText,
     roles: ["manager", "concierge"]
   }, {

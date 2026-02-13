@@ -81,7 +81,7 @@ export function ShiftNoteInboxItem({
           variant="outline"
           size="sm"
           className="rounded-none text-xs"
-          onClick={() => navigate("/dashboard/shift-report")}
+          onClick={() => navigate("/dashboard/concierge")}
         >
           View Full Report
         </Button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { format } from 'date-fns';
 import { FileText, Plus, Trash2, Send, Save, CheckCircle2, Clock, History, Cloud, RefreshCw, Upload, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +26,8 @@ import { useEditorPresence } from '@/hooks/useEditorPresence';
 import { useBroadcastSync } from '@/hooks/useBroadcastSync';
 import { useAutoSubmitConcierge } from '@/hooks/useAutoSubmitConcierge';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { useConciergeShiftStaff } from '@/hooks/useConciergeShiftStaff';
+import { useCurrentShift } from '@/hooks/useCurrentShift';
 import { ActiveEditorsBar } from './ActiveEditorsBar';
 import { ConflictModal } from './ConflictModal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
@@ -61,8 +63,21 @@ export function ConciergeForm() {
   const [notesForShift, setNotesForShift] = useState<{ id: string; from: string; text: string }[]>([]);
   const [photoUploadOpen, setPhotoUploadOpen] = useState<{ type: 'facility' | 'system'; index: number } | null>(null);
   
+  // Click-to-edit state for staff names
+  const [isEditingStaffName, setIsEditingStaffName] = useState(false);
+  const [staffNameWasAutoPopulated, setStaffNameWasAutoPopulated] = useState(false);
+  const staffNameInputRef = useRef<HTMLInputElement>(null);
+  
   const reportDate = formData.reportDate;
   const shiftType = formData.shiftTime;
+  
+  // Concierge shift staff hook - fetches AM and PM staff names from Sling
+  const { staffNames: conciergeStaffNames, shiftBoundaryMinutes } = useConciergeShiftStaff(reportDate, shiftType);
+  
+  // Current shift hook - uses dynamic boundary from Sling data
+  const { currentShift: autoDetectedShift, setShift } = useCurrentShift({
+    dynamicBoundaryMinutes: shiftBoundaryMinutes,
+  });
   
   // Custom hooks
   const { activeEditors, typingFields, broadcastTyping, sessionId } = useEditorPresence(reportDate, shiftType);
@@ -76,16 +91,80 @@ export function ConciergeForm() {
   
   // Debounced form data for auto-save
   const [debouncedFormData] = useDebounce(formData, 1500);
+  // Track whether the initial user-specific shift lookup has completed
+  const [userShiftResolved, setUserShiftResolved] = useState(false);
   
-  // Fetch user's shift from staff_shifts on mount
+  // On mount: look up the *current user's* scheduled shift first.
+  // Fall back to the wall-clock auto-detected shift only when the user
+  // has no shift in staff_shifts for today.
   useEffect(() => {
-    fetchUserShift();
+    let cancelled = false;
+    async function resolveUserShift() {
+      if (!user?.email) {
+        // No user yet – use wall-clock shift as fallback
+        setFormData(prev => ({ ...prev, shiftTime: autoDetectedShift }));
+        setUserShiftResolved(true);
+        return;
+      }
+      try {
+        // 1. Map email → sling_user_id
+        const { data: slingUser } = await supabase
+          .from('sling_users')
+          .select('sling_user_id')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (slingUser) {
+          // 2. Find today's shift for this specific user
+          const today = new Date().toISOString().split('T')[0];
+          const { data: shift } = await supabase
+            .from('staff_shifts' as any)
+            .select('shift_start, position')
+            .eq('sling_user_id', slingUser.sling_user_id)
+            .eq('schedule_date', today)
+            .maybeSingle() as { data: { shift_start: string; position: string } | null };
+
+          if (!cancelled && shift?.shift_start) {
+            const startHour = new Date(shift.shift_start).getHours();
+            const shiftAmPm: 'AM' | 'PM' = startHour < 12 ? 'AM' : 'PM';
+            setFormData(prev => ({ ...prev, shiftTime: shiftAmPm }));
+            setShift(shiftAmPm);
+            setUserShiftResolved(true);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('[ConciergeForm] Failed to fetch user shift:', error);
+      }
+      // Fallback: no scheduled shift found – use wall-clock detection
+      if (!cancelled) {
+        setFormData(prev => ({ ...prev, shiftTime: autoDetectedShift }));
+        setUserShiftResolved(true);
+      }
+    }
+    resolveUserShift();
+    return () => { cancelled = true; };
   }, [user?.email]);
   
-  // Load existing draft or report
+  // Auto-populate staff names from Sling when shift changes and name is empty or was auto-populated
   useEffect(() => {
-    loadDraft();
-  }, [reportDate, shiftType]);
+    if (conciergeStaffNames.length > 0) {
+      const formatted = conciergeStaffNames.map(n => n.toUpperCase()).join(' + ');
+      // Only auto-populate if staff name is empty or was previously auto-populated
+      if (!formData.staffName || staffNameWasAutoPopulated) {
+        setFormData(prev => ({ ...prev, staffName: formatted }));
+        setStaffNameWasAutoPopulated(true);
+      }
+    }
+  }, [conciergeStaffNames.join(','), shiftType]);
+  
+  // Load existing draft or report (wait until user shift is resolved so we
+  // load the correct shift's draft on first render)
+  useEffect(() => {
+    if (userShiftResolved) {
+      loadDraft();
+    }
+  }, [reportDate, shiftType, userShiftResolved]);
   
   // Auto-save when form changes
   useEffect(() => {
@@ -155,8 +234,7 @@ export function ConciergeForm() {
         setLocalVersion(draft.version);
         setLastSaved(new Date(draft.updated_at));
       } else {
-        // Auto-populate staff name from Sling
-        fetchStaffName();
+        // Staff name will be auto-populated by useConciergeShiftStaff hook
         // Load Arketa check-ins
         fetchArketaCheckIns();
       }
@@ -167,63 +245,6 @@ export function ConciergeForm() {
         description: 'Please refresh the page',
         variant: 'destructive',
       });
-    }
-  }
-  
-  async function fetchUserShift() {
-    try {
-      if (!user?.email) return;
-      
-      // Get sling_user_id for current user
-      const { data: slingUser } = await supabase
-        .from('sling_users')
-        .select('sling_user_id')
-        .eq('email', user.email)
-        .maybeSingle();
-      
-      if (!slingUser) return;
-      
-      // Get today's shift for this user
-      const today = new Date().toISOString().split('T')[0];
-      const { data: shift } = await supabase
-        .from('staff_shifts' as any)
-        .select('shift_start, position')
-        .eq('sling_user_id', slingUser.sling_user_id)
-        .eq('schedule_date', today)
-        .maybeSingle() as { data: { shift_start: string; position: string } | null };
-      
-      if (shift?.shift_start) {
-        // Use noon as cutoff so AM/PM aligns with legacy normalization (morning->AM, afternoon/evening->PM)
-        const startHour = new Date(shift.shift_start).getHours();
-        const shiftAmPm = startHour < 12 ? 'AM' : 'PM';
-        setFormData(prev => ({
-          ...prev,
-          shiftTime: shiftAmPm,
-        }));
-      }
-    } catch (error) {
-      console.error('[ConciergeForm] Failed to fetch user shift:', error);
-    }
-  }
-  
-  async function fetchStaffName() {
-    try {
-      const { data } = await supabase.functions.invoke('sling-api', {
-        body: {
-          action: 'get-foh-shift-staff',
-          date: reportDate,
-          shiftType: shiftType,
-        },
-      });
-      
-      if (data?.staffNames && data.staffNames.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          staffName: data.staffNames[0],
-        }));
-      }
-    } catch (error) {
-      console.error('[ConciergeForm] Failed to fetch staff name:', error);
     }
   }
   
@@ -501,14 +522,105 @@ export function ConciergeForm() {
       />
       
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            
+        {/* ── Shift Report Document Header ── */}
+        <div className="px-6 pt-6 pb-0 space-y-0">
+          {/* Title */}
+          <h2 className="text-[18px] uppercase tracking-[0.15em] font-normal">
+            Shift Report
+          </h2>
+          <div className="border-b border-foreground mt-2 mb-4" />
+
+          {/* Info row: AM/PM toggle | Date | Staff names */}
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-border">
+            {/* Left: AM/PM toggle */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  updateFormField('shiftTime', 'AM');
+                  setShift('AM');
+                  setStaffNameWasAutoPopulated(true);
+                }}
+                disabled={isSubmitted}
+                className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
+                  shiftType === 'AM'
+                    ? 'border border-foreground'
+                    : 'border border-transparent hover:text-foreground/80'
+                }`}
+              >
+                AM
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateFormField('shiftTime', 'PM');
+                  setShift('PM');
+                  setStaffNameWasAutoPopulated(true);
+                }}
+                disabled={isSubmitted}
+                className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
+                  shiftType === 'PM'
+                    ? 'border border-foreground'
+                    : 'border border-transparent hover:text-foreground/80'
+                }`}
+              >
+                PM
+              </button>
+            </div>
+
+            {/* Center: Date */}
+            <span className="text-sm font-medium">
+              {format(new Date(reportDate + 'T12:00:00'), 'EEEE, MMM d')}
+            </span>
+
+            {/* Right: Staff names (click-to-edit) */}
+            {isEditingStaffName ? (
+              <Input
+                ref={staffNameInputRef}
+                value={formData.staffName}
+                onChange={(e) => {
+                  updateFormField('staffName', e.target.value);
+                  setStaffNameWasAutoPopulated(false);
+                }}
+                onBlur={() => setIsEditingStaffName(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsEditingStaffName(false);
+                  }
+                }}
+                disabled={isSubmitted}
+                placeholder="Staff names"
+                className="w-48 text-sm text-right"
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSubmitted) {
+                    setIsEditingStaffName(true);
+                    // Focus input after render
+                    setTimeout(() => staffNameInputRef.current?.focus(), 0);
+                  }
+                }}
+                className="text-sm font-medium tracking-wider hover:opacity-70 transition-opacity cursor-text"
+                title="Click to edit staff names"
+              >
+                {formData.staffName
+                  ? formData.staffName.toUpperCase()
+                  : 'No staff scheduled'}
+              </button>
+            )}
+          </div>
+
+          {/* Secondary toolbar: History, Save indicator, Auto-submit */}
+          <div className="flex flex-wrap items-center justify-between gap-3 py-2">
             <div className="flex items-center gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
+                className="h-7 text-xs"
                 onClick={() => {
                   setHistoryOpen(true);
                   supabase
@@ -532,12 +644,12 @@ export function ConciergeForm() {
                     });
                 }}
               >
-                <History className="h-4 w-4 mr-2" />
+                <History className="h-3 w-3 mr-1" />
                 History
               </Button>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Cloud className="h-4 w-4" />
-                <RefreshCw className="h-4 w-4" />
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Cloud className="h-3 w-3" />
+                <RefreshCw className="h-3 w-3" />
               </div>
               <AutoSaveIndicator
                 isSaving={isSaving}
@@ -547,16 +659,16 @@ export function ConciergeForm() {
                 queueSize={queueSize}
               />
             </div>
+            {willAutoSubmit && timeUntilSubmitFormatted && (
+              <Badge variant="secondary" className="gap-1 text-[10px]">
+                <Clock className="h-3 w-3" />
+                Auto-submit in {timeUntilSubmitFormatted}
+              </Badge>
+            )}
           </div>
-          {/* Sync status: last saved + who last updated could be shown here from draft metadata */}
-          {willAutoSubmit && timeUntilSubmitFormatted && (
-            <Badge variant="secondary" className="gap-1">
-              <Clock className="h-3 w-3" />
-              Auto-submit in {timeUntilSubmitFormatted}
-            </Badge>
-          )}
-        </CardHeader>
+        </div>
 
+        {/* History Dialog */}
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -571,6 +683,7 @@ export function ConciergeForm() {
                     type="button"
                     onClick={() => {
                       setFormData(prev => ({ ...prev, reportDate: r.report_date, shiftTime: normalizeShiftType(r.shift_type) }));
+                      setStaffNameWasAutoPopulated(false); // Past date: use saved name
                       setHistoryOpen(false);
                     }}
                     className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
@@ -592,39 +705,7 @@ export function ConciergeForm() {
           </DialogContent>
         </Dialog>
         
-        <CardContent className="space-y-6">
-          {/* Date & Shift row */}
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm font-medium">
-              {format(new Date(reportDate + 'T12:00:00'), 'EEEE MMMM, d')}
-            </span>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground shrink-0">Staff</Label>
-              <Input
-                value={formData.staffName}
-                onChange={(e) => updateFormField('staffName', e.target.value)}
-                disabled={isSubmitted}
-                placeholder="Staff names"
-                className="w-48"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground shrink-0">Shift</Label>
-              <Select
-                value={formData.shiftTime}
-                onValueChange={(v) => updateFormField('shiftTime', v)}
-                disabled={isSubmitted}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="AM">AM</SelectItem>
-                  <SelectItem value="PM">PM</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <CardContent className="space-y-6 pt-4">
 
           {/* Notes for this shift (alert banners) */}
           {notesForShift.length > 0 && (

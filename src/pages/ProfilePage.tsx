@@ -27,39 +27,39 @@ function useHumeStartDate(slingId: string | null | undefined) {
       if (!slingId) return null;
 
       // First get the sling_user_id (numeric) from sling_users
-      const { data: slingUser, error: slingError } = await supabase
-        .from("sling_users")
-        .select("sling_user_id")
-        .eq("id", slingId)
-        .single();
+      const { data: slingUser, error: slingError } = await supabase.
+      from("sling_users").
+      select("sling_user_id").
+      eq("id", slingId).
+      single();
 
       if (slingError || !slingUser) return null;
 
       // Find the earliest shift for this sling user
-      const { data: earliestShift, error: shiftError } = await supabase
-        .from("staff_shifts")
-        .select("shift_date")
-        .eq("sling_user_id", slingUser.sling_user_id)
-        .order("shift_date", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const { data: earliestShift, error: shiftError } = await supabase.
+      from("staff_shifts").
+      select("shift_date").
+      eq("sling_user_id", slingUser.sling_user_id).
+      order("shift_date", { ascending: true }).
+      limit(1).
+      maybeSingle();
 
       if (shiftError || !earliestShift?.shift_date) {
         // Fallback: check sling_shifts_staging
-        const { data: stagingShift } = await supabase
-          .from("sling_shifts_staging")
-          .select("shift_date")
-          .eq("sling_user_id", slingUser.sling_user_id)
-          .order("shift_date", { ascending: true })
-          .limit(1)
-          .maybeSingle();
+        const { data: stagingShift } = await supabase.
+        from("sling_shifts_staging").
+        select("shift_date").
+        eq("sling_user_id", slingUser.sling_user_id).
+        order("shift_date", { ascending: true }).
+        limit(1).
+        maybeSingle();
 
         return stagingShift?.shift_date || null;
       }
 
       return earliestShift.shift_date;
     },
-    enabled: !!slingId,
+    enabled: !!slingId
   });
 }
 
@@ -77,12 +77,12 @@ export default function ProfilePage() {
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.
+    split(" ").
+    map((n) => n[0]).
+    join("").
+    toUpperCase().
+    slice(0, 2);
   };
 
   const getLanguageLabel = (code: string | null | undefined) => {
@@ -98,13 +98,13 @@ export default function ProfilePage() {
   return (
     <DashboardLayout title="Profile">
       <div className="p-4 md:p-8 flex-1 flex flex-col space-y-6">
-        {isLoading ? (
-          <div className="space-y-4">
+        {isLoading ?
+        <div className="space-y-4">
             <Skeleton className="h-32 w-full rounded-none" />
             <Skeleton className="h-48 w-full rounded-none" />
-          </div>
-        ) : (
-          <>
+          </div> :
+
+        <>
             {/* Combined Profile Card */}
             <Card className="rounded-none">
               <CardContent className="p-6">
@@ -128,7 +128,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <p className="uppercase tracking-widest text-muted-foreground text-xs">
                         Email
                       </p>
                       <p className="text-xs">{user?.email}</p>
@@ -139,18 +139,18 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <p className="uppercase tracking-widest text-muted-foreground text-sm">
                         Roles
                       </p>
-                      <p className="text-xs">
-                        {(roles || [])
-                          .map((r) => {
-                            const roleInfo = ROLES.find(
-                              (ri) => ri.value === r.role
-                            );
-                            return roleInfo?.label || r.role;
-                          })
-                          .join(", ") || "No roles assigned"}
+                      <p className="text-sm">
+                        {(roles || []).
+                      map((r) => {
+                        const roleInfo = ROLES.find(
+                          (ri) => ri.value === r.role
+                        );
+                        return roleInfo?.label || r.role;
+                      }).
+                      join(", ") || "No roles assigned"}
                       </p>
                     </div>
                   </div>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <p className="uppercase tracking-widest text-muted-foreground text-sm">
                         Preferred Language
                       </p>
                       <p className="text-xs">
@@ -173,16 +173,16 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <p className="uppercase tracking-widest text-muted-foreground text-sm">
                         Account Created
                       </p>
                       <p className="text-xs">
-                        {profile?.created_at
-                          ? format(
-                              parseISO(profile.created_at),
-                              "MMMM d, yyyy"
-                            )
-                          : "Unknown"}
+                        {profile?.created_at ?
+                      format(
+                        parseISO(profile.created_at),
+                        "MMMM d, yyyy"
+                      ) :
+                      "Unknown"}
                       </p>
                     </div>
                   </div>
@@ -193,14 +193,14 @@ export default function ProfilePage() {
             {/* Sick Day Request History */}
             {user?.id && <SickDayRequestHistory userId={user.id} onRequestSickDay={() => setSickDayDialogOpen(true)} />}
           </>
-        )}
+        }
       </div>
 
       {/* Sick Day Request Dialog */}
       <SickDayRequestDialog
         open={sickDayDialogOpen}
-        onOpenChange={setSickDayDialogOpen}
-      />
-    </DashboardLayout>
-  );
+        onOpenChange={setSickDayDialogOpen} />
+
+    </DashboardLayout>);
+
 }

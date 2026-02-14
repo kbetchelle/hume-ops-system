@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useCreateSickDayRequest } from "@/hooks/useSickDayRequests";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface SickDayRequestDialogProps {
   open: boolean;
@@ -28,23 +29,27 @@ export function SickDayRequestDialog({
   onOpenChange,
 }: SickDayRequestDialogProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [halfDay, setHalfDay] = useState<"AM" | "PM" | null>(null);
   const [notes, setNotes] = useState("");
   const createRequest = useCreateSickDayRequest();
 
-  const handleSubmit = () => {
-    if (selectedDates.length === 0 || notes.trim().length === 0) {
-      return;
-    }
+  const isSingleDate = selectedDates.length === 1;
 
-    // Convert dates to ISO date strings (YYYY-MM-DD)
-    const dateStrings = selectedDates.map((date) => format(date, "yyyy-MM-dd"));
+  const handleSubmit = () => {
+    if (selectedDates.length === 0 || notes.trim().length === 0) return;
+    if (isSingleDate && !halfDay) return;
+
+    const dateStrings = selectedDates.map((date) => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      return isSingleDate && halfDay ? `${dateStr} ${halfDay}` : dateStr;
+    });
 
     createRequest.mutate(
       { requestedDates: dateStrings, notes: notes.trim() },
       {
         onSuccess: () => {
-          // Reset form
           setSelectedDates([]);
+          setHalfDay(null);
           setNotes("");
           onOpenChange(false);
         },
@@ -65,16 +70,21 @@ export function SickDayRequestDialog({
     } else {
       setSelectedDates([...selectedDates, date].sort((a, b) => a.getTime() - b.getTime()));
     }
+    // Reset half day when date selection changes
+    setHalfDay(null);
   };
 
   const handleCancel = () => {
-    // Reset form state
     setSelectedDates([]);
+    setHalfDay(null);
     setNotes("");
     onOpenChange(false);
   };
 
-  const isFormValid = selectedDates.length > 0 && notes.trim().length >= 10;
+  const isFormValid =
+    selectedDates.length > 0 &&
+    notes.trim().length >= 10 &&
+    (!isSingleDate || halfDay !== null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,6 +127,7 @@ export function SickDayRequestDialog({
                   selected={selectedDates}
                   onDayClick={handleDayClick}
                   initialFocus
+                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
@@ -137,6 +148,34 @@ export function SickDayRequestDialog({
               </div>
             )}
           </div>
+
+          {/* AM/PM Toggle - only for single date */}
+          {isSingleDate && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-widest">
+                Shift <span className="text-destructive">*</span>
+              </Label>
+              <ToggleGroup
+                type="single"
+                value={halfDay || ""}
+                onValueChange={(val) => setHalfDay(val as "AM" | "PM" | null)}
+                className="justify-start"
+              >
+                <ToggleGroupItem
+                  value="AM"
+                  className="rounded-none text-[10px] uppercase tracking-widest px-6 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                >
+                  AM
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="PM"
+                  className="rounded-none text-[10px] uppercase tracking-widest px-6 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                >
+                  PM
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">

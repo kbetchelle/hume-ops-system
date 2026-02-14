@@ -84,6 +84,12 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: small;
+  }
+
+  /* Global minimum font size - clamp all text to at least 'small' (13.33px) */
+  p, span, a, li, td, th, label, input, textarea, select, button, div {
+    font-size: max(inherit, small);
   }
 
   /* Fear of God Typography - Uppercase, Tracked, Minimal */

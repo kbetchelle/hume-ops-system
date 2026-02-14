@@ -105,10 +105,10 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* User card */}
+            {/* Combined Profile Card */}
             <Card className="rounded-none">
               <CardContent className="p-6">
-                <div className="flex items-start gap-6">
+                <div className="flex items-start gap-6 mb-6">
                   {/* Avatar */}
                   <div className="h-16 w-16 bg-muted flex items-center justify-center shrink-0">
                     <span className="text-lg font-light tracking-widest">
@@ -120,126 +120,96 @@ export default function ProfilePage() {
                     <h2 className="text-lg uppercase tracking-widest font-normal">
                       {profile?.full_name || "User"}
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {user?.email}
-                    </p>
+                  </div>
+                </div>
 
-                    {/* Roles */}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {(roles || []).map((r) => {
-                        const roleInfo = ROLES.find(
-                          (ri) => ri.value === r.role
-                        );
-                        return (
-                          <Badge
-                            key={r.id}
-                            variant="outline"
-                            className="rounded-none text-[10px] uppercase tracking-widest"
-                          >
-                            {roleInfo?.label || r.role}
-                          </Badge>
-                        );
-                      })}
+                <div className="space-y-4">
+                  {/* Email */}
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Email
+                      </p>
+                      <p className="text-xs">{user?.email}</p>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Details */}
-            <Card className="rounded-none">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Account Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Email */}
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Email
-                    </p>
-                    <p className="text-xs">{user?.email}</p>
-                  </div>
-                </div>
-
-                {/* Roles */}
-                <div className="flex items-center gap-3">
-                  <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Roles
-                    </p>
-                    <p className="text-xs">
-                      {(roles || [])
-                        .map((r) => {
-                          const roleInfo = ROLES.find(
-                            (ri) => ri.value === r.role
-                          );
-                          return roleInfo?.label || r.role;
-                        })
-                        .join(", ") || "No roles assigned"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Language */}
-                <div className="flex items-center gap-3">
-                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Preferred Language
-                    </p>
-                    <p className="text-xs">
-                      {getLanguageLabel(profile?.preferred_language)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Start Date at HUME */}
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Start Date at HUME
-                    </p>
-                    {startDateLoading ? (
-                      <Skeleton className="h-4 w-32 rounded-none" />
-                    ) : startDate ? (
+                  {/* Roles */}
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Roles
+                      </p>
                       <p className="text-xs">
-                        Member since{" "}
-                        {format(parseISO(startDate), "MMMM d, yyyy")}
+                        {(roles || [])
+                          .map((r) => {
+                            const roleInfo = ROLES.find(
+                              (ri) => ri.value === r.role
+                            );
+                            return roleInfo?.label || r.role;
+                          })
+                          .join(", ") || "No roles assigned"}
                       </p>
-                    ) : profile?.sling_id ? (
-                      <p className="text-xs text-muted-foreground">
-                        No shift history found
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Not linked to Sling
-                      </p>
-                    )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Account created */}
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Account Created
-                    </p>
-                    <p className="text-xs">
-                      {profile?.created_at
-                        ? format(
-                            parseISO(profile.created_at),
-                            "MMMM d, yyyy"
-                          )
-                        : "Unknown"}
-                    </p>
+                  {/* Language */}
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Preferred Language
+                      </p>
+                      <p className="text-xs">
+                        {getLanguageLabel(profile?.preferred_language)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Start Date at HUME */}
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Start Date at HUME
+                      </p>
+                      {startDateLoading ? (
+                        <Skeleton className="h-4 w-32 rounded-none" />
+                      ) : startDate ? (
+                        <p className="text-xs">
+                          Member since{" "}
+                          {format(parseISO(startDate), "MMMM d, yyyy")}
+                        </p>
+                      ) : profile?.sling_id ? (
+                        <p className="text-xs text-muted-foreground">
+                          No shift history found
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Not linked to Sling
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Account created */}
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Account Created
+                      </p>
+                      <p className="text-xs">
+                        {profile?.created_at
+                          ? format(
+                              parseISO(profile.created_at),
+                              "MMMM d, yyyy"
+                            )
+                          : "Unknown"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

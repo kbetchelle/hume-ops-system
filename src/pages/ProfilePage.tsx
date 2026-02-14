@@ -168,31 +168,6 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Start Date at HUME */}
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Start Date at HUME
-                      </p>
-                      {startDateLoading ? (
-                        <Skeleton className="h-4 w-32 rounded-none" />
-                      ) : startDate ? (
-                        <p className="text-xs">
-                          Member since{" "}
-                          {format(parseISO(startDate), "MMMM d, yyyy")}
-                        </p>
-                      ) : profile?.sling_id ? (
-                        <p className="text-xs text-muted-foreground">
-                          No shift history found
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          Not linked to Sling
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Account created */}
                   <div className="flex items-center gap-3">

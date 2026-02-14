@@ -86,42 +86,9 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       icon: Package
     }];
   }
-  // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
+  // BOH: grouped nav is handled separately in SidebarNav, return empty here
   if (role && BOH_ROLES.includes(role)) {
-    const checklistUrl = role === "floater" ? "/dashboard/floater" : "/dashboard/spa";
-    return [{
-      title: "Checklist",
-      url: checklistUrl,
-      icon: ClipboardList
-    }, {
-      title: "Messages",
-      url: "/dashboard/messages",
-      icon: MessageSquare
-    }, {
-      title: "Class Schedule",
-      url: "/dashboard/class-schedule",
-      icon: Calendar
-    }, {
-      title: "Announcements",
-      url: "/dashboard/announcements",
-      icon: Bell
-    }, {
-      title: "Lost & Found",
-      url: "/dashboard/lost-and-found",
-      icon: Package
-    }, {
-      title: "Documents",
-      url: "/dashboard/documents",
-      icon: FileText
-    }, {
-      title: "Who's Working",
-      url: "/dashboard/whos-working",
-      icon: Users
-    }, {
-      title: "Resources",
-      url: "/dashboard/resources",
-      icon: FolderOpen
-    }];
+    return [];
   }
   // Cafe role: Checklist + Event Drinks + shared items
   if (role === "cafe") {
@@ -394,12 +361,66 @@ function SidebarNav() {
   };
   const effectiveRole = getEffectiveRole();
   const navItems = getNavItems(effectiveRole, permissions);
+  const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
+
+  // BoH grouped nav items
+  const bohChecklistUrl = effectiveRole === "floater" ? "/dashboard/floater" : "/dashboard/spa";
+  const bohMainItems: NavItem[] = [{ title: "Checklists", url: bohChecklistUrl, icon: ClipboardList }];
+  const bohCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
+  ];
+  const bohRefItems: NavItem[] = [
+    { title: "Class Schedule", url: "/dashboard/class-schedule", icon: Calendar },
+    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
+    { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+    { title: "Notes for Management", url: "/dashboard/boh-notes", icon: HelpCircle },
+  ];
+
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
   const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports");
+
+  // Helper to render a nav item (handles Resources sub-menu)
+  const renderNavItem = (item: NavItem) => {
+    if (item.url === "/dashboard/resources") {
+      return <ResourcesNavItem key={item.url} item={item} collapsed={collapsed} />;
+    }
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton asChild>
+          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+            <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
+            {!collapsed && <span>{item.title}</span>}
+          </NavLink>
+        </SidebarMenuButton>
+        {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
+          <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+            {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+          </SidebarMenuBadge>
+        )}
+      </SidebarMenuItem>
+    );
+  };
+
+  // Render a labeled SidebarGroup
+  const renderGroup = (label: string, items: NavItem[]) => (
+    <SidebarGroup key={label}>
+      <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
+        {label}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map(renderNavItem)}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
@@ -407,6 +428,15 @@ function SidebarNav() {
           <UserInfoDropdown collapsed={collapsed} />
           <RoleSwitcher collapsed={collapsed} />
         </div>
+
+        {/* BoH grouped navigation */}
+        {isBohRole ? (
+          <>
+            {renderGroup("Main", bohMainItems)}
+            {renderGroup("Communications", bohCommsItems)}
+            {renderGroup("References", bohRefItems)}
+          </>
+        ) : (
         <SidebarGroup>
           <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
             Navigation
@@ -436,6 +466,7 @@ function SidebarNav() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Manager Tools Section - Admin and Manager */}
         {isAdminOrManager && !collapsed && <SidebarGroup>

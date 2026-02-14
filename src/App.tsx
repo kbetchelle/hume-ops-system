@@ -406,7 +406,7 @@ const App = () => (
             <Route
               path="/dashboard/boh-notes"
               element={
-                <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant", "floater"]}>
+                <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
                   <BoHNotesPage />
                 </ProtectedRoute>
               }

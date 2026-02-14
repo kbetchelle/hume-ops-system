@@ -1,0 +1,250 @@
+/**
+ * Print Stylesheet for Resource Pages
+ * Optimizes page rendering for PDF export via browser print
+ */
+
+@media print {
+  /* Hide all UI chrome and interactive elements */
+  button,
+  .no-print,
+  nav,
+  [role="navigation"],
+  [data-sidebar],
+  .sidebar,
+  .dashboard-header {
+    display: none !important;
+  }
+
+  /* Hide screen-only elements (must come before print variants to allow override) */
+  .hidden {
+    display: none !important;
+  }
+
+  /* Show print-only elements (comes after .hidden to override it) */
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Hide Lucide icon elements used for navigation/actions */
+  svg.lucide {
+    display: none !important;
+  }
+
+  /* Hide the sticky header with back/PDF/flag buttons */
+  .sticky {
+    position: static !important;
+  }
+
+  /* Reset body and root styles for print */
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Full-width content - remove container constraints */
+  .page-renderer,
+  .max-w-4xl {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+
+  /* Page title styling */
+  h1 {
+    font-size: 20pt;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 12pt;
+    page-break-after: avoid;
+  }
+
+  h2 {
+    font-size: 16pt;
+    font-weight: 600;
+    margin-top: 12pt;
+    margin-bottom: 8pt;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 14pt;
+    font-weight: 600;
+    margin-top: 10pt;
+    margin-bottom: 6pt;
+    page-break-after: avoid;
+  }
+
+  /* Paragraph spacing */
+  p {
+    margin-top: 0;
+    margin-bottom: 8pt;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Prevent page breaks inside important elements */
+  img,
+  figure,
+  table,
+  pre,
+  blockquote {
+    page-break-inside: avoid;
+    max-width: 100%;
+  }
+
+  /* Image handling */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 8pt 0;
+  }
+
+  /* Two-column layout - maintain on print */
+  [data-type="two-columns"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16pt;
+    margin: 12pt 0;
+    page-break-inside: avoid;
+  }
+
+  [data-type="column"] {
+    border: 1px solid #e5e7eb;
+    padding: 8pt;
+    min-height: 20pt;
+  }
+
+  /* Link cards - make URLs visible */
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+    word-wrap: break-word;
+  }
+
+  /* Exception: Don't show URL for link cards (they already display it) */
+  .link-card a::after,
+  [data-link-card] a::after {
+    content: none;
+  }
+
+  /* Link card specific styling */
+  .link-card,
+  [data-link-card] {
+    border: 1px solid #d1d5db;
+    padding: 8pt;
+    margin: 8pt 0;
+    page-break-inside: avoid;
+  }
+
+  /* Lists */
+  ul,
+  ol {
+    margin: 8pt 0;
+    padding-left: 20pt;
+  }
+
+  li {
+    margin: 4pt 0;
+  }
+
+  ul {
+    list-style-type: disc;
+  }
+
+  ol {
+    list-style-type: decimal;
+  }
+
+  /* Horizontal rules */
+  hr {
+    border: none;
+    border-top: 1px solid #d1d5db;
+    margin: 12pt 0;
+  }
+
+  /* Code blocks */
+  code,
+  pre {
+    font-family: "Courier New", monospace;
+    font-size: 10pt;
+    background: #f3f4f6;
+    padding: 2pt 4pt;
+  }
+
+  pre {
+    padding: 8pt;
+    margin: 8pt 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    border-left: 3px solid #d1d5db;
+    padding-left: 12pt;
+    margin: 8pt 0;
+    font-style: italic;
+  }
+
+  /* Remove interactive element styling */
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  /* Cover image */
+  .cover-image {
+    width: 100%;
+    height: auto;
+    margin-bottom: 16pt;
+    page-break-after: avoid;
+  }
+
+  /* Footer metadata */
+  .page-footer {
+    margin-top: 24pt;
+    padding-top: 12pt;
+    border-top: 1px solid #d1d5db;
+    font-size: 9pt;
+    color: #666;
+  }
+
+  /* Hide borders on the sticky header container */
+  .border-b {
+    border-bottom: none !important;
+  }
+
+  /* Ensure background colors don't print */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Override Tailwind prose dark mode classes */
+  .prose {
+    color: #000 !important;
+  }
+
+  /* Show text content of badges but hide interactive styling */
+  .badge {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 2pt !important;
+    font-size: 9pt;
+    color: #666;
+  }
+
+  /* Breadcrumb styling for print */
+  .breadcrumb {
+    font-size: 9pt;
+    color: #666;
+    margin-bottom: 8pt;
+  }
+}

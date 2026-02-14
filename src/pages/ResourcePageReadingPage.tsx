@@ -57,8 +57,23 @@ export function ResourcePageReadingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Print-only header (hidden on screen, visible in print) */}
+      <div className="hidden print:block mb-8">
+        <h1 className="text-2xl font-semibold mb-2">{page.title}</h1>
+        {folderName && (
+          <div className="text-sm text-muted-foreground mb-2 breadcrumb">
+            Resources › Pages › {folderName}
+          </div>
+        )}
+        {page.tags.length > 0 && (
+          <div className="text-xs text-muted-foreground mb-2">
+            Tags: {page.tags.join(", ")}
+          </div>
+        )}
+      </div>
+
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-border bg-background">
+      <div className="sticky top-0 z-10 border-b border-border bg-background no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-start justify-between gap-4 mb-4">
             <Button
@@ -74,7 +89,7 @@ export function ResourcePageReadingPage() {
               <h1 className="text-2xl font-semibold mb-2">{page.title}</h1>
 
               {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 breadcrumb">
                 <span>Resources</span>
                 <span>›</span>
                 <span>Pages</span>
@@ -93,7 +108,7 @@ export function ResourcePageReadingPage() {
                   <Badge
                     key={tag}
                     variant="secondary"
-                    className="rounded-none text-xs"
+                    className="rounded-none text-xs badge"
                   >
                     {tag}
                   </Badge>
@@ -135,7 +150,7 @@ export function ResourcePageReadingPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         {page.cover_image_url && (
-          <div className="mb-8 rounded overflow-hidden">
+          <div className="mb-8 rounded overflow-hidden cover-image">
             <img
               src={page.cover_image_url}
               alt={page.title}
@@ -153,7 +168,7 @@ export function ResourcePageReadingPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-border">
+        <div className="mt-12 pt-6 border-t border-border page-footer">
           <p className="text-xs text-muted-foreground">
             Last updated {format(new Date(page.updated_at), "MMMM d, yyyy")}
           </p>

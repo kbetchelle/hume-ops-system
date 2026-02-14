@@ -149,7 +149,8 @@ export async function fetchWithRetry(
 
       // Check if we should retry based on status code
       if (isRetryableStatusCode(response.status)) {
-        const errorText = await response.text();
+        const errorClone = response.clone();
+        const errorText = await errorClone.text();
         lastError = new Error(`HTTP ${response.status}: ${errorText}`);
         
         if (attempt < finalConfig.maxAttempts) {

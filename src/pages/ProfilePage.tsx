@@ -162,7 +162,7 @@ export default function ProfilePage() {
                       <p className="uppercase tracking-widest text-muted-foreground text-sm">
                         Preferred Language
                       </p>
-                      <p className="text-xs">
+                      <p className="text-sm">
                         {getLanguageLabel(profile?.preferred_language)}
                       </p>
                     </div>
@@ -176,7 +176,7 @@ export default function ProfilePage() {
                       <p className="uppercase tracking-widest text-muted-foreground text-sm">
                         Account Created
                       </p>
-                      <p className="text-xs">
+                      <p className="text-sm">
                         {profile?.created_at ?
                       format(
                         parseISO(profile.created_at),

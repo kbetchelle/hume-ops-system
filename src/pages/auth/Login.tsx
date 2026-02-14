@@ -128,7 +128,7 @@ export default function Login() {
                       to="/forgot-password" 
                       className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
                     >
-                      Forgot?
+                      Forgot Password
                     </Link>
                   </div>
                   <FormControl>

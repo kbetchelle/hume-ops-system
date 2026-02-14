@@ -1,58 +1,51 @@
 
 
-# Resources Sub-Menu in All Role Sidebars
+# Resources Sub-Menu Implementation
 
 ## Overview
-Add expandable sub-page navigation (Quick Links, Resource Pages, Policies) under the "Resources" nav item across all role sidebars. The sub-menu expands automatically when viewing a resources page, on click toggle, or after a 2-second hover -- and collapses when navigating away or moving the mouse off the menu area.
-
-## Current State
-- **DashboardLayout sidebar** (used by BOH, Cafe, Manager/Admin): Already has a `ResourcesNavItem` component with hover-expand (3s) and click-toggle behavior. However, it does NOT collapse when the user navigates away from resources pages, and the hover delay is 3 seconds instead of the requested 2 seconds.
-- **ConciergeSidebar** (used only by Concierge role): Uses a view-based system (`ConciergeView` state) instead of URL routing. Has no sub-menu for Resources at all -- it's just a flat nav item.
+Add expandable sub-page navigation (Quick Links, Resource Pages, Policies) under the "Resources" nav item in both the Concierge sidebar and the DashboardLayout sidebar (BOH, Cafe, Manager/Admin). The sub-menu expands on click, after a 2-second hover, or automatically when on a resources page -- and collapses when navigating away or moving the mouse off.
 
 ## Changes
 
-### 1. Fix DashboardLayout `ResourcesNavItem` (all non-concierge roles)
+### 1. DashboardLayout -- Fix ResourcesNavItem
 **File:** `src/components/layout/DashboardLayout.tsx`
 
 - Change hover delay from `3000ms` to `2000ms`
-- Add an `useEffect` to auto-close the sub-menu when navigating away from `/dashboard/resources*` (currently it only auto-opens but never auto-closes)
-- On `handleMouseLeave`, also collapse the sub-menu if NOT currently on a resources route (so hovering away closes it, but it stays open if you're actively on a resources page)
+- Add a `useEffect` that auto-closes the sub-menu when navigating away from any `/dashboard/resources` route (currently it only auto-opens, never auto-closes)
+- On `handleMouseLeave`, collapse the sub-menu if the user is NOT currently on a resources route
 
-### 2. Add Resources sub-menu to ConciergeSidebar
+### 2. ConciergeSidebar -- Add Resources Sub-Menu
 **File:** `src/components/concierge/ConciergeSidebar.tsx`
 
-Since the Concierge uses a view-based system (not routes), the sub-menu items will set the `activeView` to new sub-view types. However, the resources sub-pages (Quick Links, Resource Pages, Policies) are route-based pages that live outside the Concierge view system. The approach:
+- Extend the `ConciergeView` type with `"resources-quick-links"`, `"resources-pages"`, `"resources-policies"`
+- Remove "resources" from the flat nav items list in the "Resources" section
+- Add a custom `ResourcesSubMenu` component inline (similar to the DashboardLayout pattern) that:
+  - Shows a "Resources" parent item with a chevron
+  - Expands to show 3 indented sub-items: Quick Links, Resource Pages, Policies
+  - Expand triggers: click toggle, 2-second hover, or activeView starts with "resources"
+  - Collapse triggers: activeView changes to non-resources, or mouse leaves and not on a resources view
+- Each sub-item calls `onViewChange` with the corresponding view ID
 
-- Add a new `ConciergeView` value: `"resources-quick-links"`, `"resources-pages"`, `"resources-policies"` to the type union
-- Add the same hover/click/auto-expand logic used in `DashboardLayout.ResourcesNavItem` but adapted for the view-based system
-- When a sub-item is clicked, the parent view switches to `"resources"` but the content renders the appropriate sub-page component
-- The sub-menu auto-expands when `activeView` starts with `"resources"` and collapses when switching to a non-resources view
-
-### 3. Update ConciergeDashboard to render sub-views
+### 3. ConciergeDashboard -- Render Sub-Views
 **File:** `src/pages/dashboards/ConciergeDashboard.tsx`
 
-- Import the sub-page components (`QuickLinksTab`, `ResourcePagesTab`, `PoliciesTab`)
-- Add cases for the new resource sub-views in the `renderContent` switch
+- Import `QuickLinksTab`, `ResourcePagesTab`, `PoliciesTab` and their data hooks (`useQuickLinkGroupsByRole`, `useResourcePagesByRole`, policies query)
+- Add switch cases for `"resources-quick-links"`, `"resources-pages"`, `"resources-policies"` that render the role-filtered data (using `activeRole` which defaults to "concierge")
 - Add view titles for the new sub-views
+- Keep the existing `"resources"` case as-is (shows the StaffResourcesView search hub)
+
+### 4. ConciergeBottomNav -- Map New Sub-Views
+**File:** `src/components/concierge/ConciergeBottomNav.tsx`
+
+- Add `"resources-quick-links"`, `"resources-pages"`, `"resources-policies"` to the list that maps to the "templates" tab, so the bottom nav highlights correctly on mobile
 
 ## Technical Details
 
-### ConciergeSidebar Resource Sub-Menu Logic
-```text
-Resources (FolderOpen icon)
-  |-- Quick Links      (indented, smaller text)
-  |-- Resource Pages   (indented, smaller text)
-  |-- Policies         (indented, smaller text)
-```
-
-**Expand triggers:**
-1. `activeView` is any resources view -> auto-expand via useEffect
-2. Hover over Resources item for 2 seconds -> expand
-3. Click on Resources -> toggle expand
-
-**Collapse triggers:**
-1. `activeView` changes to a non-resources view -> auto-collapse via useEffect
-2. Mouse leaves the Resources area AND not on a resources view -> collapse
+### Role-Specific Data
+Each role sees their own data because the data hooks already filter by role:
+- `useQuickLinkGroupsByRole(activeRole)` -- returns only groups assigned to the active role
+- `useResourcePagesByRole(activeRole)` -- returns only pages assigned to the active role
+- Policies are global (no role filter) -- same across all roles
 
 ### Updated ConciergeView Type
 ```typescript
@@ -63,11 +56,19 @@ export type ConciergeView =
   | "lost-found" | "qa";
 ```
 
+### Sub-Menu Visual Structure
+```text
+Resources (FolderOpen icon) [chevron]
+   Quick Links       (indented, smaller text)
+   Resource Pages    (indented, smaller text)
+   Policies          (indented, smaller text)
+```
+
 ### Files Modified
 | File | Change |
 |------|--------|
-| `src/components/concierge/ConciergeSidebar.tsx` | Add resource sub-menu with hover/click/auto-expand logic; extend ConciergeView type |
-| `src/pages/dashboards/ConciergeDashboard.tsx` | Add rendering for resource sub-views; add view titles |
-| `src/components/layout/DashboardLayout.tsx` | Fix hover delay to 2s; add auto-collapse on navigate away; collapse on mouse leave when not on resources route |
-| `src/components/concierge/ConciergeBottomNav.tsx` | Map new resource sub-views to the "templates" tab grouping |
+| `src/components/layout/DashboardLayout.tsx` | Fix hover to 2s; add auto-collapse on navigate away |
+| `src/components/concierge/ConciergeSidebar.tsx` | Extend type; add resources sub-menu with hover/click/auto-expand |
+| `src/pages/dashboards/ConciergeDashboard.tsx` | Render resource sub-views with role-filtered data |
+| `src/components/concierge/ConciergeBottomNav.tsx` | Map new views to "templates" tab |
 

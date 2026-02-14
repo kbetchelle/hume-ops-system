@@ -213,15 +213,10 @@ export function ConciergeSidebar({
       ],
     },
     {
-      title: "Resources",
+      title: "References",
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
         { id: "lost-found", label: "Lost & Found", icon: Package },
-      ],
-    },
-    {
-      title: "Reference",
-      items: [
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
@@ -302,7 +297,7 @@ export function ConciergeSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.title === "Resources" && (
+                {section.title === "References" && (
                   <ResourcesSubMenu activeView={activeView} onViewChange={onViewChange} />
                 )}
                 {section.items.map((item) => {

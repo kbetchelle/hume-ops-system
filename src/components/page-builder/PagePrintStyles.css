@@ -1,6 +1,9 @@
 /**
  * Print Stylesheet for Resource Pages
  * Optimizes page rendering for PDF export via browser print
+ * 
+ * Dark Mode Support: Print styles force white background and black text,
+ * ensuring consistent PDF output regardless of the user's theme preference.
  */
 
 @media print {

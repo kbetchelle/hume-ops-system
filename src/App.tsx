@@ -7,6 +7,8 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ActiveRoleProvider } from "@/hooks/useActiveRole";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 // Public pages
 import NotFound from "./pages/NotFound";
@@ -68,9 +70,15 @@ import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
-import { ResourcePageEditorPage } from "./pages/ResourcePageEditorPage";
 import { ResourcePageReadingPage } from "./pages/ResourcePageReadingPage";
 import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
+
+// Lazy load the page editor (contains large TipTap bundle)
+const ResourcePageEditorPage = lazy(() => 
+  import("./pages/ResourcePageEditorPage").then(module => ({
+    default: module.ResourcePageEditorPage
+  }))
+);
 import ResourcesQuickLinksPage from "./pages/dashboards/ResourcesQuickLinksPage";
 import ResourcesPagesPage from "./pages/dashboards/ResourcesPagesPage";
 import ResourcesPoliciesPage from "./pages/dashboards/ResourcesPoliciesPage";
@@ -493,12 +501,18 @@ const App = () => (
               }
             />
 
-            {/* Resource Page Editor (Manager) */}
+            {/* Resource Page Editor (Manager) - Lazy loaded */}
             <Route
               path="/dashboard/staff-resources/pages/new"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ResourcePageEditorPage />
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center h-screen">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  }>
+                    <ResourcePageEditorPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -506,7 +520,13 @@ const App = () => (
               path="/dashboard/staff-resources/pages/:pageId/edit"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ResourcePageEditorPage />
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center h-screen">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  }>
+                    <ResourcePageEditorPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />

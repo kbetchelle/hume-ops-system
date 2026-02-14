@@ -10,6 +10,7 @@ import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContext
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ResourcePagesTab({
   pages,
@@ -85,8 +86,21 @@ export function ResourcePagesTab({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="rounded-none">
+            <CardContent className="p-4">
+              <Skeleton className="h-5 w-3/4 mb-3" />
+              <Skeleton className="h-4 w-1/2 mb-2" />
+              <div className="flex gap-2 mb-3">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3 mt-2" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -152,12 +166,17 @@ export function ResourcePagesTab({
       {/* Empty State */}
       {filtered.length === 0 ? (
         <Card className="rounded-none">
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm || selectedTags.length > 0
-                ? "No pages match your filters."
-                : "No resource pages assigned to your role yet."}
+          <CardContent className="py-16 text-center">
+            <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+                ? "No pages found"
+                : "No resource pages available"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+                ? "Try adjusting your search or filters."
+                : "No resource pages have been assigned to your role yet. Check back later or contact your manager."}
             </p>
           </CardContent>
         </Card>
@@ -202,6 +221,15 @@ export function ResourcePagesTab({
 
                         {/* Badges */}
                         <div className="flex flex-wrap gap-1">
+                          {page.page_type === 'pdf' && (
+                            <Badge
+                              variant="secondary"
+                              className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              PDF
+                            </Badge>
+                          )}
                           {hasPendingFlag && <UnderReviewBadge />}
                           {folderName && (
                             <Badge

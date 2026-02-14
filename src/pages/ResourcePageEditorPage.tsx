@@ -43,6 +43,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { PageEditor } from "@/components/page-builder/PageEditor";
+import { PdfPreviewSection } from "@/components/page-builder/PdfPreviewSection";
+import { PdfReplaceButton } from "@/components/page-builder/PdfReplaceButton";
 import { TagInput } from "@/components/page-builder/TagInput";
 import { RoleAssignmentCheckboxes } from "@/components/manager/staff-resources/RoleAssignmentCheckboxes";
 import { ReadReceiptsDashboard } from "@/components/page-builder/ReadReceiptsDashboard";
@@ -57,6 +59,7 @@ import {
 import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useCanEditPage } from "@/hooks/useCanEditPage";
 import { uploadPageImage } from "@/lib/pageImageUpload";
+import type { PdfUploadResult } from "@/lib/uploadPdf";
 import type { JSONContent } from "@tiptap/react";
 import { AppRole } from "@/types/roles";
 import { toast } from "sonner";
@@ -303,13 +306,48 @@ export function ResourcePageEditorPage() {
         {/* Editor Area */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-6">
-            <PageEditor
-              initialContent={contentJson}
-              onChange={setContentJson}
-              onImageUpload={uploadPageImage}
-              editable={true}
-              placeholder="Start writing your page content..."
-            />
+            {existingPage?.page_type === 'pdf' ? (
+              /* PDF Preview for PDF pages */
+              <div className="space-y-6">
+                <PdfPreviewSection
+                  fileUrl={existingPage.pdf_file_url || ''}
+                  pageCount={existingPage.pdf_page_count || 0}
+                  fileSize={existingPage.pdf_file_size || 0}
+                  originalFilename={existingPage.pdf_original_filename || 'document.pdf'}
+                  onViewPdf={() => navigate(`/dashboard/resources/pages/${pageId}`)}
+                />
+                
+                {isManager && (
+                  <PdfReplaceButton
+                    currentFilePath={existingPage.pdf_file_path || ''}
+                    onReplace={async (data: PdfUploadResult) => {
+                      if (pageId) {
+                        await updateMutation.mutateAsync({
+                          id: pageId,
+                          pdf_file_url: data.fileUrl,
+                          pdf_file_path: data.filePath,
+                          pdf_file_size: data.fileSize,
+                          pdf_original_filename: data.originalFilename,
+                          pdf_page_count: data.pageCount,
+                          search_text: data.searchText,
+                        });
+                        setHasUnsavedChanges(false);
+                      }
+                    }}
+                    disabled={isSaving}
+                  />
+                )}
+              </div>
+            ) : (
+              /* TipTap Editor for builder pages */
+              <PageEditor
+                initialContent={contentJson}
+                onChange={setContentJson}
+                onImageUpload={uploadPageImage}
+                editable={true}
+                placeholder="Start writing your page content..."
+              />
+            )}
           </div>
         </div>
 

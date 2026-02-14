@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -116,6 +121,65 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          target_roles: Database["public"]["Enums"]["app_role"][]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          target_roles: Database["public"]["Enums"]["app_role"][]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          target_roles?: Database["public"]["Enums"]["app_role"][]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       api_credentials: {
         Row: {
@@ -246,36 +310,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_sync_skipped_records: {
-        Row: {
-          api_name: string
-          created_at: string
-          details: Json | null
-          id: string
-          reason: string
-          record_id: string
-          secondary_id: string | null
-        }
-        Insert: {
-          api_name: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          reason: string
-          record_id: string
-          secondary_id?: string | null
-        }
-        Update: {
-          api_name?: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          reason?: string
-          record_id?: string
-          secondary_id?: string | null
-        }
-        Relationships: []
-      }
       api_sync_status: {
         Row: {
           api_name: string
@@ -330,7 +364,6 @@ export type Database = {
           capacity: number | null
           class_date: string | null
           created_at: string | null
-          description: string | null
           duration_minutes: number | null
           external_id: string
           id: string
@@ -342,7 +375,6 @@ export type Database = {
           start_time: string
           status: string | null
           synced_at: string | null
-          updated_at: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -350,7 +382,6 @@ export type Database = {
           capacity?: number | null
           class_date?: string | null
           created_at?: string | null
-          description?: string | null
           duration_minutes?: number | null
           external_id: string
           id?: string
@@ -362,7 +393,6 @@ export type Database = {
           start_time: string
           status?: string | null
           synced_at?: string | null
-          updated_at?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -370,7 +400,6 @@ export type Database = {
           capacity?: number | null
           class_date?: string | null
           created_at?: string | null
-          description?: string | null
           duration_minutes?: number | null
           external_id?: string
           id?: string
@@ -382,71 +411,67 @@ export type Database = {
           start_time?: string
           status?: string | null
           synced_at?: string | null
-          updated_at?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
       }
       arketa_classes_staging: {
         Row: {
-          booked_count: number | null
+          arketa_class_id: string
           capacity: number | null
-          class_date: string
+          class_name: string
+          cursor_position: string | null
           description: string | null
-          duration_minutes: number | null
-          external_id: string
+          end_time: string | null
+          enrolled: number | null
           id: string
+          instructor_id: string | null
           instructor_name: string | null
-          is_cancelled: boolean | null
-          name: string
+          location: string | null
           raw_data: Json | null
-          room_name: string | null
+          signups: number | null
           staged_at: string | null
           start_time: string
           status: string | null
           sync_batch_id: string
-          synced_at: string | null
-          waitlist_count: number | null
         }
         Insert: {
-          booked_count?: number | null
+          arketa_class_id: string
           capacity?: number | null
-          class_date: string
+          class_name: string
+          cursor_position?: string | null
           description?: string | null
-          duration_minutes?: number | null
-          external_id: string
+          end_time?: string | null
+          enrolled?: number | null
           id?: string
+          instructor_id?: string | null
           instructor_name?: string | null
-          is_cancelled?: boolean | null
-          name: string
+          location?: string | null
           raw_data?: Json | null
-          room_name?: string | null
+          signups?: number | null
           staged_at?: string | null
           start_time: string
           status?: string | null
           sync_batch_id: string
-          synced_at?: string | null
-          waitlist_count?: number | null
         }
         Update: {
-          booked_count?: number | null
+          arketa_class_id?: string
           capacity?: number | null
-          class_date?: string
+          class_name?: string
+          cursor_position?: string | null
           description?: string | null
-          duration_minutes?: number | null
-          external_id?: string
+          end_time?: string | null
+          enrolled?: number | null
           id?: string
+          instructor_id?: string | null
           instructor_name?: string | null
-          is_cancelled?: boolean | null
-          name?: string
+          location?: string | null
           raw_data?: Json | null
-          room_name?: string | null
+          signups?: number | null
           staged_at?: string | null
           start_time?: string
           status?: string | null
           sync_batch_id?: string
-          synced_at?: string | null
-          waitlist_count?: number | null
         }
         Relationships: []
       }
@@ -2523,48 +2548,45 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_schedule: {
+      daily_schedules: {
         Row: {
-          canceled: boolean | null
-          class_id: string
-          class_name: string
-          description: string | null
-          end_time: string | null
           id: string
-          instructor: string | null
-          max_capacity: number | null
+          is_currently_working: boolean | null
+          last_synced_at: string | null
+          location: string | null
+          position: string | null
           schedule_date: string
-          start_time: string
-          total_booked: number | null
-          updated_at: string | null
+          shift_end: string
+          shift_start: string
+          sling_user_id: number
+          staff_id: string | null
+          staff_name: string | null
         }
         Insert: {
-          canceled?: boolean | null
-          class_id: string
-          class_name: string
-          description?: string | null
-          end_time?: string | null
           id?: string
-          instructor?: string | null
-          max_capacity?: number | null
+          is_currently_working?: boolean | null
+          last_synced_at?: string | null
+          location?: string | null
+          position?: string | null
           schedule_date: string
-          start_time: string
-          total_booked?: number | null
-          updated_at?: string | null
+          shift_end: string
+          shift_start: string
+          sling_user_id: number
+          staff_id?: string | null
+          staff_name?: string | null
         }
         Update: {
-          canceled?: boolean | null
-          class_id?: string
-          class_name?: string
-          description?: string | null
-          end_time?: string | null
           id?: string
-          instructor?: string | null
-          max_capacity?: number | null
+          is_currently_working?: boolean | null
+          last_synced_at?: string | null
+          location?: string | null
+          position?: string | null
           schedule_date?: string
-          start_time?: string
-          total_booked?: number | null
-          updated_at?: string | null
+          shift_end?: string
+          shift_start?: string
+          sling_user_id?: number
+          staff_id?: string | null
+          staff_name?: string | null
         }
         Relationships: []
       }
@@ -2924,30 +2946,6 @@ export type Database = {
           target_end_date?: string
           total_records_synced?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      inbox_reads: {
-        Row: {
-          id: string
-          item_id: string
-          item_type: string
-          read_at: string | null
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          item_id: string
-          item_type: string
-          read_at?: string | null
-          user_id: string
-        }
-        Update: {
-          id?: string
-          item_id?: string
-          item_type?: string
-          read_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -3579,220 +3577,56 @@ export type Database = {
         }
         Relationships: []
       }
-      resource_outdated_flags: {
-        Row: {
-          created_at: string | null
-          flagged_by_id: string
-          flagged_by_name: string
-          id: string
-          note: string
-          resolution_note: string | null
-          resolved_at: string | null
-          resolved_by_id: string | null
-          resolved_by_name: string | null
-          resource_id: string
-          resource_label: string
-          resource_type: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          flagged_by_id: string
-          flagged_by_name: string
-          id?: string
-          note: string
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by_id?: string | null
-          resolved_by_name?: string | null
-          resource_id: string
-          resource_label: string
-          resource_type: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          flagged_by_id?: string
-          flagged_by_name?: string
-          id?: string
-          note?: string
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by_id?: string | null
-          resolved_by_name?: string | null
-          resource_id?: string
-          resource_label?: string
-          resource_type?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      resource_page_editors: {
-        Row: {
-          granted_at: string | null
-          granted_by: string | null
-          id: string
-          page_id: string
-          user_id: string
-        }
-        Insert: {
-          granted_at?: string | null
-          granted_by?: string | null
-          id?: string
-          page_id: string
-          user_id: string
-        }
-        Update: {
-          granted_at?: string | null
-          granted_by?: string | null
-          id?: string
-          page_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "resource_page_editors_page_id_fkey"
-            columns: ["page_id"]
-            isOneToOne: false
-            referencedRelation: "resource_pages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      resource_page_folders: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          display_order: number | null
-          id: string
-          name: string
-          parent_folder_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name: string
-          parent_folder_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name?: string
-          parent_folder_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "resource_page_folders_parent_folder_id_fkey"
-            columns: ["parent_folder_id"]
-            isOneToOne: false
-            referencedRelation: "resource_page_folders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      resource_page_reads: {
-        Row: {
-          id: string
-          page_id: string
-          read_at: string | null
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          page_id: string
-          read_at?: string | null
-          user_id: string
-        }
-        Update: {
-          id?: string
-          page_id?: string
-          read_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "resource_page_reads_page_id_fkey"
-            columns: ["page_id"]
-            isOneToOne: false
-            referencedRelation: "resource_pages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       resource_pages: {
         Row: {
           assigned_roles: Database["public"]["Enums"]["app_role"][]
           content: string | null
-          content_json: Json | null
-          cover_image_url: string | null
           created_at: string | null
           created_by: string | null
-          display_order: number | null
-          folder_id: string | null
           id: string
           is_published: boolean | null
-          last_edited_by: string | null
-          search_text: string | null
-          tags: string[] | null
+          page_type: string
+          pdf_file_path: string | null
+          pdf_file_size: number | null
+          pdf_file_url: string | null
+          pdf_original_filename: string | null
+          pdf_page_count: number | null
           title: string
           updated_at: string | null
         }
         Insert: {
           assigned_roles?: Database["public"]["Enums"]["app_role"][]
           content?: string | null
-          content_json?: Json | null
-          cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
-          display_order?: number | null
-          folder_id?: string | null
           id?: string
           is_published?: boolean | null
-          last_edited_by?: string | null
-          search_text?: string | null
-          tags?: string[] | null
+          page_type?: string
+          pdf_file_path?: string | null
+          pdf_file_size?: number | null
+          pdf_file_url?: string | null
+          pdf_original_filename?: string | null
+          pdf_page_count?: number | null
           title: string
           updated_at?: string | null
         }
         Update: {
           assigned_roles?: Database["public"]["Enums"]["app_role"][]
           content?: string | null
-          content_json?: Json | null
-          cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
-          display_order?: number | null
-          folder_id?: string | null
           id?: string
           is_published?: boolean | null
-          last_edited_by?: string | null
-          search_text?: string | null
-          tags?: string[] | null
+          page_type?: string
+          pdf_file_path?: string | null
+          pdf_file_size?: number | null
+          pdf_file_url?: string | null
+          pdf_original_filename?: string | null
+          pdf_page_count?: number | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_resource_pages_folder"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "resource_page_folders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       response_templates: {
         Row: {
@@ -4283,9 +4117,7 @@ export type Database = {
       }
       staff_announcements: {
         Row: {
-          announcement_type:
-            | Database["public"]["Enums"]["staff_announcement_type"]
-            | null
+          announcement_type: string | null
           content: string
           created_at: string | null
           created_by: string
@@ -4301,9 +4133,7 @@ export type Database = {
           week_start_date: string | null
         }
         Insert: {
-          announcement_type?:
-            | Database["public"]["Enums"]["staff_announcement_type"]
-            | null
+          announcement_type?: string | null
           content: string
           created_at?: string | null
           created_by: string
@@ -4319,9 +4149,7 @@ export type Database = {
           week_start_date?: string | null
         }
         Update: {
-          announcement_type?:
-            | Database["public"]["Enums"]["staff_announcement_type"]
-            | null
+          announcement_type?: string | null
           content?: string
           created_at?: string | null
           created_by?: string
@@ -5414,15 +5242,7 @@ export type Database = {
         Returns: undefined
       }
       process_scheduled_messages: { Args: never; Returns: undefined }
-      refresh_daily_schedule: {
-        Args: { p_schedule_date: string }
-        Returns: number
-      }
       reload_postgrest_cache: { Args: never; Returns: string }
-      upsert_arketa_classes_from_staging: {
-        Args: { p_sync_batch_id: string }
-        Returns: number
-      }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
@@ -5458,7 +5278,6 @@ export type Database = {
         | "water_bottle"
         | "other"
       membership_tier: "basic" | "standard" | "premium" | "vip"
-      staff_announcement_type: "announcement" | "weekly_update"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5610,8 +5429,6 @@ export const Constants = {
         "other",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
-      staff_announcement_type: ["announcement", "weekly_update"],
     },
   },
 } as const
-

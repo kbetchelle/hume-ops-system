@@ -11,11 +11,14 @@ import {
   MoreVertical,
   Copy,
   Pencil,
+  Upload,
+  BookOpen,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +42,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { PdfUploadDialog } from "@/components/page-builder/PdfUploadDialog";
 import {
   useResourcePages,
   useDeleteResourcePage,
@@ -329,6 +334,13 @@ function PageCard({
           <div>
             <h3 className="font-medium line-clamp-2 mb-2">{page.title}</h3>
             <div className="flex flex-wrap gap-1">
+              {/* PDF Badge */}
+              {page.page_type === 'pdf' && (
+                <Badge variant="secondary" className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <FileText className="h-3 w-3 mr-1" />
+                  PDF
+                </Badge>
+              )}
               {folderName && (
                 <Badge variant="secondary" className="rounded-none text-[10px]">
                   <FolderOpen className="h-3 w-3 mr-1" />
@@ -427,6 +439,7 @@ export function ResourcePagesManagement() {
   const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ResourcePageFolder | null>(null);
+  const [pdfUploadDialogOpen, setPdfUploadDialogOpen] = useState(false);
 
   // Calculate page counts by folder
   const pageCountsByFolder = useMemo(() => {
@@ -468,6 +481,14 @@ export function ResourcePagesManagement() {
 
   const handleCreatePage = () => {
     navigate("/dashboard/staff-resources/pages/new");
+  };
+
+  const handleUploadPdf = () => {
+    setPdfUploadDialogOpen(true);
+  };
+
+  const handlePdfUploadSuccess = (pageId: string) => {
+    navigate(`/dashboard/staff-resources/pages/${pageId}/edit`);
   };
 
   const handleEditPage = (page: ResourcePage) => {
@@ -538,33 +559,72 @@ export function ResourcePagesManagement() {
               className="pl-9 rounded-none"
             />
           </div>
-          <Button onClick={handleCreatePage} className="rounded-none">
-            <Plus className="h-4 w-4 mr-2" />
-            New Page
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="rounded-none">
+                <Plus className="h-4 w-4 mr-2" />
+                New Page
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-none">
+              <DropdownMenuItem onClick={handleCreatePage}>
+                <BookOpen className="h-4 w-4 mr-2" />
+                Block-Based Page
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleUploadPdf}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Pages Grid */}
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="rounded-none">
+                <CardContent className="p-4">
+                  <Skeleton className="h-5 w-3/4 mb-3" />
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <div className="flex gap-2 mb-3">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : filteredPages.length === 0 ? (
           <Card className="rounded-none">
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
+            <CardContent className="py-16 text-center">
+              <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">
                 {searchTerm
-                  ? "No pages match your search."
-                  : "No pages in this folder."}
+                  ? "No pages found"
+                  : selectedFolderId === "unfiled"
+                  ? "No unfiled pages"
+                  : selectedFolderId
+                  ? "No pages in this folder"
+                  : "No pages yet"}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchTerm
+                  ? "Try adjusting your search terms or filters."
+                  : "Create your first page to get started with organizing staff resources."}
               </p>
-              <Button
-                variant="outline"
-                className="mt-4 rounded-none"
-                onClick={handleCreatePage}
-              >
-                Create your first page
-              </Button>
+              {!searchTerm && (
+                <Button
+                  variant="outline"
+                  className="rounded-none"
+                  onClick={handleCreatePage}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Page
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -639,6 +699,13 @@ export function ResourcePagesManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* PDF Upload Dialog */}
+      <PdfUploadDialog
+        open={pdfUploadDialogOpen}
+        onOpenChange={setPdfUploadDialogOpen}
+        onSuccess={handlePdfUploadSuccess}
+      />
     </div>
   );
 }

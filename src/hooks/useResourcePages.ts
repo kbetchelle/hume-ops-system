@@ -26,6 +26,13 @@ export interface ResourcePage {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // PDF-specific fields
+  page_type: 'builder' | 'pdf';
+  pdf_file_url: string | null;
+  pdf_file_path: string | null;
+  pdf_file_size: number | null;
+  pdf_original_filename: string | null;
+  pdf_page_count: number | null;
 }
 
 export interface CreateResourcePageInput {
@@ -37,6 +44,14 @@ export interface CreateResourcePageInput {
   tags?: string[];
   cover_image_url?: string | null;
   display_order?: number;
+  // PDF-specific fields
+  page_type?: 'builder' | 'pdf';
+  pdf_file_url?: string | null;
+  pdf_file_path?: string | null;
+  pdf_file_size?: number | null;
+  pdf_original_filename?: string | null;
+  pdf_page_count?: number | null;
+  search_text?: string | null; // Allow manual override for PDFs
 }
 
 export interface UpdateResourcePageInput {
@@ -49,6 +64,13 @@ export interface UpdateResourcePageInput {
   tags?: string[];
   cover_image_url?: string | null;
   display_order?: number;
+  // PDF-specific fields
+  pdf_file_url?: string | null;
+  pdf_file_path?: string | null;
+  pdf_file_size?: number | null;
+  pdf_original_filename?: string | null;
+  pdf_page_count?: number | null;
+  search_text?: string | null; // Allow manual override for PDFs
 }
 
 export interface ResourcePagesFilters {
@@ -178,14 +200,17 @@ export function useCreateResourcePage() {
 
   return useMutation({
     mutationFn: async (input: CreateResourcePageInput) => {
-      const searchText = input.content_json
-        ? extractSearchText(input.content_json)
-        : "";
+      // Extract search text based on page type
+      let searchText = input.search_text ?? "";
+      if (!searchText && input.page_type !== 'pdf' && input.content_json) {
+        searchText = extractSearchText(input.content_json);
+      }
 
       const { data, error } = await supabase
         .from("resource_pages")
         .insert({
           title: input.title,
+          page_type: input.page_type ?? 'builder',
           content_json: input.content_json ?? null,
           search_text: searchText,
           assigned_roles: input.assigned_roles,
@@ -196,6 +221,12 @@ export function useCreateResourcePage() {
           display_order: input.display_order ?? 0,
           created_by: user!.id,
           last_edited_by: user!.id,
+          // PDF fields
+          pdf_file_url: input.pdf_file_url ?? null,
+          pdf_file_path: input.pdf_file_path ?? null,
+          pdf_file_size: input.pdf_file_size ?? null,
+          pdf_original_filename: input.pdf_original_filename ?? null,
+          pdf_page_count: input.pdf_page_count ?? null,
         })
         .select()
         .single();
@@ -226,8 +257,8 @@ export function useUpdateResourcePage() {
         last_edited_by: user!.id,
       };
 
-      // Extract search text if content_json is being updated
-      if (input.content_json !== undefined) {
+      // Extract search text if content_json is being updated (for builder pages)
+      if (input.content_json !== undefined && !input.search_text) {
         updateData.search_text = extractSearchText(input.content_json);
       }
 
@@ -295,6 +326,7 @@ export function useDuplicateResourcePage() {
         .from("resource_pages")
         .insert({
           title: `${originalPage.title} (Copy)`,
+          page_type: originalPage.page_type,
           content_json: originalPage.content_json,
           search_text: originalPage.search_text,
           assigned_roles: originalPage.assigned_roles,
@@ -305,6 +337,12 @@ export function useDuplicateResourcePage() {
           display_order: 0,
           created_by: user!.id,
           last_edited_by: user!.id,
+          // PDF fields (copy if it's a PDF page)
+          pdf_file_url: originalPage.pdf_file_url,
+          pdf_file_path: originalPage.pdf_file_path,
+          pdf_file_size: originalPage.pdf_file_size,
+          pdf_original_filename: originalPage.pdf_original_filename,
+          pdf_page_count: originalPage.pdf_page_count,
         })
         .select()
         .single();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Home,
   FileText,
@@ -13,6 +13,9 @@ import {
   Settings,
   Bug,
   LogOut,
+  ChevronRight,
+  Link2,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -52,6 +55,9 @@ export type ConciergeView =
   | "whos-working"
   | "templates"
   | "resources"
+  | "resources-quick-links"
+  | "resources-pages"
+  | "resources-policies"
   | "lost-found"
   | "qa";
 
@@ -72,6 +78,96 @@ interface ConciergeSidebarProps {
   activeView: ConciergeView;
   onViewChange: (view: ConciergeView) => void;
   unreadCount?: number;
+}
+
+const RESOURCE_SUB_ITEMS: { id: ConciergeView; label: string; icon: LucideIcon }[] = [
+  { id: "resources-quick-links", label: "Quick Links", icon: Link2 },
+  { id: "resources-pages", label: "Resource Pages", icon: FileText },
+  { id: "resources-policies", label: "Policies", icon: BookOpen },
+];
+
+function ResourcesSubMenu({
+  activeView,
+  onViewChange,
+}: {
+  activeView: ConciergeView;
+  onViewChange: (view: ConciergeView) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isResourcesView = activeView.startsWith("resources");
+
+  // Auto-expand when on resources view, auto-collapse when not
+  useEffect(() => {
+    if (isResourcesView) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [isResourcesView]);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverTimerRef.current = setTimeout(() => setIsOpen(true), 2000);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (!isResourcesView) {
+      setIsOpen(false);
+    }
+  }, [isResourcesView]);
+
+  const handleClick = useCallback(() => {
+    setIsOpen((prev) => !prev);
+    if (!isResourcesView) {
+      onViewChange("resources");
+    }
+  }, [isResourcesView, onViewChange]);
+
+  return (
+    <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={handleClick}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+            "hover:bg-muted/50",
+            activeView === "resources" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
+          )}
+        >
+          <FolderOpen className="h-4 w-4 shrink-0" />
+          <span className="flex-1">Resources</span>
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isOpen && "rotate-90")} />
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      {isOpen && (
+        <div className="animate-fade-in">
+          {RESOURCE_SUB_ITEMS.map((sub) => {
+            const Icon = sub.icon;
+            const isActive = activeView === sub.id;
+            return (
+              <SidebarMenuItem key={sub.id}>
+                <SidebarMenuButton
+                  onClick={() => onViewChange(sub.id)}
+                  className={cn(
+                    "flex items-center gap-3 pl-10 pr-3 py-1.5 text-[11px] uppercase tracking-widest transition-colors",
+                    "hover:bg-muted/50",
+                    isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
+                  )}
+                >
+                  <Icon className="h-3 w-3 shrink-0" />
+                  <span>{sub.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ConciergeSidebar({
@@ -95,6 +191,7 @@ export function ConciergeSidebar({
     await signOut();
     navigate("/login");
   };
+
   const sections: NavSection[] = [
     {
       title: "Main",
@@ -119,7 +216,6 @@ export function ConciergeSidebar({
       title: "Resources",
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
-        { id: "resources", label: "Resources", icon: FolderOpen },
         { id: "lost-found", label: "Lost & Found", icon: Package },
       ],
     },
@@ -206,6 +302,9 @@ export function ConciergeSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                {section.title === "Resources" && (
+                  <ResourcesSubMenu activeView={activeView} onViewChange={onViewChange} />
+                )}
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeView === item.id;
@@ -239,8 +338,6 @@ export function ConciergeSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
-      
-      {/* Bottom spacer removed - settings moved to top greeting */}
     </Sidebar>
   );
 }

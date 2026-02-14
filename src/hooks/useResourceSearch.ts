@@ -32,6 +32,7 @@ export interface SearchResourcePage {
   content: string | null;
   assigned_roles: AppRole[];
   isOwnRole: boolean;
+  tags: string[];
 }
 
 export interface SearchPolicy {
@@ -77,6 +78,8 @@ interface RawResourcePage {
   title: string;
   content: string | null;
   assigned_roles: AppRole[];
+  tags: string[];
+  search_text: string | null;
 }
 
 interface RawPolicy {
@@ -109,7 +112,7 @@ function useAllResources() {
             .order("display_order", { ascending: true }),
           supabase
             .from("resource_pages" as any)
-            .select("id, title, content, assigned_roles")
+            .select("id, title, content, assigned_roles, tags, search_text")
             .eq("is_published", true)
             .order("created_at", { ascending: false }),
           supabase
@@ -228,7 +231,12 @@ export function useResourceSearch(
       if (seenPageIds.has(page.id)) continue;
       seenPageIds.add(page.id);
 
-      if (matches(page.title, q) || matchesHtml(page.content, q)) {
+      const titleMatch = matches(page.title, q);
+      const contentMatch = matchesHtml(page.content, q);
+      const searchTextMatch = page.search_text && page.search_text.toLowerCase().includes(q);
+      const tagMatch = page.tags.some((tag) => tag.toLowerCase().includes(q));
+
+      if (titleMatch || contentMatch || searchTextMatch || tagMatch) {
         matchedPages.push({
           ...page,
           isOwnRole: isAssignedToRole(page.assigned_roles, activeRole),

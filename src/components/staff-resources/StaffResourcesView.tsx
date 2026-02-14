@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, Copy, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Search, Copy, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
 import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
+import { MyEditablePages } from "./MyEditablePages";
+import { useMyEditablePages } from "@/hooks/useResourcePageEditors";
 
 const resourceSubPages = [
   { label: "Quick Links", path: "/dashboard/resources/quick-links" },
@@ -29,6 +31,7 @@ export function StaffResourcesView() {
   const navigate = useNavigate();
   const { activeRole } = useActiveRole();
   const { results, isLoading } = useResourceSearch(searchTerm, activeRole);
+  const { data: myEditablePages = [] } = useMyEditablePages();
 
   const hasSearch = searchTerm.trim().length >= 2;
 
@@ -42,6 +45,18 @@ export function StaffResourcesView() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
       <div className="w-full max-w-2xl space-y-6">
+        {/* My Editable Pages - Show when not searching and user has editable pages */}
+        {!hasSearch && myEditablePages.length > 0 && (
+          <Card className="rounded-none">
+            <CardContent className="p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider mb-3">
+                Pages You Can Edit
+              </h3>
+              <MyEditablePages />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Search bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -280,24 +295,14 @@ function QuickLinkResults({ groups }: { groups: SearchQuickLinkGroup[] }) {
 // ===========================================================================
 
 function ResourcePageResults({ pages }: { pages: SearchResourcePage[] }) {
-  const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
   const ownRole = pages.filter((p) => p.isOwnRole);
   const otherRole = pages.filter((p) => !p.isOwnRole);
 
   const pageIds = useMemo(() => pages.map((p) => p.id), [pages]);
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
 
-  const toggleExpand = (id: string) => {
-    setExpandedPages((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const renderPage = (page: SearchResourcePage) => {
-    const isExpanded = expandedPages.has(page.id);
     return (
       <ResourceFlagContextMenu
         key={page.id}
@@ -306,33 +311,39 @@ function ResourcePageResults({ pages }: { pages: SearchResourcePage[] }) {
         resourceLabel={page.title}
         hasPendingFlag={pageFlagsMap?.has(page.id) ?? false}
       >
-        <Card data-resource-id={page.id} className="rounded-none">
+        <Card
+          data-resource-id={page.id}
+          className="rounded-none cursor-pointer hover:shadow-sm transition-shadow"
+          onClick={() => navigate(`/dashboard/resources/pages/${page.id}`)}
+        >
           <CardContent className="p-3">
-            <button
-              type="button"
-              className="flex items-center gap-2 w-full text-left hover:text-foreground/80"
-              onClick={() => toggleExpand(page.id)}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 shrink-0" />
-              ) : (
-                <ChevronRight className="h-4 w-4 shrink-0" />
-              )}
-              <h4 className="font-medium text-sm">{page.title}</h4>
+            <div className="flex items-center gap-2 w-full">
+              <h4 className="font-medium text-sm flex-1">{page.title}</h4>
               {pageFlagsMap?.has(page.id) && <UnderReviewBadge />}
               {!page.isOwnRole && (
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto shrink-0">
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">
                   other role
                 </Badge>
               )}
-            </button>
-            {isExpanded && page.content && (
-              <div
-                className="mt-3 pt-3 border-t prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline"
-                dangerouslySetInnerHTML={{
-                  __html: sanitizeHtml(page.content),
-                }}
-              />
+            </div>
+            {/* Show tags if available */}
+            {page.tags && page.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {page.tags.slice(0, 3).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="text-[9px] px-1.5 py-0"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+                {page.tags.length > 3 && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                    +{page.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>

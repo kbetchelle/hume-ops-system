@@ -68,6 +68,8 @@ import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
 import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
+import { ResourcePageEditorPage } from "./pages/ResourcePageEditorPage";
+import { ResourcePageReadingPage } from "./pages/ResourcePageReadingPage";
 import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
 import ResourcesQuickLinksPage from "./pages/dashboards/ResourcesQuickLinksPage";
 import ResourcesPagesPage from "./pages/dashboards/ResourcesPagesPage";
@@ -491,6 +493,24 @@ const App = () => (
               }
             />
 
+            {/* Resource Page Editor (Manager) */}
+            <Route
+              path="/dashboard/staff-resources/pages/new"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <ResourcePageEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff-resources/pages/:pageId/edit"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <ResourcePageEditorPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Staff Resources View (read-only for staff) */}
             <Route
               path="/dashboard/resources"
@@ -513,6 +533,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
                   <ResourcesPagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/resources/pages/:pageId"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe", "trainer"]}>
+                  <ResourcePageReadingPage />
                 </ProtectedRoute>
               }
             />

@@ -37,12 +37,64 @@ export {
   type ResourcePage,
   type CreateResourcePageInput,
   type UpdateResourcePageInput,
+  type ResourcePagesFilters,
   // Query key
   RESOURCE_PAGES_KEY,
   // Hooks
   useResourcePages,
+  useResourcePage,
   useResourcePagesByRole,
   useCreateResourcePage,
   useUpdateResourcePage,
   useDeleteResourcePage,
+  useDuplicateResourcePage,
 } from "./useResourcePages";
+
+export {
+  // Types
+  type ResourcePageFolder,
+  type CreateFolderInput,
+  type UpdateFolderInput,
+  // Query key
+  RESOURCE_PAGE_FOLDERS_KEY,
+  // Hooks
+  useResourcePageFolders,
+  useResourcePageFolder,
+  useCreateFolder,
+  useUpdateFolder,
+  useDeleteFolder,
+  useReorderFolders,
+} from "./useResourcePageFolders";
+
+export {
+  // Types
+  type ResourcePageEditor,
+  type PageEditorWithProfile,
+  // Query key
+  RESOURCE_PAGE_EDITORS_KEY,
+  // Hooks
+  usePageEditors,
+  useMyEditablePages,
+  useAddPageEditor,
+  useRemovePageEditor,
+} from "./useResourcePageEditors";
+
+export {
+  // Hooks
+  useAvailableTags,
+} from "./useAvailableTags";
+
+export {
+  // Hooks
+  useCanEditPage,
+} from "./useCanEditPage";
+
+export {
+  // Types
+  type StaffReadStatus,
+  type PageReadReceipts,
+  // Query key
+  PAGE_READ_RECEIPTS_KEY,
+  // Hooks
+  usePageReadReceipts,
+} from "./usePageReadReceipts";

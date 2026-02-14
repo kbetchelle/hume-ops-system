@@ -9,6 +9,7 @@ import type {
   QAInboxData,
   FlagInboxData,
   ShiftNoteInboxData,
+  SickDayInboxData,
 } from "@/types/inbox";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +19,7 @@ import type {
 const INBOX_QA_KEY = "inbox-qa";
 const INBOX_FLAGS_KEY = "inbox-flags";
 const INBOX_SHIFT_NOTES_KEY = "inbox-shift-notes";
+const INBOX_SICK_DAY_KEY = "inbox-sick-day";
 const INBOX_READS_KEY = "inbox-reads";
 const INBOX_UNREAD_COUNT_KEY = "inbox-unread-count";
 
@@ -71,6 +73,21 @@ export function useManagementInbox(searchTerm?: string) {
         .not("management_notes", "is", null)
         .neq("management_notes", "")
         .eq("status", "submitted")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch sick day requests
+  const { data: sickDayData, isLoading: sickDayLoading } = useQuery({
+    queryKey: [INBOX_SICK_DAY_KEY],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sick_day_requests")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -167,6 +184,27 @@ export function useManagementInbox(searchTerm?: string) {
       });
     }
 
+    // Map sick day requests
+    for (const sickDay of sickDayData ?? []) {
+      merged.push({
+        id: sickDay.id,
+        type: "sick_day",
+        createdAt: sickDay.created_at,
+        isRead: readSet.has(`sick_day:${sickDay.id}`),
+        data: {
+          type: "sick_day",
+          userId: sickDay.user_id,
+          userName: sickDay.user_name,
+          requestedDates: sickDay.requested_dates,
+          notes: sickDay.notes,
+          status: sickDay.status,
+          reviewedByName: sickDay.reviewed_by_name,
+          reviewedAt: sickDay.reviewed_at,
+          reviewNotes: sickDay.review_notes,
+        } as SickDayInboxData,
+      });
+    }
+
     // Sort by createdAt DESC
     merged.sort(
       (a, b) =>
@@ -195,16 +233,22 @@ export function useManagementInbox(searchTerm?: string) {
               item.data.managementNotes.toLowerCase().includes(q) ||
               item.data.staffName.toLowerCase().includes(q)
             );
+          case "sick_day":
+            return (
+              item.data.userName.toLowerCase().includes(q) ||
+              item.data.notes.toLowerCase().includes(q) ||
+              item.data.status.toLowerCase().includes(q)
+            );
         }
       });
     }
 
     return merged;
-  }, [qaData, flagData, shiftData, readsData, searchTerm]);
+  }, [qaData, flagData, shiftData, sickDayData, readsData, searchTerm]);
 
   return {
     items,
-    isLoading: qaLoading || flagsLoading || shiftLoading || readsLoading,
+    isLoading: qaLoading || flagsLoading || shiftLoading || sickDayLoading || readsLoading,
   };
 }
 
@@ -227,7 +271,7 @@ export function useUnreadInboxCount() {
       if (!user?.id) return 0;
 
       // Fetch all item IDs from 3 sources
-      const [qaResult, flagResult, shiftResult, readsResult] =
+      const [qaResult, flagResult, shiftResult, sickDayResult, readsResult] =
         await Promise.all([
           supabase.from("staff_qa").select("id"),
           supabase
@@ -240,6 +284,9 @@ export function useUnreadInboxCount() {
             .neq("management_notes", "")
             .eq("status", "submitted"),
           supabase
+            .from("sick_day_requests")
+            .select("id"),
+          supabase
             .from("inbox_reads" as any)
             .select("item_type, item_id")
             .eq("user_id", user.id),
@@ -248,6 +295,7 @@ export function useUnreadInboxCount() {
       if (qaResult.error) throw qaResult.error;
       if (flagResult.error) throw flagResult.error;
       if (shiftResult.error) throw shiftResult.error;
+      if (sickDayResult.error) throw sickDayResult.error;
       if (readsResult.error) throw readsResult.error;
 
       const readSet = new Set(
@@ -265,6 +313,9 @@ export function useUnreadInboxCount() {
       }
       for (const report of shiftResult.data ?? []) {
         if (!readSet.has(`shift_note:${report.id}`)) unread++;
+      }
+      for (const sickDay of sickDayResult.data ?? []) {
+        if (!readSet.has(`sick_day:${sickDay.id}`)) unread++;
       }
 
       return unread;

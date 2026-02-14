@@ -16,7 +16,9 @@ import { useResolveResourceFlag } from "@/hooks/useResourceFlags";
 import { QAInboxItem } from "./inbox/QAInboxItem";
 import { FlagInboxItem } from "./inbox/FlagInboxItem";
 import { ShiftNoteInboxItem } from "./inbox/ShiftNoteInboxItem";
+import { SickDayInboxItem } from "./inbox/SickDayInboxItem";
 import { AnswerQuestionDialog } from "./inbox/AnswerQuestionDialog";
+import { SickDayReviewDialog } from "./inbox/SickDayReviewDialog";
 
 import type { InboxItem, InboxItemType, QAInboxData } from "@/types/inbox";
 
@@ -26,6 +28,11 @@ export function ManagementInbox() {
     null
   );
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
+  const [selectedSickDay, setSelectedSickDay] = useState<InboxItem | null>(null);
+  const [sickDayAction, setSickDayAction] = useState<"approve" | "reject" | null>(
+    null
+  );
+  const [sickDayDialogOpen, setSickDayDialogOpen] = useState(false);
 
   const { items, isLoading } = useManagementInbox(searchTerm);
   const markRead = useMarkInboxRead();
@@ -47,6 +54,15 @@ export function ManagementInbox() {
       });
     },
     [resolveFlag]
+  );
+
+  const handleSickDayReview = useCallback(
+    (item: InboxItem, action: "approve" | "reject") => {
+      setSelectedSickDay(item);
+      setSickDayAction(action);
+      setSickDayDialogOpen(true);
+    },
+    []
   );
 
   const handleMarkRead = useCallback(
@@ -131,6 +147,15 @@ export function ManagementInbox() {
                           onMarkRead={handleMarkRead}
                         />
                       );
+                    case "sick_day":
+                      return (
+                        <SickDayInboxItem
+                          key={item.id}
+                          item={item}
+                          onReview={handleSickDayReview}
+                          onMarkRead={handleMarkRead}
+                        />
+                      );
                   }
                 })}
               </div>
@@ -154,6 +179,13 @@ export function ManagementInbox() {
               }
             : null
         }
+      />
+
+      <SickDayReviewDialog
+        open={sickDayDialogOpen}
+        onOpenChange={setSickDayDialogOpen}
+        request={selectedSickDay}
+        action={sickDayAction}
       />
     </>
   );

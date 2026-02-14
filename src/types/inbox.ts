@@ -1,4 +1,4 @@
-export type InboxItemType = "qa" | "flag" | "shift_note";
+export type InboxItemType = "qa" | "flag" | "shift_note" | "sick_day";
 
 export interface QAInboxData {
   type: "qa";
@@ -42,7 +42,19 @@ export interface ShiftNoteInboxData {
   status: string;
 }
 
-export type InboxItemData = QAInboxData | FlagInboxData | ShiftNoteInboxData;
+export interface SickDayInboxData {
+  type: "sick_day";
+  userId: string;
+  userName: string;
+  requestedDates: string[]; // ISO date strings
+  notes: string;
+  status: "pending" | "approved" | "rejected";
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+}
+
+export type InboxItemData = QAInboxData | FlagInboxData | ShiftNoteInboxData | SickDayInboxData;
 
 export interface InboxItem {
   id: string;

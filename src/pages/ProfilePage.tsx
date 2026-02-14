@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -10,8 +11,10 @@ import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLES } from "@/types/roles";
-import { User, Settings, Calendar, Mail, Shield, Globe } from "lucide-react";
+import { User, Settings, Calendar, Mail, Shield, Globe, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SickDayRequestDialog } from "@/components/profile/SickDayRequestDialog";
+import { SickDayRequestHistory } from "@/components/profile/SickDayRequestHistory";
 
 /**
  * Fetches the user's start date at HUME by finding their earliest shift via Sling.
@@ -68,6 +71,7 @@ export default function ProfilePage() {
   const { data: startDate, isLoading: startDateLoading } = useHumeStartDate(
     profile?.sling_id
   );
+  const [sickDayDialogOpen, setSickDayDialogOpen] = useState(false);
 
   const isLoading = profileLoading || rolesLoading;
 
@@ -250,9 +254,28 @@ export default function ProfilePage() {
               <Settings className="h-4 w-4 mr-2" />
               Account Settings
             </Button>
+
+            {/* Request Sick Day Pay Button */}
+            <Button
+              variant="outline"
+              className="w-full rounded-none text-xs uppercase tracking-widest h-10"
+              onClick={() => setSickDayDialogOpen(true)}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Request Sick Day Pay
+            </Button>
+
+            {/* Sick Day Request History */}
+            {user?.id && <SickDayRequestHistory userId={user.id} />}
           </>
         )}
       </div>
+
+      {/* Sick Day Request Dialog */}
+      <SickDayRequestDialog
+        open={sickDayDialogOpen}
+        onOpenChange={setSickDayDialogOpen}
+      />
     </DashboardLayout>
   );
 }

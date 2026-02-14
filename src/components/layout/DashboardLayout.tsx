@@ -647,14 +647,9 @@ function UserInfoDropdown({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
           <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-[10px] uppercase tracking-widest font-normal">
-                {profile?.full_name || "User"}
-              </p>
-              <p className="text-[10px] tracking-wide text-muted-foreground">
-                {user?.email}
-              </p>
-            </div>
+            <p className="text-[10px] uppercase tracking-widest font-normal">
+              {profile?.full_name || "User"}
+            </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">

@@ -280,20 +280,24 @@ const settingsDirectItems: SettingsSubItem[] = [{
   url: "/dashboard/user-management",
   icon: Users
 }];
-// Resources nav item with 3-second hover expand and click toggle
+// Resources nav item with 2-second hover expand and click toggle
 function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResourcesActive = location.pathname.startsWith("/dashboard/resources");
 
-  // Auto-open when on a resources sub-page
+  // Auto-open when on a resources sub-page, auto-close when navigating away
   useEffect(() => {
-    if (isResourcesActive) setIsOpen(true);
+    if (isResourcesActive) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
   }, [isResourcesActive]);
 
   const handleMouseEnter = useCallback(() => {
-    hoverTimerRef.current = setTimeout(() => setIsOpen(true), 3000);
+    hoverTimerRef.current = setTimeout(() => setIsOpen(true), 2000);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
@@ -301,7 +305,11 @@ function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boole
       clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
-  }, []);
+    // Collapse if not currently on a resources route
+    if (!location.pathname.startsWith("/dashboard/resources")) {
+      setIsOpen(false);
+    }
+  }, [location.pathname]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     // Navigate to resources landing AND toggle sub-menu

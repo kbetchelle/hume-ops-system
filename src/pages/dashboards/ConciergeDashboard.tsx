@@ -19,11 +19,24 @@ import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
+import { QuickLinksTab } from "@/components/staff-resources/QuickLinksTab";
+import { ResourcePagesTab } from "@/components/staff-resources/ResourcePagesTab";
+import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
+import { useActiveRole } from "@/hooks/useActiveRole";
+import { useQuickLinkGroupsByRole, useResourcePagesByRole } from "@/hooks/useStaffResources";
+import { usePolicies } from "@/hooks/usePolicies";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const isMobile = useIsMobile();
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
+  const { activeRole } = useActiveRole();
+  const effectiveRole = activeRole ?? "concierge";
+
+  // Data hooks for resource sub-views
+  const { data: quickLinkGroups = [], isLoading: qlLoading } = useQuickLinkGroupsByRole(effectiveRole);
+  const { data: resourcePages = [], isLoading: rpLoading } = useResourcePagesByRole(effectiveRole);
+  const { data: policies = [], isLoading: polLoading } = usePolicies();
 
   // Placeholder for unread message count - will be replaced with real data
   const unreadCount = 3;
@@ -36,6 +49,9 @@ export default function ConciergeDashboard() {
     "whos-working": "Who's Working",
     templates: "Response Templates",
     resources: "Resources",
+    "resources-quick-links": "Quick Links",
+    "resources-pages": "Resource Pages",
+    "resources-policies": "Policies",
     "lost-found": "Lost & Found",
     qa: "Q&A",
   };
@@ -110,6 +126,24 @@ export default function ConciergeDashboard() {
             <div className="flex-1">
               <StaffResourcesView />
             </div>
+          </div>
+        );
+      case "resources-quick-links":
+        return (
+          <div className="p-4 md:p-8">
+            <QuickLinksTab groups={quickLinkGroups} isLoading={qlLoading} searchTerm="" />
+          </div>
+        );
+      case "resources-pages":
+        return (
+          <div className="p-4 md:p-8">
+            <ResourcePagesTab pages={resourcePages} isLoading={rpLoading} searchTerm="" />
+          </div>
+        );
+      case "resources-policies":
+        return (
+          <div className="p-4 md:p-8">
+            <PoliciesTab policies={policies} isLoading={polLoading} searchTerm="" />
           </div>
         );
       case "lost-found":

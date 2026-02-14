@@ -97,7 +97,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout title="Profile">
-      <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 flex-1 flex flex-col space-y-6">
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-32 w-full rounded-none" />

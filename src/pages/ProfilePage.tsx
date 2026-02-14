@@ -215,18 +215,8 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Request Sick Day Pay Button */}
-            <Button
-              variant="outline"
-              className="w-full rounded-none text-xs uppercase tracking-widest h-10"
-              onClick={() => setSickDayDialogOpen(true)}
-            >
-              <Heart className="h-4 w-4 mr-2" />
-              Request Sick Day Pay
-            </Button>
-
             {/* Sick Day Request History */}
-            {user?.id && <SickDayRequestHistory userId={user.id} />}
+            {user?.id && <SickDayRequestHistory userId={user.id} onRequestSickDay={() => setSickDayDialogOpen(true)} />}
           </>
         )}
       </div>

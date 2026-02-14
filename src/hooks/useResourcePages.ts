@@ -97,8 +97,8 @@ export function useResourcePages(filters?: ResourcePagesFilters) {
   return useQuery({
     queryKey: [RESOURCE_PAGES_KEY, filters],
     queryFn: async () => {
-      let query = supabase
-        .from("resource_pages")
+      let query = (supabase
+        .from("resource_pages") as any)
         .select("*")
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: false });
@@ -148,8 +148,8 @@ export function useResourcePage(pageId: string | undefined) {
     queryFn: async () => {
       if (!pageId) return null;
 
-      const { data, error } = await supabase
-        .from("resource_pages")
+      const { data, error } = await (supabase
+        .from("resource_pages") as any)
         .select("*")
         .eq("id", pageId)
         .single();
@@ -172,8 +172,8 @@ export function useResourcePagesByRole(role: AppRole) {
     queryFn: async () => {
       const isPrivileged = role === "admin" || role === "manager";
 
-      let query = supabase
-        .from("resource_pages")
+      let query = (supabase
+        .from("resource_pages") as any)
         .select("*")
         .eq("is_published", true)
         .order("display_order", { ascending: true })
@@ -206,8 +206,8 @@ export function useCreateResourcePage() {
         searchText = extractSearchText(input.content_json);
       }
 
-      const { data, error } = await supabase
-        .from("resource_pages")
+      const { data, error } = await (supabase
+        .from("resource_pages") as any)
         .insert({
           title: input.title,
           page_type: input.page_type ?? 'builder',
@@ -262,8 +262,8 @@ export function useUpdateResourcePage() {
         updateData.search_text = extractSearchText(input.content_json);
       }
 
-      const { data, error } = await supabase
-        .from("resource_pages")
+      const { data, error } = await (supabase
+        .from("resource_pages") as any)
         .update(updateData)
         .eq("id", id)
         .select()
@@ -287,8 +287,8 @@ export function useDeleteResourcePage() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("resource_pages")
+      const { error } = await (supabase
+        .from("resource_pages") as any)
         .delete()
         .eq("id", id);
 
@@ -311,8 +311,8 @@ export function useDuplicateResourcePage() {
   return useMutation({
     mutationFn: async (pageId: string) => {
       // Fetch the original page
-      const { data: original, error: fetchError } = await supabase
-        .from("resource_pages")
+      const { data: original, error: fetchError } = await (supabase
+        .from("resource_pages") as any)
         .select("*")
         .eq("id", pageId)
         .single();
@@ -322,8 +322,8 @@ export function useDuplicateResourcePage() {
       const originalPage = original as ResourcePage;
 
       // Create duplicate with modified title
-      const { data, error } = await supabase
-        .from("resource_pages")
+      const { data, error } = await (supabase
+        .from("resource_pages") as any)
         .insert({
           title: `${originalPage.title} (Copy)`,
           page_type: originalPage.page_type,

@@ -142,8 +142,8 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
       }
 
       // Fetch staff shifts from staff_shifts table (Sling data)
-      const { data: staffShifts, error: staffShiftsError } = await supabase
-        .from("staff_shifts")
+      const { data: staffShifts, error: staffShiftsError } = await (supabase
+        .from("staff_shifts") as any)
         .select("*")
         .eq("shift_date", dateStr)
         .order("shift_start", { ascending: true });
@@ -206,7 +206,7 @@ export function useShiftSystemData(date: string, shiftType: "AM" | "PM") {
 
       // Build staff summary from Sling data
       const onShiftStaff = shiftStaff.map(shift => ({
-        name: shift.user_name || "Unknown",
+        name: shift.staff_name || "Unknown",
         position: shift.position || "Staff",
         shiftStart: shift.shift_start,
         shiftEnd: shift.shift_end,

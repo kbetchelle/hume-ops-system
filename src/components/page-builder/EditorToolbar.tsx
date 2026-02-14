@@ -84,7 +84,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
       editor
         .chain()
         .focus()
-        .setImage({ src: url } as Record<string, unknown>)
+        .setImage({ src: url } as any)
         .run();
     } catch (err) {
       console.error("Image upload failed:", err);

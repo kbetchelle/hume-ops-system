@@ -184,8 +184,8 @@ export function useDevNotes() {
   return useQuery({
     queryKey: ["dev-notes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("dev_notes")
+      const { data, error } = await (supabase
+        .from("dev_notes" as any) as any)
         .select("*")
         .limit(1)
         .single();
@@ -205,22 +205,22 @@ export function useUpdateDevNotes() {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Try to update existing record
-      const { data: existing } = await supabase
-        .from("dev_notes")
+      const { data: existing } = await (supabase
+        .from("dev_notes" as any) as any)
         .select("id")
         .limit(1)
         .single();
 
       if (existing) {
-        const { error } = await supabase
-          .from("dev_notes")
+        const { error } = await (supabase
+          .from("dev_notes" as any) as any)
           .update({ content, updated_by: user?.id })
           .eq("id", existing.id);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("dev_notes")
+        const { error } = await (supabase
+          .from("dev_notes" as any) as any)
           .insert({ content, updated_by: user?.id });
 
         if (error) throw error;

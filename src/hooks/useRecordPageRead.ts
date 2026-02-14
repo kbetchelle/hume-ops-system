@@ -18,8 +18,8 @@ export function useRecordPageRead(pageId: string | undefined) {
     const checkAndInsert = async () => {
       try {
         // Check if already read
-        const { data: existing } = await supabase
-          .from("resource_page_reads")
+        const { data: existing } = await (supabase
+          .from("resource_page_reads" as any) as any)
           .select("id")
           .eq("page_id", pageId)
           .eq("user_id", user.id)
@@ -32,8 +32,8 @@ export function useRecordPageRead(pageId: string | undefined) {
         const delay = 3000 + Math.random() * 2000;
         timeoutId = setTimeout(async () => {
           // Double-check it still doesn't exist (in case of multiple quick mounts)
-          const { data: stillNotExists } = await supabase
-            .from("resource_page_reads")
+          const { data: stillNotExists } = await (supabase
+            .from("resource_page_reads" as any) as any)
             .select("id")
             .eq("page_id", pageId)
             .eq("user_id", user.id)
@@ -41,7 +41,7 @@ export function useRecordPageRead(pageId: string | undefined) {
 
           if (!stillNotExists) {
             // Insert read receipt
-            await supabase.from("resource_page_reads").insert({
+            await (supabase.from("resource_page_reads" as any) as any).insert({
               page_id: pageId,
               user_id: user.id,
             });

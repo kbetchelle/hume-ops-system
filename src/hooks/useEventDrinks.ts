@@ -105,19 +105,19 @@ export function useCafeStaffNames() {
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       const dateStr = sixtyDaysAgo.toISOString().split('T')[0];
 
-      const { data, error } = await supabase
-        .from('staff_shifts')
-        .select('user_name')
+      const { data, error } = await (supabase
+        .from('staff_shifts') as any)
+        .select('staff_name')
         .or('position.ilike.%cafe%,position.ilike.%barista%')
         .gte('shift_date', dateStr)
-        .not('user_name', 'is', null);
+        .not('staff_name', 'is', null);
 
       if (error) throw error;
 
       // Deduplicate and sort
       const names = [...new Set(
         (data ?? [])
-          .map((d) => d.user_name)
+          .map((d) => d.staff_name)
           .filter((n): n is string => !!n)
       )].sort();
 

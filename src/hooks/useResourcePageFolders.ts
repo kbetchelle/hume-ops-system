@@ -50,8 +50,8 @@ export function useResourcePageFolders() {
   return useQuery({
     queryKey: [RESOURCE_PAGE_FOLDERS_KEY],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resource_page_folders")
+      const { data, error } = await (supabase
+        .from("resource_page_folders" as any) as any)
         .select("*")
         .order("display_order", { ascending: true })
         .order("name", { ascending: true });
@@ -71,8 +71,8 @@ export function useResourcePageFolder(folderId: string | undefined) {
     queryFn: async () => {
       if (!folderId) return null;
 
-      const { data, error } = await supabase
-        .from("resource_page_folders")
+      const { data, error } = await (supabase
+        .from("resource_page_folders" as any) as any)
         .select("*")
         .eq("id", folderId)
         .single();
@@ -94,8 +94,8 @@ export function useCreateFolder() {
 
   return useMutation({
     mutationFn: async (input: CreateFolderInput) => {
-      const { data, error } = await supabase
-        .from("resource_page_folders")
+      const { data, error } = await (supabase
+        .from("resource_page_folders" as any) as any)
         .insert({
           name: input.name,
           description: input.description ?? null,
@@ -125,8 +125,8 @@ export function useUpdateFolder() {
   return useMutation({
     mutationFn: async (input: UpdateFolderInput) => {
       const { id, ...rest } = input;
-      const { data, error } = await supabase
-        .from("resource_page_folders")
+      const { data, error } = await (supabase
+        .from("resource_page_folders" as any) as any)
         .update(rest)
         .eq("id", id)
         .select()
@@ -150,8 +150,8 @@ export function useDeleteFolder() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("resource_page_folders")
+      const { error } = await (supabase
+        .from("resource_page_folders" as any) as any)
         .delete()
         .eq("id", id);
 
@@ -179,8 +179,8 @@ export function useReorderFolders() {
       // Update each folder's display_order
       const updates = folders.map((folder) =>
         supabase
-          .from("resource_page_folders")
-          .update({ display_order: folder.display_order })
+          .from("resource_page_folders" as any)
+          .update({ display_order: folder.display_order } as any)
           .eq("id", folder.id)
       );
 

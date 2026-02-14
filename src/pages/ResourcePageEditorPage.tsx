@@ -73,7 +73,10 @@ export function ResourcePageEditorPage() {
     isNew ? undefined : pageId
   );
   const { data: folders = [] } = useResourcePageFolders();
-  const { canEdit, isManager, isDelegatedEditor, isLoading: permissionLoading } = useCanEditPage(pageId);
+  const editPermission = useCanEditPage(pageId);
+  const canEdit = editPermission.data?.canEdit ?? false;
+  const isManager = editPermission.data?.isManager ?? false;
+  const isDelegatedEditor = editPermission.data?.isDelegatedEditor ?? false;
   const createMutation = useCreateResourcePage();
   const updateMutation = useUpdateResourcePage();
   const deleteMutation = useDeleteResourcePage();
@@ -95,11 +98,11 @@ export function ResourcePageEditorPage() {
 
   // Redirect if no permission (except for new pages)
   useEffect(() => {
-    if (!isNew && !permissionLoading && !canEdit && pageId) {
+    if (!isNew && !editPermission.isLoading && !canEdit && pageId) {
       toast.error("You do not have permission to edit this page");
       navigate(`/dashboard/resources/pages/${pageId}`);
     }
-  }, [canEdit, permissionLoading, pageId, isNew, navigate]);
+  }, [canEdit, editPermission.isLoading, pageId, isNew, navigate]);
 
   // Load existing page data
   useEffect(() => {

@@ -584,7 +584,7 @@ function RoleSwitcher({
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-auto py-0 w-full px-0")}>
           {!collapsed && <>
-              <span className="text-[13px] uppercase tracking-widest flex-1 text-left pl-2">
+              <span className="text-xs uppercase tracking-widest flex-1 text-left pl-2">
                 {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
               </span>
               <ChevronDown className="h-3 w-3 shrink-0" />
@@ -596,7 +596,7 @@ function RoleSwitcher({
         {availableRoles.map(userRole => {
         const roleInfo = ROLES.find(r => r.value === userRole.role);
         const isCurrentView = currentViewRole === userRole.role || currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant" || currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant";
-        return <DropdownMenuItem key={userRole.id} onClick={() => handleRoleSwitch(userRole.role)} className={cn("text-[10px] uppercase tracking-widest cursor-pointer rounded-none", isCurrentView && "bg-muted")}>
+        return <DropdownMenuItem key={userRole.id} onClick={() => handleRoleSwitch(userRole.role)} className={cn("text-xs uppercase tracking-widest cursor-pointer rounded-none", isCurrentView && "bg-muted")}>
               {getRoleLabel(userRole.role)}
             </DropdownMenuItem>;
       })}
@@ -647,25 +647,25 @@ function UserInfoDropdown({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
           <DropdownMenuLabel className="font-normal">
-            <p className="text-[10px] uppercase tracking-widest font-normal">
+            <p className="text-xs uppercase tracking-widest font-normal">
               {profile?.full_name || "User"}
             </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
             Account Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bug className="mr-2 h-3 w-3" />
             Report a Bug
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSignOut} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={handleSignOut} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <LogOut className="mr-2 h-3 w-3" />
             Sign out
           </DropdownMenuItem>

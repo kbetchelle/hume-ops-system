@@ -245,16 +245,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Account Settings link */}
-            <Button
-              variant="outline"
-              className="w-full rounded-none text-xs uppercase tracking-widest h-10"
-              onClick={() => navigate("/dashboard/settings")}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Account Settings
-            </Button>
-
             {/* Request Sick Day Pay Button */}
             <Button
               variant="outline"

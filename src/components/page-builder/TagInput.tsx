@@ -26,7 +26,7 @@ export interface TagInputProps {
 }
 
 export function TagInput({
-  value,
+  value = [],
   onChange,
   placeholder = "Select tags...",
 }: TagInputProps) {

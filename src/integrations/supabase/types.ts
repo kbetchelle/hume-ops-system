@@ -3784,6 +3784,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sick_day_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string
+          requested_dates: string[]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by_id: string | null
+          reviewed_by_name: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes: string
+          requested_dates: string[]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_id?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string
+          requested_dates?: string[]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_id?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       sling_shifts_staging: {
         Row: {
           cursor_position: string | null

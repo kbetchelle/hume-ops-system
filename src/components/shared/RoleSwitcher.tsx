@@ -54,7 +54,7 @@ export function RoleSwitcher() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full gap-2 rounded-none text-[13px] uppercase tracking-widest justify-start px-0 h-auto py-1"
+          className="w-full gap-2 rounded-none text-xs uppercase tracking-widest justify-start px-0 h-auto py-1"
         >
           <span className="pl-2 whitespace-normal text-left leading-tight">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
           <ChevronDown className="h-3 w-3 shrink-0" />
@@ -72,7 +72,7 @@ export function RoleSwitcher() {
               onClick={() => handleSwitchRole(userRole.role)}
               className="flex items-center justify-between rounded-none cursor-pointer"
             >
-              <span className="text-[13px] uppercase tracking-widest">
+              <span className="text-xs uppercase tracking-widest">
                 {getRoleLabel(userRole.role)}
               </span>
               {isCurrentView && (

@@ -160,7 +160,7 @@ export function SickDayRequestHistory({ userId, onRequestSickDay }: SickDayReque
 
                   {/* Notes (truncated) */}
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                    <p className="uppercase tracking-widest text-muted-foreground mb-1 text-xs">
                       Notes
                     </p>
                     <p className="text-xs text-muted-foreground line-clamp-2">
@@ -173,7 +173,7 @@ export function SickDayRequestHistory({ userId, onRequestSickDay }: SickDayReque
                   <div className="mt-3 pt-3 border-t space-y-2">
                       {request.reviewed_by_name &&
                     <div>
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <p className="uppercase tracking-widest text-muted-foreground text-xs">
                             Reviewed By
                           </p>
                           <p className="text-xs">{request.reviewed_by_name}</p>
@@ -181,7 +181,7 @@ export function SickDayRequestHistory({ userId, onRequestSickDay }: SickDayReque
                     }
                       {request.reviewed_at &&
                     <div>
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <p className="uppercase tracking-widest text-muted-foreground text-xs">
                             Reviewed On
                           </p>
                           <p className="text-xs">

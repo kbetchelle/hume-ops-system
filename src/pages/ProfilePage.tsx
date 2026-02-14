@@ -108,7 +108,7 @@ export default function ProfilePage() {
             {/* Combined Profile Card */}
             <Card className="rounded-none">
               <CardContent className="p-6">
-                <div className="flex items-start gap-6 mb-6">
+                <div className="flex items-center gap-6 mb-6">
                   {/* Avatar */}
                   <div className="h-16 w-16 bg-muted flex items-center justify-center shrink-0">
                     <span className="text-lg font-light tracking-widest">

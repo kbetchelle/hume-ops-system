@@ -89,18 +89,19 @@ export function WhosWorkingView() {
     queryKey: ["staff-shifts-today", todayLA],
     queryFn: async () => {
       // First fetch shifts for today
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from("staff_shifts")
-        .select("id, user_name, position, shift_start, shift_end, sling_user_id")
+      const { data: shiftsData, error: shiftsError } = await (supabase
+        .from("staff_shifts") as any)
+        .select("id, staff_name, position, shift_start, shift_end, sling_user_id")
         .eq("shift_date", todayLA)
         .order("shift_start", { ascending: true });
 
       if (shiftsError) throw shiftsError;
-      if (!shiftsData || shiftsData.length === 0) return [];
+      const shifts = (shiftsData ?? []) as any[];
+      if (shifts.length === 0) return [];
 
       // Get unique sling_user_ids to fetch names
-      const slingUserIds = shiftsData
-        .map(s => s.sling_user_id)
+      const slingUserIds = shifts
+        .map((s: any) => s.sling_user_id)
         .filter(id => id != null)
         .map(id => String(id));
       const uniqueSlingUserIds = [...new Set(slingUserIds)];
@@ -108,8 +109,8 @@ export function WhosWorkingView() {
       // Fetch sling_users separately if we have IDs
       let slingUsersMap: Record<string, { first_name: string; last_name: string }> = {};
       if (uniqueSlingUserIds.length > 0) {
-        const { data: slingUsers } = await supabase
-          .from("sling_users")
+        const { data: slingUsers } = await (supabase
+          .from("sling_users") as any)
           .select("sling_user_id, first_name, last_name")
           .in("sling_user_id", uniqueSlingUserIds.map(id => parseInt(id, 10)));
         
@@ -121,11 +122,11 @@ export function WhosWorkingView() {
       }
 
       // Map shifts with full names from sling_users
-      return shiftsData.map((shift) => {
+      return shifts.map((shift: any) => {
         const slingUser = shift.sling_user_id ? slingUsersMap[String(shift.sling_user_id)] : null;
         const fullName = slingUser 
           ? [slingUser.first_name, slingUser.last_name].filter(Boolean).join(' ') 
-          : shift.user_name || 'Unknown';
+          : shift.staff_name || 'Unknown';
 
         return {
           id: shift.id,

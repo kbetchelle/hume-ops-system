@@ -6,7 +6,9 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { uploadPdf, type PdfUploadResult } from './uploadPdf';
+import { uploadPdf } from './uploadPdf';
+import type { PdfUploadResult } from './uploadPdf';
+export type { PdfUploadResult } from './uploadPdf';
 
 /**
  * Replace an existing PDF file with a new one

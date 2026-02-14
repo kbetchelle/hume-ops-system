@@ -403,7 +403,7 @@ function StaffCell({
   const [showAdd, setShowAdd] = useState(false);
   const [customName, setCustomName] = useState("");
 
-  const available = (cafeStaff ?? []).filter((n) => !staff.includes(n));
+  const available = ((cafeStaff ?? []) as string[]).filter((n) => !staff.includes(n));
 
   const addName = (name: string) => {
     if (name && !staff.includes(name)) {

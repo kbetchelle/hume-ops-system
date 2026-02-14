@@ -10,14 +10,14 @@ export function useAvailableTags() {
     queryKey: ["resource-page-tags"],
     queryFn: async () => {
       // Fetch all pages with tags
-      const { data, error } = await supabase
-        .from("resource_pages")
+      const { data, error } = await (supabase
+        .from("resource_pages") as any)
         .select("tags");
 
       if (error) throw error;
 
       // Extract and flatten all tags
-      const allTags = (data ?? [])
+      const allTags = ((data ?? []) as any[])
         .flatMap((page) => page.tags || [])
         .filter((tag): tag is string => Boolean(tag));
 

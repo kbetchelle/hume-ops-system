@@ -53,8 +53,8 @@ export function usePageReadReceipts(pageId: string | undefined): PageReadReceipt
       }
 
       // 1. Fetch all read receipts for this page
-      const { data: reads, error: readsError } = await supabase
-        .from("resource_page_reads")
+      const { data: reads, error: readsError } = await (supabase
+        .from("resource_page_reads" as any) as any)
         .select(
           `
           user_id,

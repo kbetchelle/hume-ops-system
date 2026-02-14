@@ -18,10 +18,11 @@ import {
 import { useAvailableTags } from "@/hooks/useAvailableTags";
 import { cn } from "@/lib/utils";
 
-interface TagInputProps {
+export interface TagInputProps {
   value: string[];
   onChange: (tags: string[]) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function TagInput({

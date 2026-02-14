@@ -126,7 +126,7 @@ export function ResourcePageEditorPage() {
   }, [contentJson, title, isPublished, assignedRoles, folderId, tags, coverImageUrl]);
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    if (!(title ?? "").trim()) {
       toast.error("Please enter a title");
       return;
     }
@@ -139,7 +139,7 @@ export function ResourcePageEditorPage() {
     try {
       if (isNew) {
         const result = await createMutation.mutateAsync({
-          title: title.trim(),
+          title: (title ?? "").trim(),
           content_json: contentJson,
           is_published: isPublished,
           assigned_roles: assignedRoles,
@@ -155,7 +155,7 @@ export function ResourcePageEditorPage() {
       } else if (pageId) {
         await updateMutation.mutateAsync({
           id: pageId,
-          title: title.trim(),
+          title: (title ?? "").trim(),
           content_json: contentJson,
           is_published: isPublished,
           assigned_roles: assignedRoles,
@@ -270,7 +270,7 @@ export function ResourcePageEditorPage() {
 
             <Button
               onClick={handleSave}
-              disabled={isSaving || !title.trim()}
+              disabled={isSaving || !(title ?? "").trim()}
               className="rounded-none"
             >
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

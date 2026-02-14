@@ -1,28 +1,36 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSickDayRequests } from "@/hooks/useSickDayRequests";
 import { cn } from "@/lib/utils";
 
 interface SickDayRequestHistoryProps {
   userId: string;
+  onRequestSickDay?: () => void;
 }
 
-export function SickDayRequestHistory({ userId }: SickDayRequestHistoryProps) {
+export function SickDayRequestHistory({ userId, onRequestSickDay }: SickDayRequestHistoryProps) {
   const { data: requests, isLoading } = useSickDayRequests(userId);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
       <Card className="rounded-none">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Sick Day Pay Requests
           </CardTitle>
+          {onRequestSickDay && (
+            <Button variant="outline" size="sm" className="rounded-none text-[10px] uppercase tracking-widest h-7 px-2" onClick={onRequestSickDay}>
+              <Plus className="h-3 w-3 mr-1" />
+              Request
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -38,11 +46,17 @@ export function SickDayRequestHistory({ userId }: SickDayRequestHistoryProps) {
   if (!requests || requests.length === 0) {
     return (
       <Card className="rounded-none">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Sick Day Pay Requests
           </CardTitle>
+          {onRequestSickDay && (
+            <Button variant="outline" size="sm" className="rounded-none text-[10px] uppercase tracking-widest h-7 px-2" onClick={onRequestSickDay}>
+              <Plus className="h-3 w-3 mr-1" />
+              Request
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
@@ -89,11 +103,17 @@ export function SickDayRequestHistory({ userId }: SickDayRequestHistoryProps) {
 
   return (
     <Card className="rounded-none">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           Sick Day Pay Requests
         </CardTitle>
+        {onRequestSickDay && (
+          <Button variant="outline" size="sm" className="rounded-none text-[10px] uppercase tracking-widest h-7 px-2" onClick={onRequestSickDay}>
+            <Plus className="h-3 w-3 mr-1" />
+            Request
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-2">
         {requests.map((request) => {

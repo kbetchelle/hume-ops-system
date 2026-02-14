@@ -137,7 +137,12 @@ export default function ConciergeDashboard() {
       case "resources-pages":
         return (
           <div className="p-4 md:p-8">
-            <ResourcePagesTab pages={resourcePages} isLoading={rpLoading} searchTerm="" />
+            <ResourcePagesTab 
+              pages={resourcePages} 
+              isLoading={rpLoading} 
+              searchTerm="" 
+              returnPath="/dashboard/concierge"
+            />
           </div>
         );
       case "resources-policies":

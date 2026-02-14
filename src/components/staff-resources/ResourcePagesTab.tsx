@@ -12,14 +12,43 @@ import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Validates a return path to prevent open redirect attacks.
+ * Only allows relative paths within the application that start with /dashboard/
+ * @param path - The path to validate
+ * @returns The validated path or null if invalid
+ */
+function isValidReturnPath(path: string | null | undefined): string | null {
+  if (!path) return null;
+  
+  // Must be a string
+  if (typeof path !== 'string') return null;
+  
+  // Must start with /dashboard/ (our app's base path)
+  if (!path.startsWith('/dashboard/')) return null;
+  
+  // Must not contain protocol schemes (http://, https://, javascript:, data:, etc.)
+  if (path.includes('://') || path.startsWith('javascript:') || path.startsWith('data:')) return null;
+  
+  // Must not contain backslashes (Windows path traversal)
+  if (path.includes('\\')) return null;
+  
+  // Must not try to navigate to parent directories in a suspicious way
+  if (path.includes('../') || path.includes('/..')) return null;
+  
+  return path;
+}
+
 export function ResourcePagesTab({
   pages,
   isLoading,
   searchTerm,
+  returnPath,
 }: {
   pages: ResourcePage[];
   isLoading: boolean;
   searchTerm: string;
+  returnPath?: string;
 }) {
   const navigate = useNavigate();
   const { data: folders = [] } = useResourcePageFolders();
@@ -198,7 +227,15 @@ export function ResourcePagesTab({
                 <Card
                   data-resource-id={page.id}
                   className="rounded-none overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => navigate(`/dashboard/resources/pages/${page.id}`)}
+                  onClick={() => {
+                    const url = `/dashboard/resources/pages/${page.id}`;
+                    const validReturnPath = isValidReturnPath(returnPath);
+                    if (validReturnPath) {
+                      navigate(`${url}?returnTo=${encodeURIComponent(validReturnPath)}`);
+                    } else {
+                      navigate(url);
+                    }
+                  }}
                 >
                   <CardContent className="p-0">
                     {/* Cover Image */}

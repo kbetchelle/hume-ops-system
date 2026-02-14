@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Download, Flag, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,38 @@ import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { format } from "date-fns";
 
+/**
+ * Validates a return path to prevent open redirect attacks.
+ * Only allows relative paths within the application that start with /dashboard/
+ * @param path - The path to validate
+ * @returns The validated path or null if invalid
+ */
+function isValidReturnPath(path: string | null): string | null {
+  if (!path) return null;
+  
+  // Must be a string
+  if (typeof path !== 'string') return null;
+  
+  // Must start with /dashboard/ (our app's base path)
+  if (!path.startsWith('/dashboard/')) return null;
+  
+  // Must not contain protocol schemes (http://, https://, javascript:, data:, etc.)
+  if (path.includes('://') || path.startsWith('javascript:') || path.startsWith('data:')) return null;
+  
+  // Must not contain backslashes (Windows path traversal)
+  if (path.includes('\\')) return null;
+  
+  // Must not try to navigate to parent directories in a suspicious way
+  if (path.includes('../') || path.includes('/..')) return null;
+  
+  return path;
+}
+
 export function ResourcePageReadingPage() {
   const { pageId } = useParams<{ pageId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   const { data: page, isLoading } = useResourcePage(pageId);
   const { data: folders = [] } = useResourcePageFolders();
@@ -25,7 +54,13 @@ export function ResourcePageReadingPage() {
   useRecordPageRead(pageId);
 
   const handleBack = () => {
-    navigate("/dashboard/resources/pages");
+    const validReturnPath = isValidReturnPath(returnTo);
+    if (validReturnPath) {
+      navigate(validReturnPath);
+    } else {
+      // Fall back to default safe path if returnTo is invalid or missing
+      navigate("/dashboard/resources/pages");
+    }
   };
 
   const handleDownloadPDF = () => {

@@ -131,7 +131,7 @@ export default function ProfilePage() {
                       <p className="uppercase tracking-widest text-muted-foreground text-xs">
                         Email
                       </p>
-                      <p className="text-xs">{user?.email}</p>
+                      <p className="text-sm">{user?.email}</p>
                     </div>
                   </div>
 

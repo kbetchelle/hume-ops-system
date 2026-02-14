@@ -28,7 +28,7 @@ const ROLE_GROUPS = {
 };
 
 export function RoleAssignmentCheckboxes({
-  value,
+  value = [],
   onChange,
   disabled = false,
 }: RoleAssignmentCheckboxesProps) {

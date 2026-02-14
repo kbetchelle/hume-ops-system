@@ -90,29 +90,9 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
   if (role && BOH_ROLES.includes(role)) {
     return [];
   }
-  // Cafe role: Checklist + Event Drinks + shared items
+  // Cafe role: grouped nav is handled separately in SidebarNav, return empty here
   if (role === "cafe") {
-    return [{
-      title: "Checklist",
-      url: "/dashboard/cafe",
-      icon: ClipboardList
-    }, {
-      title: "Event Drinks",
-      url: "/dashboard/cafe/event-drinks",
-      icon: Wine
-    }, {
-      title: "Messages",
-      url: "/dashboard/messages",
-      icon: MessageSquare
-    }, {
-      title: "Announcements",
-      url: "/dashboard/announcements",
-      icon: Bell
-    }, {
-      title: "Resources",
-      url: "/dashboard/resources",
-      icon: FolderOpen
-    }];
+    return [];
   }
   const baseItems: NavItem[] = [{
     title: "Dashboard",
@@ -362,6 +342,21 @@ function SidebarNav() {
   const effectiveRole = getEffectiveRole();
   const navItems = getNavItems(effectiveRole, permissions);
   const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
+  const isCafeRole = effectiveRole === "cafe";
+
+  // Cafe grouped nav items
+  const cafeMainItems: NavItem[] = [
+    { title: "Checklists", url: "/dashboard/cafe", icon: ClipboardList },
+    { title: "Shift Notes", url: "/dashboard/boh-notes", icon: HelpCircle },
+  ];
+  const cafeCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
+  ];
+  const cafeRefItems: NavItem[] = [
+    { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+  ];
 
   // BoH grouped nav items
   const bohChecklistUrl = effectiveRole === "floater" ? "/dashboard/floater" : "/dashboard/spa";
@@ -429,12 +424,18 @@ function SidebarNav() {
           <RoleSwitcher collapsed={collapsed} />
         </div>
 
-        {/* BoH grouped navigation */}
+        {/* BoH / Cafe grouped navigation */}
         {isBohRole ? (
           <>
             {renderGroup("Main", bohMainItems)}
             {renderGroup("Communications", bohCommsItems)}
             {renderGroup("References", bohRefItems)}
+          </>
+        ) : isCafeRole ? (
+          <>
+            {renderGroup("Main", cafeMainItems)}
+            {renderGroup("Communications", cafeCommsItems)}
+            {renderGroup("References", cafeRefItems)}
           </>
         ) : (
         <SidebarGroup>

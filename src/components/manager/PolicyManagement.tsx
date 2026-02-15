@@ -511,11 +511,11 @@ export function PolicyManagement() {
                 className={cn("cursor-pointer hover:border-primary/50 transition-colors", !policy.is_active && "opacity-60")}
                 onClick={() => handleEditPolicy(policy)}
               >
-                <CardContent className="p-4">
+                <CardContent className="px-[11px] py-4">
                   <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[20px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {policy.category || "Uncategorized"}
                       </span>
                       {!policy.is_active && (

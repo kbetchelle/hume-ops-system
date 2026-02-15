@@ -151,13 +151,13 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
 
 // Manager Tools items for admin
 const managerToolsItems: SettingsSubItem[] = [{
-  title: "Checklists",
-  url: "/dashboard/checklists",
-  icon: ClipboardList
-}, {
   title: "Inbox",
   url: "/dashboard/inbox",
   icon: Inbox
+}, {
+  title: "Checklists",
+  url: "/dashboard/checklists",
+  icon: ClipboardList
 }, {
   title: "Staff Resources",
   url: "/dashboard/staff-resources",

@@ -53,6 +53,7 @@ export default function ConciergeDashboard() {
     "resources-pages": "Resource Pages",
     "resources-policies": "Policies",
     "lost-found": "Lost & Found",
+    packages: "Package Tracking",
     qa: "Q&A",
   };
 
@@ -161,6 +162,14 @@ export default function ConciergeDashboard() {
               <LostAndFoundTab />
             </div>
           </div>
+        );
+      case "packages":
+        return (
+          <iframe
+            src="/dashboard/package-tracking"
+            className="w-full min-h-screen border-0"
+            title="Package Tracking"
+          />
         );
       default:
         return (

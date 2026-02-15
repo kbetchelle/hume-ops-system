@@ -87,6 +87,8 @@ import ClassSchedulePage from "./pages/dashboards/ClassSchedulePage";
 import AnnouncementsPage from "./pages/dashboards/AnnouncementsPage";
 import DocumentsPage from "./pages/dashboards/DocumentsPage";
 import WhosWorkingPage from "./pages/dashboards/WhosWorkingPage";
+import PackageTrackingPage from "./pages/dashboards/PackageTrackingPage";
+import MyPackagesPage from "./pages/dashboards/MyPackagesPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -406,6 +408,26 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
                   <WhosWorkingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Package Tracking for Concierge, Cafe, and Management */}
+            <Route
+              path="/dashboard/package-tracking"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "cafe"]}>
+                  <PackageTrackingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* My Packages - for all authenticated users */}
+            <Route
+              path="/dashboard/my-packages"
+              element={
+                <ProtectedRoute>
+                  <MyPackagesPage />
                 </ProtectedRoute>
               }
             />

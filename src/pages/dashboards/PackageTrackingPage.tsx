@@ -1,0 +1,351 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Filter } from "lucide-react";
+import { AddPackageDialog } from "@/components/packages/AddPackageDialog";
+import { PackageTable } from "@/components/packages/PackageTable";
+import { PackageDetailsDialog } from "@/components/packages/PackageDetailsDialog";
+import { MovePackageDialog } from "@/components/packages/MovePackageDialog";
+import { BulkPackageActions } from "@/components/packages/BulkPackageActions";
+import { usePackages, usePackageStats, PackageWithRecipient } from "@/hooks/usePackages";
+import { useUpdatePackage } from "@/hooks/usePackageMutations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+
+export default function PackageTrackingPage() {
+  const [activeTab, setActiveTab] = useState<"pending_pickup" | "picked_up" | "archived">("pending_pickup");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [packageToMove, setPackageToMove] = useState<PackageWithRecipient | null>(null);
+  const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [showFilters, setShowFilters] = useState(false);
+
+  const { data: packages = [], isLoading } = usePackages({
+    status: activeTab,
+    searchQuery,
+    location: locationFilter,
+    dateFrom: dateFrom?.toISOString(),
+    dateTo: dateTo?.toISOString(),
+  });
+
+  const { data: stats } = usePackageStats();
+  const updatePackage = useUpdatePackage();
+
+  const handleSelectPackage = (id: string) => {
+    setSelectedPackages((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedPackages(packages.map((p) => p.id));
+    } else {
+      setSelectedPackages([]);
+    }
+  };
+
+  const handleViewDetails = (pkg: PackageWithRecipient) => {
+    setSelectedPackageId(pkg.id);
+    setIsDetailsOpen(true);
+  };
+
+  const handleMovePackage = (pkg: PackageWithRecipient) => {
+    setPackageToMove(pkg);
+    setIsMoveDialogOpen(true);
+  };
+
+  const handleMarkPickedUp = async (pkg: PackageWithRecipient) => {
+    await updatePackage.mutateAsync({
+      id: pkg.id,
+      status: "picked_up",
+    });
+  };
+
+  const handleBulkMove = () => {
+    setPackageToMove(null);
+    setIsMoveDialogOpen(true);
+  };
+
+  const handleMoveDialogClose = () => {
+    setIsMoveDialogOpen(false);
+    setPackageToMove(null);
+    setSelectedPackages([]);
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setLocationFilter("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const activeFiltersCount = [searchQuery, locationFilter, dateFrom, dateTo].filter(Boolean).length;
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Package Tracking</h1>
+          <p className="text-muted-foreground">
+            Manage incoming packages for residents and staff
+          </p>
+        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} size="lg">
+          <Plus className="mr-2 h-5 w-5" />
+          Add Package
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Pending Pickup
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Picked Up (Today)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pickedUp}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Archived
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.archived}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Search by tracking code or recipient..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary">{activeFiltersCount} filter(s)</Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                {showFilters ? "Hide" : "Show"} Filters
+              </Button>
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Input
+                  placeholder="Filter by location..."
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Date From</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      {dateFrom ? format(dateFrom, "PPP") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Date To</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      {dateTo ? format(dateTo, "PPP") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
+        </CardHeader>
+      </Card>
+
+      {/* Tabs and Table */}
+      <Card>
+        <CardContent className="pt-6">
+          <Tabs value={activeTab} onValueChange={(v: any) => {
+            setActiveTab(v);
+            setSelectedPackages([]);
+          }}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="pending_pickup">
+                Pending Pickup
+                {stats && stats.pending > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {stats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="picked_up">Picked Up</TabsTrigger>
+              <TabsTrigger value="archived">Archived</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pending_pickup" className="mt-6">
+              <PackageTable
+                packages={packages}
+                isLoading={isLoading}
+                selectedPackages={selectedPackages}
+                onSelectPackage={handleSelectPackage}
+                onSelectAll={handleSelectAll}
+                onViewDetails={handleViewDetails}
+                onMovePackage={handleMovePackage}
+                onMarkPickedUp={handleMarkPickedUp}
+              />
+            </TabsContent>
+
+            <TabsContent value="picked_up" className="mt-6">
+              <PackageTable
+                packages={packages}
+                isLoading={isLoading}
+                selectedPackages={selectedPackages}
+                onSelectPackage={handleSelectPackage}
+                onSelectAll={handleSelectAll}
+                onViewDetails={handleViewDetails}
+                onMovePackage={handleMovePackage}
+                onMarkPickedUp={handleMarkPickedUp}
+              />
+            </TabsContent>
+
+            <TabsContent value="archived" className="mt-6">
+              <PackageTable
+                packages={packages}
+                isLoading={isLoading}
+                selectedPackages={selectedPackages}
+                onSelectPackage={handleSelectPackage}
+                onSelectAll={handleSelectAll}
+                onViewDetails={handleViewDetails}
+                onMovePackage={handleMovePackage}
+                onMarkPickedUp={handleMarkPickedUp}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      <AddPackageDialog
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+      />
+
+      <PackageDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedPackageId(null);
+        }}
+        packageId={selectedPackageId}
+        onMove={() => {
+          const pkg = packages.find((p) => p.id === selectedPackageId);
+          if (pkg) {
+            setIsDetailsOpen(false);
+            handleMovePackage(pkg);
+          }
+        }}
+        onMarkPickedUp={() => {
+          const pkg = packages.find((p) => p.id === selectedPackageId);
+          if (pkg) {
+            handleMarkPickedUp(pkg);
+            setIsDetailsOpen(false);
+          }
+        }}
+      />
+
+      <MovePackageDialog
+        isOpen={isMoveDialogOpen}
+        onClose={handleMoveDialogClose}
+        packageIds={selectedPackages.length > 0 ? selectedPackages : packageToMove ? [packageToMove.id] : []}
+        currentLocation={packageToMove?.current_location}
+      />
+
+      {/* Bulk Actions Toolbar */}
+      <BulkPackageActions
+        selectedCount={selectedPackages.length}
+        selectedPackageIds={selectedPackages}
+        onClearSelection={() => setSelectedPackages([])}
+        onBulkMove={handleBulkMove}
+      />
+    </div>
+  );
+}

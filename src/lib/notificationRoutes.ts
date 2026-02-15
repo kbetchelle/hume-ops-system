@@ -17,6 +17,9 @@ export function getNotificationRoute(
     member_alert: '/dashboard/members/all-clients',
     class_turnover: '/dashboard/class-schedule',
     mat_cleaning: '/dashboard/my-checklists',
+    package_arrived: data?.packageId
+      ? `/dashboard/my-packages?packageId=${data.packageId}`
+      : '/dashboard/my-packages',
   };
 
   return routes[type] || '/dashboard/notifications';

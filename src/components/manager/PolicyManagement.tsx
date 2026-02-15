@@ -180,7 +180,7 @@ function PolicyCreateEditDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xs uppercase tracking-widest">
+          <DialogTitle className="text-2xl uppercase tracking-widest">
             {isEditing ? "EDIT POLICY SECTION" : "CREATE POLICY SECTION"}
           </DialogTitle>
         </DialogHeader>

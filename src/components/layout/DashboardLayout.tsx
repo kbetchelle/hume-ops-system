@@ -166,6 +166,10 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Master Calendar",
   url: "/dashboard/master-calendar",
   icon: Calendar
+}, {
+  title: "Package Tracking",
+  url: "/dashboard/package-tracking",
+  icon: Package
 }];
 
 // Settings menu structure for admin
@@ -339,6 +343,7 @@ function SidebarNav() {
     { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
   ];
   const cafeRefItems: NavItem[] = [
+    { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
     { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];

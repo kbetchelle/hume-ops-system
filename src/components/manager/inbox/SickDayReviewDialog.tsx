@@ -39,7 +39,7 @@ export function SickDayReviewDialog({
     reviewRequest.mutate(
       {
         requestId: request.id,
-        status: action,
+        status: action === "approve" ? "approved" : "rejected",
         reviewNotes: reviewNotes.trim() || undefined,
       },
       {

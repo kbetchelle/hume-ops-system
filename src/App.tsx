@@ -89,6 +89,7 @@ import DocumentsPage from "./pages/dashboards/DocumentsPage";
 import WhosWorkingPage from "./pages/dashboards/WhosWorkingPage";
 import PackageTrackingPage from "./pages/dashboards/PackageTrackingPage";
 import MyPackagesPage from "./pages/dashboards/MyPackagesPage";
+import BoHNotesPage from "./pages/dashboards/BoHNotesPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -398,6 +399,17 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
                   <DocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Who's Working for BOH and Concierge */}
+
+            {/* BoH Notes for Management */}
+            <Route
+              path="/dashboard/boh-notes"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
+                  <BoHNotesPage />
                 </ProtectedRoute>
               }
             />

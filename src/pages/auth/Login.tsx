@@ -128,7 +128,7 @@ export default function Login() {
                       to="/forgot-password" 
                       className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
                     >
-                      Forgot?
+                      Forgot Password
                     </Link>
                   </div>
                   <FormControl>
@@ -190,7 +190,7 @@ export default function Login() {
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
                 <span className="bg-background px-2 text-muted-foreground">or</span>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function Login() {
           </form>
         </Form>
 
-        <p className="text-[10px] text-center uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs text-center uppercase tracking-widest text-muted-foreground">
           No account?{" "}
           <Link to="/signup" className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300 text-foreground">
             Create one

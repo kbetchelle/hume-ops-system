@@ -86,66 +86,13 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       icon: Package
     }];
   }
-  // BOH: Checklist (dashboard) + Class Schedule, Announcements, Lost & Found, Documents, Who's Working
+  // BOH: grouped nav is handled separately in SidebarNav, return empty here
   if (role && BOH_ROLES.includes(role)) {
-    const checklistUrl = role === "floater" ? "/dashboard/floater" : "/dashboard/spa";
-    return [{
-      title: "Checklist",
-      url: checklistUrl,
-      icon: ClipboardList
-    }, {
-      title: "Messages",
-      url: "/dashboard/messages",
-      icon: MessageSquare
-    }, {
-      title: "Class Schedule",
-      url: "/dashboard/class-schedule",
-      icon: Calendar
-    }, {
-      title: "Announcements",
-      url: "/dashboard/announcements",
-      icon: Bell
-    }, {
-      title: "Lost & Found",
-      url: "/dashboard/lost-and-found",
-      icon: Package
-    }, {
-      title: "Documents",
-      url: "/dashboard/documents",
-      icon: FileText
-    }, {
-      title: "Who's Working",
-      url: "/dashboard/whos-working",
-      icon: Users
-    }, {
-      title: "Resources",
-      url: "/dashboard/resources",
-      icon: FolderOpen
-    }];
+    return [];
   }
-  // Cafe role: Checklist + Event Drinks + shared items
+  // Cafe role: grouped nav is handled separately in SidebarNav, return empty here
   if (role === "cafe") {
-    return [{
-      title: "Checklist",
-      url: "/dashboard/cafe",
-      icon: ClipboardList
-    }, {
-      title: "Event Drinks",
-      url: "/dashboard/cafe/event-drinks",
-      icon: Wine
-    }, {
-      title: "Messages",
-      url: "/dashboard/messages",
-      icon: MessageSquare
-    }, {
-      title: "Announcements",
-      url: "/dashboard/announcements",
-      icon: Bell
-    }, {
-      title: "Resources",
-      url: "/dashboard/resources",
-      icon: FolderOpen
-    }];
+    return [];
   }
   const baseItems: NavItem[] = [{
     title: "Dashboard",
@@ -324,7 +271,7 @@ function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boole
             to={item.url}
             end
             className={cn(
-              "flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors",
+              "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground",
               "hover:bg-muted/50"
             )}
             activeClassName="bg-muted text-foreground font-medium"
@@ -394,12 +341,81 @@ function SidebarNav() {
   };
   const effectiveRole = getEffectiveRole();
   const navItems = getNavItems(effectiveRole, permissions);
+  const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
+  const isCafeRole = effectiveRole === "cafe";
+
+  // Cafe grouped nav items
+  const cafeMainItems: NavItem[] = [
+    { title: "Checklists", url: "/dashboard/cafe", icon: ClipboardList },
+    { title: "Shift Notes", url: "/dashboard/boh-notes", icon: HelpCircle },
+  ];
+  const cafeCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
+  ];
+  const cafeRefItems: NavItem[] = [
+    { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+  ];
+
+  // BoH grouped nav items
+  const bohChecklistUrl = effectiveRole === "floater" ? "/dashboard/floater" : "/dashboard/spa";
+  const bohMainItems: NavItem[] = [{ title: "Checklists", url: bohChecklistUrl, icon: ClipboardList }];
+  const bohCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
+  ];
+  const bohRefItems: NavItem[] = [
+    { title: "Class Schedule", url: "/dashboard/class-schedule", icon: Calendar },
+    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
+    { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+    { title: "Notes for Management", url: "/dashboard/boh-notes", icon: HelpCircle },
+  ];
+
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
   const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports");
+
+  // Helper to render a nav item (handles Resources sub-menu)
+  const renderNavItem = (item: NavItem) => {
+    if (item.url === "/dashboard/resources") {
+      return <ResourcesNavItem key={item.url} item={item} collapsed={collapsed} />;
+    }
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton asChild>
+          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+            <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
+            {!collapsed && <span>{item.title}</span>}
+          </NavLink>
+        </SidebarMenuButton>
+        {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
+          <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+            {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+          </SidebarMenuBadge>
+        )}
+      </SidebarMenuItem>
+    );
+  };
+
+  // Render a labeled SidebarGroup
+  const renderGroup = (label: string, items: NavItem[]) => (
+    <SidebarGroup key={label}>
+      <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
+        {label}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map(renderNavItem)}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+
   return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
@@ -407,6 +423,21 @@ function SidebarNav() {
           <UserInfoDropdown collapsed={collapsed} />
           <RoleSwitcher collapsed={collapsed} />
         </div>
+
+        {/* BoH / Cafe grouped navigation */}
+        {isBohRole ? (
+          <>
+            {renderGroup("Main", bohMainItems)}
+            {renderGroup("Communications", bohCommsItems)}
+            {renderGroup("References", bohRefItems)}
+          </>
+        ) : isCafeRole ? (
+          <>
+            {renderGroup("Main", cafeMainItems)}
+            {renderGroup("Communications", cafeCommsItems)}
+            {renderGroup("References", cafeRefItems)}
+          </>
+        ) : (
         <SidebarGroup>
           <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-muted-foreground px-3", collapsed && "sr-only")}>
             Navigation
@@ -420,7 +451,7 @@ function SidebarNav() {
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                         <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -436,6 +467,7 @@ function SidebarNav() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Manager Tools Section - Admin and Manager */}
         {isAdminOrManager && !collapsed && <SidebarGroup>
@@ -446,7 +478,7 @@ function SidebarNav() {
               <SidebarMenu>
                 {managerToolsItems.map(item => <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                         <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         <span>{item.title}</span>
                       </NavLink>
@@ -471,7 +503,7 @@ function SidebarNav() {
                 {/* Direct Settings Items */}
                 {settingsDirectItems.map(item => <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                         <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         <span>{item.title}</span>
                       </NavLink>
@@ -482,7 +514,7 @@ function SidebarNav() {
                 <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={setDevToolsOpen}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton className={cn("flex items-center gap-3 px-3 py-2 text-[13px] uppercase tracking-widest transition-colors w-full", "hover:bg-muted/50", isDevToolsActive && "bg-muted/70 text-foreground")}>
+                      <SidebarMenuButton className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors w-full text-muted-foreground", "hover:bg-muted/50", isDevToolsActive && "bg-muted/70 text-foreground")}>
                         <Wrench className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         <span className="flex-1 text-left">Dev Tools</span>
                         <ChevronRight className={cn("h-3 w-3 transition-transform", (devToolsOpen || isDevToolsActive) && "rotate-90")} />
@@ -492,7 +524,7 @@ function SidebarNav() {
                   <CollapsibleContent>
                     {settingsGroups[0].items.map(item => <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
-                          <NavLink to={item.url} className={cn("flex items-center gap-3 pl-8 pr-3 py-2 text-[13px] uppercase tracking-widest transition-colors", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                          <NavLink to={item.url} className={cn("flex items-center gap-3 pl-8 pr-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
                             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                             <span>{item.title}</span>
                           </NavLink>
@@ -584,7 +616,7 @@ function RoleSwitcher({
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-auto py-0 w-full px-0")}>
           {!collapsed && <>
-              <span className="text-[13px] uppercase tracking-widest flex-1 text-left pl-2">
+              <span className="text-xs uppercase tracking-widest flex-1 text-left pl-2 whitespace-normal leading-tight">
                 {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
               </span>
               <ChevronDown className="h-3 w-3 shrink-0" />
@@ -596,7 +628,7 @@ function RoleSwitcher({
         {availableRoles.map(userRole => {
         const roleInfo = ROLES.find(r => r.value === userRole.role);
         const isCurrentView = currentViewRole === userRole.role || currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant" || currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant";
-        return <DropdownMenuItem key={userRole.id} onClick={() => handleRoleSwitch(userRole.role)} className={cn("text-[10px] uppercase tracking-widest cursor-pointer rounded-none", isCurrentView && "bg-muted")}>
+        return <DropdownMenuItem key={userRole.id} onClick={() => handleRoleSwitch(userRole.role)} className={cn("text-xs uppercase tracking-widest cursor-pointer rounded-none", isCurrentView && "bg-muted")}>
               {getRoleLabel(userRole.role)}
             </DropdownMenuItem>;
       })}
@@ -647,26 +679,25 @@ function UserInfoDropdown({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
           <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-[10px] uppercase tracking-widest font-normal">
-                {profile?.full_name || "User"}
-              </p>
-              <p className="text-[10px] tracking-wide text-muted-foreground">
-                {user?.email}
-              </p>
-            </div>
+            <p className="text-xs uppercase tracking-widest font-normal">
+              {profile?.full_name || "User"}
+            </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
             Profile
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+            <Settings className="mr-2 h-3 w-3" />
+            Account Settings
+          </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bug className="mr-2 h-3 w-3" />
             Report a Bug
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSignOut} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+          <DropdownMenuItem onClick={handleSignOut} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <LogOut className="mr-2 h-3 w-3" />
             Sign out
           </DropdownMenuItem>

@@ -214,16 +214,11 @@ export function ConciergeSidebar({
       ],
     },
     {
-      title: "Resources",
+      title: "References",
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
         { id: "packages", label: "Package Tracking", icon: Package },
         { id: "lost-found", label: "Lost & Found", icon: Package },
-      ],
-    },
-    {
-      title: "Reference",
-      items: [
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
@@ -304,8 +299,23 @@ export function ConciergeSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.title === "Resources" && (
-                  <ResourcesSubMenu activeView={activeView} onViewChange={onViewChange} />
+                {section.title === "References" && (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => onViewChange("templates")}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "hover:bg-muted/50",
+                          activeView === "templates" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
+                        )}
+                      >
+                        <FileCode className="h-4 w-4 shrink-0" />
+                        <span>Response Templates</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <ResourcesSubMenu activeView={activeView} onViewChange={onViewChange} />
+                  </>
                 )}
                 {section.items.map((item) => {
                   const Icon = item.icon;

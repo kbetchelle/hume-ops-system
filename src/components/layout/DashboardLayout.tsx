@@ -151,13 +151,13 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
 
 // Manager Tools items for admin
 const managerToolsItems: SettingsSubItem[] = [{
-  title: "Inbox",
-  url: "/dashboard/inbox",
-  icon: Inbox
-}, {
   title: "Staff Resources",
   url: "/dashboard/staff-resources",
   icon: Link2
+}, {
+  title: "Lost & Found",
+  url: "/dashboard/lost-and-found",
+  icon: Package
 }, {
   title: "Checklists",
   url: "/dashboard/checklists",
@@ -323,7 +323,6 @@ function SidebarNav() {
     { title: "Membership", url: "/dashboard/members", icon: Users },
     { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
     { title: "Reports", url: "/dashboard/reports", icon: FileText },
-    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
   ];
   const adminCommsItems: NavItem[] = [
     { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
@@ -382,6 +381,11 @@ function SidebarNav() {
         {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
           <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
             {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+          </SidebarMenuBadge>
+        )}
+        {item.url === "/dashboard" && isAdminManagerRole && (unreadInboxCount ?? 0) > 0 && (
+          <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+            {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
           </SidebarMenuBadge>
         )}
       </SidebarMenuItem>
@@ -474,11 +478,6 @@ function SidebarNav() {
                         <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
-                    {item.url === "/dashboard/inbox" && (unreadInboxCount ?? 0) > 0 && (
-                      <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
-                        {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
-                      </SidebarMenuBadge>
-                    )}
                   </SidebarMenuItem>)}
               </SidebarMenu>
             </SidebarGroupContent>

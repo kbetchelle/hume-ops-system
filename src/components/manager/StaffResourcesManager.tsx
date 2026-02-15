@@ -21,7 +21,7 @@ export function StaffResourcesManager() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
           >
             <FileText className="h-3.5 w-3.5 mr-1.5" />
-            Resource Pages
+            <span className="text-xs">Resource Pages</span>
           </TabsTrigger>
           <TabsTrigger
             value="policies"

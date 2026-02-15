@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -113,10 +113,9 @@ function PolicyCreateEditDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Policy" : "Create Policy"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update the policy details below." : "Fill in the details for your new policy."}
-          </DialogDescription>
+          <DialogTitle className="text-xs uppercase tracking-widest">
+            {isEditing ? "Edit Policy" : "Create Policy"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -130,12 +129,11 @@ function PolicyCreateEditDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="policy-content">Content</Label>
-            <Textarea
-              id="policy-content"
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder="Policy content..."
-              rows={8}
+              minHeight="200px"
             />
           </div>
           <div className="space-y-2">

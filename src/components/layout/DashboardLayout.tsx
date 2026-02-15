@@ -54,41 +54,9 @@ const BOH_ROLES: AppRole[] = ["female_spa_attendant", "male_spa_attendant", "flo
 
 // Navigation items per role
 const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => {
-  // Admin and Manager share the same navigation structure
+  // Admin and Manager: grouped nav is handled separately in SidebarNav, return empty here
   if (role === "admin" || role === "manager") {
-    return [{
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home
-    }, {
-      title: "Messages",
-      url: "/dashboard/messages",
-      icon: MessageSquare
-    }, {
-      title: "Membership",
-      url: "/dashboard/members",
-      icon: Users
-    }, {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: BarChart3
-    }, {
-      title: "Reports",
-      url: "/dashboard/reports",
-      icon: FileText
-    }, {
-      title: "Master Calendar",
-      url: "/dashboard/master-calendar",
-      icon: Calendar
-    }, {
-      title: "Package Tracking",
-      url: "/dashboard/package-tracking",
-      icon: Package
-    }, {
-      title: "Lost & Found",
-      url: "/dashboard/lost-and-found",
-      icon: Package
-    }];
+    return [];
   }
   // BOH: grouped nav is handled separately in SidebarNav, return empty here
   if (role && BOH_ROLES.includes(role)) {
@@ -188,21 +156,25 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
 
 // Manager Tools items for admin
 const managerToolsItems: SettingsSubItem[] = [{
+  title: "Staff Resources",
+  url: "/dashboard/staff-resources",
+  icon: Link2
+}, {
+  title: "Lost & Found",
+  url: "/dashboard/lost-and-found",
+  icon: Package
+}, {
   title: "Checklists",
   url: "/dashboard/checklists",
   icon: ClipboardList
 }, {
-  title: "Staff Announcements",
-  url: "/dashboard/staff-announcements",
-  icon: Bell
+  title: "Master Calendar",
+  url: "/dashboard/master-calendar",
+  icon: Calendar
 }, {
-  title: "Inbox",
-  url: "/dashboard/inbox",
-  icon: Inbox
-}, {
-  title: "Staff Resources",
-  url: "/dashboard/staff-resources",
-  icon: Link2
+  title: "Package Tracking",
+  url: "/dashboard/package-tracking",
+  icon: Package
 }];
 
 // Settings menu structure for admin
@@ -352,6 +324,19 @@ function SidebarNav() {
   const navItems = getNavItems(effectiveRole, permissions);
   const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
   const isCafeRole = effectiveRole === "cafe";
+  const isAdminManagerRole = effectiveRole === "admin" || effectiveRole === "manager";
+
+  // Admin/Manager grouped nav items
+  const adminMainItems: NavItem[] = [
+    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Membership", url: "/dashboard/members", icon: Users },
+    { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
+    { title: "Reports", url: "/dashboard/reports", icon: FileText },
+  ];
+  const adminCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Staff Announcements", url: "/dashboard/staff-announcements", icon: Bell },
+  ];
 
   // Cafe grouped nav items
   const cafeMainItems: NavItem[] = [
@@ -363,8 +348,8 @@ function SidebarNav() {
     { title: "Announcements", url: "/dashboard/announcements", icon: Bell },
   ];
   const cafeRefItems: NavItem[] = [
-    { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
     { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
+    { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];
 
@@ -408,6 +393,11 @@ function SidebarNav() {
             {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
           </SidebarMenuBadge>
         )}
+        {item.url === "/dashboard" && isAdminManagerRole && (unreadInboxCount ?? 0) > 0 && (
+          <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+            {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
+          </SidebarMenuBadge>
+        )}
       </SidebarMenuItem>
     );
   };
@@ -446,6 +436,11 @@ function SidebarNav() {
             {renderGroup("Main", cafeMainItems)}
             {renderGroup("Communications", cafeCommsItems)}
             {renderGroup("References", cafeRefItems)}
+          </>
+        ) : isAdminManagerRole ? (
+          <>
+            {renderGroup("Main", adminMainItems)}
+            {renderGroup("Communications", adminCommsItems)}
           </>
         ) : (
         <SidebarGroup>
@@ -493,11 +488,6 @@ function SidebarNav() {
                         <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
-                    {item.url === "/dashboard/inbox" && (unreadInboxCount ?? 0) > 0 && (
-                      <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
-                        {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
-                      </SidebarMenuBadge>
-                    )}
                   </SidebarMenuItem>)}
               </SidebarMenu>
             </SidebarGroupContent>

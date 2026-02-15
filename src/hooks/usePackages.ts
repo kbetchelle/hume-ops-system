@@ -58,8 +58,8 @@ export function usePackages(options: UsePackagesOptions = {}) {
   return useQuery({
     queryKey: ["packages", options],
     queryFn: async () => {
-      let query = supabase
-        .from("packages")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query = (supabase.from("packages" as any) as any)
         .select(`
           *,
           recipient_profile:profiles!recipient_user_id(full_name, email),
@@ -96,7 +96,7 @@ export function usePackages(options: UsePackagesOptions = {}) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as PackageWithRecipient[];
+      return (data as unknown) as PackageWithRecipient[];
     },
   });
 }
@@ -107,8 +107,8 @@ export function usePackage(packageId: string | undefined) {
     queryFn: async () => {
       if (!packageId) return null;
 
-      const { data, error } = await supabase
-        .from("packages")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("packages" as any) as any)
         .select(`
           *,
           recipient_profile:profiles!recipient_user_id(full_name, email),
@@ -119,7 +119,7 @@ export function usePackage(packageId: string | undefined) {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as PackageWithRecipient;
     },
     enabled: !!packageId,
   });
@@ -131,8 +131,8 @@ export function usePackageLocationHistory(packageId: string | undefined) {
     queryFn: async () => {
       if (!packageId) return [];
 
-      const { data, error } = await supabase
-        .from("package_location_history")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("package_location_history" as any) as any)
         .select(`
           *,
           moved_by_profile:profiles!moved_by_user_id(full_name, email)
@@ -141,7 +141,7 @@ export function usePackageLocationHistory(packageId: string | undefined) {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as PackageLocationHistory[];
+      return (data as unknown) as PackageLocationHistory[];
     },
     enabled: !!packageId,
   });
@@ -153,8 +153,8 @@ export function useCheckDuplicatePackage(trackingCode: string | undefined) {
     queryFn: async () => {
       if (!trackingCode) return null;
 
-      const { data, error } = await supabase
-        .from("packages")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("packages" as any) as any)
         .select("*")
         .eq("tracking_code", trackingCode)
         .in("status", ["pending_pickup", "picked_up"])
@@ -171,16 +171,17 @@ export function usePackageStats() {
   return useQuery({
     queryKey: ["package-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("packages")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("packages" as any) as any)
         .select("status");
 
       if (error) throw error;
 
+      const items = (data || []) as any[];
       const stats = {
-        pending: data.filter((p) => p.status === "pending_pickup").length,
-        pickedUp: data.filter((p) => p.status === "picked_up").length,
-        archived: data.filter((p) => p.status === "archived").length,
+        pending: items.filter((p) => p.status === "pending_pickup").length,
+        pickedUp: items.filter((p) => p.status === "picked_up").length,
+        archived: items.filter((p) => p.status === "archived").length,
       };
 
       return stats;
@@ -202,7 +203,7 @@ export function useSearchUsers(searchQuery: string) {
         .limit(20);
 
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; user_id: string; email: string; full_name: string | null }[];
     },
     enabled: searchQuery.length >= 2,
   });

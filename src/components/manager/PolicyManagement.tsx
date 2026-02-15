@@ -546,6 +546,9 @@ export function PolicyManagement() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                {policy.category || "Uncategorized"}
+                              </span>
                               {!policy.is_active && (
                                 <Badge variant="secondary">Inactive</Badge>
                               )}
@@ -559,10 +562,6 @@ export function PolicyManagement() {
                               className="text-sm text-foreground prose prose-sm max-w-none line-clamp-3"
                               dangerouslySetInnerHTML={{ __html: policy.content }}
                             />
-                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
-                              Updated {format(new Date(policy.updated_at), "MMM d, yyyy")}
-                              {policy.last_updated_by && ` by ${policy.last_updated_by}`}
-                            </p>
                           </div>
                           <div className="flex gap-2 shrink-0">
                             <Button

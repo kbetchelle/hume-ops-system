@@ -210,7 +210,7 @@ function FolderSidebar({
   pageCountsByFolder: Record<string, number>;
 }) {
   return (
-    <div className="w-64 shrink-0 border-r border-border bg-muted/20 p-4 space-y-2 overflow-hidden">
+    <div className="w-fit shrink-0 border-r border-border bg-muted/20 px-0 py-4 space-y-2 overflow-hidden">
       <div className="space-y-1">
         <Button
           variant={selectedFolderId === "all" ? "secondary" : "ghost"}

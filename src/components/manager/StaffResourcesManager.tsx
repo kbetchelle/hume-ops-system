@@ -25,7 +25,7 @@ export function StaffResourcesManager() {
           </TabsTrigger>
           <TabsTrigger
             value="policies"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-xs uppercase tracking-widest px-0 pb-3"
           >
             <BookOpen className="h-3.5 w-3.5 mr-1.5" />
             Policies

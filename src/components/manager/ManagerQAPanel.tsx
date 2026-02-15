@@ -294,7 +294,7 @@ export function ManagerQAPanel() {
                         {qa.is_resolved && qa.answer_type === 'policy_link' && linkedPolicy && (
                           <div className="mt-3 p-2 bg-primary/5 border-l-2 border-primary">
                             <p className="text-[10px] text-muted-foreground">Linked to policy:</p>
-                            <p className="text-xs font-medium">{linkedPolicy.title}</p>
+                            <p className="text-xs font-medium">{linkedPolicy.category || "General Policy"}</p>
                           </div>
                         )}
 
@@ -407,9 +407,9 @@ export function ManagerQAPanel() {
                     <SelectContent>
                       {(policies || []).map(policy => (
                         <SelectItem key={policy.id} value={policy.id}>
-                          {policy.title}
+                          {policy.category || "General Policy"}
                           {policy.category && (
-                            <span className="text-muted-foreground ml-2">({policy.category})</span>
+                            <span className="text-muted-foreground ml-2">(Category: {policy.category})</span>
                           )}
                         </SelectItem>
                       ))}

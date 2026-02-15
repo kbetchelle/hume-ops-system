@@ -37,10 +37,9 @@ export interface SearchResourcePage {
 
 export interface SearchPolicy {
   id: string;
-  title: string;
   content: string;
   category: string | null;
-  sort_order: number;
+  tags: string[];
   last_updated_by: string | null;
   updated_at: string;
   isOwnRole: boolean;
@@ -84,10 +83,9 @@ interface RawResourcePage {
 
 interface RawPolicy {
   id: string;
-  title: string;
   content: string;
   category: string | null;
-  sort_order: number;
+  tags: string[];
   last_updated_by: string | null;
   updated_at: string;
 }
@@ -118,10 +116,10 @@ function useAllResources() {
           supabase
             .from("club_policies")
             .select(
-              "id, title, content, category, sort_order, last_updated_by, updated_at"
+              "id, content, category, tags, last_updated_by, updated_at"
             )
             .eq("is_active", true)
-            .order("sort_order", { ascending: true }),
+            .order("updated_at", { ascending: false }),
         ]);
 
       if (groupsResult.error) throw groupsResult.error;
@@ -252,7 +250,11 @@ export function useResourceSearch(
       if (seenPolicyIds.has(policy.id)) continue;
       seenPolicyIds.add(policy.id);
 
-      if (matches(policy.title, q) || matches(policy.content, q)) {
+      const contentMatch = matches(policy.content, q);
+      const categoryMatch = matches(policy.category, q);
+      const tagMatch = policy.tags.some((tag) => tag.toLowerCase().includes(q));
+
+      if (contentMatch || categoryMatch || tagMatch) {
         matchedPolicies.push({
           ...policy,
           // Policies have no role assignment — always "own role"

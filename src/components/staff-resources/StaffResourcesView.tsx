@@ -358,7 +358,7 @@ function PolicyResults({ policies }: { policies: SearchPolicy[] }) {
             key={policy.id}
             resourceType="club_policy"
             resourceId={policy.id}
-            resourceLabel={policy.title}
+            resourceLabel={policy.category ? `Policy in ${policy.category}` : "Policy"}
             hasPendingFlag={policyFlagsMap?.has(policy.id) ?? false}
           >
             <Card data-resource-id={policy.id} className="rounded-none border">
@@ -373,7 +373,9 @@ function PolicyResults({ policies }: { policies: SearchPolicy[] }) {
                   ) : (
                     <ChevronRight className="h-3.5 w-3.5 shrink-0" />
                   )}
-                  <span className="text-xs font-medium">{policy.title}</span>
+                  <span className="text-xs font-medium">
+                    {policy.category || "General Policy"}
+                  </span>
                   {policyFlagsMap?.has(policy.id) && <UnderReviewBadge />}
                   {policy.category && (
                     <Badge
@@ -386,9 +388,10 @@ function PolicyResults({ policies }: { policies: SearchPolicy[] }) {
                 </button>
                 {isExpanded && (
                   <div className="px-3 pb-3 border-t">
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap pt-2">
-                      {policy.content}
-                    </p>
+                    <div 
+                      className="text-xs text-foreground prose prose-sm max-w-none pt-2"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(policy.content) }}
+                    />
                     <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t">
                       Last updated by {policy.last_updated_by} &bull;{" "}
                       {format(parseISO(policy.updated_at), "MMM d, yyyy")}

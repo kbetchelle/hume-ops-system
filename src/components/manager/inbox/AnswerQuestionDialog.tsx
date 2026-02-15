@@ -248,10 +248,10 @@ export function AnswerQuestionDialog({
                   <SelectContent>
                     {(policies || []).map((policy) => (
                       <SelectItem key={policy.id} value={policy.id}>
-                        {policy.title}
+                        {policy.category || "General Policy"}
                         {policy.category && (
                           <span className="text-muted-foreground ml-2">
-                            ({policy.category})
+                            (Category: {policy.category})
                           </span>
                         )}
                       </SelectItem>

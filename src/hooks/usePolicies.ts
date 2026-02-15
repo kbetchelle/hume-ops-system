@@ -5,10 +5,9 @@ import { toast } from "sonner";
 
 export interface ClubPolicy {
   id: string;
-  title: string;
   content: string;
   category: string | null;
-  sort_order: number;
+  tags: string[];
   is_active: boolean;
   last_updated_by: string | null;
   created_at: string;
@@ -19,17 +18,15 @@ export interface PolicyCategory {
   id: string;
   name: string;
   description: string | null;
-  sort_order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreatePolicyInput {
-  title: string;
   content: string;
   category: string | null;
-  sort_order?: number;
+  tags?: string[];
 }
 
 export interface UpdatePolicyInput extends CreatePolicyInput {
@@ -39,14 +36,12 @@ export interface UpdatePolicyInput extends CreatePolicyInput {
 export interface CreateCategoryInput {
   name: string;
   description?: string | null;
-  sort_order?: number;
 }
 
 export interface UpdateCategoryInput {
   id: string;
   name: string;
   description?: string | null;
-  sort_order?: number;
 }
 
 const POLICIES_KEY = "club-policies";
@@ -63,8 +58,7 @@ export function usePolicies(activeOnly = true) {
       let query = supabase
         .from("club_policies")
         .select("*")
-        .order("sort_order", { ascending: true })
-        .order("title", { ascending: true });
+        .order("updated_at", { ascending: false });
 
       if (activeOnly) {
         query = query.eq("is_active", true);
@@ -87,7 +81,6 @@ export function usePolicyCategories(activeOnly = true) {
       let query = supabase
         .from("policy_categories")
         .select("*")
-        .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
 
       if (activeOnly) {
@@ -121,10 +114,9 @@ export function useCreatePolicy() {
       const { data, error } = await supabase
         .from("club_policies")
         .insert({
-          title: input.title,
           content: input.content,
           category: input.category,
-          sort_order: input.sort_order ?? 0,
+          tags: input.tags ?? [],
           is_active: true,
           last_updated_by: lastUpdatedBy,
         })
@@ -136,10 +128,10 @@ export function useCreatePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [POLICIES_KEY] });
-      toast.success("Policy created successfully");
+      toast.success("Policy section created successfully");
     },
     onError: (error: Error) => {
-      toast.error("Failed to create policy: " + error.message);
+      toast.error("Failed to create policy section: " + error.message);
     },
   });
 }
@@ -177,10 +169,10 @@ export function useUpdatePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [POLICIES_KEY] });
-      toast.success("Policy updated successfully");
+      toast.success("Policy section updated successfully");
     },
     onError: (error: Error) => {
-      toast.error("Failed to update policy: " + error.message);
+      toast.error("Failed to update policy section: " + error.message);
     },
   });
 }
@@ -202,10 +194,10 @@ export function useDeletePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [POLICIES_KEY] });
-      toast.success("Policy deleted");
+      toast.success("Policy section deleted");
     },
     onError: (error: Error) => {
-      toast.error("Failed to delete policy: " + error.message);
+      toast.error("Failed to delete policy section: " + error.message);
     },
   });
 }
@@ -223,7 +215,6 @@ export function useCreateCategory() {
         .insert({
           name: input.name,
           description: input.description ?? null,
-          sort_order: input.sort_order ?? 0,
           is_active: true,
         })
         .select()

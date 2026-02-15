@@ -12,13 +12,13 @@ import {
 import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
+import { stripHtml, sanitizeHtml } from "@/lib/utils";
 
 interface Policy {
   id: string;
-  title: string;
   content: string;
   category: string | null;
-  sort_order: number;
+  tags: string[];
   last_updated_by: string | null;
   updated_at: string;
 }
@@ -37,8 +37,9 @@ export function PoliciesTab({
     const q = searchTerm.toLowerCase();
     return policies.filter(
       (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.content.toLowerCase().includes(q)
+        p.content.toLowerCase().includes(q) ||
+        (p.category ?? "").toLowerCase().includes(q) ||
+        p.tags.some((tag) => tag.toLowerCase().includes(q))
     );
   }, [policies, searchTerm]);
 
@@ -92,21 +93,25 @@ export function PoliciesTab({
               key={policy.id}
               resourceType="club_policy"
               resourceId={policy.id}
-              resourceLabel={policy.title}
+              resourceLabel={`Policy in ${category}`}
               hasPendingFlag={policyFlagsMap?.has(policy.id) ?? false}
             >
               <div data-resource-id={policy.id}>
                 <AccordionItem value={policy.id} className="border mb-1">
                   <AccordionTrigger className="px-3 py-2 text-xs hover:no-underline">
-                    <span className="flex items-center gap-2">
-                      {policy.title}
+                    <span className="flex items-center gap-2 text-left">
+                      <span className="line-clamp-1">
+                        {stripHtml(policy.content).substring(0, 100)}
+                        {stripHtml(policy.content).length > 100 ? '...' : ''}
+                      </span>
                       {policyFlagsMap?.has(policy.id) && <UnderReviewBadge />}
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="px-3 pb-3">
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                      {policy.content}
-                    </p>
+                    <div 
+                      className="text-xs text-foreground prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(policy.content) }}
+                    />
                     <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t">
                       Last updated by {policy.last_updated_by} &bull;{" "}
                       {format(parseISO(policy.updated_at), "MMM d, yyyy")}

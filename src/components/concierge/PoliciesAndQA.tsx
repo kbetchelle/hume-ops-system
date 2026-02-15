@@ -85,17 +85,17 @@ export function PoliciesAndQA() {
   }, [qaEntries]);
 
   const { data: linkedPolicies } = useQuery({
-    queryKey: ['linked-policy-titles', linkedPolicyIds],
+    queryKey: ['linked-policy-categories', linkedPolicyIds],
     queryFn: async () => {
       if (linkedPolicyIds.length === 0) return {};
       const { data, error } = await supabase
         .from('club_policies')
-        .select('id, title')
+        .select('id, category')
         .in('id', linkedPolicyIds);
       if (error) throw error;
       const map: Record<string, string> = {};
-      (data || []).forEach((p: { id: string; title: string }) => {
-        map[p.id] = p.title;
+      (data || []).forEach((p: { id: string; category: string | null }) => {
+        map[p.id] = p.category || "General Policy";
       });
       return map;
     },

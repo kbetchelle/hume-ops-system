@@ -7,14 +7,14 @@ import {
   Search,
   Loader2,
   FolderOpen,
+  X,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,7 +25,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -53,8 +52,6 @@ import {
   type PolicyCategory,
   type CreatePolicyInput,
   type UpdatePolicyInput,
-  type CreateCategoryInput,
-  type UpdateCategoryInput,
 } from "@/hooks/usePolicies";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -73,16 +70,34 @@ function PolicyCreateEditDialog({
   const isEditing = !!policy;
   const [content, setContent] = useState(policy?.content ?? "");
   const [categoryName, setCategoryName] = useState<string | null>(policy?.category ?? null);
-  const [sortOrder, setSortOrder] = useState(String(policy?.sort_order ?? 0));
+  const [tags, setTags] = useState<string[]>(policy?.tags ?? []);
+  const [tagInput, setTagInput] = useState("");
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const createMutation = useCreatePolicy();
   const updateMutation = useUpdatePolicy();
+  const createCategoryMutation = useCreateCategory();
+
+  useEffect(() => {
+    if (open && policy) {
+      setContent(policy.content);
+      setCategoryName(policy.category);
+      setTags(policy.tags);
+    } else if (open && !policy) {
+      setContent("");
+      setCategoryName(null);
+      setTags([]);
+    }
+  }, [open, policy]);
 
   const reset = () => {
-    setContent(policy?.content ?? "");
-    setCategoryName(policy?.category ?? null);
-    setCategoryName(policy?.category ?? null);
-    setSortOrder(String(policy?.sort_order ?? 0));
+    setContent("");
+    setCategoryName(null);
+    setTags([]);
+    setTagInput("");
+    setShowNewCategoryInput(false);
+    setNewCategoryName("");
   };
 
   const handleClose = () => {
@@ -90,14 +105,63 @@ function PolicyCreateEditDialog({
     onOpenChange(false);
   };
 
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const handleCreateNewCategory = async () => {
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) return;
+    
+    try {
+      const newCategory = await createCategoryMutation.mutateAsync({
+        name: trimmedName,
+      });
+      setCategoryName(newCategory.name);
+      setShowNewCategoryInput(false);
+      setNewCategoryName("");
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  const handleCategoryChange = (value: string) => {
+    if (value === "new") {
+      setShowNewCategoryInput(true);
+      setCategoryName(null);
+    } else if (value === "none") {
+      setCategoryName(null);
+      setShowNewCategoryInput(false);
+    } else {
+      setCategoryName(value);
+      setShowNewCategoryInput(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!content.trim()) return;
+    
     const input: CreatePolicyInput = {
-      title: categoryName ?? "Untitled",
       content: content.trim(),
       category: categoryName,
-      sort_order: parseInt(sortOrder, 10) || 0,
+      tags: tags,
     };
+    
     if (isEditing && policy) {
       await updateMutation.mutateAsync({ ...input, id: policy.id });
     } else {
@@ -106,14 +170,14 @@ function PolicyCreateEditDialog({
     handleClose();
   };
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || createCategoryMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xs uppercase tracking-widest">
-            {isEditing ? "Edit Policy" : "Create Policy"}
+            {isEditing ? "EDIT POLICY SECTION" : "CREATE POLICY SECTION"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -122,34 +186,92 @@ function PolicyCreateEditDialog({
             <RichTextEditor
               value={content}
               onChange={setContent}
-              placeholder="Policy content..."
+              placeholder="Policy section content..."
               minHeight="200px"
             />
           </div>
+          
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={categoryName ?? "none"} onValueChange={(v) => setCategoryName(v === "none" ? null : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.name}>
-                    {c.name}
+            {showNewCategoryInput ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter new category name..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateNewCategory();
+                    }
+                  }}
+                />
+                <Button onClick={handleCreateNewCategory} disabled={!newCategoryName.trim() || createCategoryMutation.isPending}>
+                  {createCategoryMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Create"
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setShowNewCategoryInput(false);
+                  setNewCategoryName("");
+                }}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Select value={categoryName ?? "none"} onValueChange={handleCategoryChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new">
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-3 w-3" />
+                      Create new category
+                    </span>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="policy-sort">Sort order</Label>
-            <Input
-              id="policy-sort"
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
+            <Label>Tags (for search only, not displayed to staff)</Label>
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagInputKeyDown}
+                placeholder="Add tag..."
+              />
+              <Button type="button" variant="outline" onClick={handleAddTag} disabled={!tagInput.trim()}>
+                Add
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
@@ -158,7 +280,7 @@ function PolicyCreateEditDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={!content.trim() || isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEditing ? "Update" : "Create"} Policy
+            {isEditing ? "Update" : "Create"} Policy Section
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -166,7 +288,7 @@ function PolicyCreateEditDialog({
   );
 }
 
-function CategoryCreateEditDialog({
+function CategoryEditDialog({
   open,
   onOpenChange,
   category,
@@ -175,26 +297,21 @@ function CategoryCreateEditDialog({
   onOpenChange: (open: boolean) => void;
   category: PolicyCategory | null;
 }) {
-  const isEditing = !!category;
   const [name, setName] = useState(category?.name ?? "");
   const [description, setDescription] = useState(category?.description ?? "");
-  const [sortOrder, setSortOrder] = useState(String(category?.sort_order ?? 0));
 
-  const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
 
   useEffect(() => {
-    if (open) {
-      setName(category?.name ?? "");
-      setDescription(category?.description ?? "");
-      setSortOrder(String(category?.sort_order ?? 0));
+    if (open && category) {
+      setName(category.name);
+      setDescription(category.description ?? "");
     }
   }, [open, category]);
 
   const reset = () => {
-    setName(category?.name ?? "");
-    setDescription(category?.description ?? "");
-    setSortOrder(String(category?.sort_order ?? 0));
+    setName("");
+    setDescription("");
   };
 
   const handleClose = () => {
@@ -203,34 +320,22 @@ function CategoryCreateEditDialog({
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
-    if (isEditing && category) {
-      await updateMutation.mutateAsync({
-        id: category.id,
-        name: name.trim(),
-        description: description.trim() || null,
-        sort_order: parseInt(sortOrder, 10) || 0,
-      });
-    } else {
-      await createMutation.mutateAsync({
-        name: name.trim(),
-        description: description.trim() || null,
-        sort_order: parseInt(sortOrder, 10) || 0,
-      });
-    }
+    if (!name.trim() || !category) return;
+    await updateMutation.mutateAsync({
+      id: category.id,
+      name: name.trim(),
+      description: description.trim() || null,
+    });
     handleClose();
   };
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Category" : "Create Category"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update the category details." : "Add a new policy category."}
-          </DialogDescription>
+          <DialogTitle>Edit Category</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -251,15 +356,6 @@ function CategoryCreateEditDialog({
               placeholder="Brief description..."
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="cat-sort">Sort order</Label>
-            <Input
-              id="cat-sort"
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
@@ -267,7 +363,7 @@ function CategoryCreateEditDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={!name.trim() || isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEditing ? "Update" : "Create"} Category
+            Update Category
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -276,9 +372,7 @@ function CategoryCreateEditDialog({
 }
 
 export function PolicyManagement() {
-  const [activeTab, setActiveTab] = useState<"policies" | "categories">("policies");
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string | "all">("all");
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<ClubPolicy | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -295,20 +389,30 @@ export function PolicyManagement() {
 
   const filteredPolicies = useMemo(() => {
     let list = policies ?? [];
-    if (categoryFilter !== "all") {
-      list = list.filter((p) => p.category === categoryFilter);
-    }
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       list = list.filter(
         (p) =>
-          p.title.toLowerCase().includes(term) ||
           (p.content ?? "").toLowerCase().includes(term) ||
-          (p.category ?? "").toLowerCase().includes(term)
+          (p.category ?? "").toLowerCase().includes(term) ||
+          p.tags.some((tag) => tag.toLowerCase().includes(term))
       );
     }
     return list;
-  }, [policies, categoryFilter, searchTerm]);
+  }, [policies, searchTerm]);
+
+  const policiesByCategory = useMemo(() => {
+    const grouped = filteredPolicies.reduce(
+      (acc, policy) => {
+        const cat = policy.category || "Uncategorized";
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(policy);
+        return acc;
+      },
+      {} as Record<string, ClubPolicy[]>
+    );
+    return grouped;
+  }, [filteredPolicies]);
 
   const handleEditPolicy = (policy: ClubPolicy) => {
     setEditingPolicy(policy);
@@ -322,11 +426,6 @@ export function PolicyManagement() {
 
   const handleEditCategory = (category: PolicyCategory) => {
     setEditingCategory(category);
-    setCategoryDialogOpen(true);
-  };
-
-  const handleCreateCategory = () => {
-    setEditingCategory(null);
     setCategoryDialogOpen(true);
   };
 
@@ -344,192 +443,155 @@ export function PolicyManagement() {
     }
   };
 
+  const getCategoryInfo = (categoryName: string) => {
+    return activeCategories.find((c) => c.name === categoryName);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Policy Management</h2>
           <p className="text-sm text-muted-foreground">
-            Create and manage policies and categories for staff.
+            Create and manage policy sections organized by category.
           </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "policies" | "categories")}>
-        <TabsList>
-          <TabsTrigger value="policies" className="gap-2">
-            <BookOpen className="h-4 w-4" />
-            Policies
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-2">
-            <FolderOpen className="h-4 w-4" />
-            Categories
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search policies and tags..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button onClick={handleCreatePolicy}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Policy Section
+        </Button>
+      </div>
 
-        <TabsContent value="policies" className="space-y-4 mt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search policies..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {activeCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.name}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleCreatePolicy}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Policy
+      {policiesLoading || categoriesLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : Object.keys(policiesByCategory).length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              {searchTerm ? "No policies match your search." : "No policies found."}
+            </p>
+            <Button variant="outline" className="mt-4" onClick={handleCreatePolicy}>
+              Create your first policy section
             </Button>
-          </div>
-
-          {policiesLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredPolicies.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No policies found.</p>
-                <Button variant="outline" className="mt-4" onClick={handleCreatePolicy}>
-                  Create your first policy
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredPolicies.map((policy) => (
-                <Card key={policy.id} className={cn(!policy.is_active && "opacity-60")}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {policy.category && (
-                            <h3 className="font-medium">{policy.category}</h3>
-                          )}
-                          {!policy.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {policy.content}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Updated {format(new Date(policy.updated_at), "MMM d, yyyy")}
-                          {policy.last_updated_by && ` by ${policy.last_updated_by}`}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(policiesByCategory).map(([categoryName, categoryPolicies]) => {
+            const categoryInfo = getCategoryInfo(categoryName);
+            const isUncategorized = categoryName === "Uncategorized";
+            
+            return (
+              <div key={categoryName} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="font-semibold text-sm uppercase tracking-wider">
+                        {categoryName}
+                      </h3>
+                      {categoryInfo && !categoryInfo.is_active && (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
+                    </div>
+                    {categoryInfo?.description && (
+                      <p className="text-xs text-muted-foreground mt-1 ml-6">
+                        {categoryInfo.description}
+                      </p>
+                    )}
+                  </div>
+                  {!isUncategorized && categoryInfo && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCategory(categoryInfo)}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      {categoryInfo.is_active && (
                         <Button
                           variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditPolicy(policy)}
+                          size="sm"
+                          onClick={() => setDeleteCategoryId(categoryInfo.id)}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 mr-1 text-destructive" />
+                          Delete
                         </Button>
-                        {policy.is_active && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletePolicyId(policy.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                  )}
+                </div>
 
-        <TabsContent value="categories" className="space-y-4 mt-4">
-          <div className="flex justify-end">
-            <Button onClick={handleCreateCategory}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Category
-            </Button>
-          </div>
-
-          {categoriesLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (categories ?? []).length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No categories yet.</p>
-                <Button variant="outline" className="mt-4" onClick={handleCreateCategory}>
-                  Create your first category
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {(categories ?? []).map((category) => (
-                <Card key={category.id} className={cn(!category.is_active && "opacity-60")}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{category.name}</h3>
-                          {!category.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
+                <div className="space-y-2 ml-6">
+                  {categoryPolicies.map((policy) => (
+                    <Card key={policy.id} className={cn(!policy.is_active && "opacity-60")}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-2">
+                              {!policy.is_active && (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                              {policy.tags.length > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {policy.tags.length} tag{policy.tags.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <div 
+                              className="text-sm text-foreground prose prose-sm max-w-none line-clamp-3"
+                              dangerouslySetInnerHTML={{ __html: policy.content }}
+                            />
+                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                              Updated {format(new Date(policy.updated_at), "MMM d, yyyy")}
+                              {policy.last_updated_by && ` by ${policy.last_updated_by}`}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditPolicy(policy)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            {policy.is_active && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletePolicyId(policy.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        {category.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {category.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Sort order: {category.sort_order}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditCategory(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {category.is_active && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteCategoryId(category.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <PolicyCreateEditDialog
         open={policyDialogOpen}
@@ -537,7 +599,7 @@ export function PolicyManagement() {
         policy={editingPolicy}
         categories={activeCategories}
       />
-      <CategoryCreateEditDialog
+      <CategoryEditDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         category={editingCategory}
@@ -546,9 +608,9 @@ export function PolicyManagement() {
       <AlertDialog open={!!deletePolicyId} onOpenChange={() => setDeletePolicyId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete policy?</AlertDialogTitle>
+            <AlertDialogTitle>Delete policy section?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will deactivate the policy. Staff will no longer see it. You can reactivate it later by editing.
+              This will deactivate the policy section. Staff will no longer see it. You can reactivate it later by editing.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -565,7 +627,7 @@ export function PolicyManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete category?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will deactivate the category. Policies in this category will keep their category name but the category will no longer appear in filters.
+              This will deactivate the category. Policies in this category will keep their category name but the category will no longer appear in management.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

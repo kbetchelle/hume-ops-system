@@ -154,10 +154,12 @@ function PolicyCreateEditDialog({
   };
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
+    // Check if content has meaningful text (strip HTML tags for validation)
+    const textOnly = content.replace(/<[^>]*>/g, '').trim();
+    if (!textOnly) return;
     
     const input: CreatePolicyInput = {
-      content: content.trim(),
+      content: content,
       category: categoryName,
       tags: tags,
     };

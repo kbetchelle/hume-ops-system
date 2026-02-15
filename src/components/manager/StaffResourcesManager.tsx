@@ -7,7 +7,7 @@ import { PolicyManagement } from "@/components/manager/PolicyManagement";
 export function StaffResourcesManager() {
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="quick-links" className="w-full">
+      <Tabs defaultValue="quick-links" className="w-full p-[10px]">
         <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
           <TabsTrigger
             value="quick-links"

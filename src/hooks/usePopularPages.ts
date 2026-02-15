@@ -16,7 +16,7 @@ export function usePopularPages(limit: number = 6) {
         .select("*")
         .eq("is_published", true)
         .order("updated_at", { ascending: false })
-        .limit(limit);
+        .limit(limit) as any;
 
       if (recentError) throw recentError;
 
@@ -43,7 +43,7 @@ export function usePopularPages(limit: number = 6) {
       const { data: allPages, error: allPagesError } = await supabase
         .from("resource_pages" as any)
         .select("*")
-        .eq("is_published", true);
+        .eq("is_published", true) as any;
 
       if (allPagesError) throw allPagesError;
 

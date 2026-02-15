@@ -512,6 +512,7 @@ export function PolicyManagement() {
                 onClick={() => handleEditPolicy(policy)}
               >
                 <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -530,6 +531,8 @@ export function PolicyManagement() {
                       className="text-sm text-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
                       dangerouslySetInnerHTML={{ __html: policy.content }}
                     />
+                  </div>
+                  <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
                   </div>
                 </CardContent>
               </Card>

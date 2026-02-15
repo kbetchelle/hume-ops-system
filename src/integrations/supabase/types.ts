@@ -3097,6 +3097,98 @@ export type Database = {
         }
         Relationships: []
       }
+      package_location_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: string
+          location_photo_url: string
+          moved_by_user_id: string | null
+          notes: string | null
+          package_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location: string
+          location_photo_url: string
+          moved_by_user_id?: string | null
+          notes?: string | null
+          package_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: string
+          location_photo_url?: string
+          moved_by_user_id?: string | null
+          notes?: string | null
+          package_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_location_history_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          archived_at: string | null
+          arrived_at: string
+          created_at: string | null
+          current_location: string
+          id: string
+          location_photo_url: string
+          marked_opened_by_user_id: string | null
+          notes: string | null
+          picked_up_at: string | null
+          recipient_name: string | null
+          recipient_user_id: string | null
+          scanned_by_user_id: string | null
+          status: string
+          tracking_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          arrived_at?: string
+          created_at?: string | null
+          current_location: string
+          id?: string
+          location_photo_url: string
+          marked_opened_by_user_id?: string | null
+          notes?: string | null
+          picked_up_at?: string | null
+          recipient_name?: string | null
+          recipient_user_id?: string | null
+          scanned_by_user_id?: string | null
+          status?: string
+          tracking_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          arrived_at?: string
+          created_at?: string | null
+          current_location?: string
+          id?: string
+          location_photo_url?: string
+          marked_opened_by_user_id?: string | null
+          notes?: string | null
+          picked_up_at?: string | null
+          recipient_name?: string | null
+          recipient_user_id?: string | null
+          scanned_by_user_id?: string | null
+          status?: string
+          tracking_code?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       page_dev_status: {
         Row: {
           created_at: string
@@ -5207,6 +5299,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      cleanup_archived_packages: { Args: never; Returns: undefined }
       cleanup_old_completions: { Args: never; Returns: undefined }
       direct_upsert_reservation: {
         Args: {

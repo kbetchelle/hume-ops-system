@@ -71,7 +71,6 @@ function PolicyCreateEditDialog({
   categories: PolicyCategory[];
 }) {
   const isEditing = !!policy;
-  const [title, setTitle] = useState(policy?.title ?? "");
   const [content, setContent] = useState(policy?.content ?? "");
   const [categoryName, setCategoryName] = useState<string | null>(policy?.category ?? null);
   const [sortOrder, setSortOrder] = useState(String(policy?.sort_order ?? 0));
@@ -80,8 +79,8 @@ function PolicyCreateEditDialog({
   const updateMutation = useUpdatePolicy();
 
   const reset = () => {
-    setTitle(policy?.title ?? "");
     setContent(policy?.content ?? "");
+    setCategoryName(policy?.category ?? null);
     setCategoryName(policy?.category ?? null);
     setSortOrder(String(policy?.sort_order ?? 0));
   };
@@ -92,9 +91,9 @@ function PolicyCreateEditDialog({
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) return;
+    if (!content.trim()) return;
     const input: CreatePolicyInput = {
-      title: title.trim(),
+      title: categoryName ?? "Untitled",
       content: content.trim(),
       category: categoryName,
       sort_order: parseInt(sortOrder, 10) || 0,
@@ -118,15 +117,6 @@ function PolicyCreateEditDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="policy-title">Title</Label>
-            <Input
-              id="policy-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Policy title..."
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="policy-content">Content</Label>
             <RichTextEditor
@@ -166,7 +156,7 @@ function PolicyCreateEditDialog({
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!title.trim() || !content.trim() || isSubmitting}>
+          <Button onClick={handleSubmit} disabled={!content.trim() || isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? "Update" : "Create"} Policy
           </Button>
@@ -429,12 +419,11 @@ export function PolicyManagement() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-medium">{policy.title}</h3>
+                          {policy.category && (
+                            <h3 className="font-medium">{policy.category}</h3>
+                          )}
                           {!policy.is_active && (
                             <Badge variant="secondary">Inactive</Badge>
-                          )}
-                          {policy.category && (
-                            <Badge variant="outline">{policy.category}</Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">

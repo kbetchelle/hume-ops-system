@@ -210,25 +210,25 @@ function FolderSidebar({
   pageCountsByFolder: Record<string, number>;
 }) {
   return (
-    <div className="w-64 border-r border-border bg-muted/20 p-4 space-y-2">
+    <div className="w-64 shrink-0 border-r border-border bg-muted/20 p-4 space-y-2 overflow-hidden">
       <div className="space-y-1">
         <Button
           variant={selectedFolderId === "all" ? "secondary" : "ghost"}
-          className="w-full justify-start rounded-none text-sm"
+          className="w-full justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
           onClick={() => onSelectFolder("all")}
         >
-          <FolderOpen className="h-4 w-4 mr-2" />
-          All Pages
+          <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
+          <span className="truncate">All Pages</span>
         </Button>
         <Button
           variant={selectedFolderId === "unfiled" ? "secondary" : "ghost"}
-          className="w-full justify-start rounded-none text-sm"
+          className="w-full justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
           onClick={() => onSelectFolder("unfiled")}
         >
-          <FileText className="h-4 w-4 mr-2" />
-          Unfiled
+          <FileText className="h-4 w-4 mr-2 shrink-0" />
+          <span className="truncate">Unfiled</span>
           {pageCountsByFolder.unfiled > 0 && (
-            <Badge variant="outline" className="ml-auto rounded-none text-xs">
+            <Badge variant="outline" className="ml-auto rounded-none text-xs shrink-0">
               {pageCountsByFolder.unfiled}
             </Badge>
           )}
@@ -245,11 +245,11 @@ function FolderSidebar({
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="group flex items-center gap-1"
+              className="group flex items-center gap-1 overflow-hidden"
             >
               <Button
                 variant={selectedFolderId === folder.id ? "secondary" : "ghost"}
-                className="flex-1 justify-start rounded-none text-sm"
+                className="flex-1 min-w-0 justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
                 onClick={() => onSelectFolder(folder.id)}
               >
                 <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
@@ -265,7 +265,7 @@ function FolderSidebar({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -292,7 +292,7 @@ function FolderSidebar({
       <Button
         variant="outline"
         size="sm"
-        className="w-full rounded-none"
+        className="w-full rounded-none text-xs uppercase tracking-widest px-2 mx-0"
         onClick={onCreateFolder}
       >
         <FolderPlus className="h-4 w-4 mr-2" />

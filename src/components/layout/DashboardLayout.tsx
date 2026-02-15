@@ -162,6 +162,10 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Checklists",
   url: "/dashboard/checklists",
   icon: ClipboardList
+}, {
+  title: "Master Calendar",
+  url: "/dashboard/master-calendar",
+  icon: Calendar
 }];
 
 // Settings menu structure for admin
@@ -319,7 +323,6 @@ function SidebarNav() {
     { title: "Membership", url: "/dashboard/members", icon: Users },
     { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
     { title: "Reports", url: "/dashboard/reports", icon: FileText },
-    { title: "Master Calendar", url: "/dashboard/master-calendar", icon: Calendar },
     { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
   ];
   const adminCommsItems: NavItem[] = [

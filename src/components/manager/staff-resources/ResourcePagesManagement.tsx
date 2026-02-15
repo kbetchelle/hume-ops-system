@@ -319,10 +319,10 @@ function PageCard({
   folderName?: string;
 }) {
   return (
-    <Card className="rounded-none overflow-hidden group hover:shadow-md transition-shadow">
+    <Card className="rounded-none overflow-hidden group hover:shadow-md transition-shadow w-full">
       <CardContent className="p-0">
         {page.cover_image_url && (
-          <div className="aspect-video bg-muted overflow-hidden">
+          <div className="aspect-[3/1] bg-muted overflow-hidden">
             <img
               src={page.cover_image_url}
               alt={page.title}
@@ -330,9 +330,9 @@ function PageCard({
             />
           </div>
         )}
-        <div className="p-4 space-y-3">
+        <div className="p-3 space-y-2">
           <div>
-            <h3 className="font-medium line-clamp-2 mb-2">{page.title}</h3>
+            <h3 className="font-medium text-sm line-clamp-1 mb-1">{page.title}</h3>
             <div className="flex flex-wrap gap-1">
               {/* PDF Badge */}
               {page.page_type === 'pdf' && (
@@ -628,7 +628,7 @@ export function ResourcePagesManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {filteredPages.map((page) => (
               <PageCard
                 key={page.id}

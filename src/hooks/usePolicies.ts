@@ -66,7 +66,7 @@ export function usePolicies(activeOnly = true) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as ClubPolicy[];
+      return (data ?? []) as unknown as ClubPolicy[];
     },
   });
 }
@@ -111,12 +111,11 @@ export function useCreatePolicy() {
 
       const lastUpdatedBy = profile?.full_name ?? user?.email ?? "Manager";
 
-      const { data, error } = await supabase
-        .from("club_policies")
+      const { data, error } = await (supabase.from("club_policies") as any)
         .insert({
+          title: input.category ?? "Untitled",
           content: input.content,
           category: input.category,
-          tags: input.tags ?? [],
           is_active: true,
           last_updated_by: lastUpdatedBy,
         })
@@ -124,7 +123,7 @@ export function useCreatePolicy() {
         .single();
 
       if (error) throw error;
-      return data as ClubPolicy;
+      return data as unknown as ClubPolicy;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [POLICIES_KEY] });
@@ -154,10 +153,11 @@ export function useUpdatePolicy() {
 
       const lastUpdatedBy = profile?.full_name ?? user?.email ?? "Manager";
 
-      const { data, error } = await supabase
-        .from("club_policies")
+      const { data, error } = await (supabase.from("club_policies") as any)
         .update({
-          ...rest,
+          title: rest.category ?? "Untitled",
+          content: rest.content,
+          category: rest.category,
           last_updated_by: lastUpdatedBy,
         })
         .eq("id", id)
@@ -165,7 +165,7 @@ export function useUpdatePolicy() {
         .single();
 
       if (error) throw error;
-      return data as ClubPolicy;
+      return data as unknown as ClubPolicy;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [POLICIES_KEY] });

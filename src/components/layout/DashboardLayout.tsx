@@ -81,6 +81,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
       url: "/dashboard/master-calendar",
       icon: Calendar
     }, {
+      title: "Package Tracking",
+      url: "/dashboard/package-tracking",
+      icon: Package
+    }, {
       title: "Lost & Found",
       url: "/dashboard/lost-and-found",
       icon: Package
@@ -142,6 +146,11 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
     url: "/dashboard/lost-and-found",
     icon: Package,
     roles: ["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]
+  }, {
+    title: "Package Tracking",
+    url: "/dashboard/package-tracking",
+    icon: Package,
+    roles: ["concierge", "cafe"]
   }, {
     title: "Reports",
     url: "/dashboard/reports",
@@ -355,6 +364,7 @@ function SidebarNav() {
   ];
   const cafeRefItems: NavItem[] = [
     { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
+    { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];
 

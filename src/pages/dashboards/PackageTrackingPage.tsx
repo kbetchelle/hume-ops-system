@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,19 +108,19 @@ export default function PackageTrackingPage() {
   const activeFiltersCount = [searchQuery, locationFilter, dateFrom, dateTo].filter(Boolean).length;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Package Tracking</h1>
-          <p className="text-muted-foreground">
-            Manage incoming packages for residents and staff
-          </p>
+    <DashboardLayout title="Package Tracking">
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-muted-foreground">
+              Manage incoming packages for residents and staff
+            </p>
+          </div>
+          <Button onClick={() => setIsAddDialogOpen(true)} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Add Package
+          </Button>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} size="lg">
-          <Plus className="mr-2 h-5 w-5" />
-          Add Package
-        </Button>
-      </div>
 
       {/* Stats Cards */}
       {stats && (
@@ -346,6 +347,7 @@ export default function PackageTrackingPage() {
         onClearSelection={() => setSelectedPackages([])}
         onBulkMove={handleBulkMove}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

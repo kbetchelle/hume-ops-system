@@ -59,7 +59,6 @@ export type ConciergeView =
   | "resources-pages"
   | "resources-policies"
   | "lost-found"
-  | "packages"
   | "qa";
 
 interface NavItem {
@@ -217,7 +216,6 @@ export function ConciergeSidebar({
       title: "References",
       items: [
         { id: "templates", label: "Response Templates", icon: FileCode },
-        { id: "packages", label: "Package Tracking", icon: Package },
         { id: "lost-found", label: "Lost & Found", icon: Package },
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },

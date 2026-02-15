@@ -559,7 +559,7 @@ export function PolicyManagement() {
                               )}
                             </div>
                             <div 
-                              className="text-sm text-foreground prose prose-sm max-w-none line-clamp-3"
+                              className="text-sm text-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
                               dangerouslySetInnerHTML={{ __html: policy.content }}
                             />
                           </div>

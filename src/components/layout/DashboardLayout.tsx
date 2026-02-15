@@ -155,13 +155,13 @@ const managerToolsItems: SettingsSubItem[] = [{
   url: "/dashboard/inbox",
   icon: Inbox
 }, {
-  title: "Checklists",
-  url: "/dashboard/checklists",
-  icon: ClipboardList
-}, {
   title: "Staff Resources",
   url: "/dashboard/staff-resources",
   icon: Link2
+}, {
+  title: "Checklists",
+  url: "/dashboard/checklists",
+  icon: ClipboardList
 }];
 
 // Settings menu structure for admin

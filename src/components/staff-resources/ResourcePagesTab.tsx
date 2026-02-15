@@ -11,6 +11,10 @@ import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput";
+import { useSearchAutocomplete } from "@/hooks/useSearchAutocomplete";
+import { parseSearchQuery } from "@/lib/searchFilterParser";
+import { extractSearchSnippet, highlightMatches, countMatches } from "@/lib/searchSnippets";
 
 /**
  * Validates a return path to prevent open redirect attacks.
@@ -43,11 +47,17 @@ export function ResourcePagesTab({
   pages,
   isLoading,
   searchTerm,
+  onSearchChange,
+  focusSearch,
+  onSearchFocus,
   returnPath,
 }: {
   pages: ResourcePage[];
   isLoading: boolean;
   searchTerm: string;
+  onSearchChange?: (value: string) => void;
+  focusSearch?: boolean;
+  onSearchFocus?: () => void;
   returnPath?: string;
 }) {
   const navigate = useNavigate();
@@ -55,6 +65,12 @@ export function ResourcePagesTab({
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null | "all">("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // Get autocomplete suggestions
+  const suggestions = useSearchAutocomplete(pages, searchTerm);
+  
+  // Parse search query for advanced filters
+  const parsedSearch = useMemo(() => parseSearchQuery(searchTerm), [searchTerm]);
 
   // Extract all unique tags from pages
   const allTags = useMemo(() => {
@@ -69,7 +85,7 @@ export function ResourcePagesTab({
   const filtered = useMemo(() => {
     let list = pages;
 
-    // Filter by folder
+    // Filter by folder (UI selection)
     if (selectedFolderId && selectedFolderId !== "all") {
       if (selectedFolderId === "unfiled") {
         list = list.filter((p) => !p.folder_id);
@@ -78,16 +94,38 @@ export function ResourcePagesTab({
       }
     }
 
-    // Filter by selected tags
+    // Filter by selected tags (UI tags)
     if (selectedTags.length > 0) {
       list = list.filter((p) =>
         selectedTags.some((tag) => p.tags.includes(tag))
       );
     }
 
-    // Filter by search term
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
+    // Apply advanced search filters
+    if (parsedSearch.filters.folders.length > 0) {
+      list = list.filter((p) => {
+        if (!p.folder_id) return false;
+        const folderName = getFolderName(p.folder_id);
+        if (!folderName) return false;
+        return parsedSearch.filters.folders.some(
+          (f) => folderName.toLowerCase().includes(f.toLowerCase())
+        );
+      });
+    }
+
+    if (parsedSearch.filters.tags.length > 0) {
+      list = list.filter((p) =>
+        parsedSearch.filters.tags.some((filterTag) =>
+          p.tags.some((pageTag) => 
+            pageTag.toLowerCase().includes(filterTag.toLowerCase())
+          )
+        )
+      );
+    }
+
+    // Filter by plain text search
+    if (parsedSearch.plainText.trim()) {
+      const q = parsedSearch.plainText.toLowerCase();
       list = list.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
@@ -97,7 +135,7 @@ export function ResourcePagesTab({
     }
 
     return list;
-  }, [pages, selectedFolderId, selectedTags, searchTerm]);
+  }, [pages, selectedFolderId, selectedTags, parsedSearch, folders]);
 
   const pageIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
@@ -136,6 +174,19 @@ export function ResourcePagesTab({
 
   return (
     <div className="space-y-6">
+      {/* Search Bar */}
+      {onSearchChange && (
+        <AdvancedSearchInput
+          value={searchTerm}
+          onChange={onSearchChange}
+          placeholder="Search pages... Try 'tag:training' or 'folder:onboarding'"
+          suggestions={suggestions}
+          showHistory={true}
+          focusTrigger={focusSearch}
+          onFocus={onSearchFocus}
+        />
+      )}
+      
       {/* Filter Bar */}
       <div className="space-y-3">
         {/* Folder Filters */}
@@ -215,6 +266,21 @@ export function ResourcePagesTab({
           {filtered.map((page) => {
             const folderName = getFolderName(page.folder_id);
             const hasPendingFlag = pageFlagsMap?.has(page.id) ?? false;
+            
+            // Get search snippet if there's a search query
+            const hasSearchQuery = parsedSearch.plainText.trim().length > 0;
+            const titleSegments = hasSearchQuery 
+              ? highlightMatches(page.title, parsedSearch.plainText)
+              : [{ text: page.title, start: 0, end: page.title.length, isMatch: false }];
+            
+            const contentSnippet = hasSearchQuery && page.search_text
+              ? extractSearchSnippet(page.search_text, parsedSearch.plainText)
+              : [];
+            
+            const matchCount = hasSearchQuery && page.search_text
+              ? countMatches(page.title, parsedSearch.plainText) + 
+                countMatches(page.search_text, parsedSearch.plainText)
+              : 0;
 
             return (
               <ResourceFlagContextMenu
@@ -250,10 +316,18 @@ export function ResourcePagesTab({
                     )}
 
                     <div className="p-4 space-y-3">
-                      {/* Title */}
+                      {/* Title with highlighting */}
                       <div>
                         <h3 className="font-medium line-clamp-2 mb-2">
-                          {page.title}
+                          {titleSegments.map((segment, idx) => (
+                            segment.isMatch ? (
+                              <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50">
+                                {segment.text}
+                              </span>
+                            ) : (
+                              <span key={idx}>{segment.text}</span>
+                            )
+                          ))}
                         </h3>
 
                         {/* Badges */}
@@ -265,6 +339,14 @@ export function ResourcePagesTab({
                             >
                               <FileText className="h-3 w-3 mr-1" />
                               PDF
+                            </Badge>
+                          )}
+                          {matchCount > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="rounded-none text-[10px] bg-green-500/10 text-green-600 dark:text-green-400"
+                            >
+                              {matchCount} {matchCount === 1 ? 'match' : 'matches'}
                             </Badge>
                           )}
                           {hasPendingFlag && <UnderReviewBadge />}
@@ -296,6 +378,21 @@ export function ResourcePagesTab({
                           )}
                         </div>
                       </div>
+
+                      {/* Search snippet */}
+                      {contentSnippet.length > 0 && (
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {contentSnippet.map((segment, idx) => (
+                            segment.isMatch ? (
+                              <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">
+                                {segment.text}
+                              </span>
+                            ) : (
+                              <span key={idx}>{segment.text}</span>
+                            )
+                          ))}
+                        </div>
+                      )}
 
                       {/* Last Updated */}
                       <div className="text-xs text-muted-foreground">

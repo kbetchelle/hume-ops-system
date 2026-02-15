@@ -1,10 +1,12 @@
+import { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Flag, Loader2, FileText } from "lucide-react";
+import { ArrowLeft, Download, Flag, Loader2, FileText, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageRenderer } from "@/components/page-builder/PageRenderer";
 import { PdfViewer } from "@/components/page-builder/PdfViewer";
+import { InPageSearch } from "@/components/search/InPageSearch";
 import { useResourcePage } from "@/hooks/useStaffResources";
 import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useRecordPageRead } from "@/hooks/useRecordPageRead";
@@ -50,8 +52,25 @@ export function ResourcePageReadingPage() {
   const { data: folders = [] } = useResourcePageFolders();
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageId ? [pageId] : []);
 
+  // In-page search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
   // Auto-record read receipt after 3-5 seconds
   useRecordPageRead(pageId);
+
+  // Keyboard shortcut to open search (Cmd/Ctrl + F)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleBack = () => {
     const validReturnPath = isValidReturnPath(returnTo);
@@ -195,6 +214,19 @@ export function ResourcePageReadingPage() {
             </div>
 
             <div className="flex gap-2 shrink-0">
+              {/* Search button (only for non-PDF pages) */}
+              {page.page_type !== 'pdf' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSearchOpen(true)}
+                  className="rounded-none"
+                  title="Search in page (Cmd/Ctrl + F)"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              )}
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -226,7 +258,7 @@ export function ResourcePageReadingPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div ref={contentRef} className="max-w-4xl mx-auto px-6 py-8">
         {page.cover_image_url && (
           <div className="mb-8 rounded overflow-hidden cover-image">
             <img
@@ -239,13 +271,30 @@ export function ResourcePageReadingPage() {
 
         {page.page_type === 'pdf' ? (
           /* PDF Viewer for PDF pages */
-          page.pdf_file_url ? (
-            <PdfViewer fileUrl={page.pdf_file_url} />
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              PDF file not available
-            </p>
-          )
+          <>
+            {page.pdf_file_url ? (
+              <PdfViewer fileUrl={page.pdf_file_url} />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                PDF file not available
+              </p>
+            )}
+            {isSearchOpen && (
+              <div className="fixed top-20 right-8 bg-background border border-border rounded-none shadow-lg p-4 z-50 max-w-sm">
+                <p className="text-sm text-muted-foreground">
+                  Search within PDF not supported. Download the PDF to search its contents.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSearchOpen(false)}
+                  className="mt-3 w-full rounded-none"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           /* PageRenderer for builder pages */
           page.content_json ? (
@@ -264,6 +313,15 @@ export function ResourcePageReadingPage() {
           </p>
         </div>
       </div>
+
+      {/* In-Page Search (only for non-PDF pages) */}
+      {page.page_type !== 'pdf' && (
+        <InPageSearch
+          contentRef={contentRef}
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }

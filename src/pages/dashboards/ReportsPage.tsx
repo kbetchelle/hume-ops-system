@@ -104,8 +104,8 @@ export default function ReportsPage() {
   ];
 
   return (
-    <DashboardLayout title="Reports & Analytics">
-      <div className="space-y-6">
+    <DashboardLayout title="Manager Reports">
+      <div className="space-y-6 overflow-hidden">
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
@@ -293,7 +293,8 @@ export default function ReportsPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <Table>
+              <div className="overflow-x-auto">
+              <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Member</TableHead>
@@ -306,10 +307,10 @@ export default function ReportsPage() {
                     <TableBody>
                       {activitySummary?.slice(0, 50).map((member) => (
                         <TableRow key={member.member_id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{member.member_name}</p>
-                              <p className="text-xs text-muted-foreground">
+                          <TableCell className="max-w-[200px]">
+                            <div className="overflow-hidden">
+                              <p className="font-medium truncate">{member.member_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
                                 {member.member_email}
                               </p>
                             </div>
@@ -339,6 +340,7 @@ export default function ReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -362,6 +364,7 @@ export default function ReportsPage() {
                     No new signups in this period
                   </p>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -373,10 +376,10 @@ export default function ReportsPage() {
                     <TableBody>
                       {newSignups?.map((member) => (
                         <TableRow key={member.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{member.client_name}</p>
-                              <p className="text-xs text-muted-foreground">
+                          <TableCell className="max-w-[200px]">
+                            <div className="overflow-hidden">
+                              <p className="font-medium truncate">{member.client_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
                                 {member.client_email}
                               </p>
                             </div>
@@ -400,6 +403,7 @@ export default function ReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -466,11 +470,11 @@ export default function ReportsPage() {
                             key={member.id}
                             className="flex items-center justify-between p-2 rounded bg-muted/50"
                           >
-                            <div>
-                              <p className="text-sm font-medium">
+                            <div className="overflow-hidden min-w-0">
+                              <p className="text-sm font-medium truncate">
                                 {member.client_name}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground truncate">
                                 {member.client_email}
                               </p>
                             </div>

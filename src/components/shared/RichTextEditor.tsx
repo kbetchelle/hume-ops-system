@@ -44,12 +44,14 @@ export function RichTextEditor({
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false);
   const isInitializedRef = useRef(false);
+  const lastExternalValueRef = useRef(value);
 
-  // Set initial value only once on mount
+  // Set initial value on mount, and re-sync when value changes externally
   useEffect(() => {
-    if (editorRef.current && !isInitializedRef.current) {
+    if (editorRef.current && (!isInitializedRef.current || value !== lastExternalValueRef.current)) {
       editorRef.current.innerHTML = value;
       isInitializedRef.current = true;
+      lastExternalValueRef.current = value;
     }
   }, [value]);
 

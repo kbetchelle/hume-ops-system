@@ -83,7 +83,7 @@ function PolicyCreateEditDialog({
     if (open && policy) {
       setContent(policy.content);
       setCategoryName(policy.category);
-      setTags(policy.tags);
+      setTags(policy.tags ?? []);
     } else if (open && !policy) {
       setContent("");
       setCategoryName(null);
@@ -395,7 +395,7 @@ export function PolicyManagement() {
         (p) =>
           (p.content ?? "").toLowerCase().includes(term) ||
           (p.category ?? "").toLowerCase().includes(term) ||
-          p.tags.some((tag) => tag.toLowerCase().includes(term))
+          (p.tags ?? []).some((tag) => tag.toLowerCase().includes(term))
       );
     }
     return list;
@@ -549,9 +549,9 @@ export function PolicyManagement() {
                               {!policy.is_active && (
                                 <Badge variant="secondary">Inactive</Badge>
                               )}
-                              {policy.tags.length > 0 && (
+                              {(policy.tags ?? []).length > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  {policy.tags.length} tag{policy.tags.length !== 1 ? 's' : ''}
+                                  {(policy.tags ?? []).length} tag{(policy.tags ?? []).length !== 1 ? 's' : ''}
                                 </span>
                               )}
                             </div>

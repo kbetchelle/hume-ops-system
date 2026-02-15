@@ -6,10 +6,9 @@ import { useScrollToResource } from "@/hooks/useScrollToResource";
 
 interface Policy {
   id: string;
-  title: string;
   content: string;
   category: string | null;
-  sort_order: number;
+  tags: string[];
   last_updated_by: string | null;
   updated_at: string;
 }
@@ -25,7 +24,7 @@ export default function ResourcesPoliciesPage() {
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []) as Policy[];
+      return (data || []) as unknown as Policy[];
     },
   });
 

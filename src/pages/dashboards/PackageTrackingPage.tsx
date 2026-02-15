@@ -29,7 +29,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
 export default function PackageTrackingPage() {
-  const [activeTab, setActiveTab] = useState<"pending_pickup" | "picked_up" | "archived">("pending_pickup");
+  const [activeTab, setActiveTab] = useState<"pending_pickup" | "picked_up">("pending_pickup");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -212,7 +212,7 @@ export default function PackageTrackingPage() {
             setActiveTab(v);
             setSelectedPackages([]);
           }}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pending_pickup">
                 Pending Pickup
                 {stats && stats.pending > 0 && (
@@ -222,7 +222,6 @@ export default function PackageTrackingPage() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="picked_up">Picked Up</TabsTrigger>
-              <TabsTrigger value="archived">Archived</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pending_pickup" className="mt-6">
@@ -239,19 +238,6 @@ export default function PackageTrackingPage() {
             </TabsContent>
 
             <TabsContent value="picked_up" className="mt-6">
-              <PackageTable
-                packages={packages}
-                isLoading={isLoading}
-                selectedPackages={selectedPackages}
-                onSelectPackage={handleSelectPackage}
-                onSelectAll={handleSelectAll}
-                onViewDetails={handleViewDetails}
-                onMovePackage={handleMovePackage}
-                onMarkPickedUp={handleMarkPickedUp}
-              />
-            </TabsContent>
-
-            <TabsContent value="archived" className="mt-6">
               <PackageTable
                 packages={packages}
                 isLoading={isLoading}

@@ -2278,49 +2278,127 @@ export type Database = {
       }
       daily_reports: {
         Row: {
+          attendance_rate: number | null
           cafe_gross_sales: number | null
-          cafe_net_sales: number | null
+          cafe_notes: string | null
           cafe_order_count: number | null
+          cafe_sales: number | null
+          cancellation_notes: string | null
+          class_details: Json | null
+          class_popularity: Json | null
+          crowd_comments_am: string | null
+          crowd_comments_pm: string | null
           created_at: string | null
+          facility_notes_am: Json | null
+          facility_notes_pm: Json | null
           gross_sales_arketa: number | null
+          gross_sales_membership: number | null
+          gross_sales_other: number | null
           id: string
+          instructor_metrics: Json | null
           last_synced_at: string | null
+          member_metrics: Json | null
+          negative_feedback_am: Json | null
+          negative_feedback_pm: Json | null
+          other_notes: string | null
+          positive_feedback_am: Json | null
+          positive_feedback_pm: Json | null
+          private_appointments: number | null
           raw_data: Json | null
           report_date: string
+          sync_source: string | null
+          total_cancellations: number | null
           total_class_checkins: number | null
           total_gym_checkins: number | null
+          total_no_shows: number | null
           total_reservations: number | null
           total_sales: number | null
+          total_waitlisted: number | null
+          tour_followup_completed: boolean | null
+          tour_notes: string | null
+          weather: string | null
         }
         Insert: {
+          attendance_rate?: number | null
           cafe_gross_sales?: number | null
-          cafe_net_sales?: number | null
+          cafe_notes?: string | null
           cafe_order_count?: number | null
+          cafe_sales?: number | null
+          cancellation_notes?: string | null
+          class_details?: Json | null
+          class_popularity?: Json | null
+          crowd_comments_am?: string | null
+          crowd_comments_pm?: string | null
           created_at?: string | null
+          facility_notes_am?: Json | null
+          facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null
+          gross_sales_membership?: number | null
+          gross_sales_other?: number | null
           id?: string
+          instructor_metrics?: Json | null
           last_synced_at?: string | null
+          member_metrics?: Json | null
+          negative_feedback_am?: Json | null
+          negative_feedback_pm?: Json | null
+          other_notes?: string | null
+          positive_feedback_am?: Json | null
+          positive_feedback_pm?: Json | null
+          private_appointments?: number | null
           raw_data?: Json | null
           report_date: string
+          sync_source?: string | null
+          total_cancellations?: number | null
           total_class_checkins?: number | null
           total_gym_checkins?: number | null
+          total_no_shows?: number | null
           total_reservations?: number | null
           total_sales?: number | null
+          total_waitlisted?: number | null
+          tour_followup_completed?: boolean | null
+          tour_notes?: string | null
+          weather?: string | null
         }
         Update: {
+          attendance_rate?: number | null
           cafe_gross_sales?: number | null
-          cafe_net_sales?: number | null
+          cafe_notes?: string | null
           cafe_order_count?: number | null
+          cafe_sales?: number | null
+          cancellation_notes?: string | null
+          class_details?: Json | null
+          class_popularity?: Json | null
+          crowd_comments_am?: string | null
+          crowd_comments_pm?: string | null
           created_at?: string | null
+          facility_notes_am?: Json | null
+          facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null
+          gross_sales_membership?: number | null
+          gross_sales_other?: number | null
           id?: string
+          instructor_metrics?: Json | null
           last_synced_at?: string | null
+          member_metrics?: Json | null
+          negative_feedback_am?: Json | null
+          negative_feedback_pm?: Json | null
+          other_notes?: string | null
+          positive_feedback_am?: Json | null
+          positive_feedback_pm?: Json | null
+          private_appointments?: number | null
           raw_data?: Json | null
           report_date?: string
+          sync_source?: string | null
+          total_cancellations?: number | null
           total_class_checkins?: number | null
           total_gym_checkins?: number | null
+          total_no_shows?: number | null
           total_reservations?: number | null
           total_sales?: number | null
+          total_waitlisted?: number | null
+          tour_followup_completed?: boolean | null
+          tour_notes?: string | null
+          weather?: string | null
         }
         Relationships: []
       }

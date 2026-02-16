@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox, Download } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 
 const RESOURCE_SUB_ITEMS = [
@@ -175,6 +175,14 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Package Tracking",
   url: "/dashboard/package-tracking",
   icon: Package
+}, {
+  title: "Daily Reports",
+  url: "/dashboard/daily-reports",
+  icon: FileText
+}, {
+  title: "Report Exports",
+  url: "/dashboard/report-exports",
+  icon: Download
 }];
 
 // Settings menu structure for admin

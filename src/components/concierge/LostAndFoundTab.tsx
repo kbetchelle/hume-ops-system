@@ -678,11 +678,11 @@ export function LostAndFoundTab() {
         </TabsContent>
         <TabsContent value="archived" className="mt-0">
           <Card className="rounded-none border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold normal-case tracking-normal">
-                Archived items are permanently deleted after 14 days
-              </CardTitle>
-            </CardHeader>
+             <CardHeader className="pb-3">
+               <CardTitle className="font-normal normal-case tracking-normal">
+                 Archived items are permanently deleted after 14 days
+               </CardTitle>
+             </CardHeader>
             <CardContent>
               {(() => {
                 const archivedItems = items.filter((i) => !!i.archived_at);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
+import { Extension } from "@tiptap/core";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -15,6 +16,26 @@ import { LinkCardNode } from "./extensions/LinkCardNode";
 import { TwoColumns, Column } from "./extensions/TwoColumnNode";
 import { ImageBlock } from "./extensions/ImageBlock";
 import { EditorToolbar } from "./EditorToolbar";
+
+const TabIndent = Extension.create({
+  name: "tabIndent",
+  addKeyboardShortcuts() {
+    return {
+      Tab: ({ editor }) => {
+        if (editor.can().sinkListItem("listItem")) {
+          return editor.commands.sinkListItem("listItem");
+        }
+        return false;
+      },
+      "Shift-Tab": ({ editor }) => {
+        if (editor.can().liftListItem("listItem")) {
+          return editor.commands.liftListItem("listItem");
+        }
+        return false;
+      },
+    };
+  },
+});
 
 export interface PageEditorProps {
   initialContent: JSONContent | null;
@@ -65,6 +86,7 @@ export function PageEditor({
       LinkCardNode,
       TwoColumns,
       Column,
+      TabIndent,
     ],
     content: initialContent || undefined,
     onUpdate: ({ editor: ed }) => {

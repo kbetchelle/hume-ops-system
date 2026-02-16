@@ -382,7 +382,7 @@ function SidebarNav() {
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild>
-          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
             {!collapsed && <span>{item.title}</span>}
           </NavLink>

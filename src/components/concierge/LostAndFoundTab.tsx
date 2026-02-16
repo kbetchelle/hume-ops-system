@@ -555,12 +555,6 @@ export function LostAndFoundTab() {
             <Table>
               <TableHeader className="border">
                 <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={selectedIds.size === filteredAndSortedItems.length && filteredAndSortedItems.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead
                     className="cursor-pointer select-none text-xs"
                     onClick={() => toggleSort("description")}

@@ -74,7 +74,6 @@ export interface UpdateResourcePageInput {
 }
 
 export interface ResourcePagesFilters {
-  folderId?: string | null;
   tags?: string[];
   searchTerm?: string;
   publishedOnly?: boolean;
@@ -105,14 +104,6 @@ export function useResourcePages(filters?: ResourcePagesFilters) {
 
       if (filters?.publishedOnly) {
         query = query.eq("is_published", true);
-      }
-
-      if (filters?.folderId !== undefined) {
-        if (filters.folderId === null) {
-          query = query.is("folder_id", null);
-        } else {
-          query = query.eq("folder_id", filters.folderId);
-        }
       }
 
       if (filters?.tags && filters.tags.length > 0) {

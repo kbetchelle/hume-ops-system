@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, FolderOpen } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ResourcePage } from "@/hooks/useStaffResources";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
@@ -16,30 +15,13 @@ import { useSearchAutocomplete } from "@/hooks/useSearchAutocomplete";
 import { parseSearchQuery } from "@/lib/searchFilterParser";
 import { extractSearchSnippet, highlightMatches, countMatches } from "@/lib/searchSnippets";
 
-/**
- * Validates a return path to prevent open redirect attacks.
- * Only allows relative paths within the application that start with /dashboard/
- * @param path - The path to validate
- * @returns The validated path or null if invalid
- */
 function isValidReturnPath(path: string | null | undefined): string | null {
   if (!path) return null;
-  
-  // Must be a string
   if (typeof path !== 'string') return null;
-  
-  // Must start with /dashboard/ (our app's base path)
   if (!path.startsWith('/dashboard/')) return null;
-  
-  // Must not contain protocol schemes (http://, https://, javascript:, data:, etc.)
   if (path.includes('://') || path.startsWith('javascript:') || path.startsWith('data:')) return null;
-  
-  // Must not contain backslashes (Windows path traversal)
-  if (path.includes('\\')) return null;
-  
-  // Must not try to navigate to parent directories in a suspicious way
+  if (path.includes('\\\\')) return null;
   if (path.includes('../') || path.includes('/..')) return null;
-  
   return path;
 }
 
@@ -61,9 +43,7 @@ export function ResourcePagesTab({
   returnPath?: string;
 }) {
   const navigate = useNavigate();
-  const { data: folders = [] } = useResourcePageFolders();
 
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null | "all">("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
   // Get autocomplete suggestions
@@ -81,18 +61,9 @@ export function ResourcePagesTab({
     return Array.from(tagSet).sort();
   }, [pages]);
 
-  // Filter pages by folder, tags, and search term
+  // Filter pages by tags and search term
   const filtered = useMemo(() => {
     let list = pages;
-
-    // Filter by folder (UI selection)
-    if (selectedFolderId && selectedFolderId !== "all") {
-      if (selectedFolderId === "unfiled") {
-        list = list.filter((p) => !p.folder_id);
-      } else {
-        list = list.filter((p) => p.folder_id === selectedFolderId);
-      }
-    }
 
     // Filter by selected tags (UI tags)
     if (selectedTags.length > 0) {
@@ -101,18 +72,7 @@ export function ResourcePagesTab({
       );
     }
 
-    // Apply advanced search filters
-    if (parsedSearch.filters.folders.length > 0) {
-      list = list.filter((p) => {
-        if (!p.folder_id) return false;
-        const folderName = getFolderName(p.folder_id);
-        if (!folderName) return false;
-        return parsedSearch.filters.folders.some(
-          (f) => folderName.toLowerCase().includes(f.toLowerCase())
-        );
-      });
-    }
-
+    // Apply advanced search tag filters
     if (parsedSearch.filters.tags.length > 0) {
       list = list.filter((p) =>
         parsedSearch.filters.tags.some((filterTag) =>
@@ -135,7 +95,7 @@ export function ResourcePagesTab({
     }
 
     return list;
-  }, [pages, selectedFolderId, selectedTags, parsedSearch, folders]);
+  }, [pages, selectedTags, parsedSearch]);
 
   const pageIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
@@ -144,11 +104,6 @@ export function ResourcePagesTab({
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
-  };
-
-  const getFolderName = (folderId: string | null) => {
-    if (!folderId) return undefined;
-    return folders.find((f) => f.id === folderId)?.name;
   };
 
   if (isLoading) {
@@ -179,7 +134,7 @@ export function ResourcePagesTab({
         <AdvancedSearchInput
           value={searchTerm}
           onChange={onSearchChange}
-          placeholder="Search pages... Try 'tag:training' or 'folder:onboarding'"
+          placeholder="Search pages... Try 'tag:training'"
           suggestions={suggestions}
           showHistory={true}
           focusTrigger={focusSearch}
@@ -189,40 +144,6 @@ export function ResourcePagesTab({
       
       {/* Filter Bar */}
       <div className="space-y-3">
-        {/* Folder Filters */}
-        {folders.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedFolderId === "all" ? "default" : "outline"}
-              size="sm"
-              className="rounded-none text-xs"
-              onClick={() => setSelectedFolderId("all")}
-            >
-              All Pages
-            </Button>
-            <Button
-              variant={selectedFolderId === "unfiled" ? "default" : "outline"}
-              size="sm"
-              className="rounded-none text-xs"
-              onClick={() => setSelectedFolderId("unfiled")}
-            >
-              Unfiled
-            </Button>
-            {folders.map((folder) => (
-              <Button
-                key={folder.id}
-                variant={selectedFolderId === folder.id ? "default" : "outline"}
-                size="sm"
-                className="rounded-none text-xs"
-                onClick={() => setSelectedFolderId(folder.id)}
-              >
-                <FolderOpen className="h-3 w-3 mr-1" />
-                {folder.name}
-              </Button>
-            ))}
-          </div>
-        )}
-
         {/* Tag Filters */}
         {allTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -249,12 +170,12 @@ export function ResourcePagesTab({
           <CardContent className="py-16 text-center">
             <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+              {searchTerm || selectedTags.length > 0
                 ? "No pages found"
                 : "No resource pages available"}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+              {searchTerm || selectedTags.length > 0
                 ? "Try adjusting your search or filters."
                 : "No resource pages have been assigned to your role yet. Check back later or contact your manager."}
             </p>
@@ -264,7 +185,6 @@ export function ResourcePagesTab({
         /* Card Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((page) => {
-            const folderName = getFolderName(page.folder_id);
             const hasPendingFlag = pageFlagsMap?.has(page.id) ?? false;
             
             // Get search snippet if there's a search query
@@ -350,15 +270,6 @@ export function ResourcePagesTab({
                             </Badge>
                           )}
                           {hasPendingFlag && <UnderReviewBadge />}
-                          {folderName && (
-                            <Badge
-                              variant="secondary"
-                              className="rounded-none text-[10px]"
-                            >
-                              <FolderOpen className="h-3 w-3 mr-1" />
-                              {folderName}
-                            </Badge>
-                          )}
                           {page.tags.slice(0, 2).map((tag) => (
                             <Badge
                               key={tag}

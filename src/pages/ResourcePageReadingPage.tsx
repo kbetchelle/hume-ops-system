@@ -9,7 +9,6 @@ import { PdfViewerWithFlags } from "@/components/pdf/PdfViewerWithFlags";
 import { PdfPageFlagDialog } from "@/components/pdf/PdfPageFlagDialog";
 import { InPageSearch } from "@/components/search/InPageSearch";
 import { useResourcePage } from "@/hooks/useStaffResources";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useRecordPageRead } from "@/hooks/useRecordPageRead";
 import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
@@ -50,7 +49,6 @@ export function ResourcePageReadingPage() {
   const returnTo = searchParams.get("returnTo");
 
   const { data: page, isLoading } = useResourcePage(pageId);
-  const { data: folders = [] } = useResourcePageFolders();
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageId ? [pageId] : []);
 
   // In-page search state
@@ -152,9 +150,6 @@ export function ResourcePageReadingPage() {
     );
   }
 
-  const folderName = page.folder_id
-    ? folders.find((f) => f.id === page.folder_id)?.name
-    : null;
   const hasPendingFlag = pageFlagsMap?.has(page.id) ?? false;
 
   return (
@@ -162,11 +157,6 @@ export function ResourcePageReadingPage() {
       {/* Print-only header (hidden on screen, visible in print) */}
       <div className="hidden print:block mb-8">
         <h1 className="text-2xl font-semibold mb-2">{page.title}</h1>
-        {folderName && (
-          <div className="text-sm text-muted-foreground mb-2 breadcrumb">
-            Resources › Pages › {folderName}
-          </div>
-        )}
         {page.tags.length > 0 && (
           <div className="text-xs text-muted-foreground mb-2">
             Tags: {page.tags.join(", ")}
@@ -195,12 +185,6 @@ export function ResourcePageReadingPage() {
                 <span>Resources</span>
                 <span>›</span>
                 <span>Pages</span>
-                {folderName && (
-                  <>
-                    <span>›</span>
-                    <span>{folderName}</span>
-                  </>
-                )}
               </div>
 
               {/* Tags and badges */}

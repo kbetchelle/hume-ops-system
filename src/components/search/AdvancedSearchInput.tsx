@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, X, Clock, Tag, FolderOpen, ChevronRight } from "lucide-react";
+import { Search, X, Clock, Tag, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,7 +122,6 @@ export function AdvancedSearchInput({
   // Group suggestions by type
   const historySuggestions = suggestions.filter(s => s.type === 'history');
   const tagSuggestions = suggestions.filter(s => s.type === 'tag');
-  const folderSuggestions = suggestions.filter(s => s.type === 'folder');
   const patternSuggestions = suggestions.filter(s => s.type === 'pattern');
 
   const getSuggestionIcon = (type: SearchSuggestion['type']) => {
@@ -131,8 +130,6 @@ export function AdvancedSearchInput({
         return <Clock className="h-3.5 w-3.5" />;
       case 'tag':
         return <Tag className="h-3.5 w-3.5" />;
-      case 'folder':
-        return <FolderOpen className="h-3.5 w-3.5" />;
       case 'pattern':
         return <ChevronRight className="h-3.5 w-3.5" />;
       default:
@@ -228,29 +225,6 @@ export function AdvancedSearchInput({
                 </CommandGroup>
               )}
 
-              {folderSuggestions.length > 0 && (
-                <CommandGroup heading="Folders">
-                  {folderSuggestions.map((suggestion, idx) => (
-                    <CommandItem
-                      key={`folder-${idx}`}
-                      value={suggestion.value}
-                      onSelect={() => handleSuggestionSelect(suggestion.value)}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        {getSuggestionIcon(suggestion.type)}
-                        <span className="flex-1">{suggestion.label}</span>
-                        {suggestion.description && (
-                          <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {suggestion.description}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
               {patternSuggestions.length > 0 && (
                 <CommandGroup heading="Search Patterns">
                   {patternSuggestions.map((suggestion, idx) => (
@@ -286,12 +260,6 @@ export function AdvancedSearchInput({
             <Badge key={`tag-${idx}`} variant="secondary" className="rounded-none text-xs">
               <Tag className="h-3 w-3 mr-1" />
               {tag}
-            </Badge>
-          ))}
-          {parsed.filters.folders.map((folder, idx) => (
-            <Badge key={`folder-${idx}`} variant="secondary" className="rounded-none text-xs">
-              <FolderOpen className="h-3 w-3 mr-1" />
-              {folder}
             </Badge>
           ))}
         </div>

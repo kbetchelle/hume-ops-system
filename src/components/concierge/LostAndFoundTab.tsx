@@ -999,17 +999,6 @@ export function LostAndFoundTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Member contact</Label>
-              <Input
-                value={requestForm.member_contact}
-                onChange={(e) =>
-                  setRequestForm({ ...requestForm, member_contact: e.target.value })
-                }
-                placeholder="Email or phone"
-                className="rounded-none text-xs"
-              />
-            </div>
-            <div className="space-y-2">
               <Label className="text-xs">Date inquired</Label>
               <Input
                 type="date"

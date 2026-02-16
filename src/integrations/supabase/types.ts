@@ -1946,39 +1946,56 @@ export type Database = {
       }
       club_policies: {
         Row: {
+          archived_at: string | null
+          archived_reason: string | null
           category: string | null
           content: string
           created_at: string | null
           id: string
           is_active: boolean | null
           last_updated_by: string | null
+          migrated_to_page_id: string | null
           sort_order: number | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_reason?: string | null
           category?: string | null
           content: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           last_updated_by?: string | null
+          migrated_to_page_id?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_reason?: string | null
           category?: string | null
           content?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           last_updated_by?: string | null
+          migrated_to_page_id?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "club_policies_migrated_to_page_id_fkey"
+            columns: ["migrated_to_page_id"]
+            isOneToOne: false
+            referencedRelation: "resource_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       concierge_checklist_items: {
         Row: {
@@ -3221,33 +3238,50 @@ export type Database = {
       }
       policy_categories: {
         Row: {
+          archived_at: string | null
+          archived_reason: string | null
           created_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
+          migrated_to_folder_id: string | null
           name: string
           sort_order: number | null
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_reason?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          migrated_to_folder_id?: string | null
           name: string
           sort_order?: number | null
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_reason?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          migrated_to_folder_id?: string | null
           name?: string
           sort_order?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "policy_categories_migrated_to_folder_id_fkey"
+            columns: ["migrated_to_folder_id"]
+            isOneToOne: false
+            referencedRelation: "resource_page_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -3417,6 +3451,8 @@ export type Database = {
           created_at: string | null
           flagged_by_id: string
           flagged_by_name: string
+          flagged_page_context: string | null
+          flagged_page_number: number | null
           id: string
           note: string
           resolution_note: string | null
@@ -3433,6 +3469,8 @@ export type Database = {
           created_at?: string | null
           flagged_by_id: string
           flagged_by_name: string
+          flagged_page_context?: string | null
+          flagged_page_number?: number | null
           id?: string
           note: string
           resolution_note?: string | null
@@ -3449,6 +3487,8 @@ export type Database = {
           created_at?: string | null
           flagged_by_id?: string
           flagged_by_name?: string
+          flagged_page_context?: string | null
+          flagged_page_number?: number | null
           id?: string
           note?: string
           resolution_note?: string | null
@@ -4620,6 +4660,13 @@ export type Database = {
             foreignKeyName: "staff_qa_linked_policy_id_fkey"
             columns: ["linked_policy_id"]
             isOneToOne: false
+            referencedRelation: "archived_policies_reference"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_qa_linked_policy_id_fkey"
+            columns: ["linked_policy_id"]
+            isOneToOne: false
             referencedRelation: "club_policies"
             referencedColumns: ["id"]
           },
@@ -5246,6 +5293,27 @@ export type Database = {
       }
     }
     Views: {
+      archived_policies_reference: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          content: string | null
+          created_at: string | null
+          id: string | null
+          migrated_page_title: string | null
+          migrated_pdf_url: string | null
+          migrated_to_page_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_policies_migrated_to_page_id_fkey"
+            columns: ["migrated_to_page_id"]
+            isOneToOne: false
+            referencedRelation: "resource_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       arketa_orphan_classes: {
         Row: {
           booked_count: number | null
@@ -5255,6 +5323,31 @@ export type Database = {
           id: string | null
           is_cancelled: boolean | null
           start_time: string | null
+        }
+        Relationships: []
+      }
+      resource_flags_with_page_info: {
+        Row: {
+          created_at: string | null
+          flagged_by_id: string | null
+          flagged_by_name: string | null
+          flagged_page_context: string | null
+          flagged_page_number: number | null
+          id: string | null
+          note: string | null
+          page_display: string | null
+          page_type: string | null
+          pdf_page_count: number | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_id: string | null
+          resolved_by_name: string | null
+          resource_id: string | null
+          resource_label: string | null
+          resource_title: string | null
+          resource_type: string | null
+          status: string | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -5345,6 +5438,18 @@ export type Database = {
         Returns: {
           d: string
           record_count: number
+        }[]
+      }
+      get_pdf_page_flags: {
+        Args: { page_id: string; page_num?: number }
+        Returns: {
+          created_at: string
+          flagged_by_name: string
+          flagged_page_context: string
+          flagged_page_number: number
+          id: string
+          note: string
+          status: string
         }[]
       }
       get_pending_approvals: {

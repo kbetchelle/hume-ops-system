@@ -9,74 +9,41 @@ interface RoleAssignmentCheckboxesProps {
   disabled?: boolean;
 }
 
-const ASSIGNABLE_ROLES: { role: AppRole; label: string }[] = [
-  { role: "concierge", label: "Concierge" },
-  { role: "female_spa_attendant", label: "Female Spa" },
-  { role: "male_spa_attendant", label: "Male Spa" },
-  { role: "floater", label: "Floater" },
-  { role: "cafe", label: "Cafe" },
-];
-
-// Role group definitions
-const ROLE_GROUPS = {
-  all: ASSIGNABLE_ROLES.map((r) => r.role),
-  foh: ["concierge"] as AppRole[],
-  boh: ["female_spa_attendant", "male_spa_attendant", "floater"] as AppRole[],
-  cafe: ["cafe"] as AppRole[],
-};
+const BOH_ROLES: AppRole[] = ["female_spa_attendant", "male_spa_attendant", "floater"];
 
 export function RoleAssignmentCheckboxes({
   value = [],
   onChange,
   disabled = false,
 }: RoleAssignmentCheckboxesProps) {
-  const toggle = (role: AppRole) => {
-    if (value.includes(role)) {
-      onChange(value.filter((r) => r !== role));
-    } else {
-      onChange([...value, role]);
-    }
-  };
+  const isActive = BOH_ROLES.every((role) => value.includes(role));
 
-  const toggleGroup = (groupRoles: AppRole[]) => {
-    // Check if all roles in the group are selected
-    const allSelected = groupRoles.every((role) => value.includes(role));
-
-    if (allSelected) {
-      // Deselect all roles in the group
-      onChange(value.filter((role) => !groupRoles.includes(role)));
+  const toggle = () => {
+    if (isActive) {
+      onChange(value.filter((r) => !BOH_ROLES.includes(r)));
     } else {
-      // Select all roles in the group
       const newRoles = [...value];
-      groupRoles.forEach((role) => {
-        if (!newRoles.includes(role)) {
-          newRoles.push(role);
-        }
+      BOH_ROLES.forEach((role) => {
+        if (!newRoles.includes(role)) newRoles.push(role);
       });
       onChange(newRoles);
     }
   };
 
-  const isGroupActive = (groupRoles: AppRole[]) => {
-    return groupRoles.every((role) => value.includes(role));
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1">
-        {ASSIGNABLE_ROLES.map(({ role, label }) => (
-          <Button
-            key={role}
-            type="button"
-            variant={value.includes(role) ? "default" : "outline"}
-            size="sm"
-            className="rounded-none text-xs h-7"
-            onClick={() => toggle(role)}
-            disabled={disabled}
-          >
-            {label}
-          </Button>
-        ))}
+        <Button
+          type="button"
+          variant={isActive ? "default" : "outline"}
+          size="sm"
+          className="rounded-none text-xs h-7"
+          onClick={toggle}
+          disabled={disabled}
+        >
+          Back of House
+        </Button>
+        
       </div>
     </div>
   );

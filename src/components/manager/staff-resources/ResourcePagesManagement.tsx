@@ -61,7 +61,6 @@ const FILTER_ROLES: { key: string; label: string; roles: string[] }[] = [
   { key: "concierge", label: "Concierge", roles: ["concierge"] },
   { key: "boh", label: "Back of House", roles: BOH_ROLES },
   { key: "cafe", label: "Cafe", roles: ["cafe"] },
-  { key: "trainer", label: "Trainer", roles: ["trainer"] },
 ];
 
 // ---------------------------------------------------------------------------

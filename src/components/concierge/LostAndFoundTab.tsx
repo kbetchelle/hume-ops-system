@@ -555,6 +555,7 @@ export function LostAndFoundTab() {
             <Table>
               <TableHeader className="border">
                 <TableRow>
+                  <TableHead className="w-[40px]" />
                   <TableHead
                     className="cursor-pointer select-none text-xs"
                     onClick={() => toggleSort("description")}

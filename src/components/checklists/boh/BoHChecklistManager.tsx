@@ -152,8 +152,8 @@ export function BoHChecklistManager() {
 
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
-          <Card key={checklist.id} className={`border ${!checklist.is_active ? 'opacity-60' : ''}`}>
-            <CardHeader className="p-[15px] pb-0">
+          <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''}`}>
+            <CardHeader className="p-0 pb-0">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function BoHChecklistManager() {
             </CardHeader>
 
             {expandedId === checklist.id && (
-              <CardContent className="p-[15px] pt-4">
+              <CardContent className="p-0 pt-4">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-medium">

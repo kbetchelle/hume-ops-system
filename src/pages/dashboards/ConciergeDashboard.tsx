@@ -52,6 +52,7 @@ export default function ConciergeDashboard() {
     "resources-quick-links": "Quick Links",
     "resources-pages": "Resource Pages",
     "lost-found": "Lost & Found",
+    packages: "Package Tracker",
     qa: "Q&A"
   };
 

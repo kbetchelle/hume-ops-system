@@ -610,45 +610,20 @@ export function LostAndFoundTab() {
                 className="rounded-none text-xs"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Date found</Label>
-              <Input
-                type="date"
-                value={formData.date_found}
-                onChange={(e) =>
-                  setFormData({ ...formData, date_found: e.target.value })
-                }
-                className="rounded-none text-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Object category</Label>
-              <Select
-                value={formData.object_category || "none"}
-                onValueChange={(v) =>
-                  setFormData({
-                    ...formData,
-                    object_category: v === "none" ? "" : (v as LostAndFoundCategory),
-                  })
-                }
-              >
-                <SelectTrigger className="rounded-none text-xs">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem value="none" className="text-xs">
-                    None
-                  </SelectItem>
-                  {(Constants.public.Enums.lost_and_found_category as readonly LostAndFoundCategory[]).map((c) => (
-                    <SelectItem key={c} value={c} className="text-xs">
-                      {CATEGORY_LABELS[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 flex flex-col items-end">
-              <Label className="text-xs">Photo (optional)</Label>
+            <div className="flex gap-4">
+              <div className="space-y-2 w-1/2">
+                <Label className="text-xs">Date found</Label>
+                <Input
+                  type="date"
+                  value={formData.date_found}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date_found: e.target.value })
+                  }
+                  className="rounded-none text-xs"
+                />
+              </div>
+              <div className="space-y-2 w-1/2 flex flex-col items-end">
+                <Label className="text-xs">Photo (optional)</Label>
               {formData.photo_url ? (
                 <div className="flex items-center gap-2">
                   <img
@@ -684,6 +659,7 @@ export function LostAndFoundTab() {
                   Add photo
                 </Button>
               )}
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Location found</Label>

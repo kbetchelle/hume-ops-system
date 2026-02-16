@@ -2375,9 +2375,9 @@ export type Database = {
           cancellation_notes: string | null
           class_details: Json | null
           class_popularity: Json | null
+          created_at: string | null
           crowd_comments_am: string | null
           crowd_comments_pm: string | null
-          created_at: string | null
           facility_notes_am: Json | null
           facility_notes_pm: Json | null
           gross_sales_arketa: number | null
@@ -2416,9 +2416,9 @@ export type Database = {
           cancellation_notes?: string | null
           class_details?: Json | null
           class_popularity?: Json | null
+          created_at?: string | null
           crowd_comments_am?: string | null
           crowd_comments_pm?: string | null
-          created_at?: string | null
           facility_notes_am?: Json | null
           facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null
@@ -2457,9 +2457,9 @@ export type Database = {
           cancellation_notes?: string | null
           class_details?: Json | null
           class_popularity?: Json | null
+          created_at?: string | null
           crowd_comments_am?: string | null
           crowd_comments_pm?: string | null
-          created_at?: string | null
           facility_notes_am?: Json | null
           facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null

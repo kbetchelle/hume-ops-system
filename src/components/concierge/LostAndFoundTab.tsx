@@ -378,7 +378,7 @@ export function LostAndFoundTab() {
         <TabsContent value="items" className="mt-0">
       <Card className="rounded-none border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm uppercase tracking-wider font-normal">
+          <CardTitle className="text-base font-bold normal-case tracking-normal">
             Lost & Found
           </CardTitle>
         </CardHeader>

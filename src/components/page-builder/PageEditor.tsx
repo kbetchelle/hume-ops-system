@@ -53,11 +53,13 @@ export function PageEditor({
   placeholder = "Start writing...",
 }: PageEditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInternalUpdate = useRef(false);
 
   const handleUpdate = useCallback(
     (json: JSONContent) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
+        isInternalUpdate.current = true;
         onChange(json);
       }, 300);
     },
@@ -94,10 +96,15 @@ export function PageEditor({
     },
   });
 
-  // Sync initialContent when prop changes (e.g. switching pages without remounting)
-  // Uses a ref to avoid overwriting user edits in progress
+  // Sync initialContent only for external changes (e.g. loading from DB, switching pages)
+  // Skip when the change originated from the editor's own onUpdate
   const initialContentRef = useRef(initialContent);
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      initialContentRef.current = initialContent;
+      return;
+    }
     if (editor && initialContent !== initialContentRef.current) {
       initialContentRef.current = initialContent;
       editor.commands.setContent(initialContent || { type: "doc", content: [] });

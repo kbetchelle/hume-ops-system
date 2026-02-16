@@ -241,11 +241,6 @@ function FolderSidebar({
               >
                 <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">{folder.name}</span>
-                {pageCountsByFolder[folder.id] > 0 && (
-                  <Badge variant="outline" className="ml-auto rounded-none text-xs shrink-0">
-                    {pageCountsByFolder[folder.id]}
-                  </Badge>
-                )}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

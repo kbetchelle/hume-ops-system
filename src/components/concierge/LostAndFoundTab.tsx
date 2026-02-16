@@ -441,7 +441,7 @@ export function LostAndFoundTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs font-medium">{item.description}</p>
-                        {getStatusBadge(item.status)}
+                        {item.status !== "unclaimed" && getStatusBadge(item.status)}
                         {item.object_category && (
                           <Badge variant="outline" className="rounded-none text-[10px] font-normal">
                             {CATEGORY_LABELS[item.object_category]}

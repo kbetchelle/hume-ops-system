@@ -379,7 +379,7 @@ export function LostAndFoundTab() {
       <Card className="rounded-none border">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold normal-case tracking-normal">
-            Lost & Found
+            Please add valuable items found in the space to the tracker below (not water bottles, clothes, or shoes)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

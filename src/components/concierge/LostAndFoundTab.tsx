@@ -500,29 +500,7 @@ export function LostAndFoundTab() {
                 className="pl-8 rounded-none text-xs"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="rounded-none text-xs w-[140px] h-9">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                <SelectItem value="all" className="text-xs">All Categories</SelectItem>
-                {VISIBLE_CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c} className="text-xs">
-                    {CATEGORY_LABELS[c]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={inSafeFilter} onValueChange={setInSafeFilter}>
-              <SelectTrigger className="rounded-none text-xs w-[120px] h-9">
-                <SelectValue placeholder="In Safe?" />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                <SelectItem value="all" className="text-xs">All</SelectItem>
-                <SelectItem value="yes" className="text-xs">In Safe</SelectItem>
-                <SelectItem value="no" className="text-xs">Not in Safe</SelectItem>
-              </SelectContent>
-            </Select>
+            
             <Button
               size="sm"
               className="rounded-none h-9"

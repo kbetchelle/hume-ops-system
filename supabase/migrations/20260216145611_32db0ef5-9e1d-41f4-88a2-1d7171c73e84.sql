@@ -1,0 +1,1 @@
+ALTER TABLE public.lost_and_found ADD COLUMN in_safe boolean NOT NULL DEFAULT false;

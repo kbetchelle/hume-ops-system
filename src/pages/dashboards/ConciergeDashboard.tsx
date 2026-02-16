@@ -52,7 +52,7 @@ export default function ConciergeDashboard() {
     "resources-quick-links": "Quick Links",
     "resources-pages": "Resource Pages",
     "lost-found": "Lost & Found",
-    qa: "Q&A",
+    qa: "Q&A"
   };
 
   const renderContent = () => {
@@ -62,8 +62,8 @@ export default function ConciergeDashboard() {
           <div className="space-y-4 p-4">
             <UpcomingTodayCard />
             <EmbeddedChecklist />
-          </div>
-        );
+          </div>);
+
       case "whos-working":
         return (
           <div className="p-6 md:p-8">
@@ -73,16 +73,16 @@ export default function ConciergeDashboard() {
             <div className="max-w-2xl">
               <WhosWorkingView />
             </div>
-          </div>
-        );
+          </div>);
+
       case "report":
         return (
           <div className="p-6 md:p-8">
             <div className="max-w-3xl mx-auto">
               <ConciergeForm />
             </div>
-          </div>
-        );
+          </div>);
+
       case "messages":
         return (
           <div className="p-6 md:p-8">
@@ -92,8 +92,8 @@ export default function ConciergeDashboard() {
             <div className="max-w-3xl">
               <StaffMessagesInbox />
             </div>
-          </div>
-        );
+          </div>);
+
       case "announcements":
         return (
           <div className="p-6 md:p-8">
@@ -103,58 +103,58 @@ export default function ConciergeDashboard() {
             <div className="max-w-3xl">
               <AnnouncementsBoard contextRole="concierge" />
             </div>
-          </div>
-        );
+          </div>);
+
       case "qa":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
             <div className="flex-1 flex flex-col min-h-0 w-full">
               <PoliciesAndQA />
             </div>
-          </div>
-        );
+          </div>);
+
       case "templates":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
             <ResponseTemplatesWithAI />
-          </div>
-        );
+          </div>);
+
       case "resources":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
             <div className="flex-1">
               <StaffResourcesView />
             </div>
-          </div>
-        );
+          </div>);
+
       case "resources-quick-links":
         return (
           <div className="p-4 md:p-8">
             <QuickLinksTab groups={quickLinkGroups} isLoading={qlLoading} searchTerm="" />
-          </div>
-        );
+          </div>);
+
       case "resources-pages":
         return (
           <div className="p-4 md:p-8">
-            <ResourcePagesTab 
-              pages={resourcePages} 
-              isLoading={rpLoading} 
-              searchTerm="" 
-              returnPath="/dashboard/concierge"
-            />
-          </div>
-        );
+            <ResourcePagesTab
+              pages={resourcePages}
+              isLoading={rpLoading}
+              searchTerm=""
+              returnPath="/dashboard/concierge" />
+
+          </div>);
+
       case "lost-found":
         return (
           <div className="p-6 md:p-8">
             <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Lost & Found
+
             </h2>
             <div className="max-w-3xl">
               <LostAndFoundTab />
             </div>
-          </div>
-        );
+          </div>);
+
       default:
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
@@ -165,8 +165,8 @@ export default function ConciergeDashboard() {
             <div>
               <WhosWorkingView />
             </div>
-          </div>
-        );
+          </div>);
+
     }
   };
 
@@ -181,11 +181,11 @@ export default function ConciergeDashboard() {
           <ConciergeBottomNav
             activeView={activeView}
             onViewChange={setActiveView}
-            hasUnreadAnnouncements={!!hasUnreadAnnouncements}
-          />
+            hasUnreadAnnouncements={!!hasUnreadAnnouncements} />
+
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>);
+
   }
 
   return (
@@ -194,8 +194,8 @@ export default function ConciergeDashboard() {
         <ConciergeSidebar
           activeView={activeView}
           onViewChange={setActiveView}
-          unreadCount={unreadCount}
-        />
+          unreadCount={unreadCount} />
+
         <div className="flex-1 flex flex-col min-w-0">
           <ConciergeHeader title={viewTitles[activeView]} />
           <main className="flex-1 overflow-auto">
@@ -203,6 +203,6 @@ export default function ConciergeDashboard() {
           </main>
         </div>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>);
+
 }

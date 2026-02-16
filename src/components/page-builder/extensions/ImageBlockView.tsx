@@ -65,7 +65,10 @@ export function ImageBlockView({
       >
         {/* Alignment controls — shown when selected */}
         {selected && (
-          <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-0.5 border border-border bg-background p-0.5 z-10">
+          <div
+            className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-0.5 border border-border bg-background p-0.5 z-10"
+            onMouseDown={(e) => e.preventDefault()}
+          >
             <Button
               type="button"
               variant={alignment === "left" ? "default" : "ghost"}

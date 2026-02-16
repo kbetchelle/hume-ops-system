@@ -138,14 +138,12 @@ export function ResourcePageEditorPage() {
         setIsPublished(publish);
         setHasUnsavedChanges(false);
         if (publish) {
-          toast.success("Your document has been published");
-          navigate("/dashboard/staff-resources", { replace: true });
+        toast.success("Your document has been published");
+          navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
           return;
         }
         toast.success("Draft saved");
-        navigate(`/dashboard/staff-resources/pages/${result.id}/edit`, {
-          replace: true,
-        });
+        navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
       } else if (pageId) {
         await updateMutation.mutateAsync({
           id: pageId,
@@ -160,10 +158,11 @@ export function ResourcePageEditorPage() {
         setHasUnsavedChanges(false);
         if (publish) {
           toast.success("Your document has been published");
-          navigate("/dashboard/staff-resources", { replace: true });
+          navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
           return;
         }
         toast.success("Draft saved");
+        navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
       }
     } catch (error) {
       console.error("Failed to save page:", error);
@@ -174,7 +173,7 @@ export function ResourcePageEditorPage() {
     if (!pageId || isNew) return;
     try {
       await deleteMutation.mutateAsync(pageId);
-      navigate("/dashboard/staff-resources");
+      navigate("/dashboard/staff-resources?tab=resource-pages");
     } catch (error) {
       console.error("Failed to delete page:", error);
     }
@@ -217,10 +216,10 @@ export function ResourcePageEditorPage() {
           "You have unsaved changes. Are you sure you want to leave?"
         )
       ) {
-        navigate("/dashboard/staff-resources");
+        navigate("/dashboard/staff-resources?tab=resource-pages");
       }
     } else {
-      navigate("/dashboard/staff-resources");
+      navigate("/dashboard/staff-resources?tab=resource-pages");
     }
   };
 

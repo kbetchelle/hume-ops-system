@@ -647,7 +647,7 @@ export function LostAndFoundTab() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col items-end">
               <Label className="text-xs">Photo (optional)</Label>
               {formData.photo_url ? (
                 <div className="flex items-center gap-2">

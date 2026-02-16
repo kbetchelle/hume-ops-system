@@ -225,7 +225,7 @@ export function ConciergeSidebar({
   ];
 
   return (
-    <Sidebar className="w-60 border-r border-border flex flex-col">
+    <Sidebar className="w-60 flex flex-col">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting dropdown and role switcher at top */}
         <div className="px-3 pb-3 space-y-0">

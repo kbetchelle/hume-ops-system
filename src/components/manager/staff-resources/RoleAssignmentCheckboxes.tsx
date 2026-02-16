@@ -118,26 +118,6 @@ export function RoleAssignmentCheckboxes({
           Trainers
         </Button>
       </div>
-
-      {/* Individual role checkboxes */}
-      <div className="grid grid-cols-3 gap-2">
-        {ASSIGNABLE_ROLES.map(({ role, label }) => (
-          <div key={role} className="flex items-center gap-2">
-            <Checkbox
-              id={`role-${role}`}
-              checked={value.includes(role)}
-              onCheckedChange={() => toggle(role)}
-              disabled={disabled}
-            />
-            <Label
-              htmlFor={`role-${role}`}
-              className="text-xs uppercase tracking-wider cursor-pointer"
-            >
-              {label}
-            </Label>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -603,9 +603,9 @@ export function LostAndFoundTab() {
         <TabsContent value="requests" className="mt-0">
       <Card className="rounded-none border">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm uppercase tracking-wider font-normal">
+          <p className="text-sm text-muted-foreground">
             Member requests
-          </CardTitle>
+          </p>
           <Button
             size="sm"
             className="rounded-none h-8"

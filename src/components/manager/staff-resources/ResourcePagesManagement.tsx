@@ -303,7 +303,7 @@ export function ResourcePagesManagement() {
             <span className="w-4 shrink-0" />
             <span className="flex-1 min-w-0">Name</span>
             <span className="hidden md:block w-48 shrink-0">Status / Roles</span>
-            <span className="hidden sm:block w-20 shrink-0 text-right">Modified</span>
+            <span className="hidden sm:block w-20 shrink-0 text-right">Last Updated</span>
             <span className="w-20 shrink-0" />
           </div>
           {filteredPages.map((page) => (

@@ -547,7 +547,7 @@ export function LostAndFoundTab() {
                     <span className="flex items-center">Category <SortIcon col="object_category" /></span>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none text-xs w-[90px]"
+                    className="cursor-pointer select-none text-xs w-[98px]"
                     onClick={() => toggleSort("in_safe")}
                   >
                     <span className="flex items-center">In Safe? <SortIcon col="in_safe" /></span>

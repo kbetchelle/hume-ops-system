@@ -12,7 +12,7 @@ export function useCanEditPage(pageId: string | undefined) {
   return useQuery({
     queryKey: ["can-edit-page", pageId, user?.id],
     queryFn: async () => {
-      if (!user || !pageId) {
+      if (!user) {
         return {
           canEdit: false,
           isManager: false,
@@ -39,6 +39,16 @@ export function useCanEditPage(pageId: string | undefined) {
         };
       }
 
+      // For new pages (no pageId), non-managers can't edit
+      if (!pageId) {
+        return {
+          canEdit: false,
+          isManager: false,
+          isDelegatedEditor: false,
+          isLoading: false,
+        };
+      }
+
       // Check if user is a delegated editor
       const { data, error } = await (supabase
         .from("resource_page_editors" as any) as any)
@@ -58,6 +68,6 @@ export function useCanEditPage(pageId: string | undefined) {
         isLoading: false,
       };
     },
-    enabled: !!user && !!pageId,
+    enabled: !!user,
   });
 }

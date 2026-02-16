@@ -15,6 +15,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { LinkCardNode } from "./extensions/LinkCardNode";
 import { TwoColumns, Column } from "./extensions/TwoColumnNode";
 import { ImageBlock } from "./extensions/ImageBlock";
+import { IndentExtension } from "./extensions/IndentExtension";
 import { EditorToolbar } from "./EditorToolbar";
 
 const TabIndent = Extension.create({
@@ -91,6 +92,7 @@ export function PageEditor({
       TwoColumns,
       Column,
       TabIndent,
+      IndentExtension,
     ],
     content: initialContent || undefined,
     onUpdate: ({ editor: ed }) => {

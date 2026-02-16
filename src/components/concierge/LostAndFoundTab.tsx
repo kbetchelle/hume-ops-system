@@ -56,6 +56,7 @@ interface LostFoundItem {
   object_category: LostAndFoundCategory | null;
   member_requested: boolean;
   in_safe: boolean;
+  archived_at: string | null;
 }
 
 type StatusFilter = "all" | "unclaimed" | "claimed" | "disposed";
@@ -232,7 +233,8 @@ export function LostAndFoundTab() {
   const unclaimedItems = useMemo(() => items.filter((i) => i.status === "unclaimed"), [items]);
 
   const filteredAndSortedItems = useMemo(() => {
-    let filtered = items.filter((item) => {
+  let filtered = items.filter((item) => {
+      if (item.archived_at) return false; // exclude archived items from found items tab
       const matchesSearch =
         searchQuery === "" ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -376,6 +378,7 @@ export function LostAndFoundTab() {
         status: "claimed",
         claimed_by: claimantName,
         claimed_date: format(new Date(), "yyyy-MM-dd"),
+        archived_at: new Date().toISOString(),
       },
       [eq("id", selectedItem.id)]
     );
@@ -394,7 +397,7 @@ export function LostAndFoundTab() {
   const handleDispose = async (item: LostFoundItem) => {
     const { error } = await updateTable(
       "lost_and_found",
-      { status: "disposed" },
+      { status: "disposed", archived_at: new Date().toISOString() },
       [eq("id", item.id)]
     );
 
@@ -429,7 +432,7 @@ export function LostAndFoundTab() {
     for (const id of selectedIds) {
       const { error } = await updateTable(
         "lost_and_found",
-        { status: "claimed", claimed_by: "Bulk claim", claimed_date: format(new Date(), "yyyy-MM-dd") },
+        { status: "claimed", claimed_by: "Bulk claim", claimed_date: format(new Date(), "yyyy-MM-dd"), archived_at: new Date().toISOString() },
         [eq("id", id)]
       );
       if (!error) successCount++;
@@ -445,7 +448,7 @@ export function LostAndFoundTab() {
     for (const id of selectedIds) {
       const { error } = await updateTable(
         "lost_and_found",
-        { status: "disposed" },
+        { status: "disposed", archived_at: new Date().toISOString() },
         [eq("id", id)]
       );
       if (!error) successCount++;
@@ -479,6 +482,9 @@ export function LostAndFoundTab() {
           </TabsTrigger>
           <TabsTrigger value="requests" className="flex-1 rounded-none text-xs">
             Member requests
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="flex-1 rounded-none text-xs">
+            Archived
           </TabsTrigger>
         </TabsList>
         <TabsContent value="items" className="mt-0">
@@ -669,6 +675,59 @@ export function LostAndFoundTab() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+        <TabsContent value="archived" className="mt-0">
+          <Card className="rounded-none border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold normal-case tracking-normal">
+                Archived items are permanently deleted after 14 days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const archivedItems = items.filter((i) => !!i.archived_at);
+                if (archivedItems.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground text-center py-8">
+                      No archived items
+                    </p>
+                  );
+                }
+                return (
+                  <Table>
+                    <TableHeader className="border">
+                      <TableRow>
+                        <TableHead className="text-xs w-1/4">Item Name</TableHead>
+                        <TableHead className="text-xs w-1/4">Category</TableHead>
+                        <TableHead className="text-xs w-1/4">Status</TableHead>
+                        <TableHead className="text-xs w-1/4">Archived</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {archivedItems.map((item) => {
+                        const archivedDate = new Date(item.archived_at!);
+                        const deleteDate = new Date(archivedDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+                        const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="text-xs font-medium">{item.description}</TableCell>
+                            <TableCell className="text-xs">
+                              {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs">{getStatusBadge(item.status)}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {format(archivedDate, "MMM d, yyyy")}
+                              <span className="ml-1 text-destructive">({daysLeft}d left)</span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

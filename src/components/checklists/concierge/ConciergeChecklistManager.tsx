@@ -122,7 +122,7 @@ export function ConciergeChecklistManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Concierge Checklists</h2>
+          <h3 className="text-2xl font-bold">Concierge Checklists</h3>
           <p className="text-sm text-muted-foreground">Manage checklists for concierge staff</p>
         </div>
         <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>

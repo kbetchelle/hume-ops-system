@@ -55,16 +55,12 @@ export function PageEditor({
   editable = true,
   placeholder = "Start writing...",
 }: PageEditorProps) {
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInternalUpdate = useRef(false);
 
   const handleUpdate = useCallback(
     (json: JSONContent) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        isInternalUpdate.current = true;
-        onChange(json);
-      }, 300);
+      isInternalUpdate.current = true;
+      onChange(json);
     },
     [onChange]
   );
@@ -122,12 +118,7 @@ export function PageEditor({
     }
   }, [editor, editable]);
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+  // No cleanup needed
 
   if (!editor) return null;
 

@@ -615,24 +615,30 @@ export function LostAndFoundTab() {
             Add request
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-0">
           {requestsLoading ? (
-            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full m-4" />
           ) : requests.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8">
+            <p className="text-sm text-muted-foreground text-center py-8">
               No member requests
             </p>
           ) : (
-            <div className="space-y-3">
-              {requests.map((req) => (
-                <div
-                  key={req.id}
-                  className="border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="text-xs font-medium">{req.description}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
+            <Table>
+              <TableHeader className="border-b">
+                <TableRow>
+                  <TableHead className="text-sm">Description</TableHead>
+                  <TableHead className="text-sm">Member</TableHead>
+                  <TableHead className="text-sm">Date</TableHead>
+                  <TableHead className="text-sm">Notes</TableHead>
+                  <TableHead className="text-sm text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requests.map((req) => (
+                  <TableRow key={req.id}>
+                    <TableCell className="text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        {req.description}
                         {req.status === "open" && (
                           <Badge className="rounded-none bg-amber-500/20 text-amber-700 dark:text-amber-400">Open</Badge>
                         )}
@@ -643,35 +649,36 @@ export function LostAndFoundTab() {
                           <Badge className="rounded-none bg-muted">Closed</Badge>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
-                        {req.member_name && <span>Member: {req.member_name}</span>}
-                        {req.member_contact && <span>{req.member_contact}</span>}
-                        {req.date_inquired && (
-                          <span>{format(new Date(req.date_inquired), "MMM d, yyyy")}</span>
-                        )}
-                      </div>
-                      {req.notes && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">{req.notes}</p>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {req.member_name || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {req.date_inquired ? format(new Date(req.date_inquired), "MMM d, yyyy") : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground italic">
+                      {req.notes || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {req.status === "open" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 rounded-none text-xs"
+                          onClick={() => {
+                            setSelectedRequestForMatch(req);
+                            setIsMatchDialogOpen(true);
+                            setMatchItemId("");
+                          }}
+                        >
+                          Match to item
+                        </Button>
                       )}
-                    </div>
-                    {req.status === "open" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 rounded-none text-xs"
-                        onClick={() => {
-                          setSelectedRequestForMatch(req);
-                          setIsMatchDialogOpen(true);
-                          setMatchItemId("");
-                        }}
-                      >
-                        Match to item
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

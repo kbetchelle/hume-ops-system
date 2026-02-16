@@ -8,6 +8,7 @@ import {
   FileCode,
   FolderOpen,
   Package,
+  PackageOpen,
   HelpCircle,
   User,
   Settings,
@@ -58,6 +59,7 @@ export type ConciergeView =
   | "resources-quick-links"
   | "resources-pages"
   | "lost-found"
+  | "packages"
   | "qa";
 
 interface NavItem {
@@ -66,6 +68,7 @@ interface NavItem {
   icon: LucideIcon;
   badge?: number;
   hasUnreadDot?: boolean;
+  route?: string;
 }
 
 interface NavSection {
@@ -213,6 +216,7 @@ export function ConciergeSidebar({
     {
       title: "References",
       items: [
+        { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
         { id: "lost-found", label: "Lost & Found", icon: Package },
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
@@ -319,7 +323,13 @@ export function ConciergeSidebar({
                   return (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
-                        onClick={() => onViewChange(item.id)}
+                        onClick={() => {
+                          if (item.route) {
+                            navigate(item.route);
+                          } else {
+                            onViewChange(item.id);
+                          }
+                        }}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
                           "hover:bg-muted/50",

@@ -541,25 +541,25 @@ export function LostAndFoundTab() {
                 <TableRow>
                   <TableHead className="w-[40px]" />
                   <TableHead
-                      className="cursor-pointer select-none text-sm w-1/4"
+                      className="cursor-pointer select-none text-xs w-1/4"
                       onClick={() => toggleSort("description")}>
 
                     <span className="flex items-center">Item Name <SortIcon col="description" /></span>
                   </TableHead>
                   <TableHead
-                      className="cursor-pointer select-none text-sm w-1/4"
+                      className="cursor-pointer select-none text-xs w-1/4"
                       onClick={() => toggleSort("object_category")}>
 
                     <span className="flex items-center">Category <SortIcon col="object_category" /></span>
                   </TableHead>
                   <TableHead
-                      className="cursor-pointer select-none text-sm w-1/4"
+                      className="cursor-pointer select-none text-xs w-1/4"
                       onClick={() => toggleSort("in_safe")}>
 
                     <span className="flex items-center">In Safe? <SortIcon col="in_safe" /></span>
                   </TableHead>
                   <TableHead
-                      className="cursor-pointer select-none text-sm w-1/4"
+                      className="cursor-pointer select-none text-xs w-1/4"
                       onClick={() => toggleSort("date_found")}>
 
                     <span className="flex items-center">Found Date <SortIcon col="date_found" /></span>
@@ -582,14 +582,14 @@ export function LostAndFoundTab() {
                         onCheckedChange={() => toggleSelectItem(item.id)} />
 
                     </TableCell>
-                    <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs font-medium">{item.description}</TableCell>
+                    <TableCell className="text-xs">
                       {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs">
                       {item.in_safe ? "Yes" : "No"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs">
                       {format(new Date(item.date_found), "MMM d, yyyy")}
                     </TableCell>
                   </TableRow>
@@ -626,17 +626,17 @@ export function LostAndFoundTab() {
               <Table>
               <TableHeader className="border-b">
                 <TableRow>
-                  <TableHead className="text-sm">Description</TableHead>
-                  <TableHead className="text-sm">Member</TableHead>
-                  <TableHead className="text-sm">Date</TableHead>
-                  <TableHead className="text-sm">Notes</TableHead>
-                  <TableHead className="text-sm text-right">Actions</TableHead>
+                  <TableHead className="text-xs">Description</TableHead>
+                  <TableHead className="text-xs">Member</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Notes</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((req) =>
                   <TableRow key={req.id}>
-                    <TableCell className="text-sm font-medium">
+                    <TableCell className="text-xs font-medium">
                       <div className="flex items-center gap-2">
                         {req.description}
                         {req.status === "matched" &&
@@ -647,13 +647,13 @@ export function LostAndFoundTab() {
                         }
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs">
                       {req.member_name || "—"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs">
                       {req.date_inquired ? format(new Date(req.date_inquired), "MMM d, yyyy") : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground italic">
+                    <TableCell className="text-xs text-muted-foreground italic">
                       {req.notes || "—"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -712,10 +712,10 @@ export function LostAndFoundTab() {
                     <Table>
                         <TableHeader className="border">
                           <TableRow>
-                            <TableHead className="text-sm w-1/4">Item Name</TableHead>
-                            <TableHead className="text-sm w-1/4">Category</TableHead>
-                            <TableHead className="text-sm w-1/4">Status</TableHead>
-                            <TableHead className="text-sm w-1/4">Archived</TableHead>
+                            <TableHead className="text-xs w-1/4">Item Name</TableHead>
+                            <TableHead className="text-xs w-1/4">Category</TableHead>
+                            <TableHead className="text-xs w-1/4">Status</TableHead>
+                            <TableHead className="text-xs w-1/4">Archived</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -725,12 +725,12 @@ export function LostAndFoundTab() {
                           const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
                           return (
                             <TableRow key={item.id}>
-                                <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                                <TableCell className="text-sm">
+                                <TableCell className="text-xs font-medium">{item.description}</TableCell>
+                                <TableCell className="text-xs">
                                   {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
                                 </TableCell>
-                                <TableCell className="text-sm">{getStatusBadge(item.status)}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
+                                <TableCell className="text-xs">{getStatusBadge(item.status)}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
                                   {format(archivedDate, "MMM d, yyyy")}
                                   <span className="ml-1 text-destructive">({daysLeft}d left)</span>
                                 </TableCell>
@@ -746,21 +746,21 @@ export function LostAndFoundTab() {
                         <Table>
                           <TableHeader className="border">
                             <TableRow>
-                              <TableHead className="text-sm w-1/4">Description</TableHead>
-                              <TableHead className="text-sm w-1/4">Member</TableHead>
-                              <TableHead className="text-sm w-1/4">Status</TableHead>
-                              <TableHead className="text-sm w-1/4">Date</TableHead>
+                              <TableHead className="text-xs w-1/4">Description</TableHead>
+                              <TableHead className="text-xs w-1/4">Member</TableHead>
+                              <TableHead className="text-xs w-1/4">Status</TableHead>
+                              <TableHead className="text-xs w-1/4">Date</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {closedRequests.map((req) =>
                           <TableRow key={req.id}>
-                                <TableCell className="text-sm font-medium">{req.description}</TableCell>
-                                <TableCell className="text-sm">{req.member_name || "—"}</TableCell>
-                                <TableCell className="text-sm">
+                                <TableCell className="text-xs font-medium">{req.description}</TableCell>
+                                <TableCell className="text-xs">{req.member_name || "—"}</TableCell>
+                                <TableCell className="text-xs">
                                   <Badge className="rounded-none bg-muted text-muted-foreground">Found</Badge>
                                 </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
+                                <TableCell className="text-xs text-muted-foreground">
                                   {req.updated_at ? format(new Date(req.updated_at), "MMM d, yyyy") : "—"}
                                 </TableCell>
                               </TableRow>

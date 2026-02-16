@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -125,7 +124,7 @@ export function ResourcePageEditorPage() {
     }
   }, [contentJson, title, isPublished, assignedRoles, folderId, tags, coverImageUrl]);
 
-  const handleSave = async () => {
+  const handleSave = async (publish: boolean) => {
     if (!(title ?? "").trim()) {
       toast.error("Please enter a title");
       return;
@@ -141,14 +140,15 @@ export function ResourcePageEditorPage() {
         const result = await createMutation.mutateAsync({
           title: (title ?? "").trim(),
           content_json: contentJson,
-          is_published: isPublished,
+          is_published: publish,
           assigned_roles: assignedRoles,
           folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
+        setIsPublished(publish);
         setHasUnsavedChanges(false);
-        // Navigate to the newly created page editor
+        toast.success(publish ? "Page published" : "Draft saved");
         navigate(`/dashboard/staff-resources/pages/${result.id}/edit`, {
           replace: true,
         });
@@ -157,13 +157,15 @@ export function ResourcePageEditorPage() {
           id: pageId,
           title: (title ?? "").trim(),
           content_json: contentJson,
-          is_published: isPublished,
+          is_published: publish,
           assigned_roles: assignedRoles,
           folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
+        setIsPublished(publish);
         setHasUnsavedChanges(false);
+        toast.success(publish ? "Page published" : "Draft saved");
       }
     } catch (error) {
       console.error("Failed to save page:", error);
@@ -256,26 +258,25 @@ export function ResourcePageEditorPage() {
           />
 
           <div className="flex items-center gap-2 ml-auto">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="published-toggle" className="text-sm">
-                {isPublished ? "Published" : "Draft"}
-              </Label>
-              <Switch
-                id="published-toggle"
-                checked={isPublished}
-                onCheckedChange={setIsPublished}
-                disabled={!isManager}
-              />
-            </div>
-
             <Button
-              onClick={handleSave}
+              variant="outline"
+              onClick={() => handleSave(false)}
               disabled={isSaving || !(title ?? "").trim()}
               className="rounded-none"
             >
-              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSaving && !isPublished && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Save className="h-4 w-4 mr-2" />
-              Save
+              Save Draft
+            </Button>
+
+            <Button
+              onClick={() => handleSave(true)}
+              disabled={isSaving || !(title ?? "").trim()}
+              className="rounded-none"
+            >
+              {isSaving && isPublished && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Upload className="h-4 w-4 mr-2" />
+              Publish
             </Button>
 
             {!isNew && (

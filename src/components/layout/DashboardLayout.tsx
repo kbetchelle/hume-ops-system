@@ -415,7 +415,7 @@ function SidebarNav() {
     </SidebarGroup>
   );
 
-  return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
+  return <Sidebar className={cn("bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
         <div className={cn("px-3 pb-3 space-y-0", collapsed && "px-2")}>

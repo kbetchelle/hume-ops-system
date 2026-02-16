@@ -2858,6 +2858,7 @@ export type Database = {
       }
       lost_and_found: {
         Row: {
+          archived_at: string | null
           claimed_by: string | null
           claimed_date: string | null
           created_at: string | null
@@ -2877,6 +2878,7 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          archived_at?: string | null
           claimed_by?: string | null
           claimed_date?: string | null
           created_at?: string | null
@@ -2896,6 +2898,7 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          archived_at?: string | null
           claimed_by?: string | null
           claimed_date?: string | null
           created_at?: string | null
@@ -5395,6 +5398,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      cleanup_archived_lost_and_found: { Args: never; Returns: undefined }
       cleanup_archived_packages: { Args: never; Returns: undefined }
       cleanup_old_completions: { Args: never; Returns: undefined }
       direct_upsert_reservation: {

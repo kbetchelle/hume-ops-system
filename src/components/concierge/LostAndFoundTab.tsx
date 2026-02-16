@@ -490,7 +490,7 @@ export function LostAndFoundTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search + filters + add button */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-2">
             <div className="relative flex-1 min-w-[160px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input

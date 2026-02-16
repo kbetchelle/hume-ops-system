@@ -105,7 +105,7 @@ async function transferReservations(
 
   try {
     // Paginate staging reads to avoid Supabase's 1000-row default limit
-    const stagingSelect = "id, reservation_id, class_id, client_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, late_cancel, gross_amount_paid, net_amount_paid, raw_data, sync_batch_id";
+    const stagingSelect = "id, reservation_id, class_id, client_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, late_cancel, gross_amount_paid, net_amount_paid, created_at_api, updated_at_api, spot_id, spot_name, client_email, client_first_name, client_last_name, client_phone, raw_data, sync_batch_id";
     let allRows: Record<string, unknown>[] = [];
     const PAGE_SIZE = 1000;
     let offset = 0;
@@ -140,6 +140,14 @@ async function transferReservations(
       late_cancel: r.late_cancel ?? false,
       gross_amount_paid: r.gross_amount_paid ?? null,
       net_amount_paid: r.net_amount_paid ?? null,
+      created_at_api: r.created_at_api ?? null,
+      updated_at_api: r.updated_at_api ?? null,
+      spot_id: r.spot_id ?? null,
+      spot_name: r.spot_name ?? null,
+      client_email: r.client_email ?? null,
+      client_first_name: r.client_first_name ?? null,
+      client_last_name: r.client_last_name ?? null,
+      client_phone: r.client_phone ?? null,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
     })).filter((r: any) => r.reservation_id && r.class_id);

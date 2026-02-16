@@ -57,7 +57,6 @@ export type ConciergeView =
   | "resources"
   | "resources-quick-links"
   | "resources-pages"
-  | "resources-policies"
   | "lost-found"
   | "qa";
 
@@ -83,7 +82,6 @@ interface ConciergeSidebarProps {
 const RESOURCE_SUB_ITEMS: { id: ConciergeView; label: string; icon: LucideIcon }[] = [
   { id: "resources-quick-links", label: "Quick Links", icon: Link2 },
   { id: "resources-pages", label: "Resource Pages", icon: FileText },
-  { id: "resources-policies", label: "Policies", icon: BookOpen },
 ];
 
 function ResourcesSubMenu({

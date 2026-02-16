@@ -20,7 +20,6 @@ import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
   { title: "Resource Pages", url: "/dashboard/resources/pages", icon: FileText },
-  { title: "Policies", url: "/dashboard/resources/policies", icon: BookOpen },
 ];
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";

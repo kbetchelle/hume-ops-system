@@ -51,7 +51,6 @@ export default function ConciergeDashboard() {
     resources: "Resources",
     "resources-quick-links": "Quick Links",
     "resources-pages": "Resource Pages",
-    "resources-policies": "Policies",
     "lost-found": "Lost & Found",
     qa: "Q&A",
   };
@@ -143,12 +142,6 @@ export default function ConciergeDashboard() {
               searchTerm="" 
               returnPath="/dashboard/concierge"
             />
-          </div>
-        );
-      case "resources-policies":
-        return (
-          <div className="p-4 md:p-8">
-            <PoliciesTab policies={policies} isLoading={polLoading} searchTerm="" />
           </div>
         );
       case "lost-found":

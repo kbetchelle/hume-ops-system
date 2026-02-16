@@ -137,7 +137,12 @@ export function ResourcePageEditorPage() {
         });
         setIsPublished(publish);
         setHasUnsavedChanges(false);
-        toast.success(publish ? "Page published" : "Draft saved");
+        if (publish) {
+          toast.success("Your document has been published");
+          navigate("/dashboard/staff-resources", { replace: true });
+          return;
+        }
+        toast.success("Draft saved");
         navigate(`/dashboard/staff-resources/pages/${result.id}/edit`, {
           replace: true,
         });
@@ -153,7 +158,12 @@ export function ResourcePageEditorPage() {
         });
         setIsPublished(publish);
         setHasUnsavedChanges(false);
-        toast.success(publish ? "Page published" : "Draft saved");
+        if (publish) {
+          toast.success("Your document has been published");
+          navigate("/dashboard/staff-resources", { replace: true });
+          return;
+        }
+        toast.success("Draft saved");
       }
     } catch (error) {
       console.error("Failed to save page:", error);

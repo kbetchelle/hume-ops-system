@@ -14,6 +14,26 @@ import { cn } from "@/lib/utils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Map checklist titles to their visible hours on the role page
+const BOH_VISIBLE_HOURS: Record<string, string> = {
+  "Floater - Weekday AM": "Before 1:00 PM",
+  "Floater - Weekday PM": "1:00 PM onwards",
+  "Floater - Weekend AM": "Before 1:00 PM",
+  "Floater - Weekend PM (sun only)": "1:00 PM onwards",
+  "Male Spa Attendant - Weekday AM": "Before 1:00 PM",
+  "Male Spa Attendant - Weekday PM": "1:00 PM onwards",
+  "Male Spa Attendant - Weekend AM": "Before 1:00 PM",
+  "Male Spa Attendant - Weekend AM (2)": "Before 1:00 PM",
+  "Male Spa Attendant - Weekend PM": "1:00 PM onwards",
+  "Female Spa Attendant - Weekday AM": "Before 1:00 PM",
+  "Female Spa Attendant - Weekday PM": "1:00 PM onwards",
+  "Female Spa Attendant - Weekend PM": "1:00 PM onwards",
+};
+
+function getDefaultVisibleHours(shiftTime: "AM" | "PM"): string {
+  return shiftTime === "AM" ? "Before 1:00 PM" : "1:00 PM onwards";
+}
+
 interface ScheduleSlot {
   checklistId: string;
   title: string;
@@ -98,13 +118,14 @@ function BoHChecklistTable({ checklists, conflicts }: { checklists: BoHChecklist
               <TableHead className="text-xs uppercase tracking-wider">Checklist</TableHead>
               <TableHead className="text-xs uppercase tracking-wider">Role</TableHead>
               <TableHead className="text-xs uppercase tracking-wider">Shift</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider">Visible Hours</TableHead>
               <TableHead className="text-xs uppercase tracking-wider">Schedule</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {checklists.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No BoH checklists found
                 </TableCell>
               </TableRow>
@@ -137,6 +158,11 @@ function BoHChecklistTable({ checklists, conflicts }: { checklists: BoHChecklist
                         )}
                       >
                         {cl.shift_time}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">
+                        {BOH_VISIBLE_HOURS[cl.title] || getDefaultVisibleHours(cl.shift_time)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -178,7 +204,7 @@ function ConciergeChecklistTable({ checklists, conflicts }: { checklists: Concie
           <TableHeader>
             <TableRow className="border-b">
               <TableHead className="text-xs uppercase tracking-wider">Checklist</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider">Time Range</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider">Visible Hours</TableHead>
               <TableHead className="text-xs uppercase tracking-wider">Schedule</TableHead>
             </TableRow>
           </TableHeader>

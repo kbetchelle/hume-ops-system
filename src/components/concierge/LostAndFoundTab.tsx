@@ -120,6 +120,7 @@ export function LostAndFoundTab() {
     in_safe: false,
   });
   const [claimantName, setClaimantName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [photoUploading, setPhotoUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -405,6 +406,55 @@ export function LostAndFoundTab() {
     }
   };
 
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredAndSortedItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAndSortedItems.map((i) => i.id)));
+    }
+  };
+
+  const handleBulkClaim = async () => {
+    if (selectedIds.size === 0) return;
+    let successCount = 0;
+    for (const id of selectedIds) {
+      const { error } = await updateTable(
+        "lost_and_found",
+        { status: "claimed", claimed_by: "Bulk claim", claimed_date: format(new Date(), "yyyy-MM-dd") },
+        [eq("id", id)]
+      );
+      if (!error) successCount++;
+    }
+    toast.success(`${successCount} item(s) marked as claimed`);
+    setSelectedIds(new Set());
+    fetchItems();
+  };
+
+  const handleBulkRemove = async () => {
+    if (selectedIds.size === 0) return;
+    let successCount = 0;
+    for (const id of selectedIds) {
+      const { error } = await updateTable(
+        "lost_and_found",
+        { status: "disposed" },
+        [eq("id", id)]
+      );
+      if (!error) successCount++;
+    }
+    toast.success(`${successCount} item(s) removed from L&F`);
+    setSelectedIds(new Set());
+    fetchItems();
+  };
+
   if (loading) {
     return (
       <Card className="rounded-none border">
@@ -483,6 +533,19 @@ export function LostAndFoundTab() {
             </Button>
           </div>
 
+          {/* Bulk actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{selectedIds.size} selected</span>
+              <Button size="sm" variant="outline" className="rounded-none h-7 text-xs" onClick={handleBulkClaim}>
+                Mark as Claimed
+              </Button>
+              <Button size="sm" variant="destructive" className="rounded-none h-7 text-xs" onClick={handleBulkRemove}>
+                Remove from L&F
+              </Button>
+            </div>
+          )}
+
           {/* Table */}
           {filteredAndSortedItems.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8">
@@ -492,6 +555,12 @@ export function LostAndFoundTab() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.size === filteredAndSortedItems.length && filteredAndSortedItems.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead
                     className="cursor-pointer select-none text-xs"
                     onClick={() => toggleSort("description")}
@@ -516,7 +585,6 @@ export function LostAndFoundTab() {
                   >
                     <span className="flex items-center">Found Date <SortIcon col="date_found" /></span>
                   </TableHead>
-                  <TableHead className="text-xs w-[80px]">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -529,6 +597,12 @@ export function LostAndFoundTab() {
                       setIsDetailDialogOpen(true);
                     }}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={() => toggleSelectItem(item.id)}
+                      />
+                    </TableCell>
                     <TableCell className="text-xs font-medium">{item.description}</TableCell>
                     <TableCell className="text-xs">
                       {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
@@ -539,7 +613,6 @@ export function LostAndFoundTab() {
                     <TableCell className="text-xs">
                       {format(new Date(item.date_found), "MMM d, yyyy")}
                     </TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

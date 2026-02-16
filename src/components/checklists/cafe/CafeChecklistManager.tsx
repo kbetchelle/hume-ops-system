@@ -122,7 +122,7 @@ export function CafeChecklistManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Cafe Checklists</h2>
+          <h3 className="text-2xl font-bold">Cafe Checklists</h3>
           <p className="text-sm text-muted-foreground">Manage checklists for cafe staff</p>
         </div>
         <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>

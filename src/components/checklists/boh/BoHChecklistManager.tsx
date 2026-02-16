@@ -128,7 +128,7 @@ export function BoHChecklistManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Back of House Checklists</h2>
+          <h3 className="text-2xl font-bold">Back of House Checklists</h3>
           <p className="text-sm text-muted-foreground">
             Manage checklists for floater, male spa attendant, and female spa attendant roles
           </p>

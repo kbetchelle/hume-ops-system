@@ -1,25 +1,22 @@
 import { useMemo } from "react";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { getRecentSearches } from "@/lib/searchHistory";
 import type { ResourcePage } from "@/hooks/useStaffResources";
 
 export interface SearchSuggestion {
   label: string;
   value: string;
-  type: 'history' | 'tag' | 'folder' | 'pattern';
+  type: 'history' | 'tag' | 'pattern';
   description?: string;
 }
 
 /**
  * Hook to provide autocomplete suggestions for search
- * Combines recent searches, available tags, and folder names
+ * Combines recent searches and available tags
  */
 export function useSearchAutocomplete(
   pages: ResourcePage[],
   currentQuery: string = ''
 ): SearchSuggestion[] {
-  const { data: folders = [] } = useResourcePageFolders();
-
   return useMemo(() => {
     const suggestions: SearchSuggestion[] = [];
     const query = currentQuery.toLowerCase().trim();
@@ -57,20 +54,7 @@ export function useSearchAutocomplete(
         });
       });
 
-    // 4. Filter and add folder suggestions
-    folders
-      .filter(folder => !query || folder.name.toLowerCase().includes(query))
-      .slice(0, 5)
-      .forEach(folder => {
-        suggestions.push({
-          label: folder.name,
-          value: `folder:${folder.name.includes(' ') ? `"${folder.name}"` : folder.name}`,
-          type: 'folder',
-          description: folder.description || 'Filter by folder'
-        });
-      });
-
-    // 5. Add common search patterns if query is empty
+    // 4. Add common search patterns if query is empty
     if (!query || query.length < 2) {
       const patterns: SearchSuggestion[] = [
         {
@@ -78,12 +62,6 @@ export function useSearchAutocomplete(
           value: 'tag:',
           type: 'pattern',
           description: 'Type tag name after colon'
-        },
-        {
-          label: 'Search by folder',
-          value: 'folder:',
-          type: 'pattern',
-          description: 'Type folder name after colon'
         }
       ];
       suggestions.push(...patterns);
@@ -96,7 +74,7 @@ export function useSearchAutocomplete(
       seen.add(s.value);
       return true;
     });
-  }, [pages, folders, currentQuery]);
+  }, [pages, currentQuery]);
 }
 
 /**
@@ -116,18 +94,4 @@ export function useTagSuggestions(pages: ResourcePage[], query: string = ''): st
     const q = query.toLowerCase();
     return tagArray.filter(tag => tag.toLowerCase().includes(q));
   }, [pages, query]);
-}
-
-/**
- * Hook to get folder suggestions for autocomplete
- */
-export function useFolderSuggestions(query: string = ''): Array<{ id: string; name: string }> {
-  const { data: folders = [] } = useResourcePageFolders();
-  
-  return useMemo(() => {
-    if (!query.trim()) return folders;
-    
-    const q = query.toLowerCase();
-    return folders.filter(folder => folder.name.toLowerCase().includes(q));
-  }, [folders, query]);
 }

@@ -14,13 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -55,7 +48,6 @@ import {
   useDeleteResourcePage,
   useDuplicateResourcePage,
 } from "@/hooks/useStaffResources";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useCanEditPage } from "@/hooks/useCanEditPage";
 import { uploadPageImage } from "@/lib/pageImageUpload";
 import type { PdfUploadResult } from "@/lib/uploadPdf";
@@ -71,7 +63,6 @@ export function ResourcePageEditorPage() {
   const { data: existingPage, isLoading: pageLoading } = useResourcePage(
     isNew ? undefined : pageId
   );
-  const { data: folders = [] } = useResourcePageFolders();
   const editPermission = useCanEditPage(pageId);
   const canEdit = editPermission.data?.canEdit ?? false;
   const isManager = editPermission.data?.isManager ?? false;
@@ -86,7 +77,6 @@ export function ResourcePageEditorPage() {
   const [contentJson, setContentJson] = useState<JSONContent | null>(null);
   const [isPublished, setIsPublished] = useState(false);
   const [assignedRoles, setAssignedRoles] = useState<AppRole[]>([]);
-  const [folderId, setFolderId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -110,9 +100,9 @@ export function ResourcePageEditorPage() {
       setContentJson(existingPage.content_json);
       setIsPublished(existingPage.is_published);
       setAssignedRoles(existingPage.assigned_roles);
-      setFolderId(existingPage.folder_id);
       setTags(existingPage.tags);
       setCoverImageUrl(existingPage.cover_image_url);
+      setHasUnsavedChanges(false);
       setHasUnsavedChanges(false);
     }
   }, [existingPage]);
@@ -122,7 +112,7 @@ export function ResourcePageEditorPage() {
     if (existingPage) {
       setHasUnsavedChanges(true);
     }
-  }, [contentJson, title, isPublished, assignedRoles, folderId, tags, coverImageUrl]);
+  }, [contentJson, title, isPublished, assignedRoles, tags, coverImageUrl]);
 
   const handleSave = async (publish: boolean) => {
     if (!(title ?? "").trim()) {
@@ -142,7 +132,6 @@ export function ResourcePageEditorPage() {
           content_json: contentJson,
           is_published: publish,
           assigned_roles: assignedRoles,
-          folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
@@ -159,7 +148,6 @@ export function ResourcePageEditorPage() {
           content_json: contentJson,
           is_published: publish,
           assigned_roles: assignedRoles,
-          folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
@@ -364,29 +352,6 @@ export function ResourcePageEditorPage() {
               </h3>
             </div>
 
-            {/* Folder */}
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider">Folder</Label>
-              <Select
-                value={folderId ?? "none"}
-                onValueChange={(value) =>
-                  setFolderId(value === "none" ? null : value)
-                }
-                disabled={!isManager}
-              >
-                <SelectTrigger className="rounded-none">
-                  <SelectValue placeholder="Select folder..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem value="none">No folder (Unfiled)</SelectItem>
-                  {folders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Tags */}
             <div className="space-y-2">
@@ -449,7 +414,7 @@ export function ResourcePageEditorPage() {
             {/* Assigned Roles */}
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider">
-                Assigned Roles
+                Assign Roles
               </Label>
               {!isManager && isDelegatedEditor && (
                 <p className="text-xs text-muted-foreground mb-2">

@@ -15,7 +15,6 @@ const ASSIGNABLE_ROLES: { role: AppRole; label: string }[] = [
   { role: "male_spa_attendant", label: "Male Spa" },
   { role: "floater", label: "Floater" },
   { role: "cafe", label: "Cafe" },
-  { role: "trainer", label: "Trainer" },
 ];
 
 // Role group definitions
@@ -24,7 +23,6 @@ const ROLE_GROUPS = {
   foh: ["concierge"] as AppRole[],
   boh: ["female_spa_attendant", "male_spa_attendant", "floater"] as AppRole[],
   cafe: ["cafe"] as AppRole[],
-  trainers: ["trainer"] as AppRole[],
 };
 
 export function RoleAssignmentCheckboxes({
@@ -106,16 +104,6 @@ export function RoleAssignmentCheckboxes({
           disabled={disabled}
         >
           Cafe
-        </Button>
-        <Button
-          type="button"
-          variant={isGroupActive(ROLE_GROUPS.trainers) ? "default" : "outline"}
-          size="sm"
-          className="rounded-none text-xs h-7"
-          onClick={() => toggleGroup(ROLE_GROUPS.trainers)}
-          disabled={disabled}
-        >
-          Trainers
         </Button>
       </div>
     </div>

@@ -63,23 +63,40 @@ export function RoleAssignmentCheckboxes({
 
   return (
     <div className="space-y-3">
-      {/* Quick toggle buttons */}
+      {/* Individual role toggles */}
+      <div className="flex flex-wrap gap-1">
+        {ASSIGNABLE_ROLES.map(({ role, label }) => (
+          <Button
+            key={role}
+            type="button"
+            variant={value.includes(role) ? "default" : "outline"}
+            size="sm"
+            className="rounded-none text-xs h-7"
+            onClick={() => toggle(role)}
+            disabled={disabled}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Quick group toggles */}
       <div className="flex flex-wrap gap-1">
         <Button
           type="button"
           variant={isGroupActive(ROLE_GROUPS.all) ? "default" : "outline"}
           size="sm"
-          className="rounded-none text-xs h-7"
+          className="rounded-none text-[10px] h-6"
           onClick={() => toggleGroup(ROLE_GROUPS.all)}
           disabled={disabled}
         >
-          All Roles
+          All
         </Button>
         <Button
           type="button"
           variant={isGroupActive(ROLE_GROUPS.foh) ? "default" : "outline"}
           size="sm"
-          className="rounded-none text-xs h-7"
+          className="rounded-none text-[10px] h-6"
           onClick={() => toggleGroup(ROLE_GROUPS.foh)}
           disabled={disabled}
         >
@@ -89,7 +106,7 @@ export function RoleAssignmentCheckboxes({
           type="button"
           variant={isGroupActive(ROLE_GROUPS.boh) ? "default" : "outline"}
           size="sm"
-          className="rounded-none text-xs h-7"
+          className="rounded-none text-[10px] h-6"
           onClick={() => toggleGroup(ROLE_GROUPS.boh)}
           disabled={disabled}
         >
@@ -99,7 +116,7 @@ export function RoleAssignmentCheckboxes({
           type="button"
           variant={isGroupActive(ROLE_GROUPS.cafe) ? "default" : "outline"}
           size="sm"
-          className="rounded-none text-xs h-7"
+          className="rounded-none text-[10px] h-6"
           onClick={() => toggleGroup(ROLE_GROUPS.cafe)}
           disabled={disabled}
         >

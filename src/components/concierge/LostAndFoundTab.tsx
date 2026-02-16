@@ -691,9 +691,9 @@ export function LostAndFoundTab() {
         <TabsContent value="archived" className="mt-0">
           <Card className="rounded-none border">
              <CardHeader className="pb-3">
-               <CardTitle className="font-normal normal-case tracking-normal">
-                 Archived items are permanently deleted after 14 days
-               </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Archived items are permanently deleted after 14 days
+                </p>
              </CardHeader>
             <CardContent className="space-y-6">
               {(() => {

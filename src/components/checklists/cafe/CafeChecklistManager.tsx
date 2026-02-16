@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -217,55 +218,75 @@ export function CafeChecklistManager() {
                     </Dialog>
                   </div>
 
-                  <div className="space-y-2">
-                    {items?.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                      >
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{item.task_description}</span>
-                            {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                            {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
-                            {item.time_hint && <span>{item.time_hint}</span>}
-                            {item.category && <span>• {item.category}</span>}
-                            {item.color && (
-                              <span className="flex items-center gap-1">
-                                <span className={`h-2 w-2 rounded-full bg-${item.color}-500`}></span>
-                                {item.color}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setEditingItem(item);
-                              setIsItemDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteItem(item.id)}
-                          >
-                            <Trash className="h-3 w-3" />
-                          </Button>
-                        </div>
+                  {(() => {
+                    const sorted = [...(items || [])].sort((a, b) => a.sort_order - b.sort_order);
+                    const grouped: Record<string, typeof sorted> = {};
+                    sorted.forEach((item) => {
+                      const group = item.category || 'Uncategorized';
+                      if (!grouped[group]) grouped[group] = [];
+                      grouped[group].push(item);
+                    });
+                    return (
+                      <div className="space-y-3">
+                        {Object.entries(grouped).map(([group, groupItems]) => (
+                          <Collapsible key={group} defaultOpen>
+                            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                              <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
+                              <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                              {groupItems.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                                >
+                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm">{item.task_description}</span>
+                                      {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                                      {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                      <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
+                                      {item.time_hint && <span>{item.time_hint}</span>}
+                                      {item.color && (
+                                        <span className="flex items-center gap-1">
+                                          <span className={`h-2 w-2 rounded-full bg-${item.color}-500`}></span>
+                                          {item.color}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                        setEditingItem(item);
+                                        setIsItemDialogOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handleDeleteItem(item.id)}
+                                    >
+                                      <Trash className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             )}

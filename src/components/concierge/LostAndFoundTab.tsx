@@ -662,37 +662,40 @@ export function LostAndFoundTab() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Location found</Label>
-              <Input
+              <Label className="text-xs">Object category</Label>
+              <Select
+                value={formData.object_category || "none"}
+                onValueChange={(v) =>
+                  setFormData({
+                    ...formData,
+                    object_category: v === "none" ? "" : (v as LostAndFoundCategory),
+                  })
+                }
+              >
+                <SelectTrigger className="rounded-none text-xs">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem value="none" className="text-xs">
+                    None
+                  </SelectItem>
+                  {(Constants.public.Enums.lost_and_found_category as readonly LostAndFoundCategory[]).map((c) => (
+                    <SelectItem key={c} value={c} className="text-xs">
+                      {CATEGORY_LABELS[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Location Found / Notes</Label>
+              <Textarea
                 value={formData.location_found}
                 onChange={(e) =>
                   setFormData({ ...formData, location_found: e.target.value })
                 }
-                placeholder="e.g., Main gym floor"
-                className="rounded-none text-xs"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="member-requested"
-                checked={formData.member_requested}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, member_requested: !!checked })
-                }
-              />
-              <Label htmlFor="member-requested" className="text-xs font-normal cursor-pointer">
-                Member inquired about this item
-              </Label>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Notes</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                placeholder="Any additional details..."
-                className="rounded-none text-xs min-h-[80px]"
+                placeholder="e.g., Main gym floor, any additional details..."
+                className="rounded-none text-xs min-h-[60px]"
               />
             </div>
           </div>

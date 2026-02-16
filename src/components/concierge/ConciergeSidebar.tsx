@@ -134,7 +134,7 @@ function ResourcesSubMenu({
         <SidebarMenuButton
           onClick={handleClick}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+            "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
             "hover:bg-muted/50",
             activeView === "resources" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
           )}
@@ -304,7 +304,7 @@ export function ConciergeSidebar({
                       <SidebarMenuButton
                         onClick={() => onViewChange("templates")}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
                           "hover:bg-muted/50",
                           activeView === "templates" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
                         )}
@@ -331,7 +331,7 @@ export function ConciergeSidebar({
                           }
                         }}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
                           "hover:bg-muted/50",
                           isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
                         )}

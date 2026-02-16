@@ -47,14 +47,22 @@ import { format } from "date-fns";
 // ---------------------------------------------------------------------------
 const ROLE_LABELS: Record<string, string> = {
   concierge: "Concierge",
-  female_spa_attendant: "Female Spa",
-  male_spa_attendant: "Male Spa",
-  floater: "Floater",
+  female_spa_attendant: "Back of House",
+  male_spa_attendant: "Back of House",
+  floater: "Back of House",
   cafe: "Cafe",
   trainer: "Trainer",
 };
 
-const ALL_ROLES = Object.keys(ROLE_LABELS);
+const BOH_ROLES = ["female_spa_attendant", "male_spa_attendant", "floater"];
+
+// Filter buttons: consolidated BoH into one
+const FILTER_ROLES: { key: string; label: string; roles: string[] }[] = [
+  { key: "concierge", label: "Concierge", roles: ["concierge"] },
+  { key: "boh", label: "Back of House", roles: BOH_ROLES },
+  { key: "cafe", label: "Cafe", roles: ["cafe"] },
+  { key: "trainer", label: "Trainer", roles: ["trainer"] },
+];
 
 // ---------------------------------------------------------------------------
 // Page Row
@@ -87,16 +95,34 @@ function PageRow({
         >
           {page.is_published ? "Published" : "Draft"}
         </Badge>
-        {page.assigned_roles.slice(0, 2).map((role) => (
-          <Badge key={role} variant="outline" className="rounded-none text-[10px]">
-            {ROLE_LABELS[role] ?? role}
-          </Badge>
-        ))}
-        {page.assigned_roles.length > 2 && (
-          <Badge variant="outline" className="rounded-none text-[10px]">
-            +{page.assigned_roles.length - 2}
-          </Badge>
-        )}
+        {(() => {
+          // Deduplicate display labels (BoH roles all show as "Back of House")
+          const displayedLabels: string[] = [];
+          const badges: JSX.Element[] = [];
+          for (const role of page.assigned_roles) {
+            const label = ROLE_LABELS[role] ?? role;
+            if (!displayedLabels.includes(label)) {
+              displayedLabels.push(label);
+              badges.push(
+                <Badge key={role} variant="outline" className="rounded-none text-[10px]">
+                  {label}
+                </Badge>
+              );
+            }
+          }
+          const shown = badges.slice(0, 2);
+          const remaining = badges.length - 2;
+          return (
+            <>
+              {shown}
+              {remaining > 0 && (
+                <Badge variant="outline" className="rounded-none text-[10px]">
+                  +{remaining}
+                </Badge>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-20 text-right">
@@ -128,7 +154,7 @@ export function ResourcePagesManagement() {
   const duplicatePageMutation = useDuplicateResourcePage();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState<AppRole | "all">("all");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [deletePageId, setDeletePageId] = useState<string | null>(null);
   const [pdfUploadDialogOpen, setPdfUploadDialogOpen] = useState(false);
 
@@ -136,8 +162,11 @@ export function ResourcePagesManagement() {
   const filteredPages = useMemo(() => {
     let list = allPages ?? [];
 
-    if (selectedRole !== "all") {
-      list = list.filter((p) => p.assigned_roles.includes(selectedRole));
+    if (selectedFilter !== "all") {
+      const filterDef = FILTER_ROLES.find(f => f.key === selectedFilter);
+      if (filterDef) {
+        list = list.filter((p) => filterDef.roles.some(r => p.assigned_roles.includes(r as AppRole)));
+      }
     }
 
     if (searchTerm.trim()) {
@@ -151,7 +180,7 @@ export function ResourcePagesManagement() {
     }
 
     return list;
-  }, [allPages, selectedRole, searchTerm]);
+  }, [allPages, selectedFilter, searchTerm]);
 
   const handleCreatePage = () => {
     navigate("/dashboard/staff-resources/pages/new");
@@ -216,22 +245,22 @@ export function ResourcePagesManagement() {
       {/* Role Filter Bar */}
       <div className="flex flex-wrap gap-2">
         <Button
-          variant={selectedRole === "all" ? "default" : "outline"}
+          variant={selectedFilter === "all" ? "default" : "outline"}
           size="sm"
           className="rounded-none text-xs uppercase tracking-widest"
-          onClick={() => setSelectedRole("all")}
+          onClick={() => setSelectedFilter("all")}
         >
           All Roles
         </Button>
-        {ALL_ROLES.map((role) => (
+        {FILTER_ROLES.map((filter) => (
           <Button
-            key={role}
-            variant={selectedRole === role ? "default" : "outline"}
+            key={filter.key}
+            variant={selectedFilter === filter.key ? "default" : "outline"}
             size="sm"
             className="rounded-none text-xs uppercase tracking-widest"
-            onClick={() => setSelectedRole(role as AppRole)}
+            onClick={() => setSelectedFilter(filter.key)}
           >
-            {ROLE_LABELS[role]}
+            {filter.label}
           </Button>
         ))}
       </div>
@@ -248,16 +277,16 @@ export function ResourcePagesManagement() {
           <CardContent className="py-16 text-center">
             <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || selectedRole !== "all"
+              {searchTerm || selectedFilter !== "all"
                 ? "No pages found"
                 : "No pages yet"}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {searchTerm || selectedRole !== "all"
+              {searchTerm || selectedFilter !== "all"
                 ? "Try adjusting your search or role filter."
                 : "Create your first page to get started with organizing staff resources."}
             </p>
-            {!searchTerm && selectedRole === "all" && (
+            {!searchTerm && selectedFilter === "all" && (
               <Button
                 variant="outline"
                 className="rounded-none"

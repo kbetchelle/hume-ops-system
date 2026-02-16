@@ -215,7 +215,6 @@ export function ConciergeSidebar({
     {
       title: "References",
       items: [
-        { id: "templates", label: "Response Templates", icon: FileCode },
         { id: "lost-found", label: "Lost & Found", icon: Package },
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },

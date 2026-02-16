@@ -105,7 +105,7 @@ async function transferReservations(
 
   try {
     // Paginate staging reads to avoid Supabase's 1000-row default limit
-    const stagingSelect = "id, reservation_id, class_id, client_id, purchase_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, experience_type, late_cancel, gross_amount_paid, net_amount_paid, raw_data, sync_batch_id";
+    const stagingSelect = "id, reservation_id, class_id, client_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, late_cancel, gross_amount_paid, net_amount_paid, raw_data, sync_batch_id";
     let allRows: Record<string, unknown>[] = [];
     const PAGE_SIZE = 1000;
     let offset = 0;
@@ -130,7 +130,6 @@ async function transferReservations(
     const toUpsert = rows.map((r: Record<string, unknown>) => ({
       reservation_id: r.reservation_id ?? r.arketa_reservation_id,
       client_id: r.client_id ?? null,
-      purchase_id: r.purchase_id ?? null,
       reservation_type: r.reservation_type ?? null,
       class_id: r.class_id ?? r.arketa_class_id ?? null,
       class_name: r.class_name ?? null,
@@ -138,7 +137,6 @@ async function transferReservations(
       status: r.status ?? null,
       checked_in: r.checked_in ?? false,
       checked_in_at: r.checked_in_at ?? null,
-      experience_type: r.experience_type ?? null,
       late_cancel: r.late_cancel ?? false,
       gross_amount_paid: r.gross_amount_paid ?? null,
       net_amount_paid: r.net_amount_paid ?? null,

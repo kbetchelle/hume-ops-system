@@ -12,9 +12,7 @@ interface ArketaReservation {
   class_id?: string;
   client_id?: string;
   client?: { id?: string; firstName?: string; lastName?: string; email?: string };
-  purchase_id?: string;
   reservation_type?: string;
-  experience_type?: string;
   late_cancel?: boolean;
   gross_amount_paid?: number;
   net_amount_paid?: number;
@@ -294,14 +292,12 @@ Deno.serve(async (req) => {
         return {
           client_id: ((v: unknown) => v != null ? String(v) : null)(res.client_id ?? res.client?.id),
           reservation_id: String(res.id),
-          purchase_id: res.purchase_id ?? (res as { purchaseId?: string }).purchaseId ?? null,
           reservation_type: res.reservation_type ?? (res as { type?: string }).type ?? 'class',
           class_id: String(res.class_id || ''),
           class_name: resWithClass.class_name ?? (res as { class_name?: string }).class_name ?? null,
           status: res.status || 'booked',
           checked_in: checkedIn(res),
           checked_in_at: res.checkedInAt || res.checked_in_at || null,
-          experience_type: res.experience_type ?? (res as { experienceType?: string }).experienceType ?? null,
           late_cancel: res.late_cancel ?? (res as { lateCancel?: boolean }).lateCancel ?? false,
           gross_amount_paid: res.gross_amount_paid ?? (res as { grossAmountPaid?: number }).grossAmountPaid ?? (res as { amount?: number }).amount ?? 0,
           net_amount_paid: res.net_amount_paid ?? (res as { netAmountPaid?: number }).netAmountPaid ?? (res as { amount?: number }).amount ?? 0,

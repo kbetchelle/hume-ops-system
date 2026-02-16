@@ -2866,6 +2866,7 @@ export type Database = {
           found_by_id: string | null
           found_by_name: string | null
           id: string
+          in_safe: boolean
           location_found: string | null
           member_requested: boolean | null
           notes: string | null
@@ -2884,6 +2885,7 @@ export type Database = {
           found_by_id?: string | null
           found_by_name?: string | null
           id?: string
+          in_safe?: boolean
           location_found?: string | null
           member_requested?: boolean | null
           notes?: string | null
@@ -2902,6 +2904,7 @@ export type Database = {
           found_by_id?: string | null
           found_by_name?: string | null
           id?: string
+          in_safe?: boolean
           location_found?: string | null
           member_requested?: boolean | null
           notes?: string | null

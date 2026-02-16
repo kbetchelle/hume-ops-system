@@ -22,7 +22,15 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, MapPin, Calendar, User, ImagePlus, X, Loader2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, Plus, MapPin, Calendar, User, ImagePlus, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
@@ -47,9 +55,12 @@ interface LostFoundItem {
   photo_url: string | null;
   object_category: LostAndFoundCategory | null;
   member_requested: boolean;
+  in_safe: boolean;
 }
 
 type StatusFilter = "all" | "unclaimed" | "claimed" | "disposed";
+type SortColumn = "description" | "object_category" | "in_safe" | "date_found";
+type SortDir = "asc" | "desc";
 
 const CATEGORY_LABELS: Record<LostAndFoundCategory, string> = {
   bag: "Bag",
@@ -63,7 +74,6 @@ const CATEGORY_LABELS: Record<LostAndFoundCategory, string> = {
   water_bottle: "Water Bottle",
 };
 
-// Only show these categories in the UI
 const VISIBLE_CATEGORIES: LostAndFoundCategory[] = [
   "bag",
   "jewelry",
@@ -91,8 +101,13 @@ export function LostAndFoundTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [inSafeFilter, setInSafeFilter] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("date_found");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isClaimDialogOpen, setIsClaimDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LostFoundItem | null>(null);
   const [formData, setFormData] = useState({
     description: "",
@@ -102,6 +117,7 @@ export function LostAndFoundTab() {
     photo_url: "" as string | null,
     object_category: "" as LostAndFoundCategory | "",
     member_requested: false,
+    in_safe: false,
   });
   const [claimantName, setClaimantName] = useState("");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -214,18 +230,56 @@ export function LostAndFoundTab() {
 
   const unclaimedItems = useMemo(() => items.filter((i) => i.status === "unclaimed"), [items]);
 
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+  const filteredAndSortedItems = useMemo(() => {
+    let filtered = items.filter((item) => {
       const matchesSearch =
         searchQuery === "" ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.location_found?.toLowerCase().includes(searchQuery.toLowerCase());
-
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
+      const matchesCategory = categoryFilter === "all" || item.object_category === categoryFilter;
+      const matchesInSafe =
+        inSafeFilter === "all" ||
+        (inSafeFilter === "yes" && item.in_safe) ||
+        (inSafeFilter === "no" && !item.in_safe);
+      return matchesSearch && matchesStatus && matchesCategory && matchesInSafe;
     });
-  }, [items, searchQuery, statusFilter]);
+
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      switch (sortColumn) {
+        case "description":
+          cmp = a.description.localeCompare(b.description);
+          break;
+        case "object_category":
+          cmp = (a.object_category || "").localeCompare(b.object_category || "");
+          break;
+        case "in_safe":
+          cmp = (a.in_safe ? 1 : 0) - (b.in_safe ? 1 : 0);
+          break;
+        case "date_found":
+          cmp = new Date(a.date_found).getTime() - new Date(b.date_found).getTime();
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return filtered;
+  }, [items, searchQuery, statusFilter, categoryFilter, inSafeFilter, sortColumn, sortDir]);
+
+  const toggleSort = (col: SortColumn) => {
+    if (sortColumn === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDir(col === "date_found" ? "desc" : "asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortColumn }) => {
+    if (sortColumn !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -287,6 +341,7 @@ export function LostAndFoundTab() {
       photo_url: formData.photo_url || null,
       object_category: formData.object_category || null,
       member_requested: formData.member_requested,
+      in_safe: formData.in_safe,
     });
 
     if (error) {
@@ -302,6 +357,7 @@ export function LostAndFoundTab() {
         photo_url: null,
         object_category: "",
         member_requested: false,
+        in_safe: false,
       });
       fetchItems();
     }
@@ -383,8 +439,9 @@ export function LostAndFoundTab() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          {/* Search + filters + add button */}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[160px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search items..."
@@ -393,9 +450,32 @@ export function LostAndFoundTab() {
                 className="pl-8 rounded-none text-xs"
               />
             </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="rounded-none text-xs w-[140px] h-9">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="rounded-none">
+                <SelectItem value="all" className="text-xs">All Categories</SelectItem>
+                {VISIBLE_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c} className="text-xs">
+                    {CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={inSafeFilter} onValueChange={setInSafeFilter}>
+              <SelectTrigger className="rounded-none text-xs w-[120px] h-9">
+                <SelectValue placeholder="In Safe?" />
+              </SelectTrigger>
+              <SelectContent className="rounded-none">
+                <SelectItem value="all" className="text-xs">All</SelectItem>
+                <SelectItem value="yes" className="text-xs">In Safe</SelectItem>
+                <SelectItem value="no" className="text-xs">Not in Safe</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               size="sm"
-              className="rounded-none h-8"
+              className="rounded-none h-9"
               onClick={() => setIsAddDialogOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -403,101 +483,67 @@ export function LostAndFoundTab() {
             </Button>
           </div>
 
-          {filteredItems.length === 0 ? (
+          {/* Table */}
+          {filteredAndSortedItems.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8">
               No items found
             </p>
           ) : (
-            <div className="space-y-3">
-              {filteredItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    {item.photo_url && (
-                      <div className="shrink-0 w-14 h-14 rounded overflow-hidden bg-muted">
-                        <img
-                          src={item.photo_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-xs font-medium">{item.description}</p>
-                        {item.status !== "unclaimed" && getStatusBadge(item.status)}
-                        {item.object_category && (
-                          <Badge variant="outline" className="rounded-none text-[10px] font-normal">
-                            {CATEGORY_LABELS[item.object_category]}
-                          </Badge>
-                        )}
-                        {item.member_requested && (
-                          <Badge variant="secondary" className="rounded-none text-[10px] font-normal">
-                            Member inquired
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
-                        {item.location_found && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {item.location_found}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(item.date_found), "MMM d, yyyy")}
-                        </span>
-                        {item.found_by_name && (
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            Found by {item.found_by_name}
-                          </span>
-                        )}
-                      </div>
-                      {item.status === "claimed" && item.claimed_by && (
-                        <p className="text-xs text-primary mt-1">
-                          Claimed by {item.claimed_by} on{" "}
-                          {item.claimed_date
-                            ? format(new Date(item.claimed_date), "MMM d, yyyy")
-                            : ""}
-                        </p>
-                      )}
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">
-                          {item.notes}
-                        </p>
-                      )}
-                    </div>
-                    {item.status === "unclaimed" && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 rounded-none text-xs"
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setIsClaimDialogOpen(true);
-                          }}
-                        >
-                          Claim
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 rounded-none text-xs"
-                          onClick={() => handleDispose(item)}
-                        >
-                          Dispose
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead
+                    className="cursor-pointer select-none text-xs"
+                    onClick={() => toggleSort("description")}
+                  >
+                    <span className="flex items-center">Item Name <SortIcon col="description" /></span>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none text-xs"
+                    onClick={() => toggleSort("object_category")}
+                  >
+                    <span className="flex items-center">Category <SortIcon col="object_category" /></span>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none text-xs w-[90px]"
+                    onClick={() => toggleSort("in_safe")}
+                  >
+                    <span className="flex items-center">In Safe? <SortIcon col="in_safe" /></span>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none text-xs"
+                    onClick={() => toggleSort("date_found")}
+                  >
+                    <span className="flex items-center">Found Date <SortIcon col="date_found" /></span>
+                  </TableHead>
+                  <TableHead className="text-xs w-[80px]">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedItems.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setIsDetailDialogOpen(true);
+                    }}
+                  >
+                    <TableCell className="text-xs font-medium">{item.description}</TableCell>
+                    <TableCell className="text-xs">
+                      {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {item.in_safe ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {format(new Date(item.date_found), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -579,6 +625,115 @@ export function LostAndFoundTab() {
       </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsDetailDialogOpen(false);
+          setSelectedItem(null);
+        }
+      }}>
+        <DialogContent className="rounded-none max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm uppercase tracking-wider font-normal">
+              Item Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="space-y-4 py-2">
+              {selectedItem.photo_url && (
+                <div className="w-full max-h-64 rounded overflow-hidden bg-muted">
+                  <img
+                    src={selectedItem.photo_url}
+                    alt={selectedItem.description}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Item Name</p>
+                  <p className="font-medium">{selectedItem.description}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Category</p>
+                  <p className="font-medium">
+                    {selectedItem.object_category ? CATEGORY_LABELS[selectedItem.object_category] : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">In Safe?</p>
+                  <p className="font-medium">{selectedItem.in_safe ? "Yes" : "No"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <div>{getStatusBadge(selectedItem.status)}</div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Found Date</p>
+                  <p className="font-medium">{format(new Date(selectedItem.date_found), "MMM d, yyyy")}</p>
+                </div>
+                {selectedItem.found_by_name && (
+                  <div>
+                    <p className="text-muted-foreground">Found By</p>
+                    <p className="font-medium">{selectedItem.found_by_name}</p>
+                  </div>
+                )}
+                {selectedItem.location_found && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Location / Notes</p>
+                    <p className="font-medium">{selectedItem.location_found}</p>
+                  </div>
+                )}
+                {selectedItem.notes && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Additional Notes</p>
+                    <p className="font-medium italic">{selectedItem.notes}</p>
+                  </div>
+                )}
+                {selectedItem.status === "claimed" && selectedItem.claimed_by && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Claimed By</p>
+                    <p className="font-medium">
+                      {selectedItem.claimed_by}
+                      {selectedItem.claimed_date &&
+                        ` on ${format(new Date(selectedItem.claimed_date), "MMM d, yyyy")}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            {selectedItem?.status === "unclaimed" && (
+              <div className="flex gap-2 w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-none text-xs"
+                  onClick={() => {
+                    setIsDetailDialogOpen(false);
+                    setIsClaimDialogOpen(true);
+                  }}
+                >
+                  Claim
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-none text-xs"
+                  onClick={() => {
+                    if (selectedItem) handleDispose(selectedItem);
+                    setIsDetailDialogOpen(false);
+                  }}
+                >
+                  Dispose
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Item Dialog */}
       <input
@@ -683,6 +838,18 @@ export function LostAndFoundTab() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="in-safe"
+                checked={formData.in_safe}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, in_safe: !!checked })
+                }
+              />
+              <Label htmlFor="in-safe" className="text-xs cursor-pointer">
+                Item is in the safe
+              </Label>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Location Found / Notes</Label>

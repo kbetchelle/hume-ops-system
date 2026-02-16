@@ -63,7 +63,6 @@ export function RoleAssignmentCheckboxes({
 
   return (
     <div className="space-y-3">
-      {/* Individual role toggles */}
       <div className="flex flex-wrap gap-1">
         {ASSIGNABLE_ROLES.map(({ role, label }) => (
           <Button
@@ -78,50 +77,6 @@ export function RoleAssignmentCheckboxes({
             {label}
           </Button>
         ))}
-      </div>
-
-      {/* Quick group toggles */}
-      <div className="flex flex-wrap gap-1">
-        <Button
-          type="button"
-          variant={isGroupActive(ROLE_GROUPS.all) ? "default" : "outline"}
-          size="sm"
-          className="rounded-none text-[10px] h-6"
-          onClick={() => toggleGroup(ROLE_GROUPS.all)}
-          disabled={disabled}
-        >
-          All
-        </Button>
-        <Button
-          type="button"
-          variant={isGroupActive(ROLE_GROUPS.foh) ? "default" : "outline"}
-          size="sm"
-          className="rounded-none text-[10px] h-6"
-          onClick={() => toggleGroup(ROLE_GROUPS.foh)}
-          disabled={disabled}
-        >
-          FoH
-        </Button>
-        <Button
-          type="button"
-          variant={isGroupActive(ROLE_GROUPS.boh) ? "default" : "outline"}
-          size="sm"
-          className="rounded-none text-[10px] h-6"
-          onClick={() => toggleGroup(ROLE_GROUPS.boh)}
-          disabled={disabled}
-        >
-          BoH
-        </Button>
-        <Button
-          type="button"
-          variant={isGroupActive(ROLE_GROUPS.cafe) ? "default" : "outline"}
-          size="sm"
-          className="rounded-none text-[10px] h-6"
-          onClick={() => toggleGroup(ROLE_GROUPS.cafe)}
-          disabled={disabled}
-        >
-          Cafe
-        </Button>
       </div>
     </div>
   );

@@ -45,7 +45,7 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     dataType: 'reservations',
     endpointPath: '/reservations',
     // API returns snake_case: client_id, class_id, checked_in, checked_in_at, etc.
-    fieldsToFetch: ['id', 'client_id', 'class_id', 'client', 'status', 'checked_in', 'checked_in_at', 'created_at', 'cancelled_at'],
+    fieldsToFetch: ['id', 'client_id', 'class_id', 'client', 'status', 'checked_in', 'checked_in_at', 'created_at', 'cancelled_at', 'late_cancel', 'gross_amount_paid', 'net_amount_paid'],
     stagingTable: 'arketa_reservations_staging',
     targetTable: 'arketa_reservations',
     uniqueKey: 'external_id',

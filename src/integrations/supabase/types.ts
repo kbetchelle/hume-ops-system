@@ -816,12 +816,10 @@ export type Database = {
           class_id: string | null
           class_name: string | null
           client_id: string | null
-          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
-          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
@@ -835,12 +833,10 @@ export type Database = {
           class_id?: string | null
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
@@ -854,12 +850,10 @@ export type Database = {
           class_id?: string | null
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
@@ -876,12 +870,10 @@ export type Database = {
           class_id: string
           class_name: string | null
           client_id: string | null
-          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
-          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string
           reservation_type: string | null
@@ -895,12 +887,10 @@ export type Database = {
           class_id: string
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id: string
           reservation_type?: string | null
@@ -914,12 +904,10 @@ export type Database = {
           class_id?: string
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string
           reservation_type?: string | null
@@ -936,12 +924,10 @@ export type Database = {
           class_id: string | null
           class_name: string | null
           client_id: string | null
-          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
-          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
@@ -955,12 +941,10 @@ export type Database = {
           class_id?: string | null
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
@@ -974,12 +958,10 @@ export type Database = {
           class_id?: string | null
           class_name?: string | null
           client_id?: string | null
-          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
-          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null

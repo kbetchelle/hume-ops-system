@@ -78,7 +78,7 @@ export function PdfViewerWithFlags({
         .eq("status", "pending");
 
       if (error) throw error;
-      return (data || []) as PageFlag[];
+      return (data || []) as unknown as PageFlag[];
     },
   });
 

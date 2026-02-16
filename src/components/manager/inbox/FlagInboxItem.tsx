@@ -106,6 +106,11 @@ export function FlagInboxItem({
 
         <p className="text-sm font-medium">
           {data.resourceLabel}
+          {data.flaggedPageNumber && (
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-2">
+              Page {data.flaggedPageNumber}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground font-normal ml-1.5">
             ({RESOURCE_TYPE_LABELS[data.resourceType] ?? data.resourceType})
           </span>
@@ -114,6 +119,13 @@ export function FlagInboxItem({
         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
           {data.note}
         </p>
+
+        {/* Show page context if available */}
+        {data.flaggedPageContext && (
+          <p className="text-xs text-muted-foreground mt-2 italic border-l-2 border-muted pl-2 line-clamp-2">
+            "{data.flaggedPageContext}"
+          </p>
+        )}
 
         {(data.status === "dismissed" || data.status === "resolved") && (
           <div className="mt-2 text-[10px] text-muted-foreground">

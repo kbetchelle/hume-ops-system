@@ -30,6 +30,9 @@ export interface FlagInboxData {
   resolvedByName: string | null;
   resolvedAt: string | null;
   resolutionNote: string | null;
+  // Page-specific flagging fields (for PDFs)
+  flaggedPageNumber?: number | null;
+  flaggedPageContext?: string | null;
 }
 
 export interface ShiftNoteInboxData {

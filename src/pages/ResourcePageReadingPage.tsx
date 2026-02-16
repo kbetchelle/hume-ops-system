@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageRenderer } from "@/components/page-builder/PageRenderer";
-import { PdfViewer } from "@/components/page-builder/PdfViewer";
+import { PdfViewerWithFlags } from "@/components/pdf/PdfViewerWithFlags";
+import { PdfPageFlagDialog } from "@/components/pdf/PdfPageFlagDialog";
 import { InPageSearch } from "@/components/search/InPageSearch";
 import { useResourcePage } from "@/hooks/useStaffResources";
 import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
@@ -56,8 +57,18 @@ export function ResourcePageReadingPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // PDF page flagging state
+  const [flagPageNumber, setFlagPageNumber] = useState<number | null>(null);
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+
   // Auto-record read receipt after 3-5 seconds
   useRecordPageRead(pageId);
+
+  // Handler for flagging a specific PDF page
+  const handleFlagPage = (pageNumber: number) => {
+    setFlagPageNumber(pageNumber);
+    setFlagDialogOpen(true);
+  };
 
   // Keyboard shortcut to open search (Cmd/Ctrl + F)
   useEffect(() => {
@@ -258,60 +269,67 @@ export function ResourcePageReadingPage() {
       </div>
 
       {/* Content */}
-      <div ref={contentRef} className="max-w-4xl mx-auto px-6 py-8">
-        {page.cover_image_url && (
-          <div className="mb-8 rounded overflow-hidden cover-image">
-            <img
-              src={page.cover_image_url}
-              alt={page.title}
-              className="w-full h-auto"
-            />
-          </div>
-        )}
-
+      <div className="h-[calc(100vh-180px)]">
         {page.page_type === 'pdf' ? (
-          /* PDF Viewer for PDF pages */
+          /* Enhanced PDF Viewer for PDF pages with flagging support */
           <>
             {page.pdf_file_url ? (
-              <PdfViewer fileUrl={page.pdf_file_url} />
+              <PdfViewerWithFlags
+                pdfUrl={page.pdf_file_url}
+                pageId={page.id}
+                fileName={page.pdf_original_filename || page.title}
+                onFlagPage={handleFlagPage}
+                className="h-full"
+              />
             ) : (
-              <p className="text-sm text-muted-foreground italic">
-                PDF file not available
-              </p>
-            )}
-            {isSearchOpen && (
-              <div className="fixed top-20 right-8 bg-background border border-border rounded-none shadow-lg p-4 z-50 max-w-sm">
-                <p className="text-sm text-muted-foreground">
-                  Search within PDF not supported. Download the PDF to search its contents.
+              <div className="max-w-4xl mx-auto px-6 py-8">
+                <p className="text-sm text-muted-foreground italic">
+                  PDF file not available
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSearchOpen(false)}
-                  className="mt-3 w-full rounded-none"
-                >
-                  Close
-                </Button>
               </div>
+            )}
+            
+            {/* PDF Page Flag Dialog */}
+            {flagPageNumber !== null && (
+              <PdfPageFlagDialog
+                open={flagDialogOpen}
+                onOpenChange={setFlagDialogOpen}
+                pageId={page.id}
+                pageNumber={flagPageNumber}
+                pageCount={page.pdf_page_count || 0}
+                fileName={page.pdf_original_filename || page.title}
+              />
             )}
           </>
         ) : (
           /* PageRenderer for builder pages */
-          page.content_json ? (
-            <PageRenderer content={page.content_json} />
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No content available
-            </p>
-          )
-        )}
+          <div ref={contentRef} className="max-w-4xl mx-auto px-6 py-8">
+            {page.cover_image_url && (
+              <div className="mb-8 rounded overflow-hidden cover-image">
+                <img
+                  src={page.cover_image_url}
+                  alt={page.title}
+                  className="w-full h-auto"
+                />
+              </div>
+            )}
 
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-border page-footer">
-          <p className="text-xs text-muted-foreground">
-            Last updated {format(new Date(page.updated_at), "MMMM d, yyyy")}
-          </p>
-        </div>
+            {page.content_json ? (
+              <PageRenderer content={page.content_json} />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No content available
+              </p>
+            )}
+
+            {/* Footer */}
+            <div className="mt-12 pt-6 border-t border-border page-footer">
+              <p className="text-xs text-muted-foreground">
+                Last updated {format(new Date(page.updated_at), "MMMM d, yyyy")}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* In-Page Search (only for non-PDF pages) */}

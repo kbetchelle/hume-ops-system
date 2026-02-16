@@ -249,11 +249,6 @@ export function AnswerQuestionDialog({
                     {(policies || []).map((policy) => (
                       <SelectItem key={policy.id} value={policy.id}>
                         {policy.category || "General Policy"}
-                        {policy.category && (
-                          <span className="text-muted-foreground ml-2">
-                            (Category: {policy.category})
-                          </span>
-                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>

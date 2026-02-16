@@ -8,6 +8,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
@@ -28,7 +35,17 @@ import {
   Columns2,
   IndentIncrease,
   IndentDecrease,
+  Type,
 } from "lucide-react";
+
+const FONT_SIZES = [
+  { label: "Small", value: "12px" },
+  { label: "Normal", value: "" },
+  { label: "Medium", value: "18px" },
+  { label: "Large", value: "24px" },
+  { label: "XL", value: "32px" },
+  { label: "XXL", value: "40px" },
+];
 
 const TEXT_COLORS = [
   { name: "Default", value: "" },
@@ -148,6 +165,37 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
       >
         <Strikethrough className="h-3.5 w-3.5" />
       </Button>
+
+      <div className="w-px h-5 bg-border mx-1" />
+
+      {/* --- Font Size --- */}
+      <Select
+        value={
+          (() => {
+            const attrs = editor.getAttributes("textStyle");
+            return attrs?.fontSize || "normal";
+          })()
+        }
+        onValueChange={(value) => {
+          if (value === "normal") {
+            editor.chain().focus().unsetFontSize().run();
+          } else {
+            editor.chain().focus().setFontSize(value).run();
+          }
+        }}
+      >
+        <SelectTrigger className="h-7 w-[90px] rounded-none text-xs border-none bg-transparent hover:bg-accent px-2">
+          <Type className="h-3 w-3 mr-1 shrink-0" />
+          <SelectValue placeholder="Size" />
+        </SelectTrigger>
+        <SelectContent className="rounded-none">
+          {FONT_SIZES.map((size) => (
+            <SelectItem key={size.label} value={size.value || "normal"} className="text-xs">
+              {size.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <div className="w-px h-5 bg-border mx-1" />
 

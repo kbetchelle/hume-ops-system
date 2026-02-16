@@ -16,6 +16,7 @@ import { LinkCardNode } from "./extensions/LinkCardNode";
 import { TwoColumns, Column } from "./extensions/TwoColumnNode";
 import { ImageBlock } from "./extensions/ImageBlock";
 import { IndentExtension } from "./extensions/IndentExtension";
+import { FontSize } from "./extensions/FontSizeExtension";
 import { EditorToolbar } from "./EditorToolbar";
 
 const TabIndent = Extension.create({
@@ -78,6 +79,7 @@ export function PageEditor({
       HorizontalRule,
       Color,
       TextStyle,
+      FontSize,
       TiptapLink.configure({
         openOnClick: false,
         HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },

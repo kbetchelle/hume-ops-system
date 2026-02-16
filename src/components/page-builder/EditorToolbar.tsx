@@ -26,8 +26,8 @@ import {
   Link2,
   Minus,
   Columns2,
-  Indent,
-  Outdent,
+  IndentIncrease,
+  IndentDecrease,
 } from "lucide-react";
 
 const TEXT_COLORS = [
@@ -285,7 +285,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         }}
         title="Indent"
       >
-        <Indent className="h-3.5 w-3.5" />
+        <IndentIncrease className="h-3.5 w-3.5" />
       </Button>
       <Button
         type="button"
@@ -299,7 +299,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         }}
         title="Outdent"
       >
-        <Outdent className="h-3.5 w-3.5" />
+        <IndentDecrease className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-5 bg-border mx-1" />

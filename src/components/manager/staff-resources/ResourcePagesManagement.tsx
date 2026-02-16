@@ -220,19 +220,6 @@ function FolderSidebar({
           <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
           <span className="truncate">All Pages</span>
         </Button>
-        <Button
-          variant={selectedFolderId === "unfiled" ? "secondary" : "ghost"}
-          className="w-full justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
-          onClick={() => onSelectFolder("unfiled")}
-        >
-          <FileText className="h-4 w-4 mr-2 shrink-0" />
-          <span className="truncate">Unfiled</span>
-          {pageCountsByFolder.unfiled > 0 && (
-            <Badge variant="outline" className="ml-auto rounded-none text-xs shrink-0">
-              {pageCountsByFolder.unfiled}
-            </Badge>
-          )}
-        </Button>
       </div>
 
       <div className="border-t border-border pt-2 mt-2">

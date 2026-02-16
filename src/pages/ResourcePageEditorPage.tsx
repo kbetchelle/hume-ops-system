@@ -13,14 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +48,6 @@ import {
   useDeleteResourcePage,
   useDuplicateResourcePage,
 } from "@/hooks/useStaffResources";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useCanEditPage } from "@/hooks/useCanEditPage";
 import { uploadPageImage } from "@/lib/pageImageUpload";
 import type { PdfUploadResult } from "@/lib/uploadPdf";
@@ -72,7 +63,6 @@ export function ResourcePageEditorPage() {
   const { data: existingPage, isLoading: pageLoading } = useResourcePage(
     isNew ? undefined : pageId
   );
-  const { data: folders = [] } = useResourcePageFolders();
   const editPermission = useCanEditPage(pageId);
   const canEdit = editPermission.data?.canEdit ?? false;
   const isManager = editPermission.data?.isManager ?? false;
@@ -87,7 +77,6 @@ export function ResourcePageEditorPage() {
   const [contentJson, setContentJson] = useState<JSONContent | null>(null);
   const [isPublished, setIsPublished] = useState(false);
   const [assignedRoles, setAssignedRoles] = useState<AppRole[]>([]);
-  const [folderId, setFolderId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -111,9 +100,9 @@ export function ResourcePageEditorPage() {
       setContentJson(existingPage.content_json);
       setIsPublished(existingPage.is_published);
       setAssignedRoles(existingPage.assigned_roles);
-      setFolderId(existingPage.folder_id);
       setTags(existingPage.tags);
       setCoverImageUrl(existingPage.cover_image_url);
+      setHasUnsavedChanges(false);
       setHasUnsavedChanges(false);
     }
   }, [existingPage]);
@@ -123,9 +112,9 @@ export function ResourcePageEditorPage() {
     if (existingPage) {
       setHasUnsavedChanges(true);
     }
-  }, [contentJson, title, isPublished, assignedRoles, folderId, tags, coverImageUrl]);
+  }, [contentJson, title, isPublished, assignedRoles, tags, coverImageUrl]);
 
-  const handleSave = async () => {
+  const handleSave = async (publish: boolean) => {
     if (!(title ?? "").trim()) {
       toast.error("Please enter a title");
       return;
@@ -141,29 +130,39 @@ export function ResourcePageEditorPage() {
         const result = await createMutation.mutateAsync({
           title: (title ?? "").trim(),
           content_json: contentJson,
-          is_published: isPublished,
+          is_published: publish,
           assigned_roles: assignedRoles,
-          folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
+        setIsPublished(publish);
         setHasUnsavedChanges(false);
-        // Navigate to the newly created page editor
-        navigate(`/dashboard/staff-resources/pages/${result.id}/edit`, {
-          replace: true,
-        });
+        if (publish) {
+        toast.success("Your document has been published");
+          navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
+          return;
+        }
+        toast.success("Draft saved");
+        navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
       } else if (pageId) {
         await updateMutation.mutateAsync({
           id: pageId,
           title: (title ?? "").trim(),
           content_json: contentJson,
-          is_published: isPublished,
+          is_published: publish,
           assigned_roles: assignedRoles,
-          folder_id: folderId,
           tags,
           cover_image_url: coverImageUrl,
         });
+        setIsPublished(publish);
         setHasUnsavedChanges(false);
+        if (publish) {
+          toast.success("Your document has been published");
+          navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
+          return;
+        }
+        toast.success("Draft saved");
+        navigate("/dashboard/staff-resources?tab=resource-pages", { replace: true });
       }
     } catch (error) {
       console.error("Failed to save page:", error);
@@ -174,7 +173,7 @@ export function ResourcePageEditorPage() {
     if (!pageId || isNew) return;
     try {
       await deleteMutation.mutateAsync(pageId);
-      navigate("/dashboard/staff-resources");
+      navigate("/dashboard/staff-resources?tab=resource-pages");
     } catch (error) {
       console.error("Failed to delete page:", error);
     }
@@ -217,10 +216,10 @@ export function ResourcePageEditorPage() {
           "You have unsaved changes. Are you sure you want to leave?"
         )
       ) {
-        navigate("/dashboard/staff-resources");
+        navigate("/dashboard/staff-resources?tab=resource-pages");
       }
     } else {
-      navigate("/dashboard/staff-resources");
+      navigate("/dashboard/staff-resources?tab=resource-pages");
     }
   };
 
@@ -256,26 +255,25 @@ export function ResourcePageEditorPage() {
           />
 
           <div className="flex items-center gap-2 ml-auto">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="published-toggle" className="text-sm">
-                {isPublished ? "Published" : "Draft"}
-              </Label>
-              <Switch
-                id="published-toggle"
-                checked={isPublished}
-                onCheckedChange={setIsPublished}
-                disabled={!isManager}
-              />
-            </div>
-
             <Button
-              onClick={handleSave}
+              variant="outline"
+              onClick={() => handleSave(false)}
               disabled={isSaving || !(title ?? "").trim()}
               className="rounded-none"
             >
-              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSaving && !isPublished && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Save className="h-4 w-4 mr-2" />
-              Save
+              Save Draft
+            </Button>
+
+            <Button
+              onClick={() => handleSave(true)}
+              disabled={isSaving || !(title ?? "").trim()}
+              className="rounded-none"
+            >
+              {isSaving && isPublished && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Upload className="h-4 w-4 mr-2" />
+              Publish
             </Button>
 
             {!isNew && (
@@ -363,29 +361,6 @@ export function ResourcePageEditorPage() {
               </h3>
             </div>
 
-            {/* Folder */}
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider">Folder</Label>
-              <Select
-                value={folderId ?? "none"}
-                onValueChange={(value) =>
-                  setFolderId(value === "none" ? null : value)
-                }
-                disabled={!isManager}
-              >
-                <SelectTrigger className="rounded-none">
-                  <SelectValue placeholder="Select folder..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem value="none">No folder (Unfiled)</SelectItem>
-                  {folders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Tags */}
             <div className="space-y-2">
@@ -393,62 +368,12 @@ export function ResourcePageEditorPage() {
               <TagInput value={tags} onChange={setTags} />
             </div>
 
-            {/* Cover Image */}
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider">
-                Cover Image
-              </Label>
-              {coverImageUrl ? (
-                <div className="relative group">
-                  <img
-                    src={coverImageUrl}
-                    alt="Cover"
-                    className="w-full aspect-video object-cover rounded border border-border"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-none"
-                    onClick={() => setCoverImageUrl(null)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverImageUpload}
-                    className="hidden"
-                    id="cover-upload"
-                    disabled={isUploading}
-                  />
-                  <Label htmlFor="cover-upload">
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-none"
-                      disabled={isUploading}
-                      asChild
-                    >
-                      <span>
-                        {isUploading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Upload className="h-4 w-4 mr-2" />
-                        )}
-                        Upload Cover Image
-                      </span>
-                    </Button>
-                  </Label>
-                </div>
-              )}
-            </div>
+
 
             {/* Assigned Roles */}
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider">
-                Assigned Roles
+                Assign Roles
               </Label>
               {!isManager && isDelegatedEditor && (
                 <p className="text-xs text-muted-foreground mb-2">

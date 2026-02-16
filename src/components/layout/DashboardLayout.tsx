@@ -20,7 +20,6 @@ import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
   { title: "Resource Pages", url: "/dashboard/resources/pages", icon: FileText },
-  { title: "Policies", url: "/dashboard/resources/policies", icon: BookOpen },
 ];
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { toast } from "sonner";
@@ -391,7 +390,7 @@ function SidebarNav() {
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild>
-          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
             {!collapsed && <span>{item.title}</span>}
           </NavLink>
@@ -424,7 +423,7 @@ function SidebarNav() {
     </SidebarGroup>
   );
 
-  return <Sidebar className={cn("border-r border-border bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "w-60")} collapsible="icon">
+  return <Sidebar className={cn("bg-background transition-all duration-300 flex flex-col", collapsed ? "w-14" : "")} collapsible="icon">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting and role switcher at top */}
         <div className={cn("px-3 pb-3 space-y-0", collapsed && "px-2")}>

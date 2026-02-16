@@ -70,7 +70,7 @@ import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
-import PolicyManagementPage from "./pages/manager/PolicyManagementPage";
+
 import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
 import { ResourcePageReadingPage } from "./pages/ResourcePageReadingPage";
 import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
@@ -533,15 +533,8 @@ const App = () => (
               }
             />
 
-            {/* Policy Management for Managers */}
-            <Route
-              path="/dashboard/policies"
-              element={
-                <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <PolicyManagementPage />
-                </ProtectedRoute>
-              }
-            />
+
+
 
             {/* Staff Resources for Managers */}
             <Route

@@ -31,9 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-// Import react-pdf styles
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+// Note: react-pdf CSS imports removed - styles handled inline
 
 interface PdfViewerWithFlagsProps {
   pdfUrl: string;
@@ -78,7 +76,7 @@ export function PdfViewerWithFlags({
         .eq("status", "pending");
 
       if (error) throw error;
-      return (data || []) as PageFlag[];
+      return (data || []) as unknown as PageFlag[];
     },
   });
 

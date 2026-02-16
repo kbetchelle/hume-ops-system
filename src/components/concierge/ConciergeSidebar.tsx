@@ -7,7 +7,8 @@ import {
   Users,
   FileCode,
   FolderOpen,
-  Package,
+  PackageOpen,
+  Eye,
   HelpCircle,
   User,
   Settings,
@@ -57,8 +58,8 @@ export type ConciergeView =
   | "resources"
   | "resources-quick-links"
   | "resources-pages"
-  | "resources-policies"
   | "lost-found"
+  | "packages"
   | "qa";
 
 interface NavItem {
@@ -67,6 +68,7 @@ interface NavItem {
   icon: LucideIcon;
   badge?: number;
   hasUnreadDot?: boolean;
+  route?: string;
 }
 
 interface NavSection {
@@ -83,7 +85,6 @@ interface ConciergeSidebarProps {
 const RESOURCE_SUB_ITEMS: { id: ConciergeView; label: string; icon: LucideIcon }[] = [
   { id: "resources-quick-links", label: "Quick Links", icon: Link2 },
   { id: "resources-pages", label: "Resource Pages", icon: FileText },
-  { id: "resources-policies", label: "Policies", icon: BookOpen },
 ];
 
 function ResourcesSubMenu({
@@ -133,7 +134,7 @@ function ResourcesSubMenu({
         <SidebarMenuButton
           onClick={handleClick}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+            "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
             "hover:bg-muted/50",
             activeView === "resources" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
           )}
@@ -215,8 +216,8 @@ export function ConciergeSidebar({
     {
       title: "References",
       items: [
-        { id: "templates", label: "Response Templates", icon: FileCode },
-        { id: "lost-found", label: "Lost & Found", icon: Package },
+        { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
+        { id: "lost-found", label: "Lost & Found", icon: Eye },
         { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
@@ -224,7 +225,7 @@ export function ConciergeSidebar({
   ];
 
   return (
-    <Sidebar className="w-60 border-r border-border flex flex-col">
+    <Sidebar className="flex flex-col">
       <SidebarContent className="pt-4 flex-1">
         {/* User greeting dropdown and role switcher at top */}
         <div className="px-3 pb-3 space-y-0">
@@ -303,7 +304,7 @@ export function ConciergeSidebar({
                       <SidebarMenuButton
                         onClick={() => onViewChange("templates")}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
                           "hover:bg-muted/50",
                           activeView === "templates" ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
                         )}
@@ -322,9 +323,15 @@ export function ConciergeSidebar({
                   return (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
-                        onClick={() => onViewChange(item.id)}
+                        onClick={() => {
+                          if (item.route) {
+                            navigate(item.route);
+                          } else {
+                            onViewChange(item.id);
+                          }
+                        }}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors",
+                          "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
                           "hover:bg-muted/50",
                           isActive ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
                         )}

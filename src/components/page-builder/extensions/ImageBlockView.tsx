@@ -13,12 +13,12 @@ export function ImageBlockView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
 
-  const alignmentClass =
+  const justifyClass =
     alignment === "left"
-      ? "mr-auto"
+      ? "justify-start"
       : alignment === "right"
-        ? "ml-auto"
-        : "mx-auto";
+        ? "justify-end"
+        : "justify-center";
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -56,16 +56,19 @@ export function ImageBlockView({
   );
 
   return (
-    <NodeViewWrapper className="my-2 relative">
+    <NodeViewWrapper className="my-2 relative flex" data-alignment={alignment}>
       <div
         ref={containerRef}
-        className={`relative inline-block ${alignmentClass}`}
+        className={`relative ${justifyClass === "justify-end" ? "ml-auto" : justifyClass === "justify-start" ? "mr-auto" : "mx-auto"}`}
         style={{ width: `${width}%` }}
         contentEditable={false}
       >
         {/* Alignment controls — shown when selected */}
         {selected && (
-          <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-0.5 border border-border bg-background p-0.5 z-10">
+          <div
+            className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-0.5 border border-border bg-background p-0.5 z-10"
+            onMouseDown={(e) => e.preventDefault()}
+          >
             <Button
               type="button"
               variant={alignment === "left" ? "default" : "ghost"}

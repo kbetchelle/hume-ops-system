@@ -24,17 +24,23 @@ export interface ArketaReservation {
   reservation_id: string | null;
   class_id: string | null;
   client_id: string | null;
-  purchase_id: string | null;
   reservation_type: string | null;
   class_name: string | null;
   class_date: string | null;
   status: string | null;
   checked_in: boolean | null;
   checked_in_at: string | null;
-  experience_type: string | null;
   late_cancel: boolean | null;
   gross_amount_paid: number | null;
   net_amount_paid: number | null;
+  created_at_api: string | null;
+  updated_at_api: string | null;
+  spot_id: string | null;
+  spot_name: string | null;
+  client_email: string | null;
+  client_first_name: string | null;
+  client_last_name: string | null;
+  client_phone: string | null;
   raw_data: unknown;
   sync_batch_id: string | null;
 }

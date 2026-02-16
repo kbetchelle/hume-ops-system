@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { Editor } from "@tiptap/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Bold,
   Italic,
@@ -26,7 +33,19 @@ import {
   Link2,
   Minus,
   Columns2,
+  IndentIncrease,
+  IndentDecrease,
+  Type,
 } from "lucide-react";
+
+const FONT_SIZES = [
+  { label: "Small", value: "12px" },
+  { label: "Normal", value: "" },
+  { label: "Medium", value: "18px" },
+  { label: "Large", value: "24px" },
+  { label: "XL", value: "32px" },
+  { label: "XXL", value: "40px" },
+];
 
 const TEXT_COLORS = [
   { name: "Default", value: "" },
@@ -49,7 +68,19 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
   const [linkCardUrl, setLinkCardUrl] = useState("");
   const [linkCardPopoverOpen, setLinkCardPopoverOpen] = useState(false);
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false);
+  const [, setTick] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Force re-render on selection/transaction changes so active states stay in sync
+  useEffect(() => {
+    const handler = () => setTick((t) => t + 1);
+    editor.on("selectionUpdate", handler);
+    editor.on("transaction", handler);
+    return () => {
+      editor.off("selectionUpdate", handler);
+      editor.off("transaction", handler);
+    };
+  }, [editor]);
 
   const btnClass = (isActive: boolean) =>
     `h-7 w-7 p-0 rounded-none ${isActive ? "bg-accent text-accent-foreground" : ""}`;
@@ -146,6 +177,32 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
       >
         <Strikethrough className="h-3.5 w-3.5" />
       </Button>
+
+      <div className="w-px h-5 bg-border mx-1" />
+
+      {/* --- Font Size --- */}
+      <Select
+        value={editor.getAttributes("textStyle")?.fontSize || "normal"}
+        onValueChange={(value) => {
+          if (value === "normal") {
+            editor.chain().focus().unsetFontSize().run();
+          } else {
+            editor.chain().focus().setFontSize(value).run();
+          }
+        }}
+      >
+        <SelectTrigger className="h-7 w-[95px] rounded-none text-xs border-none bg-transparent hover:bg-accent px-2">
+          <Type className="h-3 w-3 mr-1 shrink-0" />
+          <SelectValue placeholder="Size" />
+        </SelectTrigger>
+        <SelectContent className="rounded-none">
+          {FONT_SIZES.map((size) => (
+            <SelectItem key={size.label} value={size.value || "normal"} className="text-xs">
+              {size.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <div className="w-px h-5 bg-border mx-1" />
 
@@ -268,6 +325,40 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         title="Numbered List"
       >
         <ListOrdered className="h-3.5 w-3.5" />
+      </Button>
+
+      {/* --- Indent / Outdent --- */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 rounded-none"
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().sinkListItem("listItem")) {
+            editor.chain().focus().sinkListItem("listItem").run();
+          } else {
+            editor.chain().focus().indent().run();
+          }
+        }}
+        title="Indent"
+      >
+        <IndentIncrease className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 rounded-none"
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().liftListItem("listItem")) {
+            editor.chain().focus().liftListItem("listItem").run();
+          } else {
+            editor.chain().focus().outdent().run();
+          }
+        }}
+        title="Outdent"
+      >
+        <IndentDecrease className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-5 bg-border mx-1" />

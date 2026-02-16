@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppRole } from "@/types/roles";
 import {
   Plus,
   Trash2,
   Loader2,
   FileText,
   Search,
-  FolderOpen,
-  FolderPlus,
-  MoreVertical,
   Copy,
   Pencil,
   Upload,
@@ -30,21 +28,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
 import { PdfUploadDialog } from "@/components/page-builder/PdfUploadDialog";
 import {
   useResourcePages,
@@ -52,373 +40,106 @@ import {
   useDuplicateResourcePage,
   type ResourcePage,
 } from "@/hooks/useStaffResources";
-import {
-  useResourcePageFolders,
-  useCreateFolder,
-  useUpdateFolder,
-  useDeleteFolder,
-  type ResourcePageFolder,
-} from "@/hooks/useResourcePageFolders";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 const ROLE_LABELS: Record<string, string> = {
   concierge: "Concierge",
-  female_spa_attendant: "Female Spa",
-  male_spa_attendant: "Male Spa",
-  floater: "Floater",
+  female_spa_attendant: "Back of House",
+  male_spa_attendant: "Back of House",
+  floater: "Back of House",
   cafe: "Cafe",
   trainer: "Trainer",
 };
 
-// ---------------------------------------------------------------------------
-// Folder Dialog
-// ---------------------------------------------------------------------------
-function FolderDialog({
-  open,
-  onOpenChange,
-  folder,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  folder: ResourcePageFolder | null;
-}) {
-  const isEditing = !!folder;
-  const [name, setName] = useState(folder?.name ?? "");
-  const [description, setDescription] = useState(folder?.description ?? "");
+const BOH_ROLES = ["female_spa_attendant", "male_spa_attendant", "floater"];
 
-  const createMutation = useCreateFolder();
-  const updateMutation = useUpdateFolder();
-
-  // Update form state when folder prop changes
-  useEffect(() => {
-    if (folder) {
-      setName(folder.name);
-      setDescription(folder.description ?? "");
-    } else {
-      setName("");
-      setDescription("");
-    }
-  }, [folder]);
-
-  const handleClose = () => {
-    onOpenChange(false);
-    setName("");
-    setDescription("");
-  };
-
-  const handleSubmit = async () => {
-    if (!name.trim()) return;
-
-    if (isEditing && folder) {
-      await updateMutation.mutateAsync({
-        id: folder.id,
-        name: name.trim(),
-        description: description.trim() || null,
-      });
-    } else {
-      await createMutation.mutateAsync({
-        name: name.trim(),
-        description: description.trim() || null,
-      });
-    }
-    handleClose();
-  };
-
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="rounded-none">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Folder" : "New Folder"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update the folder name and description."
-              : "Create a new folder to organize your pages."}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="folder-name" className="text-xs uppercase tracking-wider">
-              Name
-            </Label>
-            <Input
-              id="folder-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Folder name..."
-              className="rounded-none"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="folder-desc" className="text-xs uppercase tracking-wider">
-              Description (optional)
-            </Label>
-            <Input
-              id="folder-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Folder description..."
-              className="rounded-none"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="rounded-none">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!name.trim() || isSubmitting}
-            className="rounded-none"
-          >
-            {isSubmitting && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            )}
-            {isEditing ? "Update" : "Create"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Filter buttons: consolidated BoH into one
+const FILTER_ROLES: { key: string; label: string; roles: string[] }[] = [
+  { key: "concierge", label: "Concierge", roles: ["concierge"] },
+  { key: "boh", label: "Back of House", roles: BOH_ROLES },
+  { key: "cafe", label: "Cafe", roles: ["cafe"] },
+];
 
 // ---------------------------------------------------------------------------
-// Folder Sidebar
+// Page Row
 // ---------------------------------------------------------------------------
-function FolderSidebar({
-  folders,
-  selectedFolderId,
-  onSelectFolder,
-  onCreateFolder,
-  onEditFolder,
-  onDeleteFolder,
-  pageCountsByFolder,
-}: {
-  folders: ResourcePageFolder[];
-  selectedFolderId: string | null | "all" | "unfiled";
-  onSelectFolder: (folderId: string | null | "all" | "unfiled") => void;
-  onCreateFolder: () => void;
-  onEditFolder: (folder: ResourcePageFolder) => void;
-  onDeleteFolder: (folderId: string) => void;
-  pageCountsByFolder: Record<string, number>;
-}) {
-  return (
-    <div className="w-fit shrink-0 border-r border-border bg-muted/20 px-0 py-4 space-y-2 overflow-hidden">
-      <div className="space-y-1">
-        <Button
-          variant={selectedFolderId === "all" ? "secondary" : "ghost"}
-          className="w-full justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
-          onClick={() => onSelectFolder("all")}
-        >
-          <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
-          <span className="truncate">All Pages</span>
-        </Button>
-        <Button
-          variant={selectedFolderId === "unfiled" ? "secondary" : "ghost"}
-          className="w-full justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
-          onClick={() => onSelectFolder("unfiled")}
-        >
-          <FileText className="h-4 w-4 mr-2 shrink-0" />
-          <span className="truncate">Unfiled</span>
-          {pageCountsByFolder.unfiled > 0 && (
-            <Badge variant="outline" className="ml-auto rounded-none text-xs shrink-0">
-              {pageCountsByFolder.unfiled}
-            </Badge>
-          )}
-        </Button>
-      </div>
-
-      <div className="border-t border-border pt-2 mt-2">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            Folders
-          </span>
-        </div>
-        <div className="space-y-1">
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              className="group flex items-center gap-1 overflow-hidden"
-            >
-              <Button
-                variant={selectedFolderId === folder.id ? "secondary" : "ghost"}
-                className="flex-1 min-w-0 justify-start rounded-none text-xs uppercase tracking-widest px-2 mx-0"
-                onClick={() => onSelectFolder(folder.id)}
-              >
-                <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
-                <span className="truncate">{folder.name}</span>
-                {pageCountsByFolder[folder.id] > 0 && (
-                  <Badge variant="outline" className="ml-auto rounded-none text-xs shrink-0">
-                    {pageCountsByFolder[folder.id]}
-                  </Badge>
-                )}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-none">
-                  <DropdownMenuItem onClick={() => onEditFolder(folder)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onDeleteFolder(folder.id)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full rounded-none text-xs uppercase tracking-widest px-2 mx-0"
-        onClick={onCreateFolder}
-      >
-        <FolderPlus className="h-4 w-4 mr-2" />
-        New Folder
-      </Button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Page Card
-// ---------------------------------------------------------------------------
-function PageCard({
+function PageRow({
   page,
   onEdit,
   onDuplicate,
   onDelete,
-  folderName,
 }: {
   page: ResourcePage;
   onEdit: (page: ResourcePage) => void;
   onDuplicate: (pageId: string) => void;
   onDelete: (pageId: string) => void;
-  folderName?: string;
 }) {
   return (
-    <Card className="rounded-none overflow-hidden group hover:shadow-md transition-shadow w-full">
-      <CardContent className="p-0">
-        {page.cover_image_url && (
-          <div className="aspect-[3/1] bg-muted overflow-hidden">
-            <img
-              src={page.cover_image_url}
-              alt={page.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+    <div className="group flex items-center gap-3 px-3 py-2 border-b border-border hover:bg-muted/40 transition-colors">
+      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="flex-1 min-w-0 text-xs truncate font-medium">{page.title}</span>
+
+      <div className="hidden md:flex items-center gap-1 shrink-0">
+        {page.page_type === 'pdf' && (
+          <Badge variant="secondary" className="rounded-none text-[10px]">
+            PDF
+          </Badge>
         )}
-        <div className="p-3 space-y-2">
-          <div>
-            <h3 className="font-medium text-sm line-clamp-1 mb-1">{page.title}</h3>
-            <div className="flex flex-wrap gap-1">
-              {/* PDF Badge */}
-              {page.page_type === 'pdf' && (
-                <Badge variant="secondary" className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <FileText className="h-3 w-3 mr-1" />
-                  PDF
+        <Badge
+          variant={page.is_published ? "default" : "secondary"}
+          className="rounded-none text-[10px]"
+        >
+          {page.is_published ? "Published" : "Draft"}
+        </Badge>
+        {(() => {
+          // Deduplicate display labels (BoH roles all show as "Back of House")
+          const displayedLabels: string[] = [];
+          const badges: JSX.Element[] = [];
+          for (const role of page.assigned_roles) {
+            const label = ROLE_LABELS[role] ?? role;
+            if (!displayedLabels.includes(label)) {
+              displayedLabels.push(label);
+              badges.push(
+                <Badge key={role} variant="outline" className="rounded-none text-[10px]">
+                  {label}
                 </Badge>
-              )}
-              {folderName && (
-                <Badge variant="secondary" className="rounded-none text-[10px]">
-                  <FolderOpen className="h-3 w-3 mr-1" />
-                  {folderName}
-                </Badge>
-              )}
-              {page.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="outline" className="rounded-none text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-              {page.tags.length > 2 && (
+              );
+            }
+          }
+          const shown = badges.slice(0, 2);
+          const remaining = badges.length - 2;
+          return (
+            <>
+              {shown}
+              {remaining > 0 && (
                 <Badge variant="outline" className="rounded-none text-[10px]">
-                  +{page.tags.length - 2}
+                  +{remaining}
                 </Badge>
               )}
-            </div>
-          </div>
+            </>
+          );
+        })()}
+      </div>
 
-          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-            <div className="flex flex-wrap gap-1">
-              <Badge
-                variant={page.is_published ? "default" : "secondary"}
-                className="rounded-none text-[10px]"
-              >
-                {page.is_published ? "Published" : "Draft"}
-              </Badge>
-              {page.assigned_roles.slice(0, 2).map((role) => (
-                <Badge
-                  key={role}
-                  variant="outline"
-                  className="rounded-none text-[10px]"
-                >
-                  {ROLE_LABELS[role] ?? role}
-                </Badge>
-              ))}
-              {page.assigned_roles.length > 2 && (
-                <Badge variant="outline" className="rounded-none text-[10px]">
-                  +{page.assigned_roles.length - 2}
-                </Badge>
-              )}
-            </div>
-          </div>
+      <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-20 text-right">
+        {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
+      </span>
 
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">
-              {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
-            </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onEdit(page)}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onDuplicate(page.id)}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onDelete(page.id)}
-              >
-                <Trash2 className="h-3 w-3 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(page)}>
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDuplicate(page.id)}>
+          <Copy className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDelete(page.id)}>
+          <Trash2 className="h-3 w-3 text-destructive" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -428,44 +149,25 @@ function PageCard({
 export function ResourcePagesManagement() {
   const navigate = useNavigate();
   const { data: allPages, isLoading: pagesLoading } = useResourcePages();
-  const { data: folders = [], isLoading: foldersLoading } = useResourcePageFolders();
   const deletePageMutation = useDeleteResourcePage();
   const duplicatePageMutation = useDuplicateResourcePage();
-  const deleteFolderMutation = useDeleteFolder();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null | "all" | "unfiled">("all");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [deletePageId, setDeletePageId] = useState<string | null>(null);
-  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
-  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [editingFolder, setEditingFolder] = useState<ResourcePageFolder | null>(null);
   const [pdfUploadDialogOpen, setPdfUploadDialogOpen] = useState(false);
 
-  // Calculate page counts by folder
-  const pageCountsByFolder = useMemo(() => {
-    const counts: Record<string, number> = { unfiled: 0 };
-    allPages?.forEach((page) => {
-      if (!page.folder_id) {
-        counts.unfiled++;
-      } else {
-        counts[page.folder_id] = (counts[page.folder_id] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [allPages]);
-
-  // Filter pages based on selection and search
+  // Filter pages based on role and search
   const filteredPages = useMemo(() => {
     let list = allPages ?? [];
 
-    // Filter by folder
-    if (selectedFolderId === "unfiled") {
-      list = list.filter((p) => !p.folder_id);
-    } else if (selectedFolderId && selectedFolderId !== "all") {
-      list = list.filter((p) => p.folder_id === selectedFolderId);
+    if (selectedFilter !== "all") {
+      const filterDef = FILTER_ROLES.find(f => f.key === selectedFilter);
+      if (filterDef) {
+        list = list.filter((p) => filterDef.roles.some(r => p.assigned_roles.includes(r as AppRole)));
+      }
     }
 
-    // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       list = list.filter(
@@ -477,7 +179,7 @@ export function ResourcePagesManagement() {
     }
 
     return list;
-  }, [allPages, selectedFolderId, searchTerm]);
+  }, [allPages, selectedFilter, searchTerm]);
 
   const handleCreatePage = () => {
     navigate("/dashboard/staff-resources/pages/new");
@@ -506,149 +208,115 @@ export function ResourcePagesManagement() {
     }
   };
 
-  const handleCreateFolder = () => {
-    setEditingFolder(null);
-    setFolderDialogOpen(true);
-  };
-
-  const handleEditFolder = (folder: ResourcePageFolder) => {
-    setEditingFolder(folder);
-    setFolderDialogOpen(true);
-  };
-
-  const handleDeleteFolder = async () => {
-    if (deleteFolderId) {
-      await deleteFolderMutation.mutateAsync(deleteFolderId);
-      setDeleteFolderId(null);
-      if (selectedFolderId === deleteFolderId) {
-        setSelectedFolderId("all");
-      }
-    }
-  };
-
-  const getFolderName = (folderId: string | null) => {
-    if (!folderId) return undefined;
-    return folders.find((f) => f.id === folderId)?.name;
-  };
-
-  const isLoading = pagesLoading || foldersLoading;
-
   return (
-    <div className="flex h-full">
-      {/* Folder Sidebar */}
-      <FolderSidebar
-        folders={folders}
-        selectedFolderId={selectedFolderId}
-        onSelectFolder={setSelectedFolderId}
-        onCreateFolder={handleCreateFolder}
-        onEditFolder={handleEditFolder}
-        onDeleteFolder={setDeleteFolderId}
-        pageCountsByFolder={pageCountsByFolder}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 p-6 space-y-6">
-        {/* Top Bar */}
-        <div className="flex flex-wrap items-center gap-2 justify-between">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search pages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 rounded-none"
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="rounded-none">
-                <Plus className="h-4 w-4 mr-2" />
-                New Page
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-none">
-              <DropdownMenuItem onClick={handleCreatePage}>
-                <BookOpen className="h-4 w-4 mr-2" />
-                Block-Based Page
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleUploadPdf}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="space-y-6">
+      {/* Top Bar */}
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search pages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 rounded-none"
+          />
         </div>
-
-        {/* Pages Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="rounded-none">
-                <CardContent className="p-4">
-                  <Skeleton className="h-5 w-3/4 mb-3" />
-                  <Skeleton className="h-4 w-1/2 mb-2" />
-                  <div className="flex gap-2 mb-3">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3 mt-2" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredPages.length === 0 ? (
-          <Card className="rounded-none">
-            <CardContent className="py-16 text-center">
-              <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">
-                {searchTerm
-                  ? "No pages found"
-                  : selectedFolderId === "unfiled"
-                  ? "No unfiled pages"
-                  : selectedFolderId
-                  ? "No pages in this folder"
-                  : "No pages yet"}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchTerm
-                  ? "Try adjusting your search terms or filters."
-                  : "Create your first page to get started with organizing staff resources."}
-              </p>
-              {!searchTerm && (
-                <Button
-                  variant="outline"
-                  className="rounded-none"
-                  onClick={handleCreatePage}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Page
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredPages.map((page) => (
-              <PageCard
-                key={page.id}
-                page={page}
-                onEdit={handleEditPage}
-                onDuplicate={handleDuplicatePage}
-                onDelete={setDeletePageId}
-                folderName={getFolderName(page.folder_id)}
-              />
-            ))}
-          </div>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="rounded-none">
+              <Plus className="h-4 w-4 mr-2" />
+              New Page
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-none">
+            <DropdownMenuItem onClick={handleCreatePage}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Build a Page
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleUploadPdf}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Folder Dialog */}
-      <FolderDialog
-        open={folderDialogOpen}
-        onOpenChange={setFolderDialogOpen}
-        folder={editingFolder}
-      />
+      {/* Role Filter Bar */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={selectedFilter === "all" ? "default" : "outline"}
+          size="sm"
+          className="rounded-none text-xs uppercase tracking-widest"
+          onClick={() => setSelectedFilter("all")}
+        >
+          All Roles
+        </Button>
+        {FILTER_ROLES.map((filter) => (
+          <Button
+            key={filter.key}
+            variant={selectedFilter === filter.key ? "default" : "outline"}
+            size="sm"
+            className="rounded-none text-xs uppercase tracking-widest"
+            onClick={() => setSelectedFilter(filter.key)}
+          >
+            {filter.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Pages List */}
+      {pagesLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : filteredPages.length === 0 ? (
+        <Card className="rounded-none">
+          <CardContent className="py-16 text-center">
+            <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {searchTerm || selectedFilter !== "all"
+                ? "No pages found"
+                : "No pages yet"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {searchTerm || selectedFilter !== "all"
+                ? "Try adjusting your search or role filter."
+                : "Create your first page to get started with organizing staff resources."}
+            </p>
+            {!searchTerm && selectedFilter === "all" && (
+              <Button
+                variant="outline"
+                className="rounded-none"
+                onClick={handleCreatePage}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Page
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="border border-border rounded-none">
+          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span className="w-4 shrink-0" />
+            <span className="flex-1 min-w-0">Name</span>
+            <span className="hidden md:block w-48 shrink-0">Status / Roles</span>
+            <span className="hidden sm:block w-20 shrink-0 text-right">Last Updated</span>
+            <span className="w-20 shrink-0" />
+          </div>
+          {filteredPages.map((page) => (
+            <PageRow
+              key={page.id}
+              page={page}
+              onEdit={handleEditPage}
+              onDuplicate={handleDuplicatePage}
+              onDelete={setDeletePageId}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Delete Page Confirmation */}
       <AlertDialog
@@ -667,31 +335,6 @@ export function ResourcePagesManagement() {
             <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeletePage}
-              className="bg-destructive text-destructive-foreground rounded-none"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Folder Confirmation */}
-      <AlertDialog
-        open={!!deleteFolderId}
-        onOpenChange={() => setDeleteFolderId(null)}
-      >
-        <AlertDialogContent className="rounded-none">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete folder?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete the folder. Pages in this folder will be moved
-              to "Unfiled". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteFolder}
               className="bg-destructive text-destructive-foreground rounded-none"
             >
               Delete

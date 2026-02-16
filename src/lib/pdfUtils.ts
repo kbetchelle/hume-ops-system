@@ -261,7 +261,8 @@ export async function generatePdfThumbnail(
     // Render page to canvas
     await page.render({ 
       canvasContext: context, 
-      viewport 
+      viewport,
+      canvas,
     }).promise;
     
     // Convert to JPEG data URL

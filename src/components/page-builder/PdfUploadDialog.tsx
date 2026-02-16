@@ -18,16 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RoleAssignmentCheckboxes } from "@/components/manager/staff-resources/RoleAssignmentCheckboxes";
 import { TagInput } from "@/components/page-builder/TagInput";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { useCreateResourcePage } from "@/hooks/useStaffResources";
 import { uploadPdf } from "@/lib/uploadPdf";
 import { AppRole } from "@/types/roles";
@@ -47,12 +39,10 @@ export function PdfUploadDialog({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [assignedRoles, setAssignedRoles] = useState<AppRole[]>([]);
-  const [folderId, setFolderId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>("");
 
-  const { data: folders = [] } = useResourcePageFolders();
   const createMutation = useCreateResourcePage();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,8 +106,7 @@ export function PdfUploadDialog({
         title: title.trim(),
         page_type: "pdf",
         assigned_roles: assignedRoles,
-        is_published: false, // Start as draft
-        folder_id: folderId,
+        is_published: true, // Auto-publish PDF uploads
         tags,
         pdf_file_url: uploadResult.fileUrl,
         pdf_file_path: uploadResult.filePath,
@@ -145,7 +134,6 @@ export function PdfUploadDialog({
       setSelectedFile(null);
       setTitle("");
       setAssignedRoles([]);
-      setFolderId(null);
       setTags([]);
       setUploadProgress("");
       onOpenChange(false);
@@ -242,30 +230,6 @@ export function PdfUploadDialog({
               onChange={setAssignedRoles}
               disabled={isUploading}
             />
-          </div>
-
-          {/* Folder */}
-          <div className="space-y-2">
-            <Label htmlFor="pdf-folder">Folder</Label>
-            <Select
-              value={folderId ?? "unfiled"}
-              onValueChange={(value) =>
-                setFolderId(value === "unfiled" ? null : value)
-              }
-              disabled={isUploading}
-            >
-              <SelectTrigger id="pdf-folder">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unfiled">Unfiled</SelectItem>
-                {folders.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Tags */}

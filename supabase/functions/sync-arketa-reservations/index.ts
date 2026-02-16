@@ -11,19 +11,20 @@ interface ArketaReservation {
   id: string;
   class_id?: string;
   client_id?: string;
-  client?: { id?: string; firstName?: string; lastName?: string; email?: string };
-  purchase_id?: string;
+  client?: { id?: string; firstName?: string; lastName?: string; email?: string; first_name?: string; last_name?: string; phone?: string };
   reservation_type?: string;
-  experience_type?: string;
   late_cancel?: boolean;
   gross_amount_paid?: number;
   net_amount_paid?: number;
   created_at?: string;
+  updated_at?: string;
   checked_in?: boolean;
   status?: string;
   checkedInAt?: string;
   checked_in_at?: string;
   start_time?: string;
+  spot_id?: string;
+  spot_name?: string;
 }
 
 interface SyncRequest {
@@ -294,18 +295,24 @@ Deno.serve(async (req) => {
         return {
           client_id: ((v: unknown) => v != null ? String(v) : null)(res.client_id ?? res.client?.id),
           reservation_id: String(res.id),
-          purchase_id: res.purchase_id ?? (res as { purchaseId?: string }).purchaseId ?? null,
           reservation_type: res.reservation_type ?? (res as { type?: string }).type ?? 'class',
           class_id: String(res.class_id || ''),
           class_name: resWithClass.class_name ?? (res as { class_name?: string }).class_name ?? null,
           status: res.status || 'booked',
           checked_in: checkedIn(res),
           checked_in_at: res.checkedInAt || res.checked_in_at || null,
-          experience_type: res.experience_type ?? (res as { experienceType?: string }).experienceType ?? null,
           late_cancel: res.late_cancel ?? (res as { lateCancel?: boolean }).lateCancel ?? false,
           gross_amount_paid: res.gross_amount_paid ?? (res as { grossAmountPaid?: number }).grossAmountPaid ?? (res as { amount?: number }).amount ?? 0,
           net_amount_paid: res.net_amount_paid ?? (res as { netAmountPaid?: number }).netAmountPaid ?? (res as { amount?: number }).amount ?? 0,
           class_date: resWithClass.class_date ?? (res as { class_date?: string }).class_date ?? null,
+          created_at_api: res.created_at ?? null,
+          updated_at_api: res.updated_at ?? (res as { updatedAt?: string }).updatedAt ?? null,
+          spot_id: res.spot_id ?? (res as { spotId?: string }).spotId ?? null,
+          spot_name: res.spot_name ?? (res as { spotName?: string }).spotName ?? null,
+          client_email: res.client?.email ?? null,
+          client_first_name: res.client?.first_name ?? res.client?.firstName ?? null,
+          client_last_name: res.client?.last_name ?? res.client?.lastName ?? null,
+          client_phone: res.client?.phone ?? null,
           sync_batch_id: syncBatchId,
           raw_data: res,
         };

@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, FolderOpen } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ResourcePage } from "@/hooks/useStaffResources";
-import { useResourcePageFolders } from "@/hooks/useResourcePageFolders";
 import { ResourceFlagContextMenu } from "@/components/shared/ResourceFlagContextMenu";
 import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
@@ -16,30 +15,13 @@ import { useSearchAutocomplete } from "@/hooks/useSearchAutocomplete";
 import { parseSearchQuery } from "@/lib/searchFilterParser";
 import { extractSearchSnippet, highlightMatches, countMatches } from "@/lib/searchSnippets";
 
-/**
- * Validates a return path to prevent open redirect attacks.
- * Only allows relative paths within the application that start with /dashboard/
- * @param path - The path to validate
- * @returns The validated path or null if invalid
- */
 function isValidReturnPath(path: string | null | undefined): string | null {
   if (!path) return null;
-  
-  // Must be a string
   if (typeof path !== 'string') return null;
-  
-  // Must start with /dashboard/ (our app's base path)
   if (!path.startsWith('/dashboard/')) return null;
-  
-  // Must not contain protocol schemes (http://, https://, javascript:, data:, etc.)
   if (path.includes('://') || path.startsWith('javascript:') || path.startsWith('data:')) return null;
-  
-  // Must not contain backslashes (Windows path traversal)
-  if (path.includes('\\')) return null;
-  
-  // Must not try to navigate to parent directories in a suspicious way
+  if (path.includes('\\\\')) return null;
   if (path.includes('../') || path.includes('/..')) return null;
-  
   return path;
 }
 
@@ -61,9 +43,7 @@ export function ResourcePagesTab({
   returnPath?: string;
 }) {
   const navigate = useNavigate();
-  const { data: folders = [] } = useResourcePageFolders();
 
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null | "all">("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
   // Get autocomplete suggestions
@@ -81,18 +61,9 @@ export function ResourcePagesTab({
     return Array.from(tagSet).sort();
   }, [pages]);
 
-  // Filter pages by folder, tags, and search term
+  // Filter pages by tags and search term
   const filtered = useMemo(() => {
     let list = pages;
-
-    // Filter by folder (UI selection)
-    if (selectedFolderId && selectedFolderId !== "all") {
-      if (selectedFolderId === "unfiled") {
-        list = list.filter((p) => !p.folder_id);
-      } else {
-        list = list.filter((p) => p.folder_id === selectedFolderId);
-      }
-    }
 
     // Filter by selected tags (UI tags)
     if (selectedTags.length > 0) {
@@ -101,18 +72,7 @@ export function ResourcePagesTab({
       );
     }
 
-    // Apply advanced search filters
-    if (parsedSearch.filters.folders.length > 0) {
-      list = list.filter((p) => {
-        if (!p.folder_id) return false;
-        const folderName = getFolderName(p.folder_id);
-        if (!folderName) return false;
-        return parsedSearch.filters.folders.some(
-          (f) => folderName.toLowerCase().includes(f.toLowerCase())
-        );
-      });
-    }
-
+    // Apply advanced search tag filters
     if (parsedSearch.filters.tags.length > 0) {
       list = list.filter((p) =>
         parsedSearch.filters.tags.some((filterTag) =>
@@ -135,7 +95,7 @@ export function ResourcePagesTab({
     }
 
     return list;
-  }, [pages, selectedFolderId, selectedTags, parsedSearch, folders]);
+  }, [pages, selectedTags, parsedSearch]);
 
   const pageIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
@@ -146,27 +106,11 @@ export function ResourcePagesTab({
     );
   };
 
-  const getFolderName = (folderId: string | null) => {
-    if (!folderId) return undefined;
-    return folders.find((f) => f.id === folderId)?.name;
-  };
-
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="rounded-none">
-            <CardContent className="p-4">
-              <Skeleton className="h-5 w-3/4 mb-3" />
-              <Skeleton className="h-4 w-1/2 mb-2" />
-              <div className="flex gap-2 mb-3">
-                <Skeleton className="h-5 w-16" />
-                <Skeleton className="h-5 w-20" />
-              </div>
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3 mt-2" />
-            </CardContent>
-          </Card>
+          <Skeleton key={i} className="h-10 w-full" />
         ))}
       </div>
     );
@@ -179,7 +123,7 @@ export function ResourcePagesTab({
         <AdvancedSearchInput
           value={searchTerm}
           onChange={onSearchChange}
-          placeholder="Search pages... Try 'tag:training' or 'folder:onboarding'"
+          placeholder="Search pages... Try 'tag:training'"
           suggestions={suggestions}
           showHistory={true}
           focusTrigger={focusSearch}
@@ -187,61 +131,22 @@ export function ResourcePagesTab({
         />
       )}
       
-      {/* Filter Bar */}
-      <div className="space-y-3">
-        {/* Folder Filters */}
-        {folders.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedFolderId === "all" ? "default" : "outline"}
-              size="sm"
-              className="rounded-none text-xs"
-              onClick={() => setSelectedFolderId("all")}
+      {/* Tag Filters */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs text-muted-foreground self-center">Tags:</span>
+          {allTags.map((tag) => (
+            <Badge
+              key={tag}
+              variant={selectedTags.includes(tag) ? "default" : "outline"}
+              className="rounded-none text-xs cursor-pointer"
+              onClick={() => toggleTag(tag)}
             >
-              All Pages
-            </Button>
-            <Button
-              variant={selectedFolderId === "unfiled" ? "default" : "outline"}
-              size="sm"
-              className="rounded-none text-xs"
-              onClick={() => setSelectedFolderId("unfiled")}
-            >
-              Unfiled
-            </Button>
-            {folders.map((folder) => (
-              <Button
-                key={folder.id}
-                variant={selectedFolderId === folder.id ? "default" : "outline"}
-                size="sm"
-                className="rounded-none text-xs"
-                onClick={() => setSelectedFolderId(folder.id)}
-              >
-                <FolderOpen className="h-3 w-3 mr-1" />
-                {folder.name}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {/* Tag Filters */}
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-muted-foreground self-center">
-              Tags:
-            </span>
-            {allTags.map((tag) => (
-              <Badge
-                key={tag}
-                variant={selectedTags.includes(tag) ? "default" : "outline"}
-                className="rounded-none text-xs cursor-pointer"
-                onClick={() => toggleTag(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
       {filtered.length === 0 ? (
@@ -249,38 +154,32 @@ export function ResourcePagesTab({
           <CardContent className="py-16 text-center">
             <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+              {searchTerm || selectedTags.length > 0
                 ? "No pages found"
                 : "No resource pages available"}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {searchTerm || selectedTags.length > 0 || (selectedFolderId && selectedFolderId !== "all")
+              {searchTerm || selectedTags.length > 0
                 ? "Try adjusting your search or filters."
                 : "No resource pages have been assigned to your role yet. Check back later or contact your manager."}
             </p>
           </CardContent>
         </Card>
       ) : (
-        /* Card Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        /* Compact List */
+        <div className="border border-border rounded-none">
+          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span className="w-4 shrink-0" />
+            <span className="flex-1 min-w-0">Name</span>
+            <span className="hidden md:block w-48 shrink-0">Tags</span>
+            <span className="hidden sm:block w-24 shrink-0 text-right">Last Edited</span>
+          </div>
           {filtered.map((page) => {
-            const folderName = getFolderName(page.folder_id);
             const hasPendingFlag = pageFlagsMap?.has(page.id) ?? false;
-            
-            // Get search snippet if there's a search query
             const hasSearchQuery = parsedSearch.plainText.trim().length > 0;
             const titleSegments = hasSearchQuery 
               ? highlightMatches(page.title, parsedSearch.plainText)
               : [{ text: page.title, start: 0, end: page.title.length, isMatch: false }];
-            
-            const contentSnippet = hasSearchQuery && page.search_text
-              ? extractSearchSnippet(page.search_text, parsedSearch.plainText)
-              : [];
-            
-            const matchCount = hasSearchQuery && page.search_text
-              ? countMatches(page.title, parsedSearch.plainText) + 
-                countMatches(page.search_text, parsedSearch.plainText)
-              : 0;
 
             return (
               <ResourceFlagContextMenu
@@ -290,9 +189,9 @@ export function ResourcePagesTab({
                 resourceLabel={page.title}
                 hasPendingFlag={hasPendingFlag}
               >
-                <Card
+                <div
                   data-resource-id={page.id}
-                  className="rounded-none overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                  className="group flex items-center gap-3 px-3 py-2 border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors cursor-pointer"
                   onClick={() => {
                     const url = `/dashboard/resources/pages/${page.id}`;
                     const validReturnPath = isValidReturnPath(returnPath);
@@ -303,105 +202,38 @@ export function ResourcePagesTab({
                     }
                   }}
                 >
-                  <CardContent className="p-0">
-                    {/* Cover Image */}
-                    {page.cover_image_url && (
-                      <div className="aspect-video bg-muted overflow-hidden">
-                        <img
-                          src={page.cover_image_url}
-                          alt={page.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 min-w-0 text-xs truncate font-medium">
+                    {titleSegments.map((segment, idx) => (
+                      segment.isMatch ? (
+                        <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50">{segment.text}</span>
+                      ) : (
+                        <span key={idx}>{segment.text}</span>
+                      )
+                    ))}
+                    {page.page_type === 'pdf' && (
+                      <Badge variant="secondary" className="rounded-none text-[10px] ml-2">PDF</Badge>
                     )}
+                    {hasPendingFlag && <span className="ml-1"><UnderReviewBadge /></span>}
+                  </span>
 
-                    <div className="p-4 space-y-3">
-                      {/* Title with highlighting */}
-                      <div>
-                        <h3 className="font-medium line-clamp-2 mb-2">
-                          {titleSegments.map((segment, idx) => (
-                            segment.isMatch ? (
-                              <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50">
-                                {segment.text}
-                              </span>
-                            ) : (
-                              <span key={idx}>{segment.text}</span>
-                            )
-                          ))}
-                        </h3>
+                  <div className="hidden md:flex items-center gap-1 shrink-0 w-48">
+                    {page.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="outline" className="rounded-none text-[10px]">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {page.tags.length > 3 && (
+                      <Badge variant="outline" className="rounded-none text-[10px]">
+                        +{page.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
 
-                        {/* Badges */}
-                        <div className="flex flex-wrap gap-1">
-                          {page.page_type === 'pdf' && (
-                            <Badge
-                              variant="secondary"
-                              className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                            >
-                              <FileText className="h-3 w-3 mr-1" />
-                              PDF
-                            </Badge>
-                          )}
-                          {matchCount > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="rounded-none text-[10px] bg-green-500/10 text-green-600 dark:text-green-400"
-                            >
-                              {matchCount} {matchCount === 1 ? 'match' : 'matches'}
-                            </Badge>
-                          )}
-                          {hasPendingFlag && <UnderReviewBadge />}
-                          {folderName && (
-                            <Badge
-                              variant="secondary"
-                              className="rounded-none text-[10px]"
-                            >
-                              <FolderOpen className="h-3 w-3 mr-1" />
-                              {folderName}
-                            </Badge>
-                          )}
-                          {page.tags.slice(0, 2).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="rounded-none text-[10px]"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {page.tags.length > 2 && (
-                            <Badge
-                              variant="outline"
-                              className="rounded-none text-[10px]"
-                            >
-                              +{page.tags.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Search snippet */}
-                      {contentSnippet.length > 0 && (
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {contentSnippet.map((segment, idx) => (
-                            segment.isMatch ? (
-                              <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">
-                                {segment.text}
-                              </span>
-                            ) : (
-                              <span key={idx}>{segment.text}</span>
-                            )
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Last Updated */}
-                      <div className="text-xs text-muted-foreground">
-                        {page.updated_at &&
-                          format(new Date(page.updated_at), "MMM d, yyyy")}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-24 text-right">
+                    {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
+                  </span>
+                </div>
               </ResourceFlagContextMenu>
             );
           })}

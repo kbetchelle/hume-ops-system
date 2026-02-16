@@ -4,7 +4,7 @@ import { StaffResourcesManager } from "@/components/manager/StaffResourcesManage
 export default function StaffResourcesPage() {
   return (
     <DashboardLayout title="Staff Resources">
-      <div className="border-t border-r border-b border-border">
+      <div className="border-t border-r border-b border-border flex-1 flex flex-col min-h-0">
         <StaffResourcesManager />
       </div>
     </DashboardLayout>

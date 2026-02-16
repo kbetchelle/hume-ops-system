@@ -359,57 +359,7 @@ export function ResourcePageEditorPage() {
               <TagInput value={tags} onChange={setTags} />
             </div>
 
-            {/* Cover Image */}
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider">
-                Cover Image
-              </Label>
-              {coverImageUrl ? (
-                <div className="relative group">
-                  <img
-                    src={coverImageUrl}
-                    alt="Cover"
-                    className="w-full aspect-video object-cover rounded border border-border"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-none"
-                    onClick={() => setCoverImageUrl(null)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverImageUpload}
-                    className="hidden"
-                    id="cover-upload"
-                    disabled={isUploading}
-                  />
-                  <Label htmlFor="cover-upload">
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-none"
-                      disabled={isUploading}
-                      asChild
-                    >
-                      <span>
-                        {isUploading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Upload className="h-4 w-4 mr-2" />
-                        )}
-                        Upload Cover Image
-                      </span>
-                    </Button>
-                  </Label>
-                </div>
-              )}
-            </div>
+
 
             {/* Assigned Roles */}
             <div className="space-y-2">

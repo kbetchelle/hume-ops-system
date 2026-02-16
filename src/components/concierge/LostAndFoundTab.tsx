@@ -377,18 +377,10 @@ export function LostAndFoundTab() {
         </TabsList>
         <TabsContent value="items" className="mt-0">
       <Card className="rounded-none border">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardHeader className="pb-3">
           <CardTitle className="text-sm uppercase tracking-wider font-normal">
             Lost & Found
           </CardTitle>
-          <Button
-            size="sm"
-            className="rounded-none h-8"
-            onClick={() => setIsAddDialogOpen(true)}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Log Item
-          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -401,20 +393,14 @@ export function LostAndFoundTab() {
                 className="pl-8 rounded-none text-xs"
               />
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+            <Button
+              size="sm"
+              className="rounded-none h-8"
+              onClick={() => setIsAddDialogOpen(true)}
             >
-              <SelectTrigger className="w-[140px] rounded-none text-xs">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                <SelectItem value="all" className="text-xs">All</SelectItem>
-                <SelectItem value="unclaimed" className="text-xs">Unclaimed</SelectItem>
-                <SelectItem value="claimed" className="text-xs">Claimed</SelectItem>
-                <SelectItem value="disposed" className="text-xs">Disposed</SelectItem>
-              </SelectContent>
-            </Select>
+              <Plus className="h-3 w-3 mr-1" />
+              Log Item
+            </Button>
           </div>
 
           {filteredItems.length === 0 ? (

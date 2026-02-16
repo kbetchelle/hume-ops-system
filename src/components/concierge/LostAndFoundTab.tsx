@@ -662,13 +662,21 @@ export function LostAndFoundTab() {
                           variant="outline"
                           size="sm"
                           className="h-7 rounded-none text-xs"
-                          onClick={() => {
-                            setSelectedRequestForMatch(req);
-                            setIsMatchDialogOpen(true);
-                            setMatchItemId("");
+                          onClick={async () => {
+                            const { error } = await updateTable(
+                              "lost_and_found_member_requests",
+                              { status: "closed", updated_at: new Date().toISOString() },
+                              [eq("id", req.id)]
+                            );
+                            if (error) {
+                              toast.error("Failed to mark as found");
+                            } else {
+                              toast.success("Request marked as found and archived");
+                              fetchRequests();
+                            }
                           }}
                         >
-                          Match to item
+                          Mark as Found
                         </Button>
                       )}
                     </TableCell>
@@ -687,10 +695,11 @@ export function LostAndFoundTab() {
                  Archived items are permanently deleted after 14 days
                </CardTitle>
              </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               {(() => {
                 const archivedItems = items.filter((i) => !!i.archived_at);
-                if (archivedItems.length === 0) {
+                const closedRequests = requests.filter((r) => r.status === "closed" || r.status === "matched");
+                if (archivedItems.length === 0 && closedRequests.length === 0) {
                   return (
                     <p className="text-xs text-muted-foreground text-center py-8">
                       No archived items
@@ -698,36 +707,69 @@ export function LostAndFoundTab() {
                   );
                 }
                 return (
-                  <Table>
-                    <TableHeader className="border">
-                      <TableRow>
-                        <TableHead className="text-sm w-1/4">Item Name</TableHead>
-                        <TableHead className="text-sm w-1/4">Category</TableHead>
-                        <TableHead className="text-sm w-1/4">Status</TableHead>
-                        <TableHead className="text-sm w-1/4">Archived</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {archivedItems.map((item) => {
-                        const archivedDate = new Date(item.archived_at!);
-                        const deleteDate = new Date(archivedDate.getTime() + 14 * 24 * 60 * 60 * 1000);
-                        const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                            <TableCell className="text-sm">
-                              {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
-                            </TableCell>
-                            <TableCell className="text-sm">{getStatusBadge(item.status)}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {format(archivedDate, "MMM d, yyyy")}
-                              <span className="ml-1 text-destructive">({daysLeft}d left)</span>
-                            </TableCell>
+                  <>
+                    {archivedItems.length > 0 && (
+                      <Table>
+                        <TableHeader className="border">
+                          <TableRow>
+                            <TableHead className="text-sm w-1/4">Item Name</TableHead>
+                            <TableHead className="text-sm w-1/4">Category</TableHead>
+                            <TableHead className="text-sm w-1/4">Status</TableHead>
+                            <TableHead className="text-sm w-1/4">Archived</TableHead>
                           </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {archivedItems.map((item) => {
+                            const archivedDate = new Date(item.archived_at!);
+                            const deleteDate = new Date(archivedDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+                            const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                                <TableCell className="text-sm">
+                                  {item.object_category ? CATEGORY_LABELS[item.object_category] : "—"}
+                                </TableCell>
+                                <TableCell className="text-sm">{getStatusBadge(item.status)}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {format(archivedDate, "MMM d, yyyy")}
+                                  <span className="ml-1 text-destructive">({daysLeft}d left)</span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                    {closedRequests.length > 0 && (
+                      <>
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Member Requests</h4>
+                        <Table>
+                          <TableHeader className="border">
+                            <TableRow>
+                              <TableHead className="text-sm w-1/4">Description</TableHead>
+                              <TableHead className="text-sm w-1/4">Member</TableHead>
+                              <TableHead className="text-sm w-1/4">Status</TableHead>
+                              <TableHead className="text-sm w-1/4">Date</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {closedRequests.map((req) => (
+                              <TableRow key={req.id}>
+                                <TableCell className="text-sm font-medium">{req.description}</TableCell>
+                                <TableCell className="text-sm">{req.member_name || "—"}</TableCell>
+                                <TableCell className="text-sm">
+                                  <Badge className="rounded-none bg-muted text-muted-foreground">Found</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {req.updated_at ? format(new Date(req.updated_at), "MMM d, yyyy") : "—"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </>
+                    )}
+                  </>
                 );
               })()}
             </CardContent>

@@ -535,25 +535,25 @@ export function LostAndFoundTab() {
                 <TableRow>
                   <TableHead className="w-[40px]" />
                   <TableHead
-                    className="cursor-pointer select-none text-xs"
+                    className="cursor-pointer select-none text-xs w-1/4"
                     onClick={() => toggleSort("description")}
                   >
                     <span className="flex items-center">Item Name <SortIcon col="description" /></span>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none text-xs w-[110px]"
+                    className="cursor-pointer select-none text-xs w-1/4"
                     onClick={() => toggleSort("object_category")}
                   >
                     <span className="flex items-center">Category <SortIcon col="object_category" /></span>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none text-xs w-[108px]"
+                    className="cursor-pointer select-none text-xs w-1/4"
                     onClick={() => toggleSort("in_safe")}
                   >
                     <span className="flex items-center">In Safe? <SortIcon col="in_safe" /></span>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none text-xs"
+                    className="cursor-pointer select-none text-xs w-1/4"
                     onClick={() => toggleSort("date_found")}
                   >
                     <span className="flex items-center">Found Date <SortIcon col="date_found" /></span>

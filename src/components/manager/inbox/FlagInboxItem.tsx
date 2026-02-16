@@ -35,7 +35,7 @@ const RESOURCE_EDIT_ROUTES: Record<string, string> = {
   quick_link_group: "/dashboard/manager/staff-resources",
   quick_link_item: "/dashboard/manager/staff-resources",
   resource_page: "/dashboard/manager/staff-resources",
-  club_policy: "/dashboard/policies",
+  club_policy: "/dashboard/manager/staff-resources",
 };
 
 export function FlagInboxItem({

@@ -639,9 +639,6 @@ export function LostAndFoundTab() {
                     <TableCell className="text-sm font-medium">
                       <div className="flex items-center gap-2">
                         {req.description}
-                        {req.status === "open" && (
-                          <Badge className="rounded-none bg-amber-500/20 text-amber-700 dark:text-amber-400">Open</Badge>
-                        )}
                         {req.status === "matched" && (
                           <Badge className="rounded-none bg-primary/20 text-primary">Matched</Badge>
                         )}

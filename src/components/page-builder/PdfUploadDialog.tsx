@@ -116,7 +116,7 @@ export function PdfUploadDialog({
         title: title.trim(),
         page_type: "pdf",
         assigned_roles: assignedRoles,
-        is_published: false, // Start as draft
+        is_published: true, // Auto-publish PDF uploads
         folder_id: folderId,
         tags,
         pdf_file_url: uploadResult.fileUrl,

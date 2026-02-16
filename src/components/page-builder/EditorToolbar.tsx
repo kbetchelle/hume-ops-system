@@ -278,7 +278,13 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         variant="ghost"
         size="sm"
         className="h-7 w-7 p-0 rounded-none"
-        onClick={() => editor.chain().focus().sinkListItem("listItem").run()}
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().sinkListItem("listItem")) {
+            editor.chain().focus().sinkListItem("listItem").run();
+          } else {
+            editor.chain().focus().indent().run();
+          }
+        }}
         title="Indent"
       >
         <IndentIncrease className="h-3.5 w-3.5" />
@@ -288,7 +294,13 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         variant="ghost"
         size="sm"
         className="h-7 w-7 p-0 rounded-none"
-        onClick={() => editor.chain().focus().liftListItem("listItem").run()}
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().liftListItem("listItem")) {
+            editor.chain().focus().liftListItem("listItem").run();
+          } else {
+            editor.chain().focus().outdent().run();
+          }
+        }}
         title="Outdent"
       >
         <IndentDecrease className="h-3.5 w-3.5" />

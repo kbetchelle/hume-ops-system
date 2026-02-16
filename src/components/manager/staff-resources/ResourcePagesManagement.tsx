@@ -203,7 +203,7 @@ export function ResourcePagesManagement() {
           <DropdownMenuContent align="end" className="rounded-none">
             <DropdownMenuItem onClick={handleCreatePage}>
               <BookOpen className="h-4 w-4 mr-2" />
-              Block-Based Page
+              Build a Page
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleUploadPdf}>
               <Upload className="h-4 w-4 mr-2" />

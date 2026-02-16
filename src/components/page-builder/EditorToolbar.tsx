@@ -184,7 +184,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
           }
         }}
       >
-        <SelectTrigger className="h-7 w-[90px] rounded-none text-xs border-none bg-transparent hover:bg-accent px-2">
+        <SelectTrigger className="h-7 w-[95px] rounded-none text-xs border-none bg-transparent hover:bg-accent px-2">
           <Type className="h-3 w-3 mr-1 shrink-0" />
           <SelectValue placeholder="Size" />
         </SelectTrigger>

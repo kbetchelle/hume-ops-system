@@ -210,7 +210,7 @@ function FolderSidebar({
   pageCountsByFolder: Record<string, number>;
 }) {
   return (
-    <div className="w-fit shrink-0 border-r border-border bg-muted/20 px-0 py-4 space-y-2 overflow-hidden">
+    <div className="w-36 shrink-0 border-r border-border bg-muted/20 px-0 py-4 space-y-2 overflow-hidden">
       <div className="space-y-1">
         <Button
           variant={selectedFolderId === "all" ? "secondary" : "ghost"}
@@ -305,7 +305,7 @@ function FolderSidebar({
 // ---------------------------------------------------------------------------
 // Page Card
 // ---------------------------------------------------------------------------
-function PageCard({
+function PageRow({
   page,
   onEdit,
   onDuplicate,
@@ -319,106 +319,51 @@ function PageCard({
   folderName?: string;
 }) {
   return (
-    <Card className="rounded-none overflow-hidden group hover:shadow-md transition-shadow w-full">
-      <CardContent className="p-0">
-        {page.cover_image_url && (
-          <div className="aspect-[3/1] bg-muted overflow-hidden">
-            <img
-              src={page.cover_image_url}
-              alt={page.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+    <div className="group flex items-center gap-3 px-3 py-2 border-b border-border hover:bg-muted/40 transition-colors">
+      {/* Icon */}
+      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+
+      {/* Title */}
+      <span className="flex-1 min-w-0 text-xs truncate font-medium">{page.title}</span>
+
+      {/* Badges */}
+      <div className="hidden md:flex items-center gap-1 shrink-0">
+        {page.page_type === 'pdf' && (
+          <Badge variant="secondary" className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            PDF
+          </Badge>
         )}
-        <div className="p-3 space-y-2">
-          <div>
-            <h3 className="font-medium text-sm line-clamp-1 mb-1">{page.title}</h3>
-            <div className="flex flex-wrap gap-1">
-              {/* PDF Badge */}
-              {page.page_type === 'pdf' && (
-                <Badge variant="secondary" className="rounded-none text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <FileText className="h-3 w-3 mr-1" />
-                  PDF
-                </Badge>
-              )}
-              {folderName && (
-                <Badge variant="secondary" className="rounded-none text-[10px]">
-                  <FolderOpen className="h-3 w-3 mr-1" />
-                  {folderName}
-                </Badge>
-              )}
-              {page.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="outline" className="rounded-none text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-              {page.tags.length > 2 && (
-                <Badge variant="outline" className="rounded-none text-[10px]">
-                  +{page.tags.length - 2}
-                </Badge>
-              )}
-            </div>
-          </div>
+        <Badge
+          variant={page.is_published ? "default" : "secondary"}
+          className="rounded-none text-[10px]"
+        >
+          {page.is_published ? "Published" : "Draft"}
+        </Badge>
+        {folderName && (
+          <Badge variant="secondary" className="rounded-none text-[10px]">
+            {folderName}
+          </Badge>
+        )}
+      </div>
 
-          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-            <div className="flex flex-wrap gap-1">
-              <Badge
-                variant={page.is_published ? "default" : "secondary"}
-                className="rounded-none text-[10px]"
-              >
-                {page.is_published ? "Published" : "Draft"}
-              </Badge>
-              {page.assigned_roles.slice(0, 2).map((role) => (
-                <Badge
-                  key={role}
-                  variant="outline"
-                  className="rounded-none text-[10px]"
-                >
-                  {ROLE_LABELS[role] ?? role}
-                </Badge>
-              ))}
-              {page.assigned_roles.length > 2 && (
-                <Badge variant="outline" className="rounded-none text-[10px]">
-                  +{page.assigned_roles.length - 2}
-                </Badge>
-              )}
-            </div>
-          </div>
+      {/* Date */}
+      <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-20 text-right">
+        {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
+      </span>
 
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">
-              {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
-            </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onEdit(page)}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onDuplicate(page.id)}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onDelete(page.id)}
-              >
-                <Trash2 className="h-3 w-3 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Actions */}
+      <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(page)}>
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDuplicate(page.id)}>
+          <Copy className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDelete(page.id)}>
+          <Trash2 className="h-3 w-3 text-destructive" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -628,9 +573,17 @@ export function ResourcePagesManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="border border-border rounded-none">
+            {/* List header */}
+            <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="w-4 shrink-0" />
+              <span className="flex-1 min-w-0">Name</span>
+              <span className="hidden md:block w-32 shrink-0">Status</span>
+              <span className="hidden sm:block w-20 shrink-0 text-right">Modified</span>
+              <span className="w-20 shrink-0" />
+            </div>
             {filteredPages.map((page) => (
-              <PageCard
+              <PageRow
                 key={page.id}
                 page={page}
                 onEdit={handleEditPage}

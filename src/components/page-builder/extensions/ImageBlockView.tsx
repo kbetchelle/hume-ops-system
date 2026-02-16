@@ -13,12 +13,12 @@ export function ImageBlockView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
 
-  const alignmentClass =
+  const justifyClass =
     alignment === "left"
-      ? "mr-auto"
+      ? "justify-start"
       : alignment === "right"
-        ? "ml-auto"
-        : "mx-auto";
+        ? "justify-end"
+        : "justify-center";
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -56,10 +56,10 @@ export function ImageBlockView({
   );
 
   return (
-    <NodeViewWrapper className="my-2 relative">
+    <NodeViewWrapper className="my-2 relative flex" data-alignment={alignment}>
       <div
         ref={containerRef}
-        className={`relative inline-block ${alignmentClass}`}
+        className={`relative ${justifyClass === "justify-end" ? "ml-auto" : justifyClass === "justify-start" ? "mr-auto" : "mx-auto"}`}
         style={{ width: `${width}%` }}
         contentEditable={false}
       >

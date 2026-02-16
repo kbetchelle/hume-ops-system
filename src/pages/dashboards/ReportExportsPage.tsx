@@ -70,7 +70,7 @@ export default function ReportExportsPage() {
     }
   };
 
-  const handleSavePreview = async (updates: Parameters<Parameters<typeof updateReport.mutateAsync>[0]>[0]) => {
+  const handleSavePreview = async (updates: Parameters<typeof updateReport.mutateAsync>[0]) => {
     try {
       await updateReport.mutateAsync(updates);
       refetchReport();

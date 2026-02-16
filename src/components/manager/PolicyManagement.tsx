@@ -61,11 +61,13 @@ function PolicyCreateEditDialog({
   onOpenChange,
   policy,
   categories,
+  onDelete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   policy: ClubPolicy | null;
   categories: PolicyCategory[];
+  onDelete?: (id: string) => void;
 }) {
   const isEditing = !!policy;
   const [content, setContent] = useState(policy?.content ?? "");
@@ -83,7 +85,7 @@ function PolicyCreateEditDialog({
     if (open && policy) {
       setContent(policy.content);
       setCategoryName(policy.category);
-      setTags(policy.tags);
+      setTags(policy.tags ?? []);
     } else if (open && !policy) {
       setContent("");
       setCategoryName(null);
@@ -154,10 +156,12 @@ function PolicyCreateEditDialog({
   };
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
+    // Check if content has meaningful text (strip HTML tags for validation)
+    const textOnly = content.replace(/<[^>]*>/g, '').trim();
+    if (!textOnly) return;
     
     const input: CreatePolicyInput = {
-      content: content.trim(),
+      content: content,
       category: categoryName,
       tags: tags,
     };
@@ -176,7 +180,7 @@ function PolicyCreateEditDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xs uppercase tracking-widest">
+          <DialogTitle className="text-2xl uppercase tracking-widest">
             {isEditing ? "EDIT POLICY SECTION" : "CREATE POLICY SECTION"}
           </DialogTitle>
         </DialogHeader>
@@ -274,14 +278,22 @@ function PolicyCreateEditDialog({
             )}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!content.trim() || isSubmitting}>
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEditing ? "Update" : "Create"} Policy Section
-          </Button>
+        <DialogFooter className="flex !justify-between">
+          {isEditing && policy && onDelete ? (
+            <Button variant="destructive" size="sm" onClick={() => { onDelete(policy.id); handleClose(); }}>
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete Policy Section
+            </Button>
+          ) : <div />}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!content.replace(/<[^>]*>/g, '').trim() || isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditing ? "Update" : "Create"} Policy Section
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -395,7 +407,7 @@ export function PolicyManagement() {
         (p) =>
           (p.content ?? "").toLowerCase().includes(term) ||
           (p.category ?? "").toLowerCase().includes(term) ||
-          p.tags.some((tag) => tag.toLowerCase().includes(term))
+          (p.tags ?? []).some((tag) => tag.toLowerCase().includes(term))
       );
     }
     return list;
@@ -491,105 +503,41 @@ export function PolicyManagement() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(policiesByCategory).map(([categoryName, categoryPolicies]) => {
-            const categoryInfo = getCategoryInfo(categoryName);
-            const isUncategorized = categoryName === "Uncategorized";
-            
-            return (
-              <div key={categoryName} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-semibold text-sm uppercase tracking-wider">
-                        {categoryName}
-                      </h3>
-                      {categoryInfo && !categoryInfo.is_active && (
+        <div className="space-y-2">
+          {Object.entries(policiesByCategory).map(([categoryName, categoryPolicies]) =>
+            categoryPolicies.map((policy) => (
+              <Card
+                key={policy.id}
+                className={cn("cursor-pointer hover:border-primary/50 transition-colors", !policy.is_active && "opacity-60")}
+                onClick={() => handleEditPolicy(policy)}
+              >
+                <CardContent className="px-[11px] py-4">
+                  <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-[20px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {policy.category || "Uncategorized"}
+                      </span>
+                      {!policy.is_active && (
                         <Badge variant="secondary">Inactive</Badge>
                       )}
-                    </div>
-                    {categoryInfo?.description && (
-                      <p className="text-xs text-muted-foreground mt-1 ml-6">
-                        {categoryInfo.description}
-                      </p>
-                    )}
-                  </div>
-                  {!isUncategorized && categoryInfo && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditCategory(categoryInfo)}
-                      >
-                        <Pencil className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      {categoryInfo.is_active && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteCategoryId(categoryInfo.id)}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1 text-destructive" />
-                          Delete
-                        </Button>
+                      {(policy.tags ?? []).length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {(policy.tags ?? []).length} tag{(policy.tags ?? []).length !== 1 ? 's' : ''}
+                        </span>
                       )}
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-2 ml-6">
-                  {categoryPolicies.map((policy) => (
-                    <Card key={policy.id} className={cn(!policy.is_active && "opacity-60")}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-2">
-                              {!policy.is_active && (
-                                <Badge variant="secondary">Inactive</Badge>
-                              )}
-                              {policy.tags.length > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  {policy.tags.length} tag{policy.tags.length !== 1 ? 's' : ''}
-                                </span>
-                              )}
-                            </div>
-                            <div 
-                              className="text-sm text-foreground prose prose-sm max-w-none line-clamp-3"
-                              dangerouslySetInnerHTML={{ __html: policy.content }}
-                            />
-                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
-                              Updated {format(new Date(policy.updated_at), "MMM d, yyyy")}
-                              {policy.last_updated_by && ` by ${policy.last_updated_by}`}
-                            </p>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditPolicy(policy)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {policy.is_active && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeletePolicyId(policy.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                    <div 
+                      className="text-sm text-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: policy.content }}
+                    />
+                  </div>
+                  <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       )}
 
@@ -598,6 +546,7 @@ export function PolicyManagement() {
         onOpenChange={setPolicyDialogOpen}
         policy={editingPolicy}
         categories={activeCategories}
+        onDelete={(id) => setDeletePolicyId(id)}
       />
       <CategoryEditDialog
         open={categoryDialogOpen}

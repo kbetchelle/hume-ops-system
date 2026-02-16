@@ -22,14 +22,16 @@ const TabIndent = Extension.create({
   addKeyboardShortcuts() {
     return {
       Tab: ({ editor }) => {
-        if (editor.can().sinkListItem("listItem")) {
-          return editor.commands.sinkListItem("listItem");
+        if (editor.isActive("listItem") && editor.can().sinkListItem("listItem")) {
+          editor.commands.sinkListItem("listItem");
+          return true;
         }
         return false;
       },
       "Shift-Tab": ({ editor }) => {
-        if (editor.can().liftListItem("listItem")) {
-          return editor.commands.liftListItem("listItem");
+        if (editor.isActive("listItem") && editor.can().liftListItem("listItem")) {
+          editor.commands.liftListItem("listItem");
+          return true;
         }
         return false;
       },

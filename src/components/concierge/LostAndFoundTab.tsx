@@ -478,7 +478,7 @@ export function LostAndFoundTab() {
       <Tabs defaultValue="items" className="w-full">
         <TabsList className="w-full rounded-none mb-4">
           <TabsTrigger value="items" className="flex-1 rounded-none text-xs">
-            Found items
+            Found Items
           </TabsTrigger>
           <TabsTrigger value="requests" className="flex-1 rounded-none text-xs">
             Member Requests

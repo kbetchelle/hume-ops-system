@@ -33,8 +33,7 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'classes',
     endpointPath: '/classes',
-    // API returns snake_case: start_time, duration_minutes, total_booked, etc.
-    fieldsToFetch: ['id', 'name', 'description', 'start_time', 'duration_minutes', 'instructor', 'room', 'capacity', 'total_booked', 'status', 'is_cancelled'],
+    fieldsToFetch: ['id', 'name', 'description', 'start_time', 'duration_minutes', 'instructor', 'instructor_name', 'room', 'capacity', 'max_capacity', 'total_booked', 'status', 'is_cancelled', 'cancelled', 'canceled', 'deleted', 'location_id', 'updated_at', 'waitlist_count'],
     stagingTable: 'arketa_classes_staging',
     targetTable: 'arketa_classes',
     uniqueKey: 'external_id',
@@ -44,8 +43,7 @@ export const BACKFILL_CONFIGS: Record<string, BackfillEndpointConfig> = {
     apiSource: 'arketa',
     dataType: 'reservations',
     endpointPath: '/reservations',
-    // API returns snake_case: client_id, class_id, checked_in, checked_in_at, etc.
-    fieldsToFetch: ['id', 'client_id', 'class_id', 'client', 'status', 'checked_in', 'checked_in_at', 'created_at', 'cancelled_at', 'late_cancel', 'gross_amount_paid', 'net_amount_paid'],
+    fieldsToFetch: ['id', 'client_id', 'class_id', 'client', 'status', 'checked_in', 'checked_in_at', 'created_at', 'updated_at', 'cancelled_at', 'late_cancel', 'gross_amount_paid', 'net_amount_paid', 'spot_id', 'spot_name', 'reservation_type'],
     stagingTable: 'arketa_reservations_staging',
     targetTable: 'arketa_reservations',
     uniqueKey: 'external_id',

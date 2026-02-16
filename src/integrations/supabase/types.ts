@@ -286,6 +286,8 @@ export type Database = {
           id: string
           instructor_name: string | null
           is_cancelled: boolean | null
+          is_deleted: boolean | null
+          location_id: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -293,6 +295,7 @@ export type Database = {
           status: string | null
           synced_at: string | null
           updated_at: string | null
+          updated_at_api: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -306,6 +309,8 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
+          is_deleted?: boolean | null
+          location_id?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -313,6 +318,7 @@ export type Database = {
           status?: string | null
           synced_at?: string | null
           updated_at?: string | null
+          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -326,6 +332,8 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
+          is_deleted?: boolean | null
+          location_id?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null
@@ -333,6 +341,7 @@ export type Database = {
           status?: string | null
           synced_at?: string | null
           updated_at?: string | null
+          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
@@ -348,6 +357,8 @@ export type Database = {
           id: string
           instructor_name: string | null
           is_cancelled: boolean | null
+          is_deleted: boolean | null
+          location_id: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -356,6 +367,7 @@ export type Database = {
           status: string | null
           sync_batch_id: string
           synced_at: string | null
+          updated_at_api: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -368,6 +380,8 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
+          is_deleted?: boolean | null
+          location_id?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -376,6 +390,7 @@ export type Database = {
           status?: string | null
           sync_batch_id: string
           synced_at?: string | null
+          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -388,6 +403,8 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
+          is_deleted?: boolean | null
+          location_id?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null
@@ -396,6 +413,7 @@ export type Database = {
           status?: string | null
           sync_batch_id?: string
           synced_at?: string | null
+          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
@@ -815,7 +833,12 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at_api: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
@@ -823,8 +846,11 @@ export type Database = {
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
+          spot_id: string | null
+          spot_name: string | null
           status: string | null
           sync_batch_id: string | null
+          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -832,7 +858,12 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -840,8 +871,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -849,7 +883,12 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -857,8 +896,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -869,7 +911,12 @@ export type Database = {
           class_date: string | null
           class_id: string
           class_name: string | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at_api: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
@@ -877,8 +924,11 @@ export type Database = {
           raw_data: Json | null
           reservation_id: string
           reservation_type: string | null
+          spot_id: string | null
+          spot_name: string | null
           status: string | null
           sync_batch_id: string | null
+          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -886,7 +936,12 @@ export type Database = {
           class_date?: string | null
           class_id: string
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -894,8 +949,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id: string
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -903,7 +961,12 @@ export type Database = {
           class_date?: string | null
           class_id?: string
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -911,8 +974,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -923,7 +989,12 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
+          client_email: string | null
+          client_first_name: string | null
           client_id: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at_api: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
@@ -931,8 +1002,11 @@ export type Database = {
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
+          spot_id: string | null
+          spot_name: string | null
           status: string | null
           sync_batch_id: string
+          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -940,7 +1014,12 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -948,8 +1027,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id: string
+          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -957,7 +1039,12 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at_api?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
@@ -965,8 +1052,11 @@ export type Database = {
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          spot_id?: string | null
+          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string
+          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -5503,10 +5593,19 @@ export type Database = {
           sling_user_id: number
         }[]
       }
-      upsert_arketa_classes_from_staging: {
-        Args: { p_sync_batch_id: string }
-        Returns: number
-      }
+      upsert_arketa_classes_from_staging:
+        | {
+            Args: { p_sync_batch_id: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { p_sync_batch_id: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]

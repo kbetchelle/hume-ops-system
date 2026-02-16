@@ -151,158 +151,184 @@ export function BoHChecklistManager() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4">
-        {checklists?.map((checklist) => (
-          <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''}`}>
-            <CardHeader className="p-0 pb-0">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <CardTitle>{checklist.title}</CardTitle>
-                    {!checklist.is_active && (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                    <Badge variant="outline">
-                      {ROLE_TYPES.find(r => r.value === checklist.role_type)?.label}
-                    </Badge>
-                  </div>
-                  <CardDescription className="mt-1">
-                    {checklist.shift_time} • {checklist.is_weekend ? 'Weekend' : 'Weekday'}
-                    {checklist.description && ` • ${checklist.description}`}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingChecklist(checklist);
-                      setIsChecklistDialogOpen(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteChecklist(checklist.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setExpandedId(expandedId === checklist.id ? null : checklist.id)}
-                  >
-                    {expandedId === checklist.id ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
-            {expandedId === checklist.id && (
-              <CardContent className="p-0 pt-4">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-medium">
-                      Checklist Items ({items?.length || 0})
-                    </h3>
-                    <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setEditingItem(null)}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <ItemDialog
-                        item={editingItem}
-                        onSave={handleSaveItem}
-                        onClose={() => {
-                          setIsItemDialogOpen(false);
-                          setEditingItem(null);
-                        }}
-                      />
-                    </Dialog>
-                  </div>
-
-                  {(() => {
-                    const sorted = [...(items || [])].sort((a, b) => a.sort_order - b.sort_order);
-                    const grouped: Record<string, typeof sorted> = {};
-                    sorted.forEach((item) => {
-                      const group = item.time_hint || 'Ungrouped';
-                      if (!grouped[group]) grouped[group] = [];
-                      grouped[group].push(item);
-                    });
-                    return (
-                      <div className="space-y-3">
-                        {Object.entries(grouped).map(([group, groupItems]) => (
-                          <Collapsible key={group} defaultOpen>
-                            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                              <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
-                              <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                              {groupItems.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                                >
-                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">{item.task_description}</span>
-                                      {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                                      {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                      <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
-                                      {item.category && <span>• {item.category}</span>}
-                                      {item.color && (
-                                        <span className="flex items-center gap-1">
-                                          <span className={`h-2 w-2 rounded-full bg-${item.color}-500`}></span>
-                                          {item.color}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditingItem(item);
-                                        setIsItemDialogOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleDeleteItem(item.id)}
-                                    >
-                                      <Trash className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
+      <div className="space-y-6">
+        {(() => {
+          const roleGroups: Record<string, typeof checklists> = {};
+          checklists?.forEach((checklist) => {
+            const role = checklist.role_type || 'unknown';
+            if (!roleGroups[role]) roleGroups[role] = [];
+            roleGroups[role]!.push(checklist);
+          });
+          const roleOrder = ROLE_TYPES.map(r => r.value);
+          const sortedRoles = Object.keys(roleGroups).sort((a, b) => {
+            const ai = roleOrder.indexOf(a);
+            const bi = roleOrder.indexOf(b);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+          });
+          return sortedRoles.map((role) => (
+            <Collapsible key={role} defaultOpen>
+              <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                <span className="font-semibold text-xs uppercase tracking-widest">
+                  {ROLE_TYPES.find(r => r.value === role)?.label || role}
+                </span>
+                <Badge variant="secondary" className="text-xs">{roleGroups[role]!.length}</Badge>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-3">
+                {roleGroups[role]!.map((checklist) => (
+                  <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''} ${checklist.is_weekend ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
+                    <CardHeader className="p-0 pb-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle>{checklist.title}</CardTitle>
+                            {!checklist.is_active && (
+                              <Badge variant="secondary">Inactive</Badge>
+                            )}
+                            <Badge variant="outline">
+                              {ROLE_TYPES.find(r => r.value === checklist.role_type)?.label}
+                            </Badge>
+                          </div>
+                          <CardDescription className="mt-1">
+                            {checklist.shift_time} • {checklist.is_weekend ? 'Weekend' : 'Weekday'}
+                            {checklist.description && ` • ${checklist.description}`}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingChecklist(checklist);
+                              setIsChecklistDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteChecklist(checklist.id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setExpandedId(expandedId === checklist.id ? null : checklist.id)}
+                          >
+                            {expandedId === checklist.id ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                    );
-                  })()}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+                    </CardHeader>
+
+                    {expandedId === checklist.id && (
+                      <CardContent className="p-0 pt-4">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-sm font-medium">
+                              Checklist Items ({items?.length || 0})
+                            </h3>
+                            <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="outline" onClick={() => setEditingItem(null)}>
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add Item
+                                </Button>
+                              </DialogTrigger>
+                              <ItemDialog
+                                item={editingItem}
+                                onSave={handleSaveItem}
+                                onClose={() => {
+                                  setIsItemDialogOpen(false);
+                                  setEditingItem(null);
+                                }}
+                              />
+                            </Dialog>
+                          </div>
+
+                          {(() => {
+                            const sorted = [...(items || [])].sort((a, b) => a.sort_order - b.sort_order);
+                            const grouped: Record<string, typeof sorted> = {};
+                            sorted.forEach((item) => {
+                              const group = item.time_hint || 'Ungrouped';
+                              if (!grouped[group]) grouped[group] = [];
+                              grouped[group].push(item);
+                            });
+                            return (
+                              <div className="space-y-3">
+                                {Object.entries(grouped).map(([group, groupItems]) => (
+                                  <Collapsible key={group} defaultOpen>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                                      <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
+                                      <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                                      {groupItems.map((item) => (
+                                        <div
+                                          key={item.id}
+                                          className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                                        >
+                                          <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm">{item.task_description}</span>
+                                              {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                                              {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                              <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
+                                              {item.category && <span>• {item.category}</span>}
+                                              {item.color && (
+                                                <span className="flex items-center gap-1">
+                                                  <span className={`h-2 w-2 rounded-full bg-${item.color}-500`}></span>
+                                                  {item.color}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              onClick={() => {
+                                                setEditingItem(item);
+                                                setIsItemDialogOpen(true);
+                                              }}
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              onClick={() => handleDeleteItem(item.id)}
+                                            >
+                                              <Trash className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </CollapsibleContent>
+                                  </Collapsible>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          ));
+        })()}
       </div>
     </div>
   );

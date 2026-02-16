@@ -145,7 +145,7 @@ export function CafeChecklistManager() {
 
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
-          <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''}`}>
+          <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''} ${checklist.is_weekend ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
             <CardHeader className="p-0 pb-0">
               <div className="flex items-center justify-between">
                 <div className="flex-1">

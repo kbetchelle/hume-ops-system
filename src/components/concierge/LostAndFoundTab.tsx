@@ -603,7 +603,7 @@ export function LostAndFoundTab() {
         <TabsContent value="requests" className="mt-0">
       <Card className="rounded-none border">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <p className="text-sm font-sans font-normal text-primary">
+          <p className="text-sm font-sans font-normal text-neutral-500">
             All member requests will expire and be moved to the archive page after 21 days
           </p>
           <Button

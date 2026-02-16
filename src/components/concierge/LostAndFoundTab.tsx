@@ -553,7 +553,7 @@ export function LostAndFoundTab() {
             </p>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="border">
                 <TableRow>
                   <TableHead className="w-[40px]">
                     <Checkbox

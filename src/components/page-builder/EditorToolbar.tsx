@@ -26,6 +26,8 @@ import {
   Link2,
   Minus,
   Columns2,
+  Indent,
+  Outdent,
 } from "lucide-react";
 
 const TEXT_COLORS = [
@@ -268,6 +270,36 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         title="Numbered List"
       >
         <ListOrdered className="h-3.5 w-3.5" />
+      </Button>
+
+      {/* --- Indent / Outdent --- */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 rounded-none"
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().sinkListItem("listItem")) {
+            editor.chain().focus().sinkListItem("listItem").run();
+          }
+        }}
+        title="Indent"
+      >
+        <Indent className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 rounded-none"
+        onClick={() => {
+          if (editor.isActive("listItem") && editor.can().liftListItem("listItem")) {
+            editor.chain().focus().liftListItem("listItem").run();
+          }
+        }}
+        title="Outdent"
+      >
+        <Outdent className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-5 bg-border mx-1" />

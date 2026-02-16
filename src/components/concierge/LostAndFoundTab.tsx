@@ -481,7 +481,7 @@ export function LostAndFoundTab() {
             Found items
           </TabsTrigger>
           <TabsTrigger value="requests" className="flex-1 rounded-none text-xs">
-            Member requests
+            Member Requests
           </TabsTrigger>
           <TabsTrigger value="archived" className="flex-1 rounded-none text-xs">
             Archived
@@ -604,7 +604,7 @@ export function LostAndFoundTab() {
       <Card className="rounded-none border">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <p className="text-sm font-sans font-normal text-primary">
-            Member requests
+            Member Requests
           </p>
           <Button
                 size="sm"
@@ -620,7 +620,7 @@ export function LostAndFoundTab() {
               <Skeleton className="h-20 w-full m-4" /> :
               requests.length === 0 ?
               <p className="text-sm text-muted-foreground text-center py-8">
-              No member requests
+              No Member Requests
             </p> :
 
               <Table>

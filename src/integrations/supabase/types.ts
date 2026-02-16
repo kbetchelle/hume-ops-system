@@ -5557,6 +5557,7 @@ export type Database = {
         | "bag"
         | "water_bottle"
         | "other"
+        | "tech_headphones"
       membership_tier: "basic" | "standard" | "premium" | "vip"
       staff_announcement_type: "announcement" | "weekly_update"
     }
@@ -5711,6 +5712,7 @@ export const Constants = {
         "bag",
         "water_bottle",
         "other",
+        "tech_headphones",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
       staff_announcement_type: ["announcement", "weekly_update"],

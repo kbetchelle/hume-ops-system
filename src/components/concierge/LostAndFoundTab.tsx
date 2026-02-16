@@ -52,15 +52,26 @@ interface LostFoundItem {
 type StatusFilter = "all" | "unclaimed" | "claimed" | "disposed";
 
 const CATEGORY_LABELS: Record<LostAndFoundCategory, string> = {
-  wallet: "Wallet",
+  bag: "Bag",
+  jewelry: "Jewelry",
   keys: "Keys",
+  wallet: "Wallet",
+  tech_headphones: "Tech/Headphones",
+  other: "Other",
   phone: "Phone",
   clothing: "Clothing",
-  jewelry: "Jewelry",
-  bag: "Bag",
   water_bottle: "Water Bottle",
-  other: "Other",
 };
+
+// Only show these categories in the UI
+const VISIBLE_CATEGORIES: LostAndFoundCategory[] = [
+  "bag",
+  "jewelry",
+  "keys",
+  "wallet",
+  "tech_headphones",
+  "other",
+];
 
 interface MemberRequest {
   id: string;
@@ -679,7 +690,7 @@ export function LostAndFoundTab() {
                   <SelectItem value="none" className="text-xs">
                     None
                   </SelectItem>
-                  {(Constants.public.Enums.lost_and_found_category as readonly LostAndFoundCategory[]).map((c) => (
+                  {VISIBLE_CATEGORIES.map((c) => (
                     <SelectItem key={c} value={c} className="text-xs">
                       {CATEGORY_LABELS[c]}
                     </SelectItem>

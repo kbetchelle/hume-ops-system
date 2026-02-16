@@ -5,8 +5,8 @@ import { ResourcePagesManagement } from "@/components/manager/staff-resources/Re
 
 export function StaffResourcesManager() {
   return (
-    <div className="space-y-8">
-      <Tabs defaultValue="quick-links" className="w-full p-[10px]">
+    <div className="flex flex-col flex-1 min-h-0 h-full">
+      <Tabs defaultValue="quick-links" className="w-full p-[10px] flex flex-col flex-1 min-h-0">
         <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
           <TabsTrigger
             value="quick-links"
@@ -23,10 +23,10 @@ export function StaffResourcesManager() {
             <span className="text-xs">Resource Pages</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="quick-links" className="pt-8">
+        <TabsContent value="quick-links" className="pt-8 flex-1 min-h-0 overflow-auto">
           <QuickLinksManagement />
         </TabsContent>
-        <TabsContent value="resource-pages" className="pt-8">
+        <TabsContent value="resource-pages" className="pt-8 flex-1 min-h-0 overflow-auto">
           <ResourcePagesManagement />
         </TabsContent>
       </Tabs>

@@ -23,7 +23,7 @@ interface CafeChecklistWithItems {
 export function CafeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
 
   // Fetch ALL active cafe checklists regardless of day/shift
   const { data: checklists, isLoading } = useQuery({
@@ -128,7 +128,7 @@ export function CafeChecklistView() {
                   </Badge>
                   <div className="flex items-center gap-2">
                     <Label htmlFor="hide-completed-cafe" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
-                    <Switch id="hide-completed-cafe" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+                    <Switch id="hide-completed-cafe" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
                   </div>
                 </div>
               </div>

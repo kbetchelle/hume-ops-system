@@ -159,7 +159,10 @@ export function BoHChecklistView() {
               if (!grouped[section]) grouped[section] = [];
               grouped[section].push(item);
             });
+            let sectionIdx = 0;
             return Object.entries(grouped).map(([section, sectionItems]) => {
+              const hasCheckboxes = sectionItems.some((i: any) => i.task_type === 'checkbox');
+              const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
               const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
               const allDone = sectionCompleted === sectionItems.length;
               return (
@@ -174,23 +177,17 @@ export function BoHChecklistView() {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                    {(() => {
-                      let cbIdx = 0;
-                      return sectionItems.map((item: any) => {
-                        const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
-                        return (
-                          <BoHChecklistItem
-                            key={item.id}
-                            item={item}
-                            completion={completionMap.get(item.id)}
-                            checklistId={checklist.id}
-                            completionDate={selectedDate}
-                            shiftTime={shiftTime}
-                            checkboxIndex={idx}
-                          />
-                        );
-                      });
-                    })()}
+                    {sectionItems.map((item: any) => (
+                      <BoHChecklistItem
+                        key={item.id}
+                        item={item}
+                        completion={completionMap.get(item.id)}
+                        checklistId={checklist.id}
+                        completionDate={selectedDate}
+                        shiftTime={shiftTime}
+                        checkboxIndex={currentSectionIdx}
+                      />
+                    ))}
                   </CollapsibleContent>
                 </Collapsible>
               );

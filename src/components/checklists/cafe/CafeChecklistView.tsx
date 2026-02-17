@@ -133,43 +133,42 @@ export function CafeChecklistView() {
               )}
 
               {/* Render items grouped by category */}
-              {Object.entries(groupedItems).map(([category, catItems]) => {
-                const categoryItems = (catItems as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
-                const categoryCompleted = categoryItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
-                const allDone = categoryCompleted === categoryItems.length;
-                return (
-                  <Collapsible key={category} defaultOpen>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                      <span className="font-semibold text-sm">{category}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">
-                          {categoryCompleted}/{categoryItems.length}
-                        </Badge>
-                        <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                      {(() => {
-                        let cbIdx = 0;
-                        return categoryItems.map((item: any) => {
-                          const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
-                          return (
-                            <CafeChecklistItem
-                              key={item.id}
-                              item={item}
-                              completion={completionMap.get(item.id)}
-                              checklistId={checklist.id}
-                              completionDate={selectedDate}
-                              shiftTime={shiftTime}
-                              checkboxIndex={idx}
-                            />
-                          );
-                        });
-                      })()}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
+              {(() => {
+                let sectionIdx = 0;
+                return Object.entries(groupedItems).map(([category, catItems]) => {
+                  const categoryItems = (catItems as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+                  const hasCheckboxes = categoryItems.some((i: any) => i.task_type === 'checkbox');
+                  const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
+                  const categoryCompleted = categoryItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
+                  const allDone = categoryCompleted === categoryItems.length;
+                  return (
+                    <Collapsible key={category} defaultOpen>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                        <span className="font-semibold text-sm">{category}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">
+                            {categoryCompleted}/{categoryItems.length}
+                          </Badge>
+                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                        {categoryItems.map((item: any) => (
+                          <CafeChecklistItem
+                            key={item.id}
+                            item={item}
+                            completion={completionMap.get(item.id)}
+                            checklistId={checklist.id}
+                            completionDate={selectedDate}
+                            shiftTime={shiftTime}
+                            checkboxIndex={currentSectionIdx}
+                          />
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                });
+              })()}
             </CardContent>
           </Card>
         );

@@ -101,7 +101,10 @@ export function MobileChecklistItem({
       yellow: "border-l-yellow-500",
       green: "border-l-green-500",
       blue: "border-l-blue-500",
+      purple: "border-l-purple-500",
       gray: "border-l-gray-500",
+      teal: "border-l-teal-500",
+      pink: "border-l-pink-500",
     };
     
     return colorMap[item.color] || "";

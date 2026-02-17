@@ -72,6 +72,20 @@ export function BoHChecklistItem({
     await handleToggle(undefined, undefined, signatureData);
   };
 
+  // Color map for left border styling
+  const colorBorderMap: Record<string, string> = {
+    red: 'border-l-red-500',
+    orange: 'border-l-orange-500',
+    yellow: 'border-l-yellow-500',
+    green: 'border-l-green-500',
+    blue: 'border-l-blue-500',
+    purple: 'border-l-purple-500',
+    gray: 'border-l-gray-500',
+    teal: 'border-l-teal-500',
+    pink: 'border-l-pink-500',
+  };
+  const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''}` : '';
+
   // Header type - just displays text
   if (item.task_type === 'header') {
     return (
@@ -85,7 +99,7 @@ export function BoHChecklistItem({
   if (item.task_type === 'checkbox') {
     return (
       <div
-        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${
+        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${colorBorderClass} ${
           isCompleted ? 'bg-accent/30 border-primary' : ''
         }`}
         onClick={() => handleToggle()}
@@ -114,7 +128,7 @@ export function BoHChecklistItem({
   // Photo type - with mobile-optimized modal and compression
   if (item.task_type === 'photo') {
     return (
-      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -178,7 +192,7 @@ export function BoHChecklistItem({
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -247,7 +261,7 @@ export function BoHChecklistItem({
   // Text entry types (free_response, short_entry)
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -278,7 +292,7 @@ export function BoHChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -315,7 +329,7 @@ export function BoHChecklistItem({
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -342,7 +356,7 @@ export function BoHChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -362,7 +376,7 @@ export function BoHChecklistItem({
 
   // Default fallback
   return (
-    <div className="p-3 border rounded-lg">
+    <div className={`p-3 border rounded-lg ${colorBorderClass}`}>
       <span>{taskLabel}</span>
       <p className="text-xs text-muted-foreground">Unsupported task type: {item.task_type}</p>
     </div>

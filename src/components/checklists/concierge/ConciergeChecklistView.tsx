@@ -130,18 +130,25 @@ export function ConciergeChecklistView() {
           )}
         </CardHeader>
         <CardContent className="space-y-2">
-          {checklist.concierge_checklist_items
-            ?.sort((a, b) => a.sort_order - b.sort_order)
-            .map((item) => (
-              <ConciergeChecklistItem
-                key={item.id}
-                item={item}
-                completion={completionMap.get(item.id)}
-                checklistId={checklist.id}
-                completionDate={selectedDate}
-                shiftTime={shiftTime}
-              />
-            ))}
+          {(() => {
+            const sorted = checklist.concierge_checklist_items
+              ?.sort((a, b) => a.sort_order - b.sort_order) || [];
+            let cbIdx = 0;
+            return sorted.map((item) => {
+              const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
+              return (
+                <ConciergeChecklistItem
+                  key={item.id}
+                  item={item}
+                  completion={completionMap.get(item.id)}
+                  checklistId={checklist.id}
+                  completionDate={selectedDate}
+                  shiftTime={shiftTime}
+                  checkboxIndex={idx}
+                />
+              );
+            });
+          })()}
         </CardContent>
       </Card>
     </div>

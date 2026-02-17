@@ -174,16 +174,23 @@ export function BoHChecklistView() {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                    {sectionItems.map((item: any) => (
-                      <BoHChecklistItem
-                        key={item.id}
-                        item={item}
-                        completion={completionMap.get(item.id)}
-                        checklistId={checklist.id}
-                        completionDate={selectedDate}
-                        shiftTime={shiftTime}
-                      />
-                    ))}
+                    {(() => {
+                      let cbIdx = 0;
+                      return sectionItems.map((item: any) => {
+                        const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
+                        return (
+                          <BoHChecklistItem
+                            key={item.id}
+                            item={item}
+                            completion={completionMap.get(item.id)}
+                            checklistId={checklist.id}
+                            completionDate={selectedDate}
+                            shiftTime={shiftTime}
+                            checkboxIndex={idx}
+                          />
+                        );
+                      });
+                    })()}
                   </CollapsibleContent>
                 </Collapsible>
               );

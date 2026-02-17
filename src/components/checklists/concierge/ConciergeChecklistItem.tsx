@@ -16,6 +16,7 @@ interface ConciergeChecklistItemProps {
   checklistId: string;
   completionDate: string;
   shiftTime: string;
+  checkboxIndex?: number;
 }
 
 export function ConciergeChecklistItem({
@@ -24,6 +25,7 @@ export function ConciergeChecklistItem({
   checklistId,
   completionDate,
   shiftTime,
+  checkboxIndex = 0,
 }: ConciergeChecklistItemProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -81,11 +83,17 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Checkbox type
+  // Checkbox type - alternate blue/green coloring
+  const checkboxColorClass = item.task_type === 'checkbox'
+    ? (checkboxIndex % 2 === 0
+      ? 'border-l-4 border-l-add-skyBlue bg-add-skyBlue/5'
+      : 'border-l-4 border-l-green-500 bg-green-500/5')
+    : '';
+
   if (item.task_type === 'checkbox') {
     return (
       <div
-        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${
+        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${checkboxColorClass} ${
           isCompleted ? 'bg-accent/30 border-primary' : ''
         }`}
         onClick={() => handleToggle()}

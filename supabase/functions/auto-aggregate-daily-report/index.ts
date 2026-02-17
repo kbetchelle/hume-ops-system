@@ -185,17 +185,21 @@ Deno.serve(async (req) => {
       const grossSalesArketa = grossSalesMembership + grossSalesOther;
       dataSources.arketa_payments = { count: payRows?.length ?? 0, total: grossSalesArketa };
 
-      // 3) Toast POS (net_sales per order, sum by business_date)
+      // 3) Toast POS (net_sales + gross_sales per order, sum by business_date)
       const { data: toastRows, error: toastErr } = await supabase
-        .from("toast_staging")
+        .from("toast_sales")
         .select("business_date, net_sales, gross_sales")
         .eq("business_date", report_date);
 
-      let cafeSales = 0;
+      let cafeNetSales = 0;
+      let cafeGrossSales = 0;
+      let cafeOrderCount = 0;
       if (!toastErr && toastRows?.length) {
-        cafeSales = (toastRows as { net_sales?: number }[]).reduce((sum, row) => sum + Number(row.net_sales ?? 0), 0);
+        cafeNetSales = (toastRows as { net_sales?: number }[]).reduce((sum, row) => sum + Number(row.net_sales ?? 0), 0);
+        cafeGrossSales = (toastRows as { gross_sales?: number }[]).reduce((sum, row) => sum + Number(row.gross_sales ?? 0), 0);
+        cafeOrderCount = toastRows.length;
       }
-      dataSources.toast_staging = { status: toastErr ? "error" : "ok", cafe_sales: cafeSales };
+      dataSources.toast_sales = { status: toastErr ? "error" : "ok", cafe_net_sales: cafeNetSales, cafe_gross_sales: cafeGrossSales, cafe_order_count: cafeOrderCount };
 
       // 4) Calendly / scheduled_tours
       const { data: tourRows } = await supabase
@@ -342,7 +346,7 @@ Deno.serve(async (req) => {
         classDetails.sort((a, b) => a.time.localeCompare(b.time));
       }
 
-      const totalSales = grossSalesArketa + cafeSales;
+      const totalSales = grossSalesArketa + cafeNetSales;
 
       const payload = {
         report_date,
@@ -353,7 +357,10 @@ Deno.serve(async (req) => {
         gross_sales_membership: Math.round(grossSalesMembership * 100) / 100,
         gross_sales_other: Math.round(grossSalesOther * 100) / 100,
         gross_sales_arketa: Math.round(grossSalesArketa * 100) / 100,
-        cafe_sales: Math.round(cafeSales * 100) / 100,
+        cafe_sales: Math.round(cafeNetSales * 100) / 100,
+        cafe_net_sales: Math.round(cafeNetSales * 100) / 100,
+        cafe_gross_sales: Math.round(cafeGrossSales * 100) / 100,
+        cafe_order_count: cafeOrderCount,
         total_sales: Math.round(totalSales * 100) / 100,
         total_reservations: totalReservations,
         total_cancellations: totalCancellations,

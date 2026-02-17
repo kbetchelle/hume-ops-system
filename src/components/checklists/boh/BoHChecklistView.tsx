@@ -34,7 +34,7 @@ export function BoHChecklistView() {
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
   
   const currentHour = new Date().getHours();
-  const detectedShift = currentHour < 13 ? 'AM' : 'PM';
+  const detectedShift = isWeekend ? (currentHour < 13 ? 'AM' : 'PM') : (currentHour < 14 ? 'AM' : 'PM');
   const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
 
   const userBoHRole = roles.find(r => 

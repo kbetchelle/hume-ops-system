@@ -32,12 +32,15 @@ const RPC_MAP: Record<BackfillCalendarType, string> = {
   toast: "get_backfill_toast_calendar",
 };
 
-/** Threshold below which a day is considered "partially" synced. */
+/** Threshold below which a day is considered "partially" synced.
+ *  Toast uses 1 because any records present means the day was fully synced
+ *  (the page-level cursor guarantees all pages are fetched before promotion).
+ */
 const PARTIAL_THRESHOLD: Record<BackfillCalendarType, number> = {
   reservations: 3,
   payments: 1,
   classes: 2,
-  toast: 5,
+  toast: 1,
 };
 
 function getStatus(

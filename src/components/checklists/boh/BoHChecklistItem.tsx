@@ -72,7 +72,7 @@ export function BoHChecklistItem({
     await handleToggle(undefined, undefined, signatureData);
   };
 
-  // Color map for left border styling
+  // Color map for left border and background styling
   const colorBorderMap: Record<string, string> = {
     red: 'border-l-add-crimson',
     orange: 'border-l-add-amber',
@@ -84,7 +84,18 @@ export function BoHChecklistItem({
     teal: 'border-l-add-olive',
     pink: 'border-l-add-burntOrange',
   };
-  const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''}` : '';
+  const colorBgMap: Record<string, string> = {
+    red: 'bg-add-crimson/25',
+    orange: 'bg-add-amber/25',
+    yellow: 'bg-yellow-500/25',
+    green: 'bg-green-500/25',
+    blue: 'bg-add-skyBlue/25',
+    purple: 'bg-purple-500/25',
+    gray: 'bg-gray-500/25',
+    teal: 'bg-add-olive/25',
+    pink: 'bg-add-burntOrange/25',
+  };
+  const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
 
   // Header type - just displays text
   if (item.task_type === 'header') {

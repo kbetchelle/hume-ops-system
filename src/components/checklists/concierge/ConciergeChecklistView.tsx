@@ -7,6 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 interface ConciergeChecklistWithItems {
@@ -22,6 +24,7 @@ interface ConciergeChecklistWithItems {
 export function ConciergeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const today = new Date().toISOString().split('T')[0];
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
   
@@ -124,17 +127,28 @@ export function ConciergeChecklistView() {
       {/* Checklist card */}
       <Card>
         <CardHeader>
-          <CardTitle>{checklist.title}</CardTitle>
-          {checklist.description && (
-            <p className="text-sm text-muted-foreground">{checklist.description}</p>
-          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{checklist.title}</CardTitle>
+              {checklist.description && (
+                <p className="text-sm text-muted-foreground">{checklist.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="hide-completed-concierge" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
+              <Switch id="hide-completed-concierge" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {(() => {
             const sorted = checklist.concierge_checklist_items
               ?.sort((a, b) => a.sort_order - b.sort_order) || [];
+            const filtered = hideCompleted
+              ? sorted.filter((item) => !completionMap.get(item.id)?.completed_at)
+              : sorted;
             let cbIdx = 0;
-            return sorted.map((item) => {
+            return filtered.map((item) => {
               const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
               return (
                 <ConciergeChecklistItem

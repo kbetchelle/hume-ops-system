@@ -7,6 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Calendar, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface CafeChecklistWithItems {
   id: string;
@@ -21,6 +23,7 @@ interface CafeChecklistWithItems {
 export function CafeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   // Fetch ALL active cafe checklists regardless of day/shift
   const { data: checklists, isLoading } = useQuery({
@@ -119,9 +122,15 @@ export function CafeChecklistView() {
                     <p className="text-sm text-muted-foreground mt-1">{checklist.description}</p>
                   )}
                 </div>
-                <Badge variant={isAllComplete ? 'default' : 'secondary'}>
-                  {completedCount} / {totalCount} Complete
-                </Badge>
+                <div className="flex items-center gap-4">
+                  <Badge variant={isAllComplete ? 'default' : 'secondary'}>
+                    {completedCount} / {totalCount} Complete
+                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="hide-completed-cafe" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
+                    <Switch id="hide-completed-cafe" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -137,6 +146,10 @@ export function CafeChecklistView() {
                 let sectionIdx = 0;
                 return Object.entries(groupedItems).map(([category, catItems]) => {
                   const categoryItems = (catItems as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+                  const filteredCategoryItems = hideCompleted
+                    ? categoryItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
+                    : categoryItems;
+                  if (filteredCategoryItems.length === 0) return null;
                   const hasCheckboxes = categoryItems.some((i: any) => i.task_type === 'checkbox');
                   const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
                   const categoryCompleted = categoryItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
@@ -153,7 +166,7 @@ export function CafeChecklistView() {
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                        {categoryItems.map((item: any) => (
+                        {filteredCategoryItems.map((item: any) => (
                           <CafeChecklistItem
                             key={item.id}
                             item={item}

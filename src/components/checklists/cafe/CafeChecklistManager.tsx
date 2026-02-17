@@ -235,10 +235,22 @@ export function CafeChecklistManager() {
                               <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                              {groupItems.map((item) => (
+                              {groupItems.map((item) => {
+                                const colorBorderMap: Record<string, string> = {
+                                  red: 'border-l-add-crimson', orange: 'border-l-add-amber', yellow: 'border-l-yellow-500',
+                                  green: 'border-l-green-500', blue: 'border-l-add-skyBlue', purple: 'border-l-purple-500',
+                                  gray: 'border-l-gray-500', teal: 'border-l-add-olive', pink: 'border-l-add-burntOrange',
+                                };
+                                const colorBgMap: Record<string, string> = {
+                                  red: 'bg-add-crimson/5', orange: 'bg-add-amber/5', yellow: 'bg-yellow-500/5',
+                                  green: 'bg-green-500/5', blue: 'bg-add-skyBlue/5', purple: 'bg-purple-500/5',
+                                  gray: 'bg-gray-500/5', teal: 'bg-add-olive/5', pink: 'bg-add-burntOrange/5',
+                                };
+                                const colorClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
+                                return (
                                 <div
                                   key={item.id}
-                                  className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                                  className={`flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors ${colorClass}`}
                                 >
                                   <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
                                   <div className="flex-1">
@@ -280,7 +292,8 @@ export function CafeChecklistManager() {
                                     </Button>
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </CollapsibleContent>
                           </Collapsible>
                         ))}

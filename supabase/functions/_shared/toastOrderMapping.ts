@@ -16,26 +16,57 @@ export interface OrderAmounts {
 export function extractOrderAmounts(order: Record<string, unknown>): OrderAmounts {
   const grossTop = Number(order.totalAmount ?? order.amount ?? 0) || 0;
   const netTop = Number(order.netAmount ?? 0) || 0;
-  if (grossTop > 0 || netTop > 0) {
-    return { gross: grossTop, net: netTop };
+
+  const checks = (order.checks as Array<{ 
+    totalAmount?: number; amount?: number; taxAmount?: number 
+  }>) ?? [];
+  const grossChecks = checks.reduce(
+    (s, c) => s + (Number(c.totalAmount ?? c.amount ?? 0) || 0), 0
+  );
+  const taxChecks = checks.reduce(
+    (s, c) => s + (Number(c.taxAmount ?? 0) || 0), 0
+  );
+
+  // Prefer root-level if available, else derive from checks
+  let gross = grossTop > 0 ? grossTop : grossChecks;
+  let net = netTop > 0 ? netTop : Math.max(0, grossChecks - taxChecks);
+
+  // Sanity: gross should always be >= net
+  if (gross < net) {
+    const tmp = gross;
+    gross = net;
+    net = tmp;
   }
 
-  const checks = (order.checks as Array<{ totalAmount?: number; amount?: number; taxAmount?: number }>) ?? [];
-  const gross = checks.reduce((s, c) => s + (Number(c.totalAmount ?? c.amount ?? 0) || 0), 0);
-  const tax = checks.reduce((s, c) => s + (Number(c.taxAmount ?? 0) || 0), 0);
-  return { net: Math.max(0, gross - tax), gross };
+  return { net, gross };
 }
 
 /**
  * Get business_date as yyyy-MM-dd from order.businessDate (integer yyyyMMdd) or fallback.
  */
-export function toBusinessDate(order: Record<string, unknown>, fallbackDate: string): string {
-  const bd = order.businessDate;
-  if (bd != null && typeof bd === 'number' && bd > 0) {
-    const s = String(bd);
-    if (s.length === 8) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
-  }
+export function toBusinessDate(
+  _order: Record<string, unknown>, 
+  fallbackDate: string
+): string {
+  // Always use the query date as canonical business_date.
+  // The order's own businessDate integer may differ due to 
+  // Toast timezone handling. Original value preserved in raw_data.
   return fallbackDate;
+}
+
+/**
+ * Validate a staging row before promotion to toast_sales.
+ */
+export function validateStagingRow(row: Record<string, unknown>): { valid: boolean; reason?: string } {
+  if (!row.order_guid || typeof row.order_guid !== 'string')
+    return { valid: false, reason: 'missing order_guid' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(row.business_date)))
+    return { valid: false, reason: 'invalid business_date format' };
+  const net = Number(row.net_sales);
+  const gross = Number(row.gross_sales);
+  if (!isFinite(net) || net < 0 || !isFinite(gross) || gross < 0)
+    return { valid: false, reason: 'invalid sales amounts' };
+  return { valid: true };
 }
 
 export interface StagingRow {

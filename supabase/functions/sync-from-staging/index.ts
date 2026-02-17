@@ -426,7 +426,7 @@ async function transferToastSales(
     }
 
     const countBefore = await getHistoryCount(supabase, "toast_sales");
-    const toUpsert = allRows.map((r: Record<string, unknown>) => ({
+    const mapped = allRows.map((r: Record<string, unknown>) => ({
       order_guid: r.order_guid,
       business_date: r.business_date,
       net_sales: r.net_sales ?? 0,
@@ -435,7 +435,17 @@ async function transferToastSales(
       order_count: r.order_count ?? 1,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
-    })).filter((r: any) => r.order_guid);
+    }));
+
+    // Validate before upserting
+    const toUpsert = mapped.filter((r: any) => {
+      if (!r.order_guid || typeof r.order_guid !== 'string') return false;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r.business_date))) return false;
+      const net = Number(r.net_sales);
+      const gross = Number(r.gross_sales);
+      if (!isFinite(net) || net < 0 || !isFinite(gross) || gross < 0) return false;
+      return true;
+    });
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);

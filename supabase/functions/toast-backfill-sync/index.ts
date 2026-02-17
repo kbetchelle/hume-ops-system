@@ -8,7 +8,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
 import { createSyncLogger } from '../_shared/logger.ts';
-import { mapOrderToStagingRow } from '../_shared/toastOrderMapping.ts';
+import { mapOrderToStagingRow, validateStagingRow } from '../_shared/toastOrderMapping.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const BACKFILL_START_DATE = '2024-08-01';
@@ -102,10 +102,11 @@ async function getResumePageForDate(supabase: any, businessDate: string): Promis
   return data[0].page_number as number;
 }
 
-/** Promote all staged rows for a business_date to toast_sales, then clear staging for that date. */
+/** Promote all staged rows for a business_date to toast_sales (with validation), then clear staging. */
 // deno-lint-ignore no-explicit-any
 async function promoteAndClearDate(supabase: any, businessDate: string, logger: ReturnType<typeof createSyncLogger>): Promise<number> {
   let promoted = 0;
+  let skipped = 0;
   let from = 0;
   const batchSize = 500;
   while (true) {
@@ -117,24 +118,36 @@ async function promoteAndClearDate(supabase: any, businessDate: string, logger: 
     if (error) { logger.error(`Promote read error for ${businessDate}`, error); throw error; }
     if (!rows || rows.length === 0) break;
 
-    const { error: upsertErr } = await supabase
-      .from('toast_sales')
-      .upsert(rows, { onConflict: 'order_guid' });
-    if (upsertErr) { logger.error(`Promote upsert error for ${businessDate}`, upsertErr); throw upsertErr; }
+    const validRows: typeof rows = [];
+    for (const row of rows) {
+      const check = validateStagingRow(row);
+      if (check.valid) {
+        validRows.push(row);
+      } else {
+        skipped++;
+        logger.warn(`Skipping invalid staging row ${row.order_guid ?? 'unknown'}: ${check.reason}`);
+      }
+    }
 
-    promoted += rows.length;
+    if (validRows.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('toast_sales')
+        .upsert(validRows, { onConflict: 'order_guid' });
+      if (upsertErr) { logger.error(`Promote upsert error for ${businessDate}`, upsertErr); throw upsertErr; }
+      promoted += validRows.length;
+    }
+
     if (rows.length < batchSize) break;
     from += batchSize;
   }
 
-  // Clear staging for this date
   const { error: delErr } = await supabase
     .from('toast_staging')
     .delete()
     .eq('business_date', businessDate);
   if (delErr) logger.warn(`Staging cleanup warning for ${businessDate}: ${delErr.message}`);
 
-  logger.info(`Promoted ${promoted} orders for ${businessDate} to toast_sales and cleared staging`);
+  logger.info(`Promoted ${promoted} orders for ${businessDate} (${skipped} skipped) and cleared staging`);
   return promoted;
 }
 
@@ -153,7 +166,18 @@ async function fetchAndStageDay(
   logger: ReturnType<typeof createSyncLogger>
 ): Promise<{ complete: boolean; fetched: number; partial: boolean }> {
   const maxStagedPage = await getResumePageForDate(supabase, businessDate);
-  let page = maxStagedPage > 0 ? maxStagedPage + 1 : 1;
+  const startingFresh = maxStagedPage === 0;
+  let page = startingFresh ? 1 : maxStagedPage + 1;
+
+  // Clear staging for this date only if starting fresh (not resuming)
+  if (startingFresh) {
+    const { error: clearErr } = await supabase
+      .from('toast_staging')
+      .delete()
+      .eq('business_date', businessDate);
+    if (clearErr) logger.warn(`Failed to clear staging for ${businessDate}: ${clearErr.message}`);
+  }
+
   let hasMore = true;
   let fetched = 0;
 

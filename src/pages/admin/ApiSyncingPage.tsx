@@ -129,7 +129,7 @@ function StatusBadge({ status, isHealthy }: { status: string | boolean | null; i
   if (isHealthy !== undefined) {
     // For overview table - HEALTHY/ERROR badges
     return isHealthy ? (
-      <Badge className="gap-1 bg-primary hover:bg-primary text-primary-foreground">
+      <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
         <CheckCircle2 className="h-3 w-3" />
         HEALTHY
       </Badge>
@@ -144,7 +144,7 @@ function StatusBadge({ status, isHealthy }: { status: string | boolean | null; i
   // For log table - SUCCESS/FAILED badges
   if (status === "success" || status === true) {
     return (
-      <Badge className="gap-1 bg-primary hover:bg-primary text-primary-foreground">
+      <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
         <CheckCircle2 className="h-3 w-3" />
         SUCCESS
       </Badge>
@@ -254,7 +254,7 @@ function SyncOverviewTable() {
             const isHealthy = sync.last_status === "success" || sync.failure_count === 0;
 
             return (
-              <TableRow key={sync.id} className={sync.last_status === "failed" ? "bg-destructive/5" : ""}>
+              <TableRow key={sync.id} className={sync.last_status === "failed" ? "bg-destructive/10" : ""}>
                 <TableCell className="font-medium">
                   {sync.display_name}
                 </TableCell>

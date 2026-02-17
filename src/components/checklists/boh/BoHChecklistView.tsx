@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Calendar, ChevronDown } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface BoHChecklistWithItems {
   id: string;
@@ -29,6 +31,7 @@ export function BoHChecklistView() {
   const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
+  const [hideCompleted, setHideCompleted] = useState(false);
   
   const currentHour = new Date().getHours();
   const detectedShift = currentHour < 13 ? 'AM' : 'PM';
@@ -145,10 +148,18 @@ export function BoHChecklistView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{checklist.title}</CardTitle>
-          {checklist.description && (
-            <p className="text-sm text-muted-foreground">{checklist.description}</p>
-          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{checklist.title}</CardTitle>
+              {checklist.description && (
+                <p className="text-sm text-muted-foreground">{checklist.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="hide-completed-boh" className="text-xs text-muted-foreground cursor-pointer">{t('Hide completed', 'Ocultar completados')}</Label>
+              <Switch id="hide-completed-boh" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {(() => {
@@ -161,6 +172,10 @@ export function BoHChecklistView() {
             });
             let sectionIdx = 0;
             return Object.entries(grouped).map(([section, sectionItems]) => {
+              const filteredItems = hideCompleted
+                ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
+                : sectionItems;
+              if (filteredItems.length === 0) return null;
               const hasCheckboxes = sectionItems.some((i: any) => i.task_type === 'checkbox');
               const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
               const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
@@ -177,7 +192,7 @@ export function BoHChecklistView() {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                    {sectionItems.map((item: any) => (
+                    {filteredItems.map((item: any) => (
                       <BoHChecklistItem
                         key={item.id}
                         item={item}

@@ -96,15 +96,15 @@ export function MobileChecklistItem({
     if (!item.color) return "";
     
     const colorMap: Record<string, string> = {
-      red: "border-l-add-crimson bg-add-crimson/75",
-      orange: "border-l-add-amber bg-add-amber/75",
-      yellow: "border-l-yellow-500 bg-yellow-500/75",
-      green: "border-l-green-500 bg-green-500/75",
-      blue: "border-l-add-skyBlue bg-add-skyBlue/75",
-      purple: "border-l-purple-500 bg-purple-500/75",
-      gray: "border-l-gray-500 bg-gray-500/75",
-      teal: "border-l-add-olive bg-add-olive/75",
-      pink: "border-l-add-burntOrange bg-add-burntOrange/75",
+      red: "border-l-add-crimson bg-add-crimson/15",
+      orange: "border-l-add-amber bg-add-amber/15",
+      yellow: "border-l-yellow-500 bg-yellow-500/15",
+      green: "border-l-green-500 bg-green-500/15",
+      blue: "border-l-add-skyBlue bg-add-skyBlue/15",
+      purple: "border-l-purple-500 bg-purple-500/15",
+      gray: "border-l-gray-500 bg-gray-500/15",
+      teal: "border-l-add-olive bg-add-olive/15",
+      pink: "border-l-add-burntOrange bg-add-burntOrange/15",
     };
     
     return colorMap[item.color] || "";

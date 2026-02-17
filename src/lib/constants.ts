@@ -10,6 +10,14 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
 } as const;
 
+export const add_color = {
+  olive: "#818807",
+  skyBlue: "#6CA2E8",
+  amber: "#F28B0C",
+  burntOrange: "#F2600C",
+  crimson: "#D9310B",
+} as const;
+
 export const QUERY_KEYS = {
   USER: ["user"],
   PROFILE: ["profile"],

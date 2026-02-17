@@ -210,8 +210,9 @@ Deno.serve(async (req) => {
         const start = (t.start_time as string) ? new Date(t.start_time as string).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
         return `${name} (${email})${start ? ` at ${start}` : ""}`.trim();
       });
-      const tourNotes = tourLines.join("\n");
       dataSources.scheduled_tours = { count: tourRows?.length ?? 0 };
+
+      // Concierge tour names from daily_report_history (AM/PM) — merge with Calendly after we have amShift/pmShift
 
       // 5) Weather
       const weatherData = await fetchWeather(report_date);
@@ -221,14 +222,14 @@ Deno.serve(async (req) => {
       // 6) Concierge shifts (daily_report_history) — shift_type AM/PM
       const { data: amShift } = await supabase
         .from("daily_report_history")
-        .select("member_feedback, facility_issues, busiest_areas, membership_requests, management_notes, tour_notes, future_shift_notes, system_issues")
+        .select("member_feedback, facility_issues, busiest_areas, membership_requests, management_notes, tour_notes, future_shift_notes, system_issues, cafe_notes")
         .eq("report_date", report_date)
         .eq("shift_type", "AM")
         .maybeSingle();
 
       const { data: pmShift } = await supabase
         .from("daily_report_history")
-        .select("member_feedback, facility_issues, busiest_areas, membership_requests, management_notes, tour_notes, future_shift_notes, system_issues")
+        .select("member_feedback, facility_issues, busiest_areas, membership_requests, management_notes, tour_notes, future_shift_notes, system_issues, cafe_notes")
         .eq("report_date", report_date)
         .eq("shift_type", "PM")
         .maybeSingle();
@@ -288,6 +289,28 @@ Deno.serve(async (req) => {
       const cancellationLines = membershipReqs.map((m) => `[CANCEL] ${m.name ?? ""} <${m.email ?? ""}> - ${(m as { membershipType?: string }).membershipType ?? ""}`);
       const cancellationNotes = cancellationLines.join("\n") || null;
 
+      // Merge Concierge tour_notes (AM/PM) with Calendly tour lines
+      type TourEntry = { name?: string; followupCompleted?: boolean };
+      const formatConciergeTours = (arr: unknown, label: string): string => {
+        if (!Array.isArray(arr) || arr.length === 0) return `${label}: No tours this ${label}`;
+        const names = (arr as TourEntry[]).map((t) => (t.name ?? "").trim()).filter(Boolean);
+        return names.length ? `${label}: ${names.join(", ")}` : `${label}: No tours this ${label}`;
+      };
+      const amTourLine = formatConciergeTours(amShift?.tour_notes ?? [], "AM");
+      const pmTourLine = formatConciergeTours(pmShift?.tour_notes ?? [], "PM");
+      const allTourParts = [...tourLines, amTourLine, pmTourLine].filter(Boolean);
+      const tourNotes = allTourParts.join("\n") || null;
+
+      // Merge Concierge cafe_notes (AM/PM) into daily_reports.cafe_notes
+      const cafeParts: string[] = [];
+      if (amShift?.cafe_notes && String(amShift.cafe_notes).trim()) {
+        cafeParts.push(`[AM] ${String(amShift.cafe_notes).trim()}`);
+      }
+      if (pmShift?.cafe_notes && String(pmShift.cafe_notes).trim()) {
+        cafeParts.push(`[PM] ${String(pmShift.cafe_notes).trim()}`);
+      }
+      const cafeNotes = cafeParts.length ? cafeParts.join("\n") : null;
+
       dataSources.daily_report_history = { am: !!amShift, pm: !!pmShift };
 
       // 7) Class schedule (from arketa_reservations_history + arketa_classes for time/instructor)
@@ -345,9 +368,10 @@ Deno.serve(async (req) => {
         facility_notes_pm: facilityPm,
         crowd_comments_am: (amShift?.busiest_areas as string) ?? null,
         crowd_comments_pm: (pmShift?.busiest_areas as string) ?? null,
-        tour_notes: tourNotes || null,
+        tour_notes: tourNotes,
         cancellation_notes: cancellationNotes,
         other_notes: otherNotes,
+        cafe_notes: cafeNotes,
         class_details: classDetails,
         class_popularity: classDetails.map((c) => ({ name: c.name, signups: c.signups })).sort((a, b) => b.signups - a.signups).slice(0, 10),
         instructor_metrics: {},

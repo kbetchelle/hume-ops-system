@@ -174,14 +174,6 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Package Tracking",
   url: "/dashboard/package-tracking",
   icon: Package
-}, {
-  title: "Daily Reports",
-  url: "/dashboard/daily-reports",
-  icon: FileText
-}, {
-  title: "Report Exports",
-  url: "/dashboard/report-exports",
-  icon: Download
 }];
 
 // Settings menu structure for admin

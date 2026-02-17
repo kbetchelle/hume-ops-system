@@ -64,6 +64,36 @@ function formatDate(dateStr: string): string {
   return `${mm}/${dd}/${yyyy} ${dayName}`;
 }
 
+/** e.g. "Tuesday, February 3, 2026" for daily report title */
+function formatDateForDailyTitle(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** e.g. "Feb 3 - Feb 9, 2026" for weekly summary */
+function formatWeeklyDateRange(startDate: string, endDate: string): string {
+  const s = new Date(startDate + "T12:00:00");
+  const e = new Date(endDate + "T12:00:00");
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${fmt(s)} - ${fmt(e)}`;
+}
+
+/** e.g. "Tue, Feb 3" for daily breakdown table */
+function formatTableDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function formatMoney(n: number | null | undefined): string {
   if (n == null) return "$0.00";
   return "$" + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -83,80 +113,108 @@ function addDataFinancialsSection(doc: jsPDF, report: ReportRow, startY: number)
   const rightX = 0.5 + colW + 0.25;
 
   doc.setFillColor(...COLORS.headerDark);
-  doc.rect(0.5, startY, colW, 0.35, "F");
-  doc.rect(0.5 + colW + 0.25, startY, colW, 0.35, "F");
+  doc.rect(0.5, startY, 11 - 1, 0.35, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.text("DATA", leftX + 0.1, startY + 0.24);
-  doc.text("FINANCIALS", rightX + 0.1, startY + 0.24);
+  doc.text("DATA FINANCIALS", leftX + 0.1, startY + 0.24);
 
   let y = startY + 0.6;
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(9);
   doc.setFont(FONT, "normal");
   doc.text(`Weather: ${report.weather ?? "—"}`, leftX, y);
+  doc.text(`Membership: ${formatMoney(report.gross_sales_membership)}`, rightX, y);
   y += 0.28;
-  doc.text(`Total Gym Check-Ins: ${report.total_gym_checkins ?? 0}`, leftX, y);
+  doc.text(`Gym Check-ins: ${report.total_gym_checkins ?? 0}`, leftX, y);
+  doc.text(`Other: ${formatMoney(report.gross_sales_other)}`, rightX, y);
   y += 0.28;
-  doc.text(`Total Class Check-Ins: ${report.total_class_checkins ?? 0}`, leftX, y);
+  doc.text(`Class Check-ins: ${report.total_class_checkins ?? 0}`, leftX, y);
+  doc.text(`Café: ${formatMoney(report.cafe_sales)}`, rightX, y);
   y += 0.28;
-  doc.text(`Private Appointments: ${report.private_appointments ?? 0}`, leftX, y);
-
-  y = startY + 0.6;
-  doc.text(`Gross Sales - Membership: ${formatMoney(report.gross_sales_membership)}`, rightX, y);
-  y += 0.28;
-  doc.text(`Gross Sales - Other: ${formatMoney(report.gross_sales_other)}`, rightX, y);
-  y += 0.28;
-  doc.text(`Café Sales: ${formatMoney(report.cafe_sales)}`, rightX, y);
-  y += 0.28;
+  doc.text(`Appointments: ${report.private_appointments ?? 0}`, leftX, y);
   doc.setFont(FONT, "bold");
-  doc.text(`Total Sales: ${formatMoney(report.total_sales)}`, rightX, y);
+  doc.text(`Total: ${formatMoney(report.total_sales)}`, rightX, y);
 
   return startY + 0.6 + 4 * 0.28 + 0.2;
 }
 
 function addNotesSection(doc: jsPDF, report: ReportRow, startY: number): number {
-  doc.setFillColor(...COLORS.headerMedium);
-  doc.rect(0.5, startY, 11 - 1, 0.3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.text("NOTES", 0.5 + 0.1, startY + 0.2);
-
-  let y = startY + 0.5;
   const colW = (11 - 1.2) / 2;
   const leftX = 0.5;
   const rightX = 0.5 + colW + 0.2;
-
   doc.setTextColor(0, 0, 0);
   doc.setFont(FONT, "normal");
   doc.setFontSize(8);
+  let y = startY;
+
+  const addSection = (title: string, amContent: string, pmContent: string) => {
+    doc.setFillColor(...COLORS.headerMedium);
+    doc.rect(0.5, y, 11 - 1, 0.3, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text(title, 0.5 + 0.1, y + 0.2);
+    y += 0.5;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.text(`AM: ${amContent || "—"}`, leftX, y, { maxWidth: colW });
+    doc.text(`PM: ${pmContent || "—"}`, rightX, y, { maxWidth: colW });
+    y += 0.6;
+  };
 
   const posAm = jsonbToLines(report.positive_feedback_am as { text?: string }[]);
   const posPm = jsonbToLines(report.positive_feedback_pm as { text?: string }[]);
-  const posText = `Positive (AM/PM):\n${posAm || "—"}\n${posPm || "—"}`;
+  addSection("POSITIVE FEEDBACK", posAm, posPm);
+
   const negAm = jsonbToLines(report.negative_feedback_am as { text?: string }[]);
   const negPm = jsonbToLines(report.negative_feedback_pm as { text?: string }[]);
-  const negText = `Negative (AM/PM):\n${negAm || "—"}\n${negPm || "—"}`;
-
-  doc.text(posText, leftX, y, { maxWidth: colW });
-  doc.text(negText, rightX, y, { maxWidth: colW });
-  y += 1.2;
+  addSection("NEGATIVE FEEDBACK", negAm, negPm);
 
   const facAm = jsonbToLines(report.facility_notes_am as { description?: string }[]);
   const facPm = jsonbToLines(report.facility_notes_pm as { description?: string }[]);
-  const facText = `Facility (AM/PM):\n${facAm || "—"}\n${facPm || "—"}`;
-  const crowdText = `Crowd/Space (AM/PM):\n${report.crowd_comments_am ?? "—"}\n${report.crowd_comments_pm ?? "—"}`;
-  doc.text(facText, leftX, y, { maxWidth: colW });
-  doc.text(crowdText, rightX, y, { maxWidth: colW });
-  y += 1.0;
+  addSection("FACILITY NOTES", facAm, facPm);
 
-  doc.text(`Tour Notes:\n${report.tour_notes ?? "—"}`, leftX, y, { maxWidth: colW });
-  doc.text(`Cancellation Notes:\n${report.cancellation_notes ?? "—"}`, rightX, y, { maxWidth: colW });
-  y += 1.0;
+  addSection(
+    "CROWD COMMENTS",
+    report.crowd_comments_am ?? "",
+    report.crowd_comments_pm ?? ""
+  );
 
-  doc.text(`Notes for Management:\n${report.other_notes ?? "—"}\nCafé Notes:\n${report.cafe_notes ?? "—"}`, leftX, y, { maxWidth: 11 - 1 });
+  doc.setFillColor(...COLORS.headerMedium);
+  doc.rect(0.5, y, 11 - 1, 0.3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("TOUR NOTES", 0.5 + 0.1, y + 0.2);
+  y += 0.5;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(8);
+  doc.text(report.tour_notes ?? "—", leftX, y, { maxWidth: 11 - 1 });
+  y += 0.5;
 
-  return y + 0.8;
+  doc.setFillColor(...COLORS.headerMedium);
+  doc.rect(0.5, y, 11 - 1, 0.3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("CAFÉ NOTES", 0.5 + 0.1, y + 0.2);
+  y += 0.5;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(8);
+  doc.text(report.cafe_notes ?? "—", leftX, y, { maxWidth: 11 - 1 });
+  y += 0.5;
+
+  if (report.cancellation_notes || report.other_notes) {
+    doc.setFillColor(...COLORS.headerMedium);
+    doc.rect(0.5, y, 11 - 1, 0.3, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text("OTHER / CANCELLATION NOTES", 0.5 + 0.1, y + 0.2);
+    y += 0.5;
+    doc.setTextColor(0, 0, 0);
+    const other = [report.cancellation_notes, report.other_notes].filter(Boolean).join("\n") || "—";
+    doc.text(other, leftX, y, { maxWidth: 11 - 1 });
+    y += 0.5;
+  }
+
+  return y + 0.3;
 }
 
 function addClassSchedulePage(doc: jsPDF, report: ReportRow, dateStr: string) {
@@ -197,58 +255,102 @@ function addClassSchedulePage(doc: jsPDF, report: ReportRow, dateStr: string) {
   }
 }
 
-function renderSingleDay(doc: jsPDF, report: ReportRow) {
-  addPageHeader(doc, report.report_date, "Daily Report");
+function renderSingleDay(
+  doc: jsPDF,
+  report: ReportRow,
+  pageIndex?: number,
+  totalPages?: number
+) {
+  const dailyTitle = `Daily Report - ${formatDateForDailyTitle(report.report_date)}`;
+  addPageHeader(doc, report.report_date, dailyTitle);
 
   let y = addDataFinancialsSection(doc, report, 0.7);
   y = addNotesSection(doc, report, y);
+  if (totalPages != null && pageIndex != null) {
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    const label = `-- ${pageIndex + 1} of ${totalPages} --`;
+    doc.text(label, 11 / 2 - doc.getTextWidth(label) / 2, 8.5 - 0.35);
+    doc.setTextColor(0, 0, 0);
+  }
   addClassSchedulePage(doc, report, report.report_date);
 }
 
 function renderWeeklySummary(doc: jsPDF, reports: ReportRow[], startDate: string, endDate: string) {
   doc.addPage([8.5, 11], "portrait");
   doc.setFontSize(14);
-  doc.text("Weekly Report Summary", 0.5, 0.7);
+  doc.text("HU+E Weekly Report Summary", 0.5, 0.7);
   doc.setFontSize(10);
-  doc.text(`${formatDate(startDate)} — ${formatDate(endDate)}`, 0.5, 1.0);
+  doc.text(formatWeeklyDateRange(startDate, endDate), 0.5, 1.0);
 
-  let totalGym = 0, totalClass = 0, totalAppts = 0, totalSales = 0, totalCafe = 0;
+  let totalGym = 0,
+    totalClass = 0,
+    totalAppts = 0,
+    totalSales = 0,
+    totalMembership = 0,
+    totalOther = 0,
+    totalCafe = 0;
   for (const r of reports) {
     totalGym += r.total_gym_checkins ?? 0;
     totalClass += r.total_class_checkins ?? 0;
     totalAppts += r.private_appointments ?? 0;
     totalSales += Number(r.total_sales ?? 0);
+    totalMembership += Number(r.gross_sales_membership ?? 0);
+    totalOther += Number(r.gross_sales_other ?? 0);
     totalCafe += Number(r.cafe_sales ?? 0);
   }
 
+  doc.setFillColor(...COLORS.headerDark);
+  doc.rect(0.5, 1.2, 8.5 - 1, 0.3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("WEEKLY SUMMARY", 0.5 + 0.1, 1.42);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
-  let y = 1.4;
-  doc.text(`Total Gym Check-Ins: ${totalGym}`, 0.5, y);
-  y += 0.25;
-  doc.text(`Total Class Check-Ins: ${totalClass}`, 0.5, y);
-  y += 0.25;
-  doc.text(`Private Appointments: ${totalAppts}`, 0.5, y);
-  y += 0.25;
-  doc.text(`Total Sales: ${formatMoney(totalSales)}`, 0.5, y);
-  y += 0.25;
-  doc.text(`Café Sales: ${formatMoney(totalCafe)}`, 0.5, y);
-  y += 0.4;
+  let y = 1.75;
+  doc.text(
+    `Total Gym Check-ins: ${totalGym}  Total Class Check-ins: ${totalClass}  Total Appointments: ${totalAppts}  Total Sales: ${formatMoney(totalSales)}`,
+    0.5,
+    y
+  );
+  y += 0.28;
+  doc.text(
+    `Membership Sales: ${formatMoney(totalMembership)}  Other Sales: ${formatMoney(totalOther)}  Café Sales: ${formatMoney(totalCafe)}  Reports: ${reports.length} days`,
+    0.5,
+    y
+  );
+  y += 0.5;
 
+  doc.setFillColor(...COLORS.headerDark);
+  doc.rect(0.5, y, 8.5 - 1, 0.3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("DAILY BREAKDOWN", 0.5 + 0.1, y + 0.2);
+  y += 0.55;
+  doc.setTextColor(0, 0, 0);
   doc.setFont(FONT, "bold");
+  doc.setFontSize(8);
   doc.text("Date", 0.5, y);
-  doc.text("Gym", 1.8, y);
-  doc.text("Class", 2.3, y);
-  doc.text("Appts", 2.8, y);
-  doc.text("Sales", 3.5, y);
+  doc.text("Gym", 1.4, y);
+  doc.text("Class", 1.85, y);
+  doc.text("Appts", 2.25, y);
+  doc.text("Membership", 2.7, y);
+  doc.text("Other", 3.4, y);
+  doc.text("Café", 3.9, y);
+  doc.text("Total", 4.4, y);
   y += 0.28;
   doc.setFont(FONT, "normal");
 
   for (const r of reports) {
-    doc.text(r.report_date, 0.5, y);
-    doc.text(String(r.total_gym_checkins ?? 0), 1.8, y);
-    doc.text(String(r.total_class_checkins ?? 0), 2.3, y);
-    doc.text(String(r.private_appointments ?? 0), 2.8, y);
-    doc.text(formatMoney(r.total_sales), 3.5, y);
+    doc.text(formatTableDate(r.report_date), 0.5, y);
+    doc.text(String(r.total_gym_checkins ?? 0), 1.4, y);
+    doc.text(String(r.total_class_checkins ?? 0), 1.85, y);
+    doc.text(String(r.private_appointments ?? 0), 2.25, y);
+    doc.text(formatMoney(r.gross_sales_membership), 2.7, y);
+    doc.text(formatMoney(r.gross_sales_other), 3.4, y);
+    doc.text(formatMoney(r.cafe_sales), 3.9, y);
+    doc.text(formatMoney(r.total_sales), 4.4, y);
     y += 0.25;
   }
 }
@@ -311,7 +413,7 @@ Deno.serve(async (req) => {
       renderWeeklySummary(doc, reports, dates[0], dates[dates.length - 1]);
       for (let i = 0; i < reports.length; i++) {
         doc.addPage([11, 8.5], "landscape");
-        renderSingleDay(doc, reports[i]);
+        renderSingleDay(doc, reports[i], i, reports.length);
       }
     } else if (isBatch && reports.length > 0) {
       for (let i = 0; i < reports.length; i++) {

@@ -52,8 +52,6 @@ import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
 import MessagesPage from "./pages/dashboards/MessagesPage";
 import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
 import ReportsPage from "./pages/dashboards/ReportsPage";
-import DailyReportsPage from "./pages/dashboards/DailyReportsPage";
-import ReportExportsPage from "./pages/dashboards/ReportExportsPage";
 import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
 import PublicPlanPage from "./pages/PublicPlanPage";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
@@ -457,19 +455,11 @@ const App = () => (
             />
             <Route
               path="/dashboard/daily-reports"
-              element={
-                <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <DailyReportsPage />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/reports" replace />}
             />
             <Route
               path="/dashboard/report-exports"
-              element={
-                <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ReportExportsPage />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/reports" replace />}
             />
 
             {/* Training Plans for Trainers */}

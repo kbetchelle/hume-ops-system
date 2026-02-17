@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -226,6 +246,36 @@ export type Database = {
         }
         Relationships: []
       }
+      api_sync_skipped_records: {
+        Row: {
+          api_name: string
+          created_at: string
+          details: Json | null
+          id: string
+          reason: string
+          record_id: string
+          secondary_id: string | null
+        }
+        Insert: {
+          api_name: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reason: string
+          record_id: string
+          secondary_id?: string | null
+        }
+        Update: {
+          api_name?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reason?: string
+          record_id?: string
+          secondary_id?: string | null
+        }
+        Relationships: []
+      }
       api_sync_status: {
         Row: {
           api_name: string
@@ -286,8 +336,6 @@ export type Database = {
           id: string
           instructor_name: string | null
           is_cancelled: boolean | null
-          is_deleted: boolean | null
-          location_id: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -295,7 +343,6 @@ export type Database = {
           status: string | null
           synced_at: string | null
           updated_at: string | null
-          updated_at_api: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -309,8 +356,6 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
-          is_deleted?: boolean | null
-          location_id?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -318,7 +363,6 @@ export type Database = {
           status?: string | null
           synced_at?: string | null
           updated_at?: string | null
-          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -332,8 +376,6 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
-          is_deleted?: boolean | null
-          location_id?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null
@@ -341,7 +383,6 @@ export type Database = {
           status?: string | null
           synced_at?: string | null
           updated_at?: string | null
-          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
@@ -357,8 +398,6 @@ export type Database = {
           id: string
           instructor_name: string | null
           is_cancelled: boolean | null
-          is_deleted: boolean | null
-          location_id: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -367,7 +406,6 @@ export type Database = {
           status: string | null
           sync_batch_id: string
           synced_at: string | null
-          updated_at_api: string | null
           waitlist_count: number | null
         }
         Insert: {
@@ -380,8 +418,6 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
-          is_deleted?: boolean | null
-          location_id?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -390,7 +426,6 @@ export type Database = {
           status?: string | null
           sync_batch_id: string
           synced_at?: string | null
-          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Update: {
@@ -403,8 +438,6 @@ export type Database = {
           id?: string
           instructor_name?: string | null
           is_cancelled?: boolean | null
-          is_deleted?: boolean | null
-          location_id?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null
@@ -413,7 +446,6 @@ export type Database = {
           status?: string | null
           sync_batch_id?: string
           synced_at?: string | null
-          updated_at_api?: string | null
           waitlist_count?: number | null
         }
         Relationships: []
@@ -833,24 +865,18 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
-          client_email: string | null
-          client_first_name: string | null
           client_id: string | null
-          client_last_name: string | null
-          client_phone: string | null
-          created_at_api: string | null
+          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
-          spot_id: string | null
-          spot_name: string | null
           status: string | null
           sync_batch_id: string | null
-          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -858,24 +884,18 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -883,24 +903,18 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -911,24 +925,18 @@ export type Database = {
           class_date: string | null
           class_id: string
           class_name: string | null
-          client_email: string | null
-          client_first_name: string | null
           client_id: string | null
-          client_last_name: string | null
-          client_phone: string | null
-          created_at_api: string | null
+          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string
           reservation_type: string | null
-          spot_id: string | null
-          spot_name: string | null
           status: string | null
           sync_batch_id: string | null
-          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -936,24 +944,18 @@ export type Database = {
           class_date?: string | null
           class_id: string
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id: string
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -961,24 +963,18 @@ export type Database = {
           class_date?: string | null
           class_id?: string
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -989,24 +985,18 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
-          client_email: string | null
-          client_first_name: string | null
           client_id: string | null
-          client_last_name: string | null
-          client_phone: string | null
-          created_at_api: string | null
+          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
-          spot_id: string | null
-          spot_name: string | null
           status: string | null
           sync_batch_id: string
-          updated_at_api: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -1014,24 +1004,18 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id: string
-          updated_at_api?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -1039,24 +1023,18 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
-          client_first_name?: string | null
           client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          spot_id?: string | null
-          spot_name?: string | null
           status?: string | null
           sync_batch_id?: string
-          updated_at_api?: string | null
         }
         Relationships: []
       }
@@ -1230,6 +1208,7 @@ export type Database = {
           errors: Json | null
           id: string
           job_type: string | null
+          last_batch_first_id: string | null
           last_batch_synced_at: string | null
           last_cursor: string | null
           no_more_records: boolean | null
@@ -1268,6 +1247,7 @@ export type Database = {
           errors?: Json | null
           id?: string
           job_type?: string | null
+          last_batch_first_id?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1306,6 +1286,7 @@ export type Database = {
           errors?: Json | null
           id?: string
           job_type?: string | null
+          last_batch_first_id?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1854,11 +1835,57 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_comments: {
+        Row: {
+          checklist_id: string | null
+          comment_text: string
+          completion_date: string
+          completion_id: string | null
+          created_at: string | null
+          department_table: string | null
+          id: string
+          is_private: boolean | null
+          item_id: string | null
+          shift_time: string
+          staff_id: string | null
+          staff_name: string
+        }
+        Insert: {
+          checklist_id?: string | null
+          comment_text: string
+          completion_date: string
+          completion_id?: string | null
+          created_at?: string | null
+          department_table?: string | null
+          id?: string
+          is_private?: boolean | null
+          item_id?: string | null
+          shift_time: string
+          staff_id?: string | null
+          staff_name: string
+        }
+        Update: {
+          checklist_id?: string | null
+          comment_text?: string
+          completion_date?: string
+          completion_id?: string | null
+          created_at?: string | null
+          department_table?: string | null
+          id?: string
+          is_private?: boolean | null
+          item_id?: string | null
+          shift_time?: string
+          staff_id?: string | null
+          staff_name?: string
+        }
+        Relationships: []
+      }
       checklist_shift_submissions: {
         Row: {
           completed_tasks: number
           completion_date: string
           department: string
+          department_table: string | null
           id: string
           notes: string | null
           position: string | null
@@ -1872,6 +1899,7 @@ export type Database = {
           completed_tasks: number
           completion_date: string
           department: string
+          department_table?: string | null
           id?: string
           notes?: string | null
           position?: string | null
@@ -1885,6 +1913,7 @@ export type Database = {
           completed_tasks?: number
           completion_date?: string
           department?: string
+          department_table?: string | null
           id?: string
           notes?: string | null
           position?: string | null
@@ -1895,6 +1924,104 @@ export type Database = {
           total_tasks?: number
         }
         Relationships: []
+      }
+      checklist_template_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_id: string | null
+          completion_date: string
+          deleted_at: string | null
+          id: string
+          item_id: string | null
+          note_text: string | null
+          photo_url: string | null
+          shift_time: string | null
+          signature_data: string | null
+          submitted_at: string | null
+          template_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date: string
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          note_text?: string | null
+          photo_url?: string | null
+          shift_time?: string | null
+          signature_data?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date?: string
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          note_text?: string | null
+          photo_url?: string | null
+          shift_time?: string | null
+          signature_data?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_template_completions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_template_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          item_text: string
+          sort_order: number | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_text: string
+          sort_order?: number | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_text?: string
+          sort_order?: number | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       checklist_templates: {
         Row: {
@@ -2018,56 +2145,39 @@ export type Database = {
       }
       club_policies: {
         Row: {
-          archived_at: string | null
-          archived_reason: string | null
           category: string | null
           content: string
           created_at: string | null
           id: string
           is_active: boolean | null
           last_updated_by: string | null
-          migrated_to_page_id: string | null
           sort_order: number | null
           title: string
           updated_at: string | null
         }
         Insert: {
-          archived_at?: string | null
-          archived_reason?: string | null
           category?: string | null
           content: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           last_updated_by?: string | null
-          migrated_to_page_id?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string | null
         }
         Update: {
-          archived_at?: string | null
-          archived_reason?: string | null
           category?: string | null
           content?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           last_updated_by?: string | null
-          migrated_to_page_id?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "club_policies_migrated_to_page_id_fkey"
-            columns: ["migrated_to_page_id"]
-            isOneToOne: false
-            referencedRelation: "resource_pages"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       concierge_checklist_items: {
         Row: {
@@ -2367,259 +2477,94 @@ export type Database = {
       }
       daily_reports: {
         Row: {
-          attendance_rate: number | null
           cafe_gross_sales: number | null
-          cafe_notes: string | null
+          cafe_net_sales: number | null
           cafe_order_count: number | null
-          cafe_sales: number | null
-          cancellation_notes: string | null
-          class_details: Json | null
-          class_popularity: Json | null
           created_at: string | null
-          crowd_comments_am: string | null
-          crowd_comments_pm: string | null
-          facility_notes_am: Json | null
-          facility_notes_pm: Json | null
           gross_sales_arketa: number | null
-          gross_sales_membership: number | null
-          gross_sales_other: number | null
           id: string
-          instructor_metrics: Json | null
           last_synced_at: string | null
-          member_metrics: Json | null
-          negative_feedback_am: Json | null
-          negative_feedback_pm: Json | null
-          other_notes: string | null
-          positive_feedback_am: Json | null
-          positive_feedback_pm: Json | null
-          private_appointments: number | null
           raw_data: Json | null
           report_date: string
-          sync_source: string | null
-          total_cancellations: number | null
           total_class_checkins: number | null
           total_gym_checkins: number | null
-          total_no_shows: number | null
           total_reservations: number | null
           total_sales: number | null
-          total_waitlisted: number | null
-          tour_followup_completed: boolean | null
-          tour_notes: string | null
-          weather: string | null
         }
         Insert: {
-          attendance_rate?: number | null
           cafe_gross_sales?: number | null
-          cafe_notes?: string | null
+          cafe_net_sales?: number | null
           cafe_order_count?: number | null
-          cafe_sales?: number | null
-          cancellation_notes?: string | null
-          class_details?: Json | null
-          class_popularity?: Json | null
           created_at?: string | null
-          crowd_comments_am?: string | null
-          crowd_comments_pm?: string | null
-          facility_notes_am?: Json | null
-          facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null
-          gross_sales_membership?: number | null
-          gross_sales_other?: number | null
           id?: string
-          instructor_metrics?: Json | null
           last_synced_at?: string | null
-          member_metrics?: Json | null
-          negative_feedback_am?: Json | null
-          negative_feedback_pm?: Json | null
-          other_notes?: string | null
-          positive_feedback_am?: Json | null
-          positive_feedback_pm?: Json | null
-          private_appointments?: number | null
           raw_data?: Json | null
           report_date: string
-          sync_source?: string | null
-          total_cancellations?: number | null
           total_class_checkins?: number | null
           total_gym_checkins?: number | null
-          total_no_shows?: number | null
           total_reservations?: number | null
           total_sales?: number | null
-          total_waitlisted?: number | null
-          tour_followup_completed?: boolean | null
-          tour_notes?: string | null
-          weather?: string | null
         }
         Update: {
-          attendance_rate?: number | null
           cafe_gross_sales?: number | null
-          cafe_notes?: string | null
+          cafe_net_sales?: number | null
           cafe_order_count?: number | null
-          cafe_sales?: number | null
-          cancellation_notes?: string | null
-          class_details?: Json | null
-          class_popularity?: Json | null
           created_at?: string | null
-          crowd_comments_am?: string | null
-          crowd_comments_pm?: string | null
-          facility_notes_am?: Json | null
-          facility_notes_pm?: Json | null
           gross_sales_arketa?: number | null
-          gross_sales_membership?: number | null
-          gross_sales_other?: number | null
           id?: string
-          instructor_metrics?: Json | null
           last_synced_at?: string | null
-          member_metrics?: Json | null
-          negative_feedback_am?: Json | null
-          negative_feedback_pm?: Json | null
-          other_notes?: string | null
-          positive_feedback_am?: Json | null
-          positive_feedback_pm?: Json | null
-          private_appointments?: number | null
           raw_data?: Json | null
           report_date?: string
-          sync_source?: string | null
-          total_cancellations?: number | null
           total_class_checkins?: number | null
           total_gym_checkins?: number | null
-          total_no_shows?: number | null
           total_reservations?: number | null
           total_sales?: number | null
-          total_waitlisted?: number | null
-          tour_followup_completed?: boolean | null
-          tour_notes?: string | null
-          weather?: string | null
-        }
-        Relationships: []
-      }
-      daily_sales: {
-        Row: {
-          business_date: string
-          created_at: string
-          id: string
-          payment_breakdown: Json | null
-          raw_data: Json | null
-          synced_at: string
-          top_items: Json | null
-          total_sales: number | null
-          total_transactions: number | null
-        }
-        Insert: {
-          business_date: string
-          created_at?: string
-          id?: string
-          payment_breakdown?: Json | null
-          raw_data?: Json | null
-          synced_at?: string
-          top_items?: Json | null
-          total_sales?: number | null
-          total_transactions?: number | null
-        }
-        Update: {
-          business_date?: string
-          created_at?: string
-          id?: string
-          payment_breakdown?: Json | null
-          raw_data?: Json | null
-          synced_at?: string
-          top_items?: Json | null
-          total_sales?: number | null
-          total_transactions?: number | null
         }
         Relationships: []
       }
       daily_schedule: {
         Row: {
           canceled: boolean | null
-          class_id: string | null
-          class_name: string | null
-          created_at: string
+          class_id: string
+          class_name: string
           description: string | null
           end_time: string | null
           id: string
           instructor: string | null
           max_capacity: number | null
           schedule_date: string
-          start_time: string | null
+          start_time: string
           total_booked: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           canceled?: boolean | null
-          class_id?: string | null
-          class_name?: string | null
-          created_at?: string
+          class_id: string
+          class_name: string
           description?: string | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
           schedule_date: string
-          start_time?: string | null
+          start_time: string
           total_booked?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           canceled?: boolean | null
-          class_id?: string | null
-          class_name?: string | null
-          created_at?: string
+          class_id?: string
+          class_name?: string
           description?: string | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
           schedule_date?: string
-          start_time?: string | null
+          start_time?: string
           total_booked?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      dev_notes: {
-        Row: {
-          content: string
-          id: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          content?: string
-          id?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          content?: string
-          id?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      dev_tasks: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          sort_order: number
-          status: Database["public"]["Enums"]["dev_task_status"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          sort_order?: number
-          status?: Database["public"]["Enums"]["dev_task_status"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          sort_order?: number
-          status?: Database["public"]["Enums"]["dev_task_status"]
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3008,7 +2953,6 @@ export type Database = {
       }
       lost_and_found: {
         Row: {
-          archived_at: string | null
           claimed_by: string | null
           claimed_date: string | null
           created_at: string | null
@@ -3017,7 +2961,6 @@ export type Database = {
           found_by_id: string | null
           found_by_name: string | null
           id: string
-          in_safe: boolean
           location_found: string | null
           member_requested: boolean | null
           notes: string | null
@@ -3028,7 +2971,6 @@ export type Database = {
           status: string | null
         }
         Insert: {
-          archived_at?: string | null
           claimed_by?: string | null
           claimed_date?: string | null
           created_at?: string | null
@@ -3037,7 +2979,6 @@ export type Database = {
           found_by_id?: string | null
           found_by_name?: string | null
           id?: string
-          in_safe?: boolean
           location_found?: string | null
           member_requested?: boolean | null
           notes?: string | null
@@ -3048,7 +2989,6 @@ export type Database = {
           status?: string | null
         }
         Update: {
-          archived_at?: string | null
           claimed_by?: string | null
           claimed_date?: string | null
           created_at?: string | null
@@ -3057,7 +2997,6 @@ export type Database = {
           found_by_id?: string | null
           found_by_name?: string | null
           id?: string
-          in_safe?: boolean
           location_found?: string | null
           member_requested?: boolean | null
           notes?: string | null
@@ -3270,95 +3209,147 @@ export type Database = {
         }
         Relationships: []
       }
-      package_location_history: {
+      order_checks: {
         Row: {
+          amount: number | null
+          business_date: string
+          check_guid: string
+          closed_date: string | null
           created_at: string | null
           id: string
-          location: string
-          location_photo_url: string
-          moved_by_user_id: string | null
-          notes: string | null
-          package_id: string | null
+          order_guid: string
+          paid_date: string | null
+          payment_status: string | null
+          raw_data: Json | null
+          sync_batch_id: string | null
+          tax_amount: number | null
+          total_amount: number | null
+          void_date: string | null
+          voided: boolean | null
         }
         Insert: {
+          amount?: number | null
+          business_date: string
+          check_guid: string
+          closed_date?: string | null
           created_at?: string | null
           id?: string
-          location: string
-          location_photo_url: string
-          moved_by_user_id?: string | null
-          notes?: string | null
-          package_id?: string | null
+          order_guid: string
+          paid_date?: string | null
+          payment_status?: string | null
+          raw_data?: Json | null
+          sync_batch_id?: string | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          void_date?: string | null
+          voided?: boolean | null
         }
         Update: {
+          amount?: number | null
+          business_date?: string
+          check_guid?: string
+          closed_date?: string | null
           created_at?: string | null
           id?: string
-          location?: string
-          location_photo_url?: string
-          moved_by_user_id?: string | null
-          notes?: string | null
-          package_id?: string | null
+          order_guid?: string
+          paid_date?: string | null
+          payment_status?: string | null
+          raw_data?: Json | null
+          sync_batch_id?: string | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          void_date?: string | null
+          voided?: boolean | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "package_location_history_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      packages: {
+      order_checks_backfill_state: {
         Row: {
-          archived_at: string | null
-          arrived_at: string
           created_at: string | null
-          current_location: string
+          cursor_date: string
+          cursor_page: number
           id: string
-          location_photo_url: string
-          marked_opened_by_user_id: string | null
-          notes: string | null
-          picked_up_at: string | null
-          recipient_name: string | null
-          recipient_user_id: string | null
-          scanned_by_user_id: string | null
+          last_error: string | null
+          last_synced_at: string | null
           status: string
-          tracking_code: string
+          total_checks_synced: number | null
           updated_at: string | null
         }
         Insert: {
-          archived_at?: string | null
-          arrived_at?: string
           created_at?: string | null
-          current_location: string
+          cursor_date?: string
+          cursor_page?: number
           id?: string
-          location_photo_url: string
-          marked_opened_by_user_id?: string | null
-          notes?: string | null
-          picked_up_at?: string | null
-          recipient_name?: string | null
-          recipient_user_id?: string | null
-          scanned_by_user_id?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
           status?: string
-          tracking_code: string
+          total_checks_synced?: number | null
           updated_at?: string | null
         }
         Update: {
-          archived_at?: string | null
-          arrived_at?: string
           created_at?: string | null
-          current_location?: string
+          cursor_date?: string
+          cursor_page?: number
           id?: string
-          location_photo_url?: string
-          marked_opened_by_user_id?: string | null
-          notes?: string | null
-          picked_up_at?: string | null
-          recipient_name?: string | null
-          recipient_user_id?: string | null
-          scanned_by_user_id?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
           status?: string
-          tracking_code?: string
+          total_checks_synced?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      order_checks_staging: {
+        Row: {
+          amount: number | null
+          business_date: string
+          check_guid: string
+          closed_date: string | null
+          id: string
+          order_guid: string
+          paid_date: string | null
+          payment_status: string | null
+          raw_data: Json | null
+          staged_at: string | null
+          sync_batch_id: string
+          tax_amount: number | null
+          total_amount: number | null
+          void_date: string | null
+          voided: boolean | null
+        }
+        Insert: {
+          amount?: number | null
+          business_date: string
+          check_guid: string
+          closed_date?: string | null
+          id?: string
+          order_guid: string
+          paid_date?: string | null
+          payment_status?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id: string
+          tax_amount?: number | null
+          total_amount?: number | null
+          void_date?: string | null
+          voided?: boolean | null
+        }
+        Update: {
+          amount?: number | null
+          business_date?: string
+          check_guid?: string
+          closed_date?: string | null
+          id?: string
+          order_guid?: string
+          paid_date?: string | null
+          payment_status?: string | null
+          raw_data?: Json | null
+          staged_at?: string | null
+          sync_batch_id?: string
+          tax_amount?: number | null
+          total_amount?: number | null
+          void_date?: string | null
+          voided?: boolean | null
         }
         Relationships: []
       }
@@ -3394,50 +3385,33 @@ export type Database = {
       }
       policy_categories: {
         Row: {
-          archived_at: string | null
-          archived_reason: string | null
           created_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
-          migrated_to_folder_id: string | null
           name: string
           sort_order: number | null
           updated_at: string | null
         }
         Insert: {
-          archived_at?: string | null
-          archived_reason?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
-          migrated_to_folder_id?: string | null
           name: string
           sort_order?: number | null
           updated_at?: string | null
         }
         Update: {
-          archived_at?: string | null
-          archived_reason?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
-          migrated_to_folder_id?: string | null
           name?: string
           sort_order?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "policy_categories_migrated_to_folder_id_fkey"
-            columns: ["migrated_to_folder_id"]
-            isOneToOne: false
-            referencedRelation: "resource_page_folders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3450,6 +3424,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          must_change_password: boolean
           onboarding_completed: boolean | null
           preferred_language: string | null
           sling_id: string | null
@@ -3466,6 +3441,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
           sling_id?: string | null
@@ -3482,6 +3458,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
           sling_id?: string | null
@@ -3607,8 +3584,6 @@ export type Database = {
           created_at: string | null
           flagged_by_id: string
           flagged_by_name: string
-          flagged_page_context: string | null
-          flagged_page_number: number | null
           id: string
           note: string
           resolution_note: string | null
@@ -3625,8 +3600,6 @@ export type Database = {
           created_at?: string | null
           flagged_by_id: string
           flagged_by_name: string
-          flagged_page_context?: string | null
-          flagged_page_number?: number | null
           id?: string
           note: string
           resolution_note?: string | null
@@ -3643,8 +3616,6 @@ export type Database = {
           created_at?: string | null
           flagged_by_id?: string
           flagged_by_name?: string
-          flagged_page_context?: string | null
-          flagged_page_number?: number | null
           id?: string
           note?: string
           resolution_note?: string | null
@@ -3774,12 +3745,6 @@ export type Database = {
           id: string
           is_published: boolean | null
           last_edited_by: string | null
-          page_type: string
-          pdf_file_path: string | null
-          pdf_file_size: number | null
-          pdf_file_url: string | null
-          pdf_original_filename: string | null
-          pdf_page_count: number | null
           search_text: string | null
           tags: string[] | null
           title: string
@@ -3797,12 +3762,6 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           last_edited_by?: string | null
-          page_type?: string
-          pdf_file_path?: string | null
-          pdf_file_size?: number | null
-          pdf_file_url?: string | null
-          pdf_original_filename?: string | null
-          pdf_page_count?: number | null
           search_text?: string | null
           tags?: string[] | null
           title: string
@@ -3820,12 +3779,6 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           last_edited_by?: string | null
-          page_type?: string
-          pdf_file_path?: string | null
-          pdf_file_size?: number | null
-          pdf_file_url?: string | null
-          pdf_original_filename?: string | null
-          pdf_page_count?: number | null
           search_text?: string | null
           tags?: string[] | null
           title?: string
@@ -4072,51 +4025,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sick_day_requests: {
-        Row: {
-          created_at: string | null
-          id: string
-          notes: string
-          requested_dates: string[]
-          review_notes: string | null
-          reviewed_at: string | null
-          reviewed_by_id: string | null
-          reviewed_by_name: string | null
-          status: string
-          updated_at: string | null
-          user_id: string
-          user_name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          notes: string
-          requested_dates: string[]
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by_id?: string | null
-          reviewed_by_name?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id: string
-          user_name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          notes?: string
-          requested_dates?: string[]
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by_id?: string | null
-          reviewed_by_name?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-          user_name?: string
-        }
-        Relationships: []
-      }
       sling_shifts_staging: {
         Row: {
           cursor_position: string | null
@@ -4210,45 +4118,6 @@ export type Database = {
           sling_user_id?: number
           staged_at?: string | null
           sync_batch_id?: string
-        }
-        Relationships: []
-      }
-      sling_sync_log: {
-        Row: {
-          completed_at: string | null
-          error_message: string | null
-          failed_record_ids: string[] | null
-          failure_count: number | null
-          id: string
-          records_synced: number | null
-          retry_attempts: number | null
-          started_at: string
-          status: string
-          success_count: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_message?: string | null
-          failed_record_ids?: string[] | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          retry_attempts?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
         }
         Relationships: []
       }
@@ -4352,7 +4221,7 @@ export type Database = {
         Row: {
           announcement_id: string
           comment: string
-          created_at: string
+          created_at: string | null
           id: string
           user_id: string | null
           user_name: string
@@ -4360,7 +4229,7 @@ export type Database = {
         Insert: {
           announcement_id: string
           comment: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           user_id?: string | null
           user_name: string
@@ -4368,7 +4237,7 @@ export type Database = {
         Update: {
           announcement_id?: string
           comment?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           user_id?: string | null
           user_name?: string
@@ -4816,13 +4685,6 @@ export type Database = {
             foreignKeyName: "staff_qa_linked_policy_id_fkey"
             columns: ["linked_policy_id"]
             isOneToOne: false
-            referencedRelation: "archived_policies_reference"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_qa_linked_policy_id_fkey"
-            columns: ["linked_policy_id"]
-            isOneToOne: false
             referencedRelation: "club_policies"
             referencedColumns: ["id"]
           },
@@ -4838,21 +4700,21 @@ export type Database = {
       staff_qa_reads: {
         Row: {
           id: string
-          qa_id: string | null
+          qa_id: string
           read_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           id?: string
-          qa_id?: string | null
+          qa_id: string
           read_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           id?: string
-          qa_id?: string | null
+          qa_id?: string
           read_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -4866,49 +4728,52 @@ export type Database = {
       }
       staff_shifts: {
         Row: {
-          created_at: string
-          external_id: string
+          created_at: string | null
           id: string
+          last_synced_at: string | null
           position: string | null
           raw_data: Json | null
+          schedule_date: string | null
           shift_date: string | null
-          shift_end: string
-          shift_start: string
+          shift_end: string | null
+          shift_start: string | null
           sling_shift_id: number | null
           sling_user_id: number | null
+          staff_name: string | null
           status: string | null
-          synced_at: string
-          user_name: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          external_id: string
+          created_at?: string | null
           id?: string
+          last_synced_at?: string | null
           position?: string | null
           raw_data?: Json | null
+          schedule_date?: string | null
           shift_date?: string | null
-          shift_end: string
-          shift_start: string
+          shift_end?: string | null
+          shift_start?: string | null
           sling_shift_id?: number | null
           sling_user_id?: number | null
+          staff_name?: string | null
           status?: string | null
-          synced_at?: string
-          user_name?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          external_id?: string
+          created_at?: string | null
           id?: string
+          last_synced_at?: string | null
           position?: string | null
           raw_data?: Json | null
+          schedule_date?: string | null
           shift_date?: string | null
-          shift_end?: string
-          shift_start?: string
+          shift_end?: string | null
+          shift_start?: string | null
           sling_shift_id?: number | null
           sling_user_id?: number | null
+          staff_name?: string | null
           status?: string | null
-          synced_at?: string
-          user_name?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5170,8 +5035,6 @@ export type Database = {
           gross_sales: number | null
           id: string
           net_sales: number | null
-          order_count: number | null
-          order_guid: string
           raw_data: Json | null
           sync_batch_id: string | null
         }
@@ -5182,8 +5045,6 @@ export type Database = {
           gross_sales?: number | null
           id?: string
           net_sales?: number | null
-          order_count?: number | null
-          order_guid: string
           raw_data?: Json | null
           sync_batch_id?: string | null
         }
@@ -5194,8 +5055,6 @@ export type Database = {
           gross_sales?: number | null
           id?: string
           net_sales?: number | null
-          order_count?: number | null
-          order_guid?: string
           raw_data?: Json | null
           sync_batch_id?: string | null
         }
@@ -5209,7 +5068,6 @@ export type Database = {
           id: string
           net_sales: number | null
           order_count: number | null
-          order_guid: string
           raw_data: Json | null
           staged_at: string | null
           sync_batch_id: string
@@ -5221,7 +5079,6 @@ export type Database = {
           id?: string
           net_sales?: number | null
           order_count?: number | null
-          order_guid: string
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id: string
@@ -5233,43 +5090,9 @@ export type Database = {
           id?: string
           net_sales?: number | null
           order_count?: number | null
-          order_guid?: string
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id?: string
-        }
-        Relationships: []
-      }
-      toast_sync_log: {
-        Row: {
-          completed_at: string | null
-          error_message: string | null
-          failure_count: number | null
-          id: string
-          records_synced: number | null
-          started_at: string
-          status: string
-          success_count: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_message?: string | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_message?: string | null
-          failure_count?: number | null
-          id?: string
-          records_synced?: number | null
-          started_at?: string
-          status?: string
-          success_count?: number | null
         }
         Relationships: []
       }
@@ -5449,27 +5272,6 @@ export type Database = {
       }
     }
     Views: {
-      archived_policies_reference: {
-        Row: {
-          archived_at: string | null
-          category: string | null
-          content: string | null
-          created_at: string | null
-          id: string | null
-          migrated_page_title: string | null
-          migrated_pdf_url: string | null
-          migrated_to_page_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "club_policies_migrated_to_page_id_fkey"
-            columns: ["migrated_to_page_id"]
-            isOneToOne: false
-            referencedRelation: "resource_pages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       arketa_orphan_classes: {
         Row: {
           booked_count: number | null
@@ -5479,31 +5281,6 @@ export type Database = {
           id: string | null
           is_cancelled: boolean | null
           start_time: string | null
-        }
-        Relationships: []
-      }
-      resource_flags_with_page_info: {
-        Row: {
-          created_at: string | null
-          flagged_by_id: string | null
-          flagged_by_name: string | null
-          flagged_page_context: string | null
-          flagged_page_number: number | null
-          id: string | null
-          note: string | null
-          page_display: string | null
-          page_type: string | null
-          pdf_page_count: number | null
-          resolution_note: string | null
-          resolved_at: string | null
-          resolved_by_id: string | null
-          resolved_by_name: string | null
-          resource_id: string | null
-          resource_label: string | null
-          resource_title: string | null
-          resource_type: string | null
-          status: string | null
-          updated_at: string | null
         }
         Relationships: []
       }
@@ -5521,22 +5298,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      admin_get_users_with_sling_info: {
-        Args: never
-        Returns: {
-          email: string
-          full_name: string
-          is_auto_matched: boolean
-          sling_email: string
-          sling_id: string
-          sling_user_name: string
-          user_id: string
-        }[]
-      }
-      admin_link_user_to_sling: {
-        Args: { _sling_id: string; _user_id: string }
-        Returns: undefined
-      }
       admin_toggle_user_deactivation: {
         Args: { _deactivated: boolean; _target_user_id: string }
         Returns: undefined
@@ -5548,8 +5309,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      cleanup_archived_lost_and_found: { Args: never; Returns: undefined }
-      cleanup_archived_packages: { Args: never; Returns: undefined }
       cleanup_old_completions: { Args: never; Returns: undefined }
       direct_upsert_reservation: {
         Args: {
@@ -5597,18 +5356,6 @@ export type Database = {
           record_count: number
         }[]
       }
-      get_pdf_page_flags: {
-        Args: { page_id: string; page_num?: number }
-        Returns: {
-          created_at: string
-          flagged_by_name: string
-          flagged_page_context: string
-          flagged_page_number: number
-          id: string
-          note: string
-          status: string
-        }[]
-      }
       get_pending_approvals: {
         Args: never
         Returns: {
@@ -5626,10 +5373,20 @@ export type Database = {
         Args: { _sling_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_table_columns: {
+        Args: { table_name_param: string }
+        Returns: {
+          column_default: string
+          column_name: string
+          data_type: string
+          is_nullable: string
+        }[]
+      }
       get_trainer_member_ids: {
         Args: { _trainer_id: string }
         Returns: string[]
       }
+      get_unread_message_count: { Args: { p_user_id: string }; Returns: number }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -5661,29 +5418,11 @@ export type Database = {
         Args: { p_schedule_date: string }
         Returns: number
       }
-      search_sling_users: {
-        Args: { _search: string }
-        Returns: {
-          email: string
-          full_name: string
-          id: string
-          is_active: boolean
-          sling_user_id: number
-        }[]
+      reload_postgrest_cache: { Args: never; Returns: string }
+      upsert_arketa_classes_from_staging: {
+        Args: { p_sync_batch_id: string }
+        Returns: number
       }
-      upsert_arketa_classes_from_staging:
-        | {
-            Args: { p_sync_batch_id: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
-        | {
-            Args: { p_sync_batch_id: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
@@ -5709,11 +5448,6 @@ export type Database = {
         | "male_spa_attendant"
         | "floater"
         | "cafe"
-      dev_task_status:
-        | "not_started"
-        | "in_progress"
-        | "finishing_touches"
-        | "completed"
       lost_and_found_category:
         | "wallet"
         | "keys"
@@ -5723,7 +5457,6 @@ export type Database = {
         | "bag"
         | "water_bottle"
         | "other"
-        | "tech_headphones"
       membership_tier: "basic" | "standard" | "premium" | "vip"
       staff_announcement_type: "announcement" | "weekly_update"
     }
@@ -5851,6 +5584,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: [
@@ -5863,12 +5599,6 @@ export const Constants = {
         "floater",
         "cafe",
       ],
-      dev_task_status: [
-        "not_started",
-        "in_progress",
-        "finishing_touches",
-        "completed",
-      ],
       lost_and_found_category: [
         "wallet",
         "keys",
@@ -5878,10 +5608,10 @@ export const Constants = {
         "bag",
         "water_bottle",
         "other",
-        "tech_headphones",
       ],
       membership_tier: ["basic", "standard", "premium", "vip"],
       staff_announcement_type: ["announcement", "weekly_update"],
     },
   },
 } as const
+

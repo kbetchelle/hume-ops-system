@@ -87,6 +87,7 @@ export interface FormDataType {
   managementNotes: string;
   futureShiftNotesNA: boolean;
   futureNotes: FutureNote[];
+  cafeNotes: string;
   _sessionId?: string; // Optional session tracking ID
 }
 
@@ -119,6 +120,7 @@ export const INITIAL_FORM_DATA: FormDataType = {
   managementNotes: '',
   futureShiftNotesNA: false,
   futureNotes: [],
+  cafeNotes: '',
 };
 
 export function hasMeaningfulContent(formData: FormDataType): boolean {
@@ -135,6 +137,7 @@ export function hasMeaningfulContent(formData: FormDataType): boolean {
     hasStringContent(formData.busiestAreas) ||
     hasArrayContent(formData.systemIssues) ||
     hasStringContent(formData.managementNotes) ||
-    hasArrayContent(formData.futureNotes)
+    hasArrayContent(formData.futureNotes) ||
+    hasStringContent(formData.cafeNotes)
   );
 }

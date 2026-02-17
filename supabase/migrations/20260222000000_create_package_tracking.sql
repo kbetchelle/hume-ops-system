@@ -190,28 +190,29 @@ BEGIN
   NULL;
 END $$;
 
--- Schedule cleanup job to run daily at 2 AM
-SELECT cron.schedule(
-  'cleanup-archived-packages',
-  '0 2 * * *',
-  $$
-  SELECT cleanup_archived_packages();
-  $$
-);
-
--- Schedule package reminders to run daily at 9 AM
-SELECT cron.schedule(
-  'send-package-reminders',
-  '0 9 * * *',
-  $$
-  SELECT net.http_post(
-    url := current_setting('app.supabase_url') || '/functions/v1/send-package-reminders',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key')
-    )
-  );
-  $$
-);
+-- Schedule cleanup job and reminders only if pg_cron is available (cron schema exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'cron') THEN
+    PERFORM cron.schedule(
+      'cleanup-archived-packages',
+      '0 2 * * *',
+      'SELECT cleanup_archived_packages();'
+    );
+    PERFORM cron.schedule(
+      'send-package-reminders',
+      '0 9 * * *',
+      $cron$
+      SELECT net.http_post(
+        url := current_setting('app.supabase_url') || '/functions/v1/send-package-reminders',
+        headers := jsonb_build_object(
+          'Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key')
+        )
+      );
+      $cron$
+    );
+  END IF;
+END $$;
 
 -- Grant necessary permissions
 GRANT ALL ON public.packages TO authenticated;

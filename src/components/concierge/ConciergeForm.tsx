@@ -228,6 +228,7 @@ export function ConciergeForm() {
         const shift = loadedFormData.shiftTime;
         setFormData({
           ...loadedFormData,
+          cafeNotes: (loadedFormData as { cafeNotes?: string }).cafeNotes ?? '',
           shiftTime: normalizeShiftType(shift),
           _sessionId: sessionId
         });
@@ -384,6 +385,7 @@ export function ConciergeForm() {
         system_issues: formData.systemIssues as any,
         management_notes: formData.managementNotes || '',
         future_shift_notes: formData.futureNotes as any,
+        cafe_notes: formData.cafeNotes || '',
         status: 'submitted',
         submitted_at: new Date().toISOString()
       };
@@ -1243,6 +1245,19 @@ export function ConciergeForm() {
               rows={4}
               className="resize-y" />
 
+          </div>
+
+          {/* Café Notes */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider">Café Notes</h3>
+            <Label className="text-sm sr-only">Café activity, toss, or other café updates</Label>
+            <Textarea
+              value={formData.cafeNotes}
+              onChange={(e) => updateFormField('cafeNotes', e.target.value)}
+              disabled={isSubmitted}
+              placeholder="Café activity, toss, busy/slow, etc."
+              rows={2}
+              className="resize-y" />
           </div>
           
           <Separator />

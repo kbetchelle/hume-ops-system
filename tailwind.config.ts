@@ -33,11 +33,11 @@ export default {
       },
       colors: {
         add: {
-          olive: "#818807",
-          skyBlue: "#6CA2E8",
-          amber: "#F28B0C",
-          burntOrange: "#F2600C",
-          crimson: "#D9310B",
+          olive: "#62bb47",
+          skyBlue: "#009ddc",
+          amber: "#fcb827",
+          burntOrange: "#f6821f",
+          crimson: "#e03a3c",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

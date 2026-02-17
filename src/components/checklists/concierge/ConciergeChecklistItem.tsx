@@ -74,7 +74,36 @@ export function ConciergeChecklistItem({
     await handleToggle(undefined, undefined, signatureData);
   };
 
-  // Header type - just displays text
+  // Color map for left border and background styling
+  const colorBorderMap: Record<string, string> = {
+    red: 'border-l-add-crimson',
+    orange: 'border-l-add-amber',
+    yellow: 'border-l-yellow-500',
+    green: 'border-l-green-500',
+    blue: 'border-l-add-skyBlue',
+    purple: 'border-l-purple-500',
+    gray: 'border-l-gray-500',
+    teal: 'border-l-add-olive',
+    pink: 'border-l-add-burntOrange',
+  };
+  const colorBgMap: Record<string, string> = {
+    red: 'bg-add-crimson/5',
+    orange: 'bg-add-amber/5',
+    yellow: 'bg-yellow-500/5',
+    green: 'bg-green-500/5',
+    blue: 'bg-add-skyBlue/5',
+    purple: 'bg-purple-500/5',
+    gray: 'bg-gray-500/5',
+    teal: 'bg-add-olive/5',
+    pink: 'bg-add-burntOrange/5',
+  };
+  // For checkbox items, alternate between blue and green based on checkboxIndex
+  const effectiveColor = item.task_type === 'checkbox' 
+    ? (checkboxIndex % 2 === 0 ? 'blue' : 'green') 
+    : item.color;
+  const colorBorderClass = effectiveColor ? `border-l-4 ${colorBorderMap[effectiveColor] || ''} ${colorBgMap[effectiveColor] || ''}` : '';
+
+  // Header type
   if (item.task_type === 'header') {
     return (
       <div className={`p-4 font-semibold text-lg ${item.color ? `text-${item.color}-700` : ''}`}>
@@ -83,17 +112,11 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Checkbox type - alternate blue/green coloring
-  const checkboxColorClass = item.task_type === 'checkbox'
-    ? (checkboxIndex % 2 === 0
-      ? 'border-l-4 border-l-add-skyBlue bg-add-skyBlue/5'
-      : 'border-l-4 border-l-green-500 bg-green-500/5')
-    : '';
-
+  // Checkbox type
   if (item.task_type === 'checkbox') {
     return (
       <div
-        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${checkboxColorClass} ${
+        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${colorBorderClass} ${
           isCompleted ? 'bg-accent/30 border-primary' : ''
         }`}
         onClick={() => handleToggle()}
@@ -107,7 +130,7 @@ export function ConciergeChecklistItem({
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className={isCompleted ? 'line-through text-muted-foreground' : ''}>{taskLabel}</span>
+            <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
             {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
             {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
           </div>
@@ -119,10 +142,10 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Photo type - with mobile-optimized modal and compression
+  // Photo type
   if (item.task_type === 'photo') {
     return (
-      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -133,7 +156,7 @@ export function ConciergeChecklistItem({
         
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -181,12 +204,12 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Signature type - with canvas-based signature pad
+  // Signature type
   if (item.task_type === 'signature') {
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className="p-3 md:p-4 border rounded-lg space-y-3">
+      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -196,7 +219,7 @@ export function ConciergeChecklistItem({
         
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -252,12 +275,12 @@ export function ConciergeChecklistItem({
     );
   }
 
-  // Text entry types (free_response, short_entry)
+  // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -286,9 +309,9 @@ export function ConciergeChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -323,9 +346,9 @@ export function ConciergeChecklistItem({
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -350,9 +373,9 @@ export function ConciergeChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className="p-3 border rounded-lg space-y-2">
+      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -370,7 +393,7 @@ export function ConciergeChecklistItem({
 
   // Default fallback
   return (
-    <div className="p-3 border rounded-lg">
+    <div className={`p-3 border rounded-lg ${colorBorderClass}`}>
       <span>{taskLabel}</span>
       <p className="text-xs text-muted-foreground">Unsupported task type: {item.task_type}</p>
     </div>

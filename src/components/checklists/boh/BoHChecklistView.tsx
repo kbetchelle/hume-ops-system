@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { BoHChecklistItem } from './BoHChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,21 +25,19 @@ interface BoHChecklistWithItems {
 export function BoHChecklistView() {
   const { user } = useAuth();
   const { data: userRolesData } = useUserRoles(user?.id);
+  const { t } = useLanguage();
   const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
   
-  // Detect shift time (AM/PM) based on current time
   const currentHour = new Date().getHours();
   const detectedShift = currentHour < 13 ? 'AM' : 'PM';
   const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
 
-  // Get user's BoH role
   const userBoHRole = roles.find(r => 
     ['floater', 'male_spa_attendant', 'female_spa_attendant'].includes(r.role)
   );
 
-  // Fetch checklist for selected date and shift
   const { data: checklist, isLoading } = useQuery({
     queryKey: ['boh-checklist', shiftTime, isWeekend, userBoHRole?.role],
     queryFn: async () => {
@@ -62,7 +61,6 @@ export function BoHChecklistView() {
     enabled: !!userBoHRole,
   });
 
-  // Fetch completions for selected date
   const { data: completions } = useQuery({
     queryKey: ['boh-completions', selectedDate, shiftTime, user?.id],
     queryFn: async () => {
@@ -86,22 +84,25 @@ export function BoHChecklistView() {
     return (
       <Card>
         <CardContent className="p-6 text-center text-muted-foreground">
-          <p>You don't have a Back of House role assigned.</p>
+          <p>{t('You don\'t have a Back of House role assigned.', 'No tienes un rol de Back of House asignado.')}</p>
         </CardContent>
       </Card>
     );
   }
 
   if (isLoading) {
-    return <div className="p-4">Loading checklist...</div>;
+    return <div className="p-4">{t('Loading checklist...', 'Cargando lista...')}</div>;
   }
 
   if (!checklist) {
     return (
       <Card>
         <CardContent className="p-6 text-center text-muted-foreground">
-          <p>No checklist found for {userBoHRole.role} ({isWeekend ? 'weekend' : 'weekday'} {shiftTime} shift).</p>
-          <p className="text-sm mt-2">Contact your manager to set up checklists.</p>
+          <p>{t(
+            `No checklist found for ${userBoHRole.role} (${isWeekend ? 'weekend' : 'weekday'} ${shiftTime} shift).`,
+            `No se encontró lista para ${userBoHRole.role} (${isWeekend ? 'fin de semana' : 'entre semana'} turno ${shiftTime}).`
+          )}</p>
+          <p className="text-sm mt-2">{t('Contact your manager to set up checklists.', 'Contacta a tu gerente para configurar las listas.')}</p>
         </CardContent>
       </Card>
     );
@@ -109,7 +110,6 @@ export function BoHChecklistView() {
 
   return (
     <div className="space-y-4">
-      {/* Header with date selector and shift toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -139,11 +139,10 @@ export function BoHChecklistView() {
           </div>
         </div>
         <Badge variant={completedCount === totalCount ? 'default' : 'secondary'}>
-          {completedCount} / {totalCount} Complete
+          {completedCount} / {totalCount} {t('Complete', 'Completo')}
         </Badge>
       </div>
 
-      {/* Checklist card */}
       <Card>
         <CardHeader>
           <CardTitle>{checklist.title}</CardTitle>
@@ -156,7 +155,7 @@ export function BoHChecklistView() {
             const items = checklist.boh_checklist_items?.sort((a: any, b: any) => a.sort_order - b.sort_order) || [];
             const grouped: Record<string, any[]> = {};
             items.forEach((item: any) => {
-              const section = item.time_hint || 'Other';
+              const section = item.time_hint || t('Other', 'Otro');
               if (!grouped[section]) grouped[section] = [];
               grouped[section].push(item);
             });

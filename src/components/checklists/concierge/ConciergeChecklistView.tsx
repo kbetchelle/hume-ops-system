@@ -24,7 +24,7 @@ interface ConciergeChecklistWithItems {
 export function ConciergeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
   const today = new Date().toISOString().split('T')[0];
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
   
@@ -136,7 +136,7 @@ export function ConciergeChecklistView() {
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="hide-completed-concierge" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
-              <Switch id="hide-completed-concierge" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+              <Switch id="hide-completed-concierge" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
             </div>
           </div>
         </CardHeader>

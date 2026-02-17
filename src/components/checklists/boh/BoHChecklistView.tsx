@@ -31,7 +31,7 @@ export function BoHChecklistView() {
   const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
   
   const currentHour = new Date().getHours();
   const detectedShift = currentHour < 13 ? 'AM' : 'PM';
@@ -157,7 +157,7 @@ export function BoHChecklistView() {
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="hide-completed-boh" className="text-xs text-muted-foreground cursor-pointer">{t('Hide completed', 'Ocultar completados')}</Label>
-              <Switch id="hide-completed-boh" checked={hideCompleted} onCheckedChange={setHideCompleted} />
+              <Switch id="hide-completed-boh" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
             </div>
           </div>
         </CardHeader>

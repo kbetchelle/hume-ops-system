@@ -16,22 +16,22 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Map checklist titles to their visible hours on the role page
 const BOH_VISIBLE_HOURS: Record<string, string> = {
-  "Floater - Weekday AM": "Before 1:00 PM",
-  "Floater - Weekday PM": "1:00 PM onwards",
+  "Floater - Weekday AM": "Before 2:00 PM",
+  "Floater - Weekday PM": "2:00 PM onwards",
   "Floater - Weekend AM": "Before 1:00 PM",
   "Floater - Weekend PM (sun only)": "1:00 PM onwards",
-  "Male Spa Attendant - Weekday AM": "Before 1:00 PM",
-  "Male Spa Attendant - Weekday PM": "1:00 PM onwards",
+  "Male Spa Attendant - Weekday AM": "Before 2:00 PM",
+  "Male Spa Attendant - Weekday PM": "2:00 PM onwards",
   "Male Spa Attendant - Weekend AM": "Before 1:00 PM",
   "Male Spa Attendant - Weekend AM (2)": "Before 1:00 PM",
   "Male Spa Attendant - Weekend PM": "1:00 PM onwards",
-  "Female Spa Attendant - Weekday AM": "Before 1:00 PM",
-  "Female Spa Attendant - Weekday PM": "1:00 PM onwards",
+  "Female Spa Attendant - Weekday AM": "Before 2:00 PM",
+  "Female Spa Attendant - Weekday PM": "2:00 PM onwards",
   "Female Spa Attendant - Weekend PM": "1:00 PM onwards",
 };
 
 function getDefaultVisibleHours(shiftTime: "AM" | "PM"): string {
-  return shiftTime === "AM" ? "Before 1:00 PM" : "1:00 PM onwards";
+  return shiftTime === "AM" ? "Before 2:00 PM" : "2:00 PM onwards";
 }
 
 interface ScheduleSlot {

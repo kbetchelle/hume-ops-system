@@ -8,12 +8,12 @@ import { mapOrderToStagingRow, mapOrderToSalesRow } from '../_shared/toastOrderM
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const PAGE_SIZE = 100;
 const BATCH_UPSERT_SIZE = 100;
+const TIME_BUDGET_MS = 50_000; // 50s budget, 10s buffer before 60s limit
 
 interface SyncRequest {
   action?: string;
   start_date?: string;
   end_date?: string;
-  days_back?: number;
 }
 
 interface ToastAuthResponse {
@@ -21,10 +21,7 @@ interface ToastAuthResponse {
   status: string;
 }
 
-async function getToastToken(
-  clientId: string,
-  clientSecret: string,
-): Promise<string> {
+async function getToastToken(clientId: string, clientSecret: string): Promise<string> {
   const authUrl = `${TOAST_BASE_URL}/authentication/v1/authentication/login`;
   const { response, attempts } = await fetchWithRetry(authUrl, {
     method: 'POST',
@@ -74,46 +71,55 @@ async function fetchOrdersPage(
   return { orders, hasMore };
 }
 
-function dateRangeDays(startDate: string, endDate: string): string[] {
-  const start = new Date(startDate + 'T00:00:00.000Z');
-  const end = new Date(endDate + 'T00:00:00.000Z');
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
-  const out: string[] = [];
-  const current = new Date(start);
-  while (current <= end && out.length < 31) {
-    out.push(current.toISOString().slice(0, 10));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-  return out;
+/** Get the max page_number already staged for a given business_date. Returns 0 if none. */
+// deno-lint-ignore no-explicit-any
+async function getResumePageForDate(supabase: any, businessDate: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('toast_staging')
+    .select('page_number')
+    .eq('business_date', businessDate)
+    .not('page_number', 'is', null)
+    .order('page_number', { ascending: false })
+    .limit(1);
+  if (error || !data || data.length === 0) return 0;
+  return data[0].page_number as number;
 }
 
-/** Fetch all orders for a date range, returning raw individual orders with their business date. */
-async function fetchAllRawOrders(
-  token: string,
-  restaurantGuid: string,
-  startDate: string,
-  endDate: string,
-  logger: ReturnType<typeof createSyncLogger>
-): Promise<{ orders: Record<string, unknown>[]; businessDate: string }[]> {
-  const days = dateRangeDays(startDate, endDate);
-  logger.info(`Fetching raw orders for ${days.length} days (${startDate} to ${endDate})`);
-  const results: { orders: Record<string, unknown>[]; businessDate: string }[] = [];
-  for (const businessDate of days) {
-    let page = 1;
-    const allOrders: Record<string, unknown>[] = [];
-    let hasMore = true;
-    while (hasMore) {
-      const { orders, hasMore: more } = await fetchOrdersPage(token, restaurantGuid, businessDate, page, logger);
-      allOrders.push(...orders);
-      hasMore = more && orders.length >= PAGE_SIZE;
-      if (hasMore) page++;
-      else break;
-    }
-    if (allOrders.length > 0) {
-      results.push({ orders: allOrders, businessDate });
-    }
+/** Promote all staged rows for a business_date to toast_sales, then clear staging for that date. */
+// deno-lint-ignore no-explicit-any
+async function promoteAndClearDate(supabase: any, businessDate: string, logger: ReturnType<typeof createSyncLogger>): Promise<number> {
+  // Read staged rows in batches
+  let promoted = 0;
+  let from = 0;
+  const batchSize = 500;
+  while (true) {
+    const { data: rows, error } = await supabase
+      .from('toast_staging')
+      .select('order_guid, business_date, net_sales, gross_sales, cafe_sales, order_count, raw_data, sync_batch_id')
+      .eq('business_date', businessDate)
+      .range(from, from + batchSize - 1);
+    if (error) { logger.error(`Promote read error for ${businessDate}`, error); throw error; }
+    if (!rows || rows.length === 0) break;
+
+    const { error: upsertErr } = await supabase
+      .from('toast_sales')
+      .upsert(rows, { onConflict: 'order_guid' });
+    if (upsertErr) { logger.error(`Promote upsert error for ${businessDate}`, upsertErr); throw upsertErr; }
+
+    promoted += rows.length;
+    if (rows.length < batchSize) break;
+    from += batchSize;
   }
-  return results;
+
+  // Clear staging for this date
+  const { error: delErr } = await supabase
+    .from('toast_staging')
+    .delete()
+    .eq('business_date', businessDate);
+  if (delErr) logger.warn(`Staging cleanup warning for ${businessDate}: ${delErr.message}`);
+
+  logger.info(`Promoted ${promoted} orders for ${businessDate} to toast_sales and cleared staging`);
+  return promoted;
 }
 
 Deno.serve(async (req) => {
@@ -144,14 +150,26 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
     const body = await req.json().catch(() => ({})) as SyncRequest;
 
-    const today = new Date().toISOString().split('T')[0];
-    const daysBack = body.days_back || 14;
-    const endDate = body.end_date || today;
-    const startDateDefault = new Date();
-    startDateDefault.setDate(startDateDefault.getDate() - daysBack);
-    const startDate = body.start_date || startDateDefault.toISOString().split('T')[0];
+    // Default to yesterday only
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const defaultDate = yesterday.toISOString().split('T')[0];
+    const startDate = body.start_date || defaultDate;
+    const endDate = body.end_date || defaultDate;
 
-    logger.info(`Starting Toast sync from ${startDate} to ${endDate}`);
+    // Build date list
+    const days: string[] = [];
+    const startD = new Date(startDate + 'T00:00:00.000Z');
+    const endD = new Date(endDate + 'T00:00:00.000Z');
+    if (!isNaN(startD.getTime()) && !isNaN(endD.getTime()) && startD <= endD) {
+      const cur = new Date(startD);
+      while (cur <= endD && days.length < 31) {
+        days.push(cur.toISOString().slice(0, 10));
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+
+    logger.info(`Starting Toast sync for ${days.length} day(s): ${startDate} to ${endDate}`);
     const batchId = crypto.randomUUID();
 
     let token: string;
@@ -168,46 +186,58 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Toast authentication failed', details }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    let dayResults: { orders: Record<string, unknown>[]; businessDate: string }[];
-    try {
-      dayResults = await fetchAllRawOrders(token, TOAST_RESTAURANT_GUID, startDate, endDate, logger);
-    } catch (fetchError) {
-      const details = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      logger.error('Toast fetch failed', fetchError);
-      await logApiCall(supabase, {
-        apiName: 'toast_sales', endpoint: '/orders/v2/ordersBulk',
-        syncSuccess: false, durationMs: Date.now() - startTime, recordsProcessed: 0,
-        recordsInserted: 0, responseStatus: 500, errorMessage: `Toast fetch failed: ${details}`, triggeredBy: 'manual',
-      });
-      return new Response(JSON.stringify({ error: 'Failed to fetch Toast sales data', details }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const totalOrders = dayResults.reduce((sum, d) => sum + d.orders.length, 0);
-    logger.info(`Fetched ${totalOrders} total orders across ${dayResults.length} days`);
-
     const syncedDates: string[] = [];
+    const partialDates: string[] = [];
     let failedCount = 0;
-    let totalInserted = 0;
+    let totalFetched = 0;
+    let totalPromoted = 0;
+    let timeBudgetExceeded = false;
 
-    for (const { orders, businessDate } of dayResults) {
+    for (const businessDate of days) {
+      if (timeBudgetExceeded) break;
+
       try {
-        // Batch upsert individual orders
-        for (let i = 0; i < orders.length; i += BATCH_UPSERT_SIZE) {
-          const batch = orders.slice(i, i + BATCH_UPSERT_SIZE);
+        // Check resume point: which pages are already staged for this date?
+        const maxStagedPage = await getResumePageForDate(supabase, businessDate);
+        let page = maxStagedPage > 0 ? maxStagedPage + 1 : 1;
+        let hasMore = true;
+        let dayFetched = 0;
 
-          const stagingRows = batch.map((order) => mapOrderToStagingRow(order, businessDate, batchId));
+        while (hasMore) {
+          // Time budget guard
+          if (Date.now() - startTime > TIME_BUDGET_MS) {
+            logger.warn(`Time budget exceeded after page ${page} of ${businessDate}, will resume next invocation`);
+            timeBudgetExceeded = true;
+            partialDates.push(businessDate);
+            break;
+          }
 
-          const { error: stagingErr } = await (supabase.from('toast_staging') as any).upsert(stagingRows, { onConflict: 'order_guid' });
-          if (stagingErr) { logger.error(`Staging error ${businessDate}`, stagingErr); throw stagingErr; }
+          const { orders, hasMore: more } = await fetchOrdersPage(token, TOAST_RESTAURANT_GUID, businessDate, page, logger);
 
-          const salesRows = batch.map((order) => mapOrderToSalesRow(order, businessDate, batchId));
+          // Stage immediately
+          if (orders.length > 0) {
+            for (let i = 0; i < orders.length; i += BATCH_UPSERT_SIZE) {
+              const batch = orders.slice(i, i + BATCH_UPSERT_SIZE);
+              const stagingRows = batch.map((order) => mapOrderToStagingRow(order, businessDate, batchId, page));
+              const { error: stagingErr } = await (supabase.from('toast_staging') as any).upsert(stagingRows, { onConflict: 'order_guid' });
+              if (stagingErr) { logger.error(`Staging error ${businessDate} p${page}`, stagingErr); throw stagingErr; }
+            }
+            dayFetched += orders.length;
+          }
 
-          const { error: salesErr } = await (supabase.from('toast_sales') as any).upsert(salesRows, { onConflict: 'order_guid' });
-          if (salesErr) { logger.error(`Sales error ${businessDate}`, salesErr); throw salesErr; }
-
-          totalInserted += batch.length;
+          hasMore = more && orders.length >= PAGE_SIZE;
+          if (hasMore) page++;
+          else break;
         }
-        syncedDates.push(businessDate);
+
+        totalFetched += dayFetched;
+
+        // Only promote if all pages are fetched (not interrupted by time budget)
+        if (!timeBudgetExceeded || !partialDates.includes(businessDate)) {
+          const promoted = await promoteAndClearDate(supabase, businessDate, logger);
+          totalPromoted += promoted;
+          syncedDates.push(businessDate);
+        }
       } catch (error) {
         logger.error(`Error syncing ${businessDate}`, error);
         failedCount++;
@@ -217,22 +247,30 @@ Deno.serve(async (req) => {
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {
       syncType: 'toast_sales', startedAt: new Date(startTime).toISOString(),
-      completedAt: new Date().toISOString(), durationMs, recordsFetched: totalOrders,
-      recordsSynced: totalInserted, recordsFailed: failedCount, retryCount: 0,
+      completedAt: new Date().toISOString(), durationMs, recordsFetched: totalFetched,
+      recordsSynced: totalPromoted, recordsFailed: failedCount, retryCount: 0,
     });
 
     await supabase.from('api_sync_status').upsert({
       api_name: 'toast_sales', last_sync_at: new Date().toISOString(),
-      last_sync_success: failedCount === 0, last_records_processed: totalOrders,
-      last_records_inserted: totalInserted,
+      last_sync_success: failedCount === 0 && !timeBudgetExceeded,
+      last_records_processed: totalFetched,
+      last_records_inserted: totalPromoted,
     }, { onConflict: 'api_name' });
 
-    logger.info(`Sync completed: ${totalInserted} orders synced across ${syncedDates.length} days, ${failedCount} failed`);
+    logger.info(`Sync completed: ${totalPromoted} promoted, ${syncedDates.length} days done, ${partialDates.length} partial, ${failedCount} failed`);
 
     return new Response(
       JSON.stringify({
-        success: true, syncedDates, totalFetched: totalOrders,
-        syncedCount: totalInserted, failedCount, dateRange: { startDate, endDate }, batchId,
+        success: true,
+        partial: timeBudgetExceeded,
+        syncedDates,
+        partialDates,
+        totalFetched,
+        syncedCount: totalPromoted,
+        failedCount,
+        dateRange: { startDate, endDate },
+        batchId,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

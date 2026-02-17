@@ -5213,6 +5213,7 @@ export type Database = {
           net_sales: number | null
           order_count: number | null
           order_guid: string
+          page_number: number | null
           raw_data: Json | null
           staged_at: string | null
           sync_batch_id: string
@@ -5225,6 +5226,7 @@ export type Database = {
           net_sales?: number | null
           order_count?: number | null
           order_guid: string
+          page_number?: number | null
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id: string
@@ -5237,6 +5239,7 @@ export type Database = {
           net_sales?: number | null
           order_count?: number | null
           order_guid?: string
+          page_number?: number | null
           raw_data?: Json | null
           staged_at?: string | null
           sync_batch_id?: string

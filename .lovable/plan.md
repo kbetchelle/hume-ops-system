@@ -1,88 +1,101 @@
 
+# Plan: Page-Level Cursor for High-Volume Days
 
-# Plan: Fix Toast Staging Cleanup, Aggregate from toast_sales, Fix Build Errors, and Data Report
+## Problem
 
-This plan addresses three areas: (1) ensuring toast_staging is cleared after sync-from-staging, (2) switching the daily report aggregation to read from toast_sales instead of toast_staging, (3) fixing all TypeScript build errors caused by stale generated types, and (4) providing a toast_sales data completeness report.
+Edge functions have a ~60s execution limit. A day with 177 orders requires 2 API pages, each with up to 60s timeout + retry delays. Combined with DB upserts, a single high-volume day can exceed the limit. If the function times out mid-pagination, all fetched-but-not-committed data for that day is lost.
 
----
+## Solution: Resume-from-page cursor using toast_staging metadata
 
-## 1. Add Toast Staging Transfer to sync-from-staging
+Instead of holding all pages in memory before writing, **stage each page immediately as it's fetched**, and track the last successfully staged page. If the function times out or errors, the next invocation skips already-staged pages.
 
-**File:** `supabase/functions/sync-from-staging/index.ts`
+## How It Works
 
-Currently, `sync-from-staging` handles arketa_reservations, arketa_payments, and order_checks -- but NOT toast. Toast data goes directly from API to both `toast_staging` and `toast_sales` in `sync-toast-orders` and `toast-backfill-sync`, but `toast_staging` is never cleaned up afterward.
+```text
+Invocation 1 (times out on page 3):
+  Page 1 -> fetch -> stage (100 rows) -> OK
+  Page 2 -> fetch -> stage (100 rows) -> OK
+  Page 3 -> fetch -> TIMEOUT
 
-**Changes:**
-- Add a new `transferToastSales()` function that reads all rows from `toast_staging`, upserts them into `toast_sales` (on conflict `order_guid`), then deletes the staged rows -- following the same pattern as the other transfer functions.
-- Update the `TransferApi` type to include `"toast"`.
-- Call `transferToastSales()` when `api === "toast"` or `api === "both"`.
+Invocation 2 (resumes):
+  Check toast_staging: max page for this date = 2
+  Page 3 -> fetch -> stage (77 rows) -> OK
+  No more pages -> promote to toast_sales -> clear staging
+```
 
----
+## Changes
 
-## 2. Switch Daily Report Aggregation to toast_sales
+### 1. Add `page_number` column to `toast_staging`
 
-**File:** `supabase/functions/auto-aggregate-daily-report/index.ts`
+A new migration adds an integer `page_number` column (nullable, default null) so each staged batch knows which API page it came from.
 
-Currently at line 189-198, the aggregation queries `toast_staging`. Change this to query `toast_sales` instead.
+```sql
+ALTER TABLE toast_staging ADD COLUMN IF NOT EXISTS page_number integer;
+```
 
-**Changes (lines ~189-198):**
-- Change `from("toast_staging")` to `from("toast_sales")`
-- Change `dataSources.toast_staging` to `dataSources.toast_sales`
-- Also aggregate `gross_sales` alongside `net_sales` so both `cafe_net_sales` and `cafe_gross_sales` are populated in the daily report
-- Add `cafe_order_count` (count of toast rows for that date)
-- Update the upsert payload (lines ~347-381) to include `cafe_gross_sales`, `cafe_net_sales`, and `cafe_order_count`
+### 2. Stage-per-page pattern in both sync functions
 
----
+**Files:** `sync-toast-orders/index.ts`, `toast-backfill-sync/index.ts`
 
-## 3. Fix Build Errors -- Regenerate Types
+Replace the "fetch all pages into memory, then stage" pattern with:
 
-The root cause of ALL the build errors is that the generated `types.ts` file is out of sync with the actual database. The `daily_reports` table in the DB has 38 columns (including `weather`, `private_appointments`, `gross_sales_membership`, `gross_sales_other`, `cafe_sales`, `class_details`, feedback fields, etc.) but the generated types only show 13 columns. Similarly, the `lost_and_found_category` enum in the DB includes `tech_headphones` but the generated types don't have it.
+```
+For each business_date:
+  1. Query toast_staging for max(page_number) WHERE business_date = X
+     -> resume_from_page = max + 1 (or 1 if none)
+  2. Fetch page resume_from_page from API
+  3. Map to staging rows with page_number set
+  4. Upsert into toast_staging immediately
+  5. If hasMore, increment page and repeat from step 2
+  6. When done (no more pages), promote all rows for this date to toast_sales
+  7. Clear staging for this date
+```
 
-**Fix:** Trigger a types regeneration. This is automatic when a migration runs, so a no-op migration or schema touch will refresh the types. Since we need a migration for the toast changes anyway, the types will regenerate automatically.
+This means:
+- Each page is persisted the moment it arrives -- no data loss on timeout
+- On re-invocation, already-fetched pages are skipped via the `page_number` cursor
+- Promotion to `toast_sales` only happens once ALL pages for a date are staged
 
-**If types still don't regenerate**, each affected component would need to cast `report` as `any` -- but this should not be necessary since the types file auto-updates on schema changes.
+### 3. Add a time budget guard
 
----
+Both functions get a `TIME_BUDGET_MS` constant (e.g., 50000ms = 50s, leaving 10s buffer before the 60s limit). Before fetching each new page, check elapsed time:
 
-## 4. Toast Sales Data Completeness Report
+```typescript
+const TIME_BUDGET_MS = 50_000;
+if (Date.now() - startTime > TIME_BUDGET_MS) {
+  logger.warn(`Time budget exceeded after page ${page}, will resume next invocation`);
+  return { partial: true, lastPage: page };
+}
+```
 
-Based on querying the `toast_sales` table, here are the data quality findings:
+If the budget is exceeded, the function returns a `partial: true` response. The next cron/manual invocation picks up from where it left off.
 
-**Dates with zero sales (net_sales = 0 AND gross_sales = 0):**
-- 2024-08-05 (1 order, $0 net, $0 gross)
-- 2024-08-08 (5 orders, $0 net, $0 gross)
-- 2024-08-09 (9 orders, $0 net, $0 gross)
-- 2024-08-12 (4 orders, $0 net, $0 gross)
+### 4. Backfill state tracks partial days
 
-**Dates with suspiciously low order counts (fewer than 5 orders):**
-- 2024-08-02 (1 order)
-- 2024-08-05 (1 order)
-- 2024-08-08 (5 orders -- but $0 sales)
-- 2024-08-12 (4 orders)
-- 2024-11-21 (1 order)
-- 2025-01-14 (1 order)
-- 2025-01-17 (2 orders)
-- 2025-02-12 (4 orders)
+**File:** `toast-backfill-sync/index.ts`
 
-**Missing dates (no data at all, excluding Sundays):**
-- 2024-08-01, 2024-08-06, 2024-08-07, 2024-08-10
-- 2024-11-28 (Thanksgiving)
-- 2024-12-25, 2024-12-26 (Christmas)
-- 2025-01-01 (New Year's)
-- 2025-01-08 through 2025-01-18 (multiple gaps -- 6 missing days)
-- 2025-02-05 through 2025-02-07 (3 consecutive missing days)
-- 2025-02-13
-- Various future dates in 2025-2026 (expected -- haven't occurred yet)
+The `toast_backfill_state.cursor_page` field (already exists but always set to 1) will now be used properly:
+- After a partial day, `cursor_page` is set to the next page to fetch
+- `cursor_date` stays on the current day
+- Next invocation resumes from `cursor_page` on `cursor_date`
 
-The early August 2024 dates (8/01-8/12) likely represent the start of Toast integration where data was incomplete or the system wasn't fully configured. The January 2025 gaps and February 2025 gaps may indicate sync failures or closures.
+### 5. Daily sync handles partials via staging check
 
----
+**File:** `sync-toast-orders/index.ts`
+
+For the daily sync (yesterday only), partial handling is simpler:
+- On invocation, check `toast_staging` for any rows with yesterday's date
+- If rows exist, query `max(page_number)` and resume from page N+1
+- If the function completes all pages, promote and clear as normal
 
 ## Technical Summary
 
-| Step | File | Change |
-|------|------|--------|
-| 1 | `supabase/functions/sync-from-staging/index.ts` | Add `transferToastSales()` function, clear toast_staging after upsert to toast_sales |
-| 2 | `supabase/functions/auto-aggregate-daily-report/index.ts` | Query `toast_sales` instead of `toast_staging`; add cafe_gross_sales, cafe_net_sales, cafe_order_count |
-| 3 | Types regeneration | Automatic on next migration -- fixes all TS2339/TS2344/TS2353 errors across ReportDataSection, ReportNotesSection, ClassScheduleTable, LostAndFoundTab |
+| Change | File |
+|--------|------|
+| Add `page_number` column | New migration |
+| Stage each page immediately + resume cursor | `sync-toast-orders/index.ts` |
+| Stage each page immediately + use `cursor_page` properly | `toast-backfill-sync/index.ts` |
+| Time budget guard (50s) | Both sync functions |
+| Query staging for resume point | Both sync functions |
 
+This approach is resilient: even if the function is killed mid-execution, no data is lost because every page is staged before the next one is fetched. The next invocation seamlessly resumes.

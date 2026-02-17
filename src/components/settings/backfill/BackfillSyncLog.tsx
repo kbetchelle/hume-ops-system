@@ -55,26 +55,30 @@ export default function BackfillSyncLog({ results, isRunning, totalRecords, tota
           {results.map((r, i) => (
             <div
               key={r.date + i}
-              className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50"
+              className={`text-sm px-2 py-1.5 rounded ${
+                r.success ? 'bg-muted/50' : 'bg-destructive/10 border border-destructive/20'
+              }`}
             >
-              <div className="flex items-center gap-2">
-                {r.success ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                ) : (
-                  <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                )}
-                <span className="font-mono">{r.date}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {r.success ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  )}
+                  <span className="font-mono">{r.date}</span>
+                </div>
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <span>{r.recordCount} pulled</span>
+                  <span className="text-green-600">+{r.newRecords} new</span>
+                  <span>{r.existingBefore} existed</span>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <span>{r.recordCount} pulled</span>
-                <span className="text-green-600">+{r.newRecords} new</span>
-                <span>{r.existingBefore} existed</span>
-                {r.error && (
-                  <span className="text-destructive text-xs truncate max-w-[150px]" title={r.error}>
-                    {r.error}
-                  </span>
-                )}
-              </div>
+              {r.error && (
+                <p className="text-destructive text-xs mt-1 break-words">
+                  {r.error}
+                </p>
+              )}
             </div>
           ))}
         </div>

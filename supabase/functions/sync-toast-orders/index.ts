@@ -3,7 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 import { logApiCall } from '../_shared/apiLogger.ts';
-import { mapOrderToStagingRow, mapOrderToSalesRow } from '../_shared/toastOrderMapping.ts';
+import { mapOrderToStagingRow, validateStagingRow } from '../_shared/toastOrderMapping.ts';
 
 const TOAST_BASE_URL = 'https://ws-api.toasttab.com';
 const PAGE_SIZE = 100;
@@ -85,11 +85,11 @@ async function getResumePageForDate(supabase: any, businessDate: string): Promis
   return data[0].page_number as number;
 }
 
-/** Promote all staged rows for a business_date to toast_sales, then clear staging for that date. */
+/** Promote all staged rows for a business_date to toast_sales (with validation), then clear staging. */
 // deno-lint-ignore no-explicit-any
 async function promoteAndClearDate(supabase: any, businessDate: string, logger: ReturnType<typeof createSyncLogger>): Promise<number> {
-  // Read staged rows in batches
   let promoted = 0;
+  let skipped = 0;
   let from = 0;
   const batchSize = 500;
   while (true) {
@@ -101,12 +101,26 @@ async function promoteAndClearDate(supabase: any, businessDate: string, logger: 
     if (error) { logger.error(`Promote read error for ${businessDate}`, error); throw error; }
     if (!rows || rows.length === 0) break;
 
-    const { error: upsertErr } = await supabase
-      .from('toast_sales')
-      .upsert(rows, { onConflict: 'order_guid' });
-    if (upsertErr) { logger.error(`Promote upsert error for ${businessDate}`, upsertErr); throw upsertErr; }
+    // Validate before promoting
+    const validRows: typeof rows = [];
+    for (const row of rows) {
+      const check = validateStagingRow(row);
+      if (check.valid) {
+        validRows.push(row);
+      } else {
+        skipped++;
+        logger.warn(`Skipping invalid staging row ${row.order_guid ?? 'unknown'}: ${check.reason}`);
+      }
+    }
 
-    promoted += rows.length;
+    if (validRows.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('toast_sales')
+        .upsert(validRows, { onConflict: 'order_guid' });
+      if (upsertErr) { logger.error(`Promote upsert error for ${businessDate}`, upsertErr); throw upsertErr; }
+      promoted += validRows.length;
+    }
+
     if (rows.length < batchSize) break;
     from += batchSize;
   }
@@ -118,7 +132,7 @@ async function promoteAndClearDate(supabase: any, businessDate: string, logger: 
     .eq('business_date', businessDate);
   if (delErr) logger.warn(`Staging cleanup warning for ${businessDate}: ${delErr.message}`);
 
-  logger.info(`Promoted ${promoted} orders for ${businessDate} to toast_sales and cleared staging`);
+  logger.info(`Promoted ${promoted} orders for ${businessDate} (${skipped} skipped) and cleared staging`);
   return promoted;
 }
 
@@ -185,6 +199,10 @@ Deno.serve(async (req) => {
       });
       return new Response(JSON.stringify({ error: 'Toast authentication failed', details }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+
+    // Clear stale staging data from previous runs (safe for daily sync — only processes yesterday)
+    const { error: clearErr } = await supabase.from('toast_staging').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (clearErr) logger.warn('Failed to clear toast_staging at start: ' + clearErr.message);
 
     const syncedDates: string[] = [];
     const partialDates: string[] = [];

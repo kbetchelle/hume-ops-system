@@ -32,6 +32,13 @@ export default {
         "fog-heading": ["12px", { lineHeight: "1.4", letterSpacing: "0.15em" }],
       },
       colors: {
+        add: {
+          olive: "#818807",
+          skyBlue: "#6CA2E8",
+          amber: "#F28B0C",
+          burntOrange: "#F2600C",
+          crimson: "#D9310B",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

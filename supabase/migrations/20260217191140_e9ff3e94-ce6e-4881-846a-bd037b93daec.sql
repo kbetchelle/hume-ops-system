@@ -1,0 +1,1 @@
+ALTER TABLE public.toast_staging ADD COLUMN IF NOT EXISTS page_number integer;

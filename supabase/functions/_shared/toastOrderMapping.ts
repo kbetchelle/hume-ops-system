@@ -47,6 +47,7 @@ export interface StagingRow {
   order_count: number;
   raw_data: Record<string, unknown>;
   sync_batch_id: string;
+  page_number?: number;
 }
 
 export interface SalesRow {
@@ -69,12 +70,13 @@ function getOrderGuid(order: Record<string, unknown>): string {
 export function mapOrderToStagingRow(
   order: Record<string, unknown>,
   businessDate: string,
-  batchId: string
+  batchId: string,
+  pageNumber?: number
 ): StagingRow {
   const orderGuid = getOrderGuid(order);
   const date = toBusinessDate(order, businessDate);
   const { net, gross } = extractOrderAmounts(order);
-  return {
+  const row: StagingRow = {
     order_guid: orderGuid,
     business_date: date,
     net_sales: net,
@@ -84,6 +86,8 @@ export function mapOrderToStagingRow(
     raw_data: order,
     sync_batch_id: batchId,
   };
+  if (pageNumber != null) row.page_number = pageNumber;
+  return row;
 }
 
 export function mapOrderToSalesRow(

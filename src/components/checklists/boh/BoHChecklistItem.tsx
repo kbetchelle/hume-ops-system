@@ -53,7 +53,6 @@ export function BoHChecklistItem({
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 
-  // Generate date-based storage path for photos
   const getPhotoStoragePath = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -97,7 +96,7 @@ export function BoHChecklistItem({
   };
   const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
 
-  // Header type - just displays text
+  // Header type
   if (item.task_type === 'header') {
     return (
       <div className={`p-4 font-semibold text-lg ${item.color ? `text-${item.color}-700` : ''}`}>
@@ -125,8 +124,8 @@ export function BoHChecklistItem({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
-            {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-            {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
+            {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+            {item.is_high_priority && <Badge variant="default" className="text-xs">{t('High Priority', 'Alta Prioridad')}</Badge>}
           </div>
           {item.time_hint && (
             <p className="text-xs text-muted-foreground mt-1">{item.time_hint}</p>
@@ -136,7 +135,7 @@ export function BoHChecklistItem({
     );
   }
 
-  // Photo type - with mobile-optimized modal and compression
+  // Photo type
   if (item.task_type === 'photo') {
     return (
       <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
@@ -145,13 +144,13 @@ export function BoHChecklistItem({
           onSave={handlePhotoSave}
           onCancel={() => setIsPhotoModalOpen(false)}
           storagePath={getPhotoStoragePath()}
-          title={completion?.photo_url ? 'Retake Photo' : 'Take Photo'}
+          title={completion?.photo_url ? t('Retake Photo', 'Retomar Foto') : t('Take Photo', 'Tomar Foto')}
         />
         
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -160,7 +159,7 @@ export function BoHChecklistItem({
           <div className="space-y-3">
             <img 
               src={completion.photo_url} 
-              alt="Completion photo" 
+              alt={t('Completion photo', 'Foto de finalización')}
               className="max-w-full sm:max-w-xs rounded-lg border"
             />
             <div className="flex gap-2">
@@ -171,7 +170,7 @@ export function BoHChecklistItem({
                 className="min-h-[44px] min-w-[44px] gap-2"
               >
                 <Camera className="h-4 w-4" />
-                Retake
+                {t('Retake', 'Retomar')}
               </Button>
               <Button 
                 size="sm" 
@@ -179,7 +178,7 @@ export function BoHChecklistItem({
                 onClick={() => handleToggle()}
                 className="min-h-[44px]"
               >
-                Remove
+                {t('Remove', 'Eliminar')}
               </Button>
             </div>
           </div>
@@ -191,14 +190,14 @@ export function BoHChecklistItem({
             className="min-h-[44px] min-w-[44px] gap-2"
           >
             <Camera className="h-4 w-4" />
-            Take Photo
+            {t('Take Photo', 'Tomar Foto')}
           </Button>
         )}
       </div>
     );
   }
 
-  // Signature type - with canvas-based signature pad
+  // Signature type
   if (item.task_type === 'signature') {
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
@@ -208,13 +207,13 @@ export function BoHChecklistItem({
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
           onCancel={() => setIsSignatureModalOpen(false)}
-          title={completion?.signature_data ? 'Update Signature' : 'Sign Below'}
+          title={completion?.signature_data ? t('Update Signature', 'Actualizar Firma') : t('Sign Below', 'Firme Abajo')}
         />
         
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -225,7 +224,7 @@ export function BoHChecklistItem({
               <div className="p-2 border rounded-lg bg-white inline-block">
                 <img
                   src={completion.signature_data}
-                  alt="Signature"
+                  alt={t('Signature', 'Firma')}
                   className="max-h-[80px] w-auto"
                 />
               </div>
@@ -242,7 +241,7 @@ export function BoHChecklistItem({
                 className="min-h-[44px] min-w-[44px] gap-2"
               >
                 <PenTool className="h-4 w-4" />
-                Re-sign
+                {t('Re-sign', 'Re-firmar')}
               </Button>
               <Button 
                 size="sm" 
@@ -250,7 +249,7 @@ export function BoHChecklistItem({
                 onClick={() => handleToggle()}
                 className="min-h-[44px]"
               >
-                Clear
+                {t('Clear', 'Limpiar')}
               </Button>
             </div>
           </div>
@@ -262,20 +261,20 @@ export function BoHChecklistItem({
             className="min-h-[44px] min-w-[44px] gap-2"
           >
             <PenTool className="h-4 w-4" />
-            Sign
+            {t('Sign', 'Firmar')}
           </Button>
         )}
       </div>
     );
   }
 
-  // Text entry types (free_response, short_entry)
+  // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -285,14 +284,14 @@ export function BoHChecklistItem({
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
             onBlur={() => handleToggle(textValue)}
-            placeholder="Enter value..."
+            placeholder={t('Enter value...', 'Ingrese valor...')}
           />
         ) : (
           <Textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
             onBlur={() => handleToggle(textValue)}
-            placeholder="Enter your response..."
+            placeholder={t('Enter your response...', 'Ingrese su respuesta...')}
             rows={3}
           />
         )}
@@ -306,7 +305,7 @@ export function BoHChecklistItem({
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -317,7 +316,7 @@ export function BoHChecklistItem({
             variant={completion?.note_text === 'Yes' ? 'default' : 'outline'}
             onClick={() => handleToggle('Yes')}
           >
-            Yes
+            {t('Yes', 'Sí')}
           </Button>
           <Button
             size="sm"
@@ -328,7 +327,7 @@ export function BoHChecklistItem({
           </Button>
           {completion?.note_text && (
             <Button size="sm" variant="ghost" onClick={() => handleToggle()}>
-              Clear
+              {t('Clear', 'Limpiar')}
             </Button>
           )}
         </div>
@@ -339,11 +338,12 @@ export function BoHChecklistItem({
   // Multiple choice type
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
+    const choicesEs: Record<string, string> = { Mon: 'Lun', Tue: 'Mar', Wed: 'Mié', Thu: 'Jue', Fri: 'Vie', Sat: 'Sáb', Sun: 'Dom', 'N/A': 'N/A' };
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -356,7 +356,7 @@ export function BoHChecklistItem({
               variant={completion?.note_text === choice ? 'default' : 'outline'}
               onClick={() => handleToggle(choice)}
             >
-              {choice}
+              {t(choice, choicesEs[choice])}
             </Button>
           ))}
         </div>
@@ -370,7 +370,7 @@ export function BoHChecklistItem({
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -379,7 +379,7 @@ export function BoHChecklistItem({
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           onBlur={() => handleToggle(textValue)}
-          placeholder="Employee name..."
+          placeholder={t('Employee name...', 'Nombre del empleado...')}
         />
       </div>
     );
@@ -389,7 +389,7 @@ export function BoHChecklistItem({
   return (
     <div className={`p-3 border rounded-lg ${colorBorderClass}`}>
       <span>{taskLabel}</span>
-      <p className="text-xs text-muted-foreground">Unsupported task type: {item.task_type}</p>
+      <p className="text-xs text-muted-foreground">{t('Unsupported task type', 'Tipo de tarea no soportado')}: {item.task_type}</p>
     </div>
   );
 }

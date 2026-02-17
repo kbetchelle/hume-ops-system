@@ -181,14 +181,14 @@ function BoHChecklistTable({ checklists, conflicts }: { checklists: BoHChecklist
 
 // Map checklist titles to their specific time ranges
 const CONCIERGE_TIME_RANGES: Record<string, string> = {
+  "Concierge - Weekday Opening Checklist": "Before 6am",
   "Concierge - Weekday AM": "6am - 1:30pm",
   "Concierge - Weekday PM": "1:30pm - 8pm",
-  "Concierge - Weekday Opening Checklist": "5am - 6am",
-  "Concierge - Weekday Closing Checklist": "8pm - 9pm",
+  "Concierge - Weekday Closing Checklist": "8pm onwards",
+  "Concierge - Weekend Opening Checklist": "Before 7am",
   "Concierge - Weekend AM": "7am - 1pm",
   "Concierge - Weekend PM": "1pm - 6pm",
-  "Concierge - Weekend Opening Checklist": "6am - 7am",
-  "Concierge - Weekend Closing Checklist": "6pm - 7pm",
+  "Concierge - Weekend Closing Checklist": "6pm onwards",
 };
 
 function ConciergeChecklistTable({ checklists, conflicts }: { checklists: ConciergeChecklist[]; conflicts: Map<string, boolean> }) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
 
 interface ConciergeChecklistWithItems {
   id: string;
@@ -21,43 +20,82 @@ interface ConciergeChecklistWithItems {
   concierge_checklist_items: any[];
 }
 
+// Determine which checklist to show based on current hour/minute for weekdays
+function getWeekdayChecklistSlot(hour: number, minute: number): string {
+  const timeInMinutes = hour * 60 + minute;
+  if (timeInMinutes < 360) return 'opening';       // before 6:00am
+  if (timeInMinutes < 810) return 'am';             // 6:00am - 1:29pm
+  if (timeInMinutes < 1200) return 'pm';            // 1:30pm - 7:59pm
+  return 'closing';                                  // 8:00pm onwards
+}
+
+function getWeekendChecklistSlot(hour: number, minute: number): string {
+  const timeInMinutes = hour * 60 + minute;
+  if (timeInMinutes < 420) return 'opening';        // before 7:00am
+  if (timeInMinutes < 780) return 'am';             // 7:00am - 12:59pm
+  if (timeInMinutes < 1080) return 'pm';            // 1:00pm - 5:59pm
+  return 'closing';                                  // 6:00pm onwards
+}
+
+const WEEKDAY_SLOT_LABELS: Record<string, string> = {
+  opening: 'Opening',
+  am: 'AM',
+  pm: 'PM',
+  closing: 'Closing',
+};
+
+function matchChecklistToSlot(checklist: ConciergeChecklistWithItems, slot: string): boolean {
+  const t = checklist.title.toLowerCase();
+  switch (slot) {
+    case 'opening': return t.includes('opening');
+    case 'closing': return t.includes('closing');
+    case 'am': return !t.includes('opening') && !t.includes('closing') && checklist.shift_time === 'AM';
+    case 'pm': return !t.includes('opening') && !t.includes('closing') && checklist.shift_time === 'PM';
+    default: return false;
+  }
+}
+
 export function ConciergeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
-  const today = new Date().toISOString().split('T')[0];
-  const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
-  
-  // Detect shift time (AM/PM) based on current time
-  const currentHour = new Date().getHours();
-  const detectedShift = currentHour < 13 ? 'AM' : 'PM';
-  const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
+  // Local override: when user clicks the blurred overlay, we show items without changing localStorage
+  const [localShowAll, setLocalShowAll] = useState(false);
+  const isWeekend = [0, 6].includes(new Date(selectedDate + 'T00:00:00').getDay());
 
-  // Fetch checklist for selected date and shift
-  const { data: checklist, isLoading } = useQuery({
-    queryKey: ['concierge-checklist', shiftTime, isWeekend],
+  const now = new Date();
+  const currentSlot = isWeekend
+    ? getWeekendChecklistSlot(now.getHours(), now.getMinutes())
+    : getWeekdayChecklistSlot(now.getHours(), now.getMinutes());
+  const [activeSlot, setActiveSlot] = useState(currentSlot);
+
+  // Fetch ALL active concierge checklists for the day type
+  const { data: allChecklists, isLoading } = useQuery({
+    queryKey: ['concierge-checklists-all', isWeekend],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('concierge_checklists')
-        .select(`
-          *,
-          concierge_checklist_items(*)
-        `)
-        .eq('shift_time', shiftTime)
+        .select(`*, concierge_checklist_items(*)`)
         .eq('is_weekend', isWeekend)
-        .eq('is_active', true)
-        .maybeSingle();
-      
+        .eq('is_active', true);
       if (error) throw error;
-      return data as ConciergeChecklistWithItems | null;
+      return (data || []) as ConciergeChecklistWithItems[];
     },
   });
 
+  const checklist = useMemo(() => {
+    if (!allChecklists) return null;
+    return allChecklists.find(cl => matchChecklistToSlot(cl, activeSlot)) || null;
+  }, [allChecklists, activeSlot]);
+
+  // Determine shiftTime from the matched checklist for completions query
+  const shiftTime = checklist?.shift_time || 'AM';
+
   // Fetch completions for selected date
   const { data: completions } = useQuery({
-    queryKey: ['concierge-completions', selectedDate, shiftTime, user?.id],
+    queryKey: ['concierge-completions', selectedDate, checklist?.id, user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !checklist) return [];
       const { data, error } = await supabase
         .from('concierge_completions')
         .select('*')
@@ -66,12 +104,25 @@ export function ConciergeChecklistView() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!user && !!checklist,
   });
 
   const completionMap = new Map(completions?.map(c => [c.item_id, c]) || []);
   const completedCount = completions?.filter(c => c.completed_at).length || 0;
   const totalCount = checklist?.concierge_checklist_items?.length || 0;
+
+  const isClosingSlot = activeSlot === 'closing';
+  const allCompleted = totalCount > 0 && completedCount === totalCount;
+  const effectiveHideCompleted = hideCompleted && !localShowAll;
+  const showCompletedOverlay = isClosingSlot && hideCompleted && allCompleted && !localShowAll;
+
+  // Reset localShowAll when slot or date changes
+  const slotDateKey = `${activeSlot}-${selectedDate}`;
+  const [prevSlotDateKey, setPrevSlotDateKey] = useState(slotDateKey);
+  if (slotDateKey !== prevSlotDateKey) {
+    setPrevSlotDateKey(slotDateKey);
+    setLocalShowAll(false);
+  }
 
   if (isLoading) {
     return <div className="p-4">Loading checklist...</div>;
@@ -81,7 +132,7 @@ export function ConciergeChecklistView() {
     return (
       <Card>
         <CardContent className="p-6 text-center text-muted-foreground">
-          <p>No checklist found for {isWeekend ? 'weekend' : 'weekday'} {shiftTime} shift.</p>
+          <p>No checklist found for {isWeekend ? 'weekend' : 'weekday'} {WEEKDAY_SLOT_LABELS[activeSlot]} shift.</p>
           <p className="text-sm mt-2">Contact your manager to set up checklists.</p>
         </CardContent>
       </Card>
@@ -90,9 +141,9 @@ export function ConciergeChecklistView() {
 
   return (
     <div className="space-y-4">
-      {/* Header with date selector and shift toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Header with date selector and slot toggle */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             <input
@@ -102,21 +153,17 @@ export function ConciergeChecklistView() {
               className="px-3 py-1 border rounded-md"
             />
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={shiftTime === 'AM' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setShiftTime('AM')}
-            >
-              AM
-            </Button>
-            <Button
-              variant={shiftTime === 'PM' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setShiftTime('PM')}
-            >
-              PM
-            </Button>
+          <div className="flex gap-1">
+            {(['opening', 'am', 'pm', 'closing'] as const).map(slot => (
+              <Button
+                key={slot}
+                variant={activeSlot === slot ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setActiveSlot(slot); setLocalShowAll(false); }}
+              >
+                {WEEKDAY_SLOT_LABELS[slot]}
+              </Button>
+            ))}
           </div>
         </div>
         <Badge variant={completedCount === totalCount ? 'default' : 'secondary'}>
@@ -136,19 +183,39 @@ export function ConciergeChecklistView() {
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="hide-completed-concierge" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
-              <Switch id="hide-completed-concierge" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
+              <Switch
+                id="hide-completed-concierge"
+                checked={hideCompleted}
+                onCheckedChange={(v) => {
+                  setHideCompleted(v);
+                  localStorage.setItem('checklist-hide-completed', String(v));
+                  setLocalShowAll(false);
+                }}
+              />
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 relative">
+          {showCompletedOverlay && (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer rounded-b-lg"
+              onClick={() => setLocalShowAll(true)}
+            >
+              <div className="absolute inset-0 backdrop-blur-sm bg-background/60 rounded-b-lg" />
+              <div className="relative z-20 text-center p-6">
+                <p className="text-lg font-semibold text-foreground">Today's Concierge tasks completed ✓</p>
+                <p className="text-sm text-muted-foreground mt-1">Tap to view all tasks</p>
+              </div>
+            </div>
+          )}
           {(() => {
             const sorted = checklist.concierge_checklist_items
-              ?.sort((a, b) => a.sort_order - b.sort_order) || [];
-            const filtered = hideCompleted
-              ? sorted.filter((item) => !completionMap.get(item.id)?.completed_at)
+              ?.sort((a: any, b: any) => a.sort_order - b.sort_order) || [];
+            const filtered = effectiveHideCompleted
+              ? sorted.filter((item: any) => !completionMap.get(item.id)?.completed_at)
               : sorted;
             let cbIdx = 0;
-            return filtered.map((item) => {
+            return filtered.map((item: any) => {
               const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
               return (
                 <ConciergeChecklistItem

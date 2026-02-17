@@ -13,7 +13,7 @@ const BATCH_SIZE = 500;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-type TransferApi = "arketa_reservations" | "arketa_payments" | "order_checks" | "both";
+type TransferApi = "arketa_reservations" | "arketa_payments" | "order_checks" | "toast" | "both";
 
 interface SyncFromStagingRequest {
   api?: TransferApi;
@@ -54,6 +54,10 @@ Deno.serve(async (req) => {
     }
     if (api === "order_checks" || api === "both") {
       const r = await transferOrderChecks(supabase, clearStaging, syncBatchId);
+      results.push(r);
+    }
+    if (api === "toast" || api === "both") {
+      const r = await transferToastSales(supabase, clearStaging, syncBatchId);
       results.push(r);
     }
 
@@ -384,6 +388,95 @@ async function transferOrderChecks(
   } catch (e) {
     return {
       api: "order_checks",
+      records_processed: recordsProcessed,
+      records_inserted: recordsInserted,
+      records_updated: recordsUpdated,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function transferToastSales(
+  supabase: any,
+  clearStaging: boolean,
+  syncBatchId?: string
+): Promise<TransferResult> {
+  let recordsProcessed = 0;
+  let recordsInserted = 0;
+  let recordsUpdated = 0;
+
+  try {
+    let allRows: Record<string, unknown>[] = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    while (true) {
+      let query = supabase.from("toast_staging").select("*").range(offset, offset + PAGE_SIZE - 1);
+      if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
+      const { data: rows, error: fetchError } = await query;
+      if (fetchError) {
+        return { api: "toast", records_processed: 0, records_inserted: 0, records_updated: 0, error: fetchError.message };
+      }
+      if (!rows?.length) break;
+      allRows = allRows.concat(rows);
+      if (rows.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+    if (!allRows.length) {
+      return { api: "toast", records_processed: 0, records_inserted: 0, records_updated: 0 };
+    }
+
+    const countBefore = await getHistoryCount(supabase, "toast_sales");
+    const toUpsert = allRows.map((r: Record<string, unknown>) => ({
+      order_guid: r.order_guid,
+      business_date: r.business_date,
+      net_sales: r.net_sales ?? 0,
+      gross_sales: r.gross_sales ?? 0,
+      cafe_sales: r.cafe_sales ?? 0,
+      order_count: r.order_count ?? 1,
+      raw_data: r.raw_data ?? null,
+      sync_batch_id: r.sync_batch_id ?? null,
+    })).filter((r: any) => r.order_guid);
+
+    for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
+      const batch = toUpsert.slice(i, i + BATCH_SIZE);
+      const { error: upsertError } = await (supabase as any)
+        .from("toast_sales")
+        .upsert(batch, { onConflict: "order_guid" });
+      if (upsertError) {
+        return {
+          api: "toast",
+          records_processed: toUpsert.length,
+          records_inserted: recordsInserted,
+          records_updated: recordsUpdated,
+          error: upsertError.message,
+        };
+      }
+      recordsProcessed += batch.length;
+    }
+
+    const countAfter = await getHistoryCount(supabase, "toast_sales");
+    recordsInserted = Math.max(0, countAfter - countBefore);
+    recordsUpdated = recordsProcessed - recordsInserted;
+    if (recordsUpdated < 0) recordsUpdated = 0;
+
+    if (clearStaging && allRows.length) {
+      const ids = allRows.map((r: { id?: string }) => r.id).filter(Boolean);
+      const DEL_BATCH = 500;
+      for (let i = 0; i < ids.length; i += DEL_BATCH) {
+        const batch = ids.slice(i, i + DEL_BATCH);
+        await supabase.from("toast_staging").delete().in("id", batch);
+      }
+    }
+
+    return {
+      api: "toast",
+      records_processed: recordsProcessed,
+      records_inserted: recordsInserted,
+      records_updated: recordsUpdated,
+    };
+  } catch (e) {
+    return {
+      api: "toast",
       records_processed: recordsProcessed,
       records_inserted: recordsInserted,
       records_updated: recordsUpdated,

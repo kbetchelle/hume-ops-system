@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Database } from "@/integrations/supabase/types";
 import { format, addDays, subDays } from "date-fns";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -89,7 +90,7 @@ export default function ReportsPage() {
   };
 
   const handleSavePreview = async (
-    updates: Parameters<Parameters<typeof updateReport.mutateAsync>[0]>[0]
+    updates: Partial<Database["public"]["Tables"]["daily_reports"]["Update"]>
   ) => {
     try {
       await updateReport.mutateAsync(updates);

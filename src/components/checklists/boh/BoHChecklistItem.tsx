@@ -124,7 +124,7 @@ export function BoHChecklistItem({
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className={isCompleted ? 'line-through text-muted-foreground' : ''}>{taskLabel}</span>
+            <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
             {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
             {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
           </div>
@@ -150,7 +150,7 @@ export function BoHChecklistItem({
         
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -213,7 +213,7 @@ export function BoHChecklistItem({
         
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -274,7 +274,7 @@ export function BoHChecklistItem({
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -305,7 +305,7 @@ export function BoHChecklistItem({
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -342,7 +342,7 @@ export function BoHChecklistItem({
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (
@@ -369,7 +369,7 @@ export function BoHChecklistItem({
     return (
       <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
         <div className="flex items-center gap-2">
-          <span className="font-medium">{taskLabel}</span>
+          <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
         </div>
         {item.time_hint && (

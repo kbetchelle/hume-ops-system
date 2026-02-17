@@ -85,15 +85,15 @@ export function BoHChecklistItem({
     pink: 'border-l-add-burntOrange',
   };
   const colorBgMap: Record<string, string> = {
-    red: 'bg-add-crimson/15',
-    orange: 'bg-add-amber/15',
-    yellow: 'bg-yellow-500/15',
-    green: 'bg-green-500/15',
-    blue: 'bg-add-skyBlue/15',
-    purple: 'bg-purple-500/15',
-    gray: 'bg-gray-500/15',
-    teal: 'bg-add-olive/15',
-    pink: 'bg-add-burntOrange/15',
+    red: 'bg-add-crimson/5',
+    orange: 'bg-add-amber/5',
+    yellow: 'bg-yellow-500/5',
+    green: 'bg-green-500/5',
+    blue: 'bg-add-skyBlue/5',
+    purple: 'bg-purple-500/5',
+    gray: 'bg-gray-500/5',
+    teal: 'bg-add-olive/5',
+    pink: 'bg-add-burntOrange/5',
   };
   const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
 

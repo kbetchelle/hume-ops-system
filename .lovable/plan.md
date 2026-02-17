@@ -1,101 +1,200 @@
 
-# Plan: Page-Level Cursor for High-Volume Days
 
-## Problem
+# Combined Plan: Toast Pipeline Overhaul + Page-Level Cursor
 
-Edge functions have a ~60s execution limit. A day with 177 orders requires 2 API pages, each with up to 60s timeout + retry delays. Combined with DB upserts, a single high-volume day can exceed the limit. If the function times out mid-pagination, all fetched-but-not-committed data for that day is lost.
+This is the full consolidated plan merging all 11 items from the pipeline overhaul with the page-level cursor strategy. Items marked with [DONE] are already implemented; items marked [REMAINING] still need work.
 
-## Solution: Resume-from-page cursor using toast_staging metadata
+---
 
-Instead of holding all pages in memory before writing, **stage each page immediately as it's fetched**, and track the last successfully staged page. If the function times out or errors, the next invocation skips already-staged pages.
+## Status Summary
 
-## How It Works
+| # | Item | Status |
+|---|------|--------|
+| 1 | Daily sync writes to staging only | REMAINING -- still has inline `promoteAndClearDate`, should use shared `transferToastSales` with validation |
+| 2 | Clear toast_staging at start of each sync | REMAINING -- not implemented in either function |
+| 3 | Toast sync-from-staging transfer function | PARTIAL -- `transferToastSales` exists in `sync-from-staging` but lacks validation; sync functions use their own inline promote instead |
+| 4 | Daily sync pulls only yesterday | DONE |
+| 5 | Page size cap / timeout resilience | DONE -- page-level cursor + time budget guard |
+| 6 | Content-type validation before promotion | REMAINING |
+| 7 | Amount extraction fragility | REMAINING -- still uses fragile logic in `toastOrderMapping.ts` |
+| 8 | Business date mismatch fix | REMAINING -- `toBusinessDate` still uses order's integer date |
+| 9 | Per-day atomic pipeline (fetch-stage-validate-promote-clear) | PARTIAL -- fetch-stage-promote-clear works, but missing validation step |
+| 10 | Backfill sync log error highlighting | REMAINING |
+| 11 | API syncing page color-coded status | REMAINING |
 
-```text
-Invocation 1 (times out on page 3):
-  Page 1 -> fetch -> stage (100 rows) -> OK
-  Page 2 -> fetch -> stage (100 rows) -> OK
-  Page 3 -> fetch -> TIMEOUT
+---
 
-Invocation 2 (resumes):
-  Check toast_staging: max page for this date = 2
-  Page 3 -> fetch -> stage (77 rows) -> OK
-  No more pages -> promote to toast_sales -> clear staging
+## Remaining Changes
+
+### 1. Write to staging only + use shared transfer function
+
+**File:** `supabase/functions/sync-toast-orders/index.ts`
+
+- Remove import of `mapOrderToSalesRow` (line 6) -- it is imported but unused after the cursor refactor, so this is cleanup
+- Replace the inline `promoteAndClearDate` function (lines 88-123) with a call to `sync-from-staging` via Supabase function invoke, OR keep inline but add the validation step from item 6
+- The simplest approach: keep the inline `promoteAndClearDate` but add validation before upserting (see item 6 below)
+
+### 2. Clear toast_staging at start of each sync
+
+**Files:**
+- `supabase/functions/sync-toast-orders/index.ts` -- after auth succeeds (around line 188), before the day loop
+- `supabase/functions/toast-backfill-sync/index.ts` -- after auth succeeds, before processing days
+
+Add:
+```typescript
+// Clear stale staging data from previous runs
+const { error: clearErr } = await supabase.from('toast_staging').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+if (clearErr) logger.warn('Failed to clear toast_staging at start: ' + clearErr.message);
 ```
 
-## Changes
+Note: For the backfill cron mode, staging may contain partial-day data from a previous timed-out run. We should only clear staging for dates we are about to re-process, NOT all staging data. So the clear should be per-date before fetching that date, not a blanket delete. For the daily sync (yesterday only), a blanket clear is safe.
 
-### 1. Add `page_number` column to `toast_staging`
+Revised approach:
+- **Daily sync (`sync-toast-orders`):** Blanket clear all staging at start (only processes yesterday)
+- **Backfill (`toast-backfill-sync`):** Clear staging per-date ONLY if we are starting that date fresh (page 1). If resuming from page N > 1, do NOT clear.
 
-A new migration adds an integer `page_number` column (nullable, default null) so each staged batch knows which API page it came from.
+### 3. Validation in promotion step (items 3 + 6 combined)
 
-```sql
-ALTER TABLE toast_staging ADD COLUMN IF NOT EXISTS page_number integer;
-```
+**File:** `supabase/functions/sync-toast-orders/index.ts` (in `promoteAndClearDate`)
+**File:** `supabase/functions/toast-backfill-sync/index.ts` (in `promoteAndClearDate`)
+**File:** `supabase/functions/sync-from-staging/index.ts` (in `transferToastSales`)
 
-### 2. Stage-per-page pattern in both sync functions
-
-**Files:** `sync-toast-orders/index.ts`, `toast-backfill-sync/index.ts`
-
-Replace the "fetch all pages into memory, then stage" pattern with:
-
-```
-For each business_date:
-  1. Query toast_staging for max(page_number) WHERE business_date = X
-     -> resume_from_page = max + 1 (or 1 if none)
-  2. Fetch page resume_from_page from API
-  3. Map to staging rows with page_number set
-  4. Upsert into toast_staging immediately
-  5. If hasMore, increment page and repeat from step 2
-  6. When done (no more pages), promote all rows for this date to toast_sales
-  7. Clear staging for this date
-```
-
-This means:
-- Each page is persisted the moment it arrives -- no data loss on timeout
-- On re-invocation, already-fetched pages are skipped via the `page_number` cursor
-- Promotion to `toast_sales` only happens once ALL pages for a date are staged
-
-### 3. Add a time budget guard
-
-Both functions get a `TIME_BUDGET_MS` constant (e.g., 50000ms = 50s, leaving 10s buffer before the 60s limit). Before fetching each new page, check elapsed time:
+Add a `validateStagingRow` function to the shared mapping file or inline in the promote function:
 
 ```typescript
-const TIME_BUDGET_MS = 50_000;
-if (Date.now() - startTime > TIME_BUDGET_MS) {
-  logger.warn(`Time budget exceeded after page ${page}, will resume next invocation`);
-  return { partial: true, lastPage: page };
+function validateStagingRow(row: Record<string, unknown>): { valid: boolean; reason?: string } {
+  if (!row.order_guid || typeof row.order_guid !== 'string') 
+    return { valid: false, reason: 'missing order_guid' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(row.business_date))) 
+    return { valid: false, reason: 'invalid business_date format' };
+  const net = Number(row.net_sales);
+  const gross = Number(row.gross_sales);
+  if (!isFinite(net) || net < 0 || !isFinite(gross) || gross < 0) 
+    return { valid: false, reason: 'invalid sales amounts' };
+  return { valid: true };
 }
 ```
 
-If the budget is exceeded, the function returns a `partial: true` response. The next cron/manual invocation picks up from where it left off.
+In `promoteAndClearDate`, filter rows through validation before upserting to `toast_sales`. Log skipped rows with reasons.
 
-### 4. Backfill state tracks partial days
+### 7. Fix amount extraction
 
-**File:** `toast-backfill-sync/index.ts`
+**File:** `supabase/functions/_shared/toastOrderMapping.ts`
 
-The `toast_backfill_state.cursor_page` field (already exists but always set to 1) will now be used properly:
-- After a partial day, `cursor_page` is set to the next page to fetch
-- `cursor_date` stays on the current day
-- Next invocation resumes from `cursor_page` on `cursor_date`
+Replace `extractOrderAmounts` (lines 16-27):
 
-### 5. Daily sync handles partials via staging check
+```typescript
+export function extractOrderAmounts(order: Record<string, unknown>): OrderAmounts {
+  const grossTop = Number(order.totalAmount ?? order.amount ?? 0) || 0;
+  const netTop = Number(order.netAmount ?? 0) || 0;
 
-**File:** `sync-toast-orders/index.ts`
+  const checks = (order.checks as Array<{ 
+    totalAmount?: number; amount?: number; taxAmount?: number 
+  }>) ?? [];
+  const grossChecks = checks.reduce(
+    (s, c) => s + (Number(c.totalAmount ?? c.amount ?? 0) || 0), 0
+  );
+  const taxChecks = checks.reduce(
+    (s, c) => s + (Number(c.taxAmount ?? 0) || 0), 0
+  );
 
-For the daily sync (yesterday only), partial handling is simpler:
-- On invocation, check `toast_staging` for any rows with yesterday's date
-- If rows exist, query `max(page_number)` and resume from page N+1
-- If the function completes all pages, promote and clear as normal
+  // Prefer root-level if available, else derive from checks
+  let gross = grossTop > 0 ? grossTop : grossChecks;
+  let net = netTop > 0 ? netTop : Math.max(0, grossChecks - taxChecks);
 
-## Technical Summary
+  // Sanity: gross should always be >= net
+  if (gross < net) {
+    const tmp = gross;
+    gross = net;
+    net = tmp;
+  }
 
-| Change | File |
-|--------|------|
-| Add `page_number` column | New migration |
-| Stage each page immediately + resume cursor | `sync-toast-orders/index.ts` |
-| Stage each page immediately + use `cursor_page` properly | `toast-backfill-sync/index.ts` |
-| Time budget guard (50s) | Both sync functions |
-| Query staging for resume point | Both sync functions |
+  return { net, gross };
+}
+```
 
-This approach is resilient: even if the function is killed mid-execution, no data is lost because every page is staged before the next one is fetched. The next invocation seamlessly resumes.
+### 8. Fix business date mismatch
+
+**File:** `supabase/functions/_shared/toastOrderMapping.ts`
+
+Replace `toBusinessDate` (lines 32-39) to always use the query date:
+
+```typescript
+export function toBusinessDate(
+  _order: Record<string, unknown>, 
+  fallbackDate: string
+): string {
+  // Always use the query date as canonical business_date.
+  // The order's own businessDate integer may differ due to 
+  // Toast timezone handling. Original value preserved in raw_data.
+  return fallbackDate;
+}
+```
+
+### 10. Backfill sync log -- error highlighting
+
+**File:** `src/components/settings/backfill/BackfillSyncLog.tsx`
+
+Changes to the results list:
+- Failed rows get `bg-destructive/10` background instead of `bg-muted/50`
+- Error messages become expandable (not truncated to 150px)
+- Add a summary banner at top: "X succeeded, Y failed" with colored counts
+
+Updated row rendering:
+```tsx
+<div
+  key={r.date + i}
+  className={`flex items-center justify-between text-sm px-2 py-1.5 rounded ${
+    r.success ? 'bg-muted/50' : 'bg-destructive/10 border border-destructive/20'
+  }`}
+>
+```
+
+Error text becomes a full-width block below the row when present:
+```tsx
+{r.error && (
+  <p className="text-destructive text-xs mt-1 break-words">
+    {r.error}
+  </p>
+)}
+```
+
+### 11. API syncing page -- color-coded status badges
+
+**File:** `src/pages/admin/ApiSyncingPage.tsx`
+
+Update `StatusBadge` (lines 144-160):
+
+- SUCCESS: green background (`bg-green-600 hover:bg-green-700 text-white`)
+- FAILED: already uses `destructive` variant -- keep as-is
+- Failed rows: increase background intensity from `bg-destructive/5` to `bg-destructive/10`
+
+```tsx
+if (status === "success" || status === true) {
+  return (
+    <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
+      <CheckCircle2 className="h-3 w-3" />
+      SUCCESS
+    </Badge>
+  );
+}
+```
+
+Also update HEALTHY badge (line 132) to use green:
+```tsx
+<Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
+```
+
+---
+
+## File Change Summary
+
+| File | Changes |
+|------|---------|
+| `_shared/toastOrderMapping.ts` | Fix `extractOrderAmounts` (checks fallback + gross>=net), fix `toBusinessDate` (always use query date), add `validateStagingRow` export |
+| `sync-toast-orders/index.ts` | Remove unused `mapOrderToSalesRow` import, add blanket staging clear at start, add validation in `promoteAndClearDate` |
+| `toast-backfill-sync/index.ts` | Add per-date staging clear (only when starting fresh, not resuming), add validation in `promoteAndClearDate` |
+| `sync-from-staging/index.ts` | Add validation in `transferToastSales` before upsert |
+| `BackfillSyncLog.tsx` | Red background for failed rows, expandable error messages, summary banner |
+| `ApiSyncingPage.tsx` | Green SUCCESS/HEALTHY badges, stronger failed row highlighting |
+

@@ -16,6 +16,7 @@ interface BoHChecklistItemProps {
   checklistId: string;
   completionDate: string;
   shiftTime: string;
+  checkboxIndex?: number;
 }
 
 export function BoHChecklistItem({
@@ -24,6 +25,7 @@ export function BoHChecklistItem({
   checklistId,
   completionDate,
   shiftTime,
+  checkboxIndex = 0,
 }: BoHChecklistItemProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -94,7 +96,11 @@ export function BoHChecklistItem({
     teal: 'bg-add-olive/5',
     pink: 'bg-add-burntOrange/5',
   };
-  const colorBorderClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
+  // For checkbox items, alternate between blue and green based on checkboxIndex
+  const effectiveColor = item.task_type === 'checkbox' 
+    ? (checkboxIndex % 2 === 0 ? 'blue' : 'green') 
+    : item.color;
+  const colorBorderClass = effectiveColor ? `border-l-4 ${colorBorderMap[effectiveColor] || ''} ${colorBgMap[effectiveColor] || ''}` : '';
 
   // Header type
   if (item.task_type === 'header') {

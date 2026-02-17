@@ -149,16 +149,23 @@ export function CafeChecklistView() {
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                      {categoryItems.map((item: any) => (
-                        <CafeChecklistItem
-                          key={item.id}
-                          item={item}
-                          completion={completionMap.get(item.id)}
-                          checklistId={checklist.id}
-                          completionDate={selectedDate}
-                          shiftTime={shiftTime}
-                        />
-                      ))}
+                      {(() => {
+                        let cbIdx = 0;
+                        return categoryItems.map((item: any) => {
+                          const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
+                          return (
+                            <CafeChecklistItem
+                              key={item.id}
+                              item={item}
+                              completion={completionMap.get(item.id)}
+                              checklistId={checklist.id}
+                              completionDate={selectedDate}
+                              shiftTime={shiftTime}
+                              checkboxIndex={idx}
+                            />
+                          );
+                        });
+                      })()}
                     </CollapsibleContent>
                   </Collapsible>
                 );

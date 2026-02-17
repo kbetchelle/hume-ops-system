@@ -259,6 +259,11 @@ Deno.serve(async (req) => {
 
     // ── Mode 1: Date range provided (manual backfill from UI) ──
     if (dateRange && dateRange.length > 0) {
+      // Clear all stale staging data before starting a fresh date-range sync
+      const { error: clearAllErr } = await supabase.from('toast_staging').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (clearAllErr) logger.warn('Failed to clear toast_staging at start of date-range sync: ' + clearAllErr.message);
+      else logger.info('Cleared toast_staging before date-range sync');
+
       let token: string;
       try {
         token = await getToastToken(TOAST_CLIENT_ID, TOAST_CLIENT_SECRET);
@@ -359,6 +364,11 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Clear stale staging data from previous runs (keep only current cursor date if resuming)
+    const { error: clearStaleErr } = await supabase.from('toast_staging').delete().neq('business_date', state.cursor_date);
+    if (clearStaleErr) logger.warn('Failed to clear stale staging: ' + clearStaleErr.message);
+    else logger.info(`Cleared stale staging (kept ${state.cursor_date} if resuming)`);
 
     let currentDate = state.cursor_date;
     let totalOrdersThisRun = 0;

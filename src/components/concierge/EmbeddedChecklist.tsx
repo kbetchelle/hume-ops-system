@@ -592,7 +592,7 @@ export function EmbeddedChecklist() {
                           <ChevronRight className="h-4 w-4" />
                         )}
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium text-sm">{group.timeHint}</span>
+                        <span className="font-medium" style={{ fontSize: '13.5px' }}>{group.timeHint}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary" className="text-xs">

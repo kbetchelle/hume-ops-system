@@ -576,6 +576,7 @@ export function EmbeddedChecklist() {
               return (
                 <Collapsible
                   key={group.timeHint}
+                  className="mt-3 first:mt-0"
                   open={isExpanded}
                   onOpenChange={() => toggleGroup(group.timeHint)}
                 >

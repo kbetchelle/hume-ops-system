@@ -128,7 +128,7 @@ export function CafeChecklistManager() {
         </div>
         <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingChecklist(null)}>
+            <Button onClick={() => setEditingChecklist(null)} style={{ paddingLeft: '9px', paddingRight: '9px' }}>
               <Plus className="h-4 w-4 mr-2" />
               New Checklist
             </Button>

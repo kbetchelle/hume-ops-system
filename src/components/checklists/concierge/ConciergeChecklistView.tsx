@@ -219,11 +219,14 @@ export function ConciergeChecklistView() {
               if (!grouped[section]) grouped[section] = [];
               grouped[section].push(item);
             });
+            let sectionIdx = 0;
             return Object.entries(grouped).map(([section, sectionItems]) => {
               const filteredItems = effectiveHideCompleted
                 ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
                 : sectionItems;
               if (filteredItems.length === 0) return null;
+              const hasCheckboxes = sectionItems.some((i: any) => i.task_type === 'checkbox');
+              const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
               const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
               const allDone = sectionCompleted === sectionItems.length;
               return (
@@ -246,6 +249,7 @@ export function ConciergeChecklistView() {
                         checklistId={checklist.id}
                         completionDate={selectedDate}
                         shiftTime={shiftTime}
+                        checkboxIndex={currentSectionIdx}
                       />
                     ))}
                   </CollapsibleContent>

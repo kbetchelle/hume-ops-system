@@ -76,7 +76,7 @@ export function CafeChecklistItem({
   };
 
   // Use standardized task-type-based color
-  const colorBorderClass = getTaskColorClass(item.task_type);
+  const colorBorderClass = getTaskColorClass(item.task_type, checkboxIndex);
 
   // Header type
   if (item.task_type === 'header') {

@@ -36,8 +36,12 @@ export const COLOR_BG_MAP: Record<string, string> = {
   pink: 'bg-add-burntOrange/5',
 };
 
-export function getTaskColorClass(taskType: string): string {
-  const color = TASK_TYPE_COLOR_MAP[taskType];
+export function getTaskColorClass(taskType: string, checkboxIndex?: number): string {
+  let color = TASK_TYPE_COLOR_MAP[taskType];
+  // Alternate checkbox colors between blue and green by hourly block
+  if (taskType === 'checkbox' && checkboxIndex !== undefined) {
+    color = checkboxIndex % 2 === 0 ? 'blue' : 'green';
+  }
   if (!color) return '';
   return `border-l-4 ${COLOR_BORDER_MAP[color] || ''} ${COLOR_BG_MAP[color] || ''}`;
 }

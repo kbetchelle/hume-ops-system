@@ -598,12 +598,6 @@ export function EmbeddedChecklist() {
                         <Badge variant="secondary" className="text-xs">
                           {group.completedCount}/{group.totalCount}
                         </Badge>
-                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
                       </div>
                     </Button>
                   </CollapsibleTrigger>

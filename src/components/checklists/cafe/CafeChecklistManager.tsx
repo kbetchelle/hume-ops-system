@@ -195,7 +195,7 @@ export function CafeChecklistManager() {
             </CardHeader>
 
             {expandedId === checklist.id && (
-              <CardContent className="p-0 pt-4">
+              <CardContent className="p-0">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-medium">
@@ -228,14 +228,14 @@ export function CafeChecklistManager() {
                       grouped[group].push(item);
                     });
                     return (
-                      <div className="space-y-3">
+                      <div>
                         {Object.entries(grouped).map(([group, groupItems]) => (
                           <Collapsible key={group} defaultOpen>
                             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
                               <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
                               <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                            <CollapsibleContent className="pl-1">
                               {groupItems.map((item, idx) => {
                                 const colorClass = getTaskColorClass(item.task_type, idx);
                                 return (

@@ -36,7 +36,7 @@ export function CheckboxTask({ isCompleted, onToggle, disabled }: TaskComponentP
       checked={isCompleted}
       onCheckedChange={onToggle}
       disabled={disabled}
-      className="h-6 w-6"
+      className="h-[18px] w-[18px]"
     />
   );
 }

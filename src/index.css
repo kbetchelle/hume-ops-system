@@ -140,6 +140,12 @@
     align-items: center;
   }
 
+  /* Standardize all sidebar group header labels */
+  [data-sidebar="group-label"] {
+    font-size: 10px !important;
+    height: 36px !important;
+  }
+
   /* Table rows - subtle borders */
   .fog-table-row {
     @apply border-b border-zinc-100;

@@ -42,12 +42,16 @@ interface ScheduleSlot {
   roleType?: string;
 }
 
+function isSubShift(title: string): boolean {
+  const t = title.toLowerCase();
+  return t.includes('opening') || t.includes('closing');
+}
+
 function detectConflicts(checklists: ScheduleSlot[]): Map<string, boolean> {
   const conflicts = new Map<string, boolean>();
-  const slotMap = new Map<string, string[]>();
+  const slotMap = new Map<string, ScheduleSlot[]>();
 
   checklists.forEach((cl) => {
-    // Generate keys for each applicable day
     const applicableDays = cl.isWeekend ? ["Sat", "Sun"] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
     const roleKey = cl.roleType || "concierge";
     
@@ -56,15 +60,29 @@ function detectConflicts(checklists: ScheduleSlot[]): Map<string, boolean> {
       if (!slotMap.has(key)) {
         slotMap.set(key, []);
       }
-      slotMap.get(key)!.push(cl.checklistId);
+      slotMap.get(key)!.push(cl);
     });
   });
 
-  // Mark conflicts where more than one checklist occupies the same slot
-  slotMap.forEach((ids) => {
-    if (ids.length > 1) {
-      ids.forEach((id) => conflicts.set(id, true));
+  slotMap.forEach((slots) => {
+    // Filter out sub-shifts (opening/closing) — they don't conflict with the main AM/PM
+    const mainSlots = slots.filter(s => !isSubShift(s.title));
+    if (mainSlots.length > 1) {
+      mainSlots.forEach((s) => conflicts.set(s.checklistId, true));
     }
+    // Sub-shifts conflict only with other sub-shifts of the same type
+    const subSlots = slots.filter(s => isSubShift(s.title));
+    const subByType = new Map<string, ScheduleSlot[]>();
+    subSlots.forEach(s => {
+      const type = s.title.toLowerCase().includes('opening') ? 'opening' : 'closing';
+      if (!subByType.has(type)) subByType.set(type, []);
+      subByType.get(type)!.push(s);
+    });
+    subByType.forEach((group) => {
+      if (group.length > 1) {
+        group.forEach((s) => conflicts.set(s.checklistId, true));
+      }
+    });
   });
 
   return conflicts;

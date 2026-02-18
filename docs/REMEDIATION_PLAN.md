@@ -210,12 +210,12 @@ Do not enable strict `noImplicitAny` / `noUnusedLocals` globally in one step; re
 | 1.1 | NotFound.tsx self-assign → correct OAuth handling | ☑ |
 | 1.2 | PolicyManagement.tsx sanitize `policy.content` | ☑ |
 | 1.3 | Remove/guard debug ingest (client, Login, useUserRoles, NotFound) | ☑ |
-| 2.1 | ESLint ignore `**/._*` | ☐ |
-| 2.2 | `npm run lint -- --fix` | ☐ |
-| 2.3 | no-case-declarations (DateSelector, import-csv-mapped, backfill-historical) | ☐ |
-| 2.4 | BuildStatusModal irregular whitespace | ☐ |
-| 2.6 | registerSW.ts @ts-expect-error | ☐ |
-| 2.7 | CSVImportMapper eslint-disable | ☐ |
+| 2.1 | ESLint ignore `**/._*` | ☑ |
+| 2.2 | `npm run lint -- --fix` | ☑ |
+| 2.3 | no-case-declarations (DateSelector, import-csv-mapped, backfill-historical) | ☑ |
+| 2.4 | BuildStatusModal irregular whitespace | ☑ |
+| 2.6 | registerSW.ts @ts-expect-error | ☑ |
+| 2.7 | CSVImportMapper eslint-disable | ☑ |
 | 3.1 | npm audit fix (and optionally upgrade ESLint stack) | ☐ |
 | 3.3 | tailwind.config.ts require → import or disable | ☐ |
 | 4.x | React hooks exhaustive-deps (ConciergeForm + list in 4.2) | ☐ |

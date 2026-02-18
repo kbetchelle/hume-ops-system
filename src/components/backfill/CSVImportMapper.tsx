@@ -568,8 +568,8 @@ export function CSVImportMapper() {
       }
 
       // Attempt to insert all skipped records without validation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(targetTable as any)
         .insert(records)
         .select());

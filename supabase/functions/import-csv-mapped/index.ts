@@ -76,13 +76,14 @@ function convertValue(value: string, type: FieldMapping["type"]): unknown {
   const trimmed = value.trim();
 
   switch (type) {
-    case "number":
+    case "number": {
       // Be more lenient with number parsing
       const cleaned = trimmed.replace(/[,$]/g, ""); // Remove common separators
       const num = Number(cleaned);
       return isNaN(num) ? null : num;
+    }
 
-    case "boolean":
+    case "boolean": {
       const lower = trimmed.toLowerCase();
       if (["true", "1", "yes", "y", "t"].includes(lower)) return true;
       if (["false", "0", "no", "n", "f"].includes(lower)) return false;
@@ -90,8 +91,9 @@ function convertValue(value: string, type: FieldMapping["type"]): unknown {
       const numVal = Number(trimmed);
       if (!isNaN(numVal)) return numVal !== 0;
       return null;
+    }
 
-    case "date":
+    case "date": {
       // Try to parse as date - be more permissive
       try {
         const date = new Date(trimmed);
@@ -100,6 +102,7 @@ function convertValue(value: string, type: FieldMapping["type"]): unknown {
       } catch {
         return null;
       }
+    }
 
     case "json":
       try {

@@ -43,12 +43,13 @@ export default function DateSelector({
         onEndDateChange(format(now, "yyyy-MM-dd"));
         onIsRangeChange(false);
         break;
-      case "yesterday":
+      case "yesterday": {
         const yesterday = subDays(now, 1);
         onStartDateChange(format(yesterday, "yyyy-MM-dd"));
         onEndDateChange(format(yesterday, "yyyy-MM-dd"));
         onIsRangeChange(false);
         break;
+      }
       case "week":
         onStartDateChange(format(subDays(now, 6), "yyyy-MM-dd"));
         onEndDateChange(format(now, "yyyy-MM-dd"));

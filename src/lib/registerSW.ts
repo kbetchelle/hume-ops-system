@@ -95,7 +95,7 @@ export function requestSync(tag: string = 'upload-pending'): Promise<void> {
     return Promise.resolve();
   }
 
-  // @ts-ignore - sync is not in TypeScript definitions
+  // @ts-expect-error - sync is not in TypeScript ServiceWorkerRegistration definitions
   return swRegistration.sync.register(tag);
 }
 

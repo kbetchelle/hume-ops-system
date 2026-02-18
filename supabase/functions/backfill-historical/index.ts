@@ -80,7 +80,7 @@ async function syncArketaClasses(supabase: any, date: string, _syncBatchId?: str
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  let allClasses: any[] = [];
+  const allClasses: any[] = [];
   let nextCursor: string | undefined;
 
   do {
@@ -174,7 +174,7 @@ async function syncArketaReservations(supabase: any, date: string, syncBatchId?:
     };
   }
 
-  let allReservations: any[] = [];
+  const allReservations: any[] = [];
 
   // Step 1: Fetch classes for this date (reservations are nested under classes)
   let classCursor: string | undefined;
@@ -313,7 +313,7 @@ async function syncArketaPayments(supabase: any, date: string, syncBatchId?: str
   const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
   const ARKETA_PROD_URL = 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0';
 
-  let allPayments: any[] = [];
+  const allPayments: any[] = [];
   let nextCursor: string | undefined;
 
   do {
@@ -975,7 +975,7 @@ Deno.serve(async (req) => {
       case 'sling_shifts':
         syncFunction = syncSlingShifts;
         break;
-      case 'arketa_clients':
+      case 'arketa_clients': {
         // Special handling for clients - staging table workflow with granular progress
         logger.info('Starting resumable clients sync with staging table', { syncBatchId });
 
@@ -1152,6 +1152,7 @@ Deno.serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+      }
 
       default:
         throw new Error(`Unsupported sync type: ${api_source}_${data_type}`);

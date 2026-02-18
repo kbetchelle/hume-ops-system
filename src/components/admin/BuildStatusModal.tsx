@@ -357,7 +357,7 @@ export function BuildStatusModal({
           <div className="flex items-center py-2 border-b border-border gap-4 sticky top-0 bg-background z-10">
             {isEditMode && <div className="w-6" />}
             <div className="flex-1 text-[0.625em] uppercase tracking-widest text-muted-foreground font-medium pl-2">
-              ​
+              {" "}
             </div>
             {isEditMode && (
               <div className="w-32 text-[0.625em] uppercase tracking-widest text-muted-foreground font-medium">

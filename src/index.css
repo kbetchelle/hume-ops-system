@@ -138,6 +138,14 @@
     height: 22.5px;
     display: inline-flex;
     align-items: center;
+    color: #000000 !important;
+    font-weight: 500 !important;
+  }
+
+  /* Standardize all sidebar nav icon stroke width */
+  [data-sidebar="menu-button"] svg {
+    stroke-width: 2 !important;
+    color: #000000 !important;
   }
 
   /* Standardize all sidebar group header labels */

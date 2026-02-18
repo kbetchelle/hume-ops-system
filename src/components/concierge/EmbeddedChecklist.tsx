@@ -292,8 +292,7 @@ export function EmbeddedChecklist() {
   const { data: shiftSubmission, isLoading: submissionLoading } = useQuery({
     queryKey: ["shift-submission", "concierge", today, currentShift],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_shift_submissions")
+      const { data, error } = await (supabase.from("checklist_shift_submissions") as any)
         .select("*")
         .eq("department_table", "concierge")
         .eq("department", "Concierge")
@@ -303,7 +302,7 @@ export function EmbeddedChecklist() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as ShiftSubmission | null;
+      return data as unknown as ShiftSubmission | null;
     },
   });
 
@@ -338,7 +337,7 @@ export function EmbeddedChecklist() {
     today,
     currentShift,
     null, // formData not needed for checklists
-    () => submitShiftMutation.mutate(),
+    async () => { submitShiftMutation.mutate(); },
     !!shiftSubmission // isSubmitted
   );
 

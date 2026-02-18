@@ -330,15 +330,15 @@ export function ConciergeForm() {
 
   // Supabase Realtime subscription for database changes
   useEffect(() => {
-    const channel = supabase.
-    channel(`draft-${reportDate}-${shiftType}`).
-    on('postgres_changes', {
+    const channel = (supabase as any)
+    .channel(`draft-${reportDate}-${shiftType}`)
+    .on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'concierge_drafts',
       filter: `report_date=eq.${reportDate},shift_time=eq.${shiftType}`
-    }, handleDatabaseChange).
-    subscribe();
+    }, handleDatabaseChange)
+    .subscribe();
 
     return () => {
       channel.unsubscribe();
@@ -376,16 +376,16 @@ export function ConciergeForm() {
         shift_type: shiftType,
         staff_user_id: user?.id || '',
         staff_name: formData.staffName || user?.user_metadata?.full_name || '',
-        member_feedback: formData.memberFeedback as Database["public"]["Tables"]["daily_report_history"]["Row"]["member_feedback"],
-        membership_requests: formData.membershipCancelRequests as Database["public"]["Tables"]["daily_report_history"]["Row"]["membership_requests"],
-        celebratory_events: formData.celebratoryEvents as Database["public"]["Tables"]["daily_report_history"]["Row"]["celebratory_events"],
-        scheduled_tours: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["scheduled_tours"],
-        tour_notes: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["tour_notes"],
-        facility_issues: formData.facilityIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["facility_issues"],
+        member_feedback: formData.memberFeedback as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["member_feedback"],
+        membership_requests: formData.membershipCancelRequests as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["membership_requests"],
+        celebratory_events: formData.celebratoryEvents as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["celebratory_events"],
+        scheduled_tours: formData.tours as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["scheduled_tours"],
+        tour_notes: formData.tours as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["tour_notes"],
+        facility_issues: formData.facilityIssues as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["facility_issues"],
         busiest_areas: formData.busiestAreas || '',
-        system_issues: formData.systemIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["system_issues"],
+        system_issues: formData.systemIssues as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["system_issues"],
         management_notes: formData.managementNotes || '',
-        future_shift_notes: formData.futureNotes as Database["public"]["Tables"]["daily_report_history"]["Row"]["future_shift_notes"],
+        future_shift_notes: formData.futureNotes as unknown as Database["public"]["Tables"]["daily_report_history"]["Row"]["future_shift_notes"],
         cafe_notes: formData.cafeNotes || '',
         status: 'submitted',
         submitted_at: new Date().toISOString()
@@ -1098,7 +1098,7 @@ export function ConciergeForm() {
                 value={issue.issueType}
                 onValueChange={(v) => {
                   const updated = [...formData.systemIssues];
-                  updated[i].issueType = v;
+                  updated[i].issueType = v as "" | "arketa" | "database" | "jolt" | "question";
                   updateFormField('systemIssues', updated);
                 }}
                 disabled={isSubmitted}>

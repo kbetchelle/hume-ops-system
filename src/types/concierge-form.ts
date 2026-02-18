@@ -27,14 +27,24 @@ export interface CancelRequestEntry {
   pauseEndDate?: string;
 }
 
-export type CelebratoryEventType = 'new_baby' | 'new_job' | 'new_house' | 'marriage_engagement' | 'personal_accomplishment' | 'birthday' | 'anniversary' | 'other';
+export type CelebratoryEventType =
+  | 'new_baby'
+  | 'new_job'
+  | 'new_house'
+  | 'marriage_engagement'
+  | 'personal_accomplishment'
+  | 'birthday'
+  | 'anniversary'
+  | 'wedding'
+  | 'promotion'
+  | 'other';
 
 export type CancelPauseReason = 'moving' | 'commute' | 'financial' | 'travel' | 'illness' | 'other';
 
 export interface CelebratoryEventEntry {
   id?: string;
   memberName: string;
-  eventType: CelebratoryEventType | 'birthday' | 'anniversary' | 'wedding' | 'promotion';
+  eventType: CelebratoryEventType;
   date?: string;
   timing?: string;
   accomplishmentDetails?: string;

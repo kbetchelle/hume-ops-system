@@ -27,27 +27,51 @@ function isWeekend(date: Date): boolean {
   return day === 0 || day === 6; // Sunday = 0, Saturday = 6
 }
 
-function getPSTDate(): Date {
-  // Convert current time to PST (UTC-8 or UTC-7 during DST)
-  const now = new Date();
-  const utcOffset = now.getTimezoneOffset();
-  const pstOffset = -480; // PST is UTC-8 (480 minutes behind)
-  const offsetDiff = utcOffset - pstOffset;
-  return new Date(now.getTime() + offsetDiff * 60 * 1000);
+/** Returns the current moment. Used for comparison with shift end (both are UTC timestamps). */
+function getNow(): Date {
+  return new Date();
 }
 
+/**
+ * US Pacific: DST is 2nd Sunday March (02:00) through 1st Sunday November (02:00).
+ * Returns ISO offset for the given date: '-07:00' (PDT) or '-08:00' (PST).
+ */
+function getPacificOffsetForDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const year = y!;
+  const month = m!;
+  const day = d!;
+
+  const secondSundayMarch = (() => {
+    const first = new Date(year, 2, 1); // March 1 (month 0-indexed)
+    const firstSunday = 1 + ((7 - first.getDay()) % 7) || 7;
+    return firstSunday + 7; // 2nd Sunday
+  })();
+  const firstSundayNovember = (() => {
+    const first = new Date(year, 10, 1); // November 1 (month 0-indexed)
+    const firstSunday = 1 + ((7 - first.getDay()) % 7) || 7;
+    return firstSunday;
+  })();
+
+  // dateStr is YYYY-MM-DD so month is 1-12 (March=3, November=11)
+  if (month < 3 || (month === 3 && day < secondSundayMarch)) return '-08:00';
+  if (month > 11 || (month === 11 && day >= firstSundayNovember)) return '-08:00';
+  return '-07:00';
+}
+
+/**
+ * Returns the shift end time (plus auto-submit delay) as a Date (UTC timestamp).
+ * reportDate is YYYY-MM-DD in Pacific; we parse it with the correct PST/PDT offset.
+ */
 function getShiftEndTime(reportDate: string, shiftType: 'AM' | 'PM'): Date {
-  const date = new Date(reportDate);
-  const weekend = isWeekend(date);
+  const offset = getPacificOffsetForDate(reportDate);
+  const dateAtNoon = new Date(`${reportDate}T12:00:00${offset}`);
+  const weekend = isWeekend(dateAtNoon);
   const times = weekend ? SHIFT_END_TIMES.weekend : SHIFT_END_TIMES.weekday;
   const [hours, minutes] = times[shiftType].split(':').map(Number);
-
-  const endTime = new Date(reportDate);
-  endTime.setHours(hours, minutes, 0, 0);
-
-  // Add auto-submit delay
+  const timePart = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  const endTime = new Date(`${reportDate}T${timePart}${offset}`);
   endTime.setMinutes(endTime.getMinutes() + AUTO_SUBMIT_DELAY_MINUTES);
-
   return endTime;
 }
 
@@ -70,7 +94,7 @@ export function useAutoSubmitConcierge(
       return;
     }
 
-    const now = getPSTDate();
+    const now = getNow();
     const shiftEnd = getShiftEndTime(reportDate, shiftType);
     const timeDiff = shiftEnd.getTime() - now.getTime();
 

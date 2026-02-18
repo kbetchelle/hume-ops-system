@@ -10,8 +10,8 @@ export function getNotificationRoute(
     qa_new_question: '/dashboard/inbox',
     resource_outdated: '/dashboard/inbox',
     announcement: '/dashboard/communications',
-    message: data?.messageId 
-      ? `/dashboard/messages?messageId=${data.messageId}` 
+    message: data?.messageId
+      ? `/dashboard/messages?messageId=${data.messageId}`
       : '/dashboard/messages',
     bug_report_update: '/dashboard/bug-reports',
     member_alert: '/dashboard/members/all-clients',

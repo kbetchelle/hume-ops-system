@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
-import { Bell, HelpCircle, Megaphone, MessageSquare, CheckCheck } from 'lucide-react';
+import { Bell, HelpCircle, Megaphone, MessageSquare, CheckCheck, Bug, Users, RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { getNotificationRoute } from '@/lib/notificationRoutes';
 
 interface Notification {
   id: string;
@@ -33,11 +35,16 @@ const notificationIcons: Record<string, React.ComponentType<{ className?: string
   qa_new_question: HelpCircle,
   announcement: Megaphone,
   message: MessageSquare,
+  bug_report_update: Bug,
+  member_alert: Users,
+  class_turnover: RefreshCw,
+  mat_cleaning: Sparkles,
 };
 
 export function NotificationBell() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const { data: notifications } = useQuery({
@@ -48,6 +55,7 @@ export function NotificationBell() {
         .from('staff_notifications')
         .select('*')
         .eq('user_id', user.id)
+        .is('dismissed_at', null)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -69,6 +77,8 @@ export function NotificationBell() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-center'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
     },
   });
 
@@ -85,6 +95,8 @@ export function NotificationBell() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-center'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
     },
   });
 
@@ -136,6 +148,8 @@ export function NotificationBell() {
                     if (!notification.is_read) {
                       markAsRead.mutate(notification.id);
                     }
+                    setOpen(false);
+                    navigate(getNotificationRoute(notification.type, notification.data));
                   }}
                 >
                   <div className={cn(
@@ -168,6 +182,16 @@ export function NotificationBell() {
             })}
           </div>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            navigate('/dashboard/notifications');
+          }}
+          className="text-center text-[10px] uppercase tracking-widest cursor-pointer justify-center"
+        >
+          View All Notifications
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

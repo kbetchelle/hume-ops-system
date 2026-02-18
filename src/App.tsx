@@ -67,6 +67,7 @@ import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import BugReportsPage from "./pages/admin/BugReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
 import StaffQAPage from "./pages/manager/StaffQAPage";
 
@@ -714,6 +715,16 @@ const App = () => (
 
             {/* OAuth callback - must not be caught by React Router */}
             <Route path="/~oauth" element={null} />
+
+            {/* Notifications for all authenticated users */}
+            <Route
+              path="/dashboard/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

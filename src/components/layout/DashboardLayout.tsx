@@ -8,6 +8,8 @@ import { useActiveRole } from "@/hooks/useActiveRole";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useUnreadBugReportCount } from "@/hooks/useUnreadBugReportCount";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
+import { useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -580,6 +582,8 @@ function UserInfoDropdown({
   const {
     data: profile
   } = useUserProfile(user?.id);
+  const { count: unreadCount } = useUnreadNotificationCount();
+  const { t } = useLanguage();
   const [showBugReport, setShowBugReport] = useState(false);
   const handleSignOut = async () => {
     const {
@@ -603,10 +607,11 @@ function UserInfoDropdown({
   return <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
+          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
             {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
                 Hi, {getFirstName(profile?.full_name)}
               </span>}
+            {unreadCount > 0 && <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
@@ -623,6 +628,10 @@ function UserInfoDropdown({
           <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
             Account Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+            <Bell className="mr-2 h-3 w-3" />
+            {t("Notifications", "Notificaciones")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">

@@ -42,7 +42,7 @@ export function useEditorPresence(reportDate: string, shiftType: 'AM' | 'PM') {
         const editors: EditorInfo[] = [];
 
         Object.keys(state).forEach((key) => {
-          const presences = state[key] as PresenceState[];
+          const presences = state[key] as unknown as PresenceState[];
           presences.forEach((presence) => {
             // Don't include current user/session
             if (presence.session_id !== sessionId.current) {

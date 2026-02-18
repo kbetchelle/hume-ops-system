@@ -162,9 +162,9 @@ Deno.serve(async (req) => {
               status: 'open',
             });
           console.log('[Submit Report] Inserted facility issue');
-        } catch (error) {
+        } catch (error: unknown) {
           // Ignore duplicate key errors (deduplication working)
-          if (!error.message?.includes('duplicate key')) {
+          if (!(error instanceof Error) || !error.message?.includes('duplicate key')) {
             console.error('[Submit Report] Failed to insert facility issue:', error);
           } else {
             console.log('[Submit Report] Facility issue already exists (deduplication)');

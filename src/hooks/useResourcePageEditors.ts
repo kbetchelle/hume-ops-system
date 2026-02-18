@@ -41,8 +41,7 @@ export function usePageEditors(pageId: string | undefined) {
     queryFn: async () => {
       if (!pageId) return [];
 
-      const { data, error } = await supabase
-        .from("resource_page_editors")
+      const { data, error } = await (supabase.from("resource_page_editors") as any)
         .select(
           `
           *,
@@ -52,7 +51,7 @@ export function usePageEditors(pageId: string | undefined) {
         .eq("page_id", pageId);
 
       if (error) throw error;
-      return (data ?? []) as PageEditorWithProfile[];
+      return (data ?? []) as unknown as PageEditorWithProfile[];
     },
     enabled: !!pageId,
   });

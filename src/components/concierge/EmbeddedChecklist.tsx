@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CheckSquare, ChevronDown, ChevronRight, Clock, Wifi, WifiOff, Cloud } from "lucide-react";
@@ -169,28 +169,17 @@ export function EmbeddedChecklist() {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync pending completions when coming online
-  useEffect(() => {
-    if (isOnline) {
-      syncPendingCompletions();
-    }
-  }, [isOnline]);
-
-  const syncPendingCompletions = async () => {
+  const syncPendingCompletions = useCallback(async () => {
     if (isSyncing) return;
-    
     try {
       setIsSyncing(true);
       const pending = await getPendingCompletions();
-      
       if (pending.length === 0) {
         setPendingCount(0);
         return;
       }
-
       for (const completion of pending) {
         try {
-          // Upload to server
           const { error } = await supabase
             .from("concierge_completions")
             .insert({
@@ -203,7 +192,6 @@ export function EmbeddedChecklist() {
               note_text: completion.note_text || null,
               completed_at: completion.completed_at || new Date().toISOString(),
             });
-
           if (!error) {
             await markCompletionSynced(completion.id);
           }
@@ -211,11 +199,7 @@ export function EmbeddedChecklist() {
           console.error("Failed to sync completion:", err);
         }
       }
-
-      // Refresh data after sync
       queryClient.invalidateQueries({ queryKey: ["concierge-completions"] });
-      
-      // Update pending count
       const stats = await getOfflineStats();
       setPendingCount(stats.pendingCompletions);
     } catch (error) {
@@ -223,7 +207,14 @@ export function EmbeddedChecklist() {
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [isSyncing, queryClient]);
+
+  // Sync pending completions when coming online
+  useEffect(() => {
+    if (isOnline) {
+      syncPendingCompletions();
+    }
+  }, [isOnline, syncPendingCompletions]);
 
   // Get current user
   const { data: userData } = useQuery({
@@ -301,8 +292,8 @@ export function EmbeddedChecklist() {
   const { data: shiftSubmission, isLoading: submissionLoading } = useQuery({
     queryKey: ["shift-submission", "concierge", today, currentShift],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("checklist_shift_submissions" as any) as any)
+      const { data, error } = await supabase
+        .from("checklist_shift_submissions")
         .select("*")
         .eq("department_table", "concierge")
         .eq("department", "Concierge")
@@ -321,8 +312,8 @@ export function EmbeddedChecklist() {
     mutationFn: async () => {
       if (!userData?.id) throw new Error("Not authenticated");
 
-      const { error } = await (supabase
-        .from("checklist_shift_submissions" as any) as any)
+      const { error } = await supabase
+        .from("checklist_shift_submissions")
         .insert({
           department_table: "concierge",
           department: "Concierge",

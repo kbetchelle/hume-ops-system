@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { FileText, Save, Send, Clock, CheckCircle2 } from 'lucide-react';
@@ -53,6 +53,34 @@ export function ConciergeShiftReport() {
   const { data: existingReport, isLoading } = useShiftReport(today, currentShift);
   const saveReportMutation = useSaveShiftReport();
 
+  const handleSaveDraft = useCallback(async () => {
+    if (!user?.id) return;
+    const reportData: ShiftReportData = {
+      id: existingReport?.id,
+      report_date: today,
+      shift_type: currentShift,
+      staff_user_id: user.id,
+      staff_name: user.user_metadata?.full_name || user.email || 'Unknown',
+      member_feedback: [],
+      membership_requests: [],
+      celebratory_events: [],
+      scheduled_tours: [],
+      tour_notes: [],
+      facility_issues: [],
+      busiest_areas: formData.weather,
+      system_issues: [],
+      management_notes: formData.summary,
+      future_shift_notes: [],
+      status: 'draft',
+    };
+    saveReportMutation.mutate(reportData, {
+      onSuccess: () => {
+        setLastSaved(new Date());
+        setIsDirty(false);
+      },
+    });
+  }, [user?.id, user?.email, user?.user_metadata?.full_name, existingReport?.id, today, currentShift, formData, saveReportMutation]);
+
   // Load existing data into form
   useEffect(() => {
     if (existingReport) {
@@ -80,37 +108,7 @@ export function ConciergeShiftReport() {
       handleSaveDraft();
     }, 30000);
     return () => clearTimeout(timer);
-  }, [isDirty, formData]);
-
-  const handleSaveDraft = async () => {
-    if (!user?.id) return;
-    
-    const reportData: ShiftReportData = {
-      id: existingReport?.id,
-      report_date: today,
-      shift_type: currentShift,
-      staff_user_id: user.id,
-      staff_name: user.user_metadata?.full_name || user.email || 'Unknown',
-      member_feedback: [],
-      membership_requests: [],
-      celebratory_events: [],
-      scheduled_tours: [],
-      tour_notes: [],
-      facility_issues: [],
-      busiest_areas: formData.weather,
-      system_issues: [],
-      management_notes: formData.summary,
-      future_shift_notes: [],
-      status: 'draft',
-    };
-
-    saveReportMutation.mutate(reportData, {
-      onSuccess: () => {
-        setLastSaved(new Date());
-        setIsDirty(false);
-      },
-    });
-  };
+  }, [isDirty, formData, handleSaveDraft]);
 
   const handleSubmit = async () => {
     if (!user?.id) return;

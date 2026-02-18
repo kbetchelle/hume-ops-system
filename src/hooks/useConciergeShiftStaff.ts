@@ -29,10 +29,10 @@ export function useConciergeShiftStaff(
     queryFn: async () => {
       // 1. Fetch all concierge shifts for the given date
       const { data: shifts, error: shiftsError } = await supabase
-        .from('staff_shifts' as any)
+        .from('staff_shifts')
         .select('sling_user_id, shift_start, shift_end, position, staff_name, user_name')
         .eq('shift_date', date)
-        .ilike('position', '%concierge%') as any;
+        .ilike('position', '%concierge%');
 
       if (shiftsError) throw shiftsError;
       if (!shifts || shifts.length === 0) {
@@ -41,8 +41,8 @@ export function useConciergeShiftStaff(
 
       // 2. Collect sling_user_ids to look up first_name
       const slingUserIds = shifts
-        .map((s: any) => s.sling_user_id)
-        .filter((id: any) => id != null);
+        .map((s: { sling_user_id: number | null }) => s.sling_user_id)
+        .filter((id: number | null): id is number => id != null);
 
       const userNameMap = new Map<number, string>();
 

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { CafeChecklistItem } from './CafeChecklistItem';
+import type { CafeChecklistItem } from '@/hooks/checklists/useCafeChecklists';
+import { CafeChecklistItem as CafeChecklistItemComponent } from './CafeChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -167,7 +168,7 @@ export function CafeChecklistView() {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="space-y-1 pt-2 pl-1">
                         {filteredCategoryItems.map((item: any) => (
-                          <CafeChecklistItem
+                          <CafeChecklistItemComponent
                             key={item.id}
                             item={item}
                             completion={completionMap.get(item.id)}

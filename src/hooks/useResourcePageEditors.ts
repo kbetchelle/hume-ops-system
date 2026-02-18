@@ -41,8 +41,8 @@ export function usePageEditors(pageId: string | undefined) {
     queryFn: async () => {
       if (!pageId) return [];
 
-      const { data, error } = await (supabase
-        .from("resource_page_editors" as any) as any)
+      const { data, error } = await supabase
+        .from("resource_page_editors")
         .select(
           `
           *,
@@ -70,8 +70,8 @@ export function useMyEditablePages() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase
-        .from("resource_page_editors" as any) as any)
+      const { data, error } = await supabase
+        .from("resource_page_editors")
         .select(
           `
           *,
@@ -106,8 +106,8 @@ export function useAddPageEditor() {
       pageId: string;
       userId: string;
     }) => {
-      const { data, error } = await (supabase
-        .from("resource_page_editors" as any) as any)
+      const { data, error } = await supabase
+        .from("resource_page_editors")
         .insert({
           page_id: pageId,
           user_id: userId,
@@ -145,8 +145,8 @@ export function useRemovePageEditor() {
       pageId: string;
       userId: string;
     }) => {
-      const { error } = await (supabase
-        .from("resource_page_editors" as any) as any)
+      const { error } = await supabase
+        .from("resource_page_editors")
         .delete()
         .eq("page_id", pageId)
         .eq("user_id", userId);

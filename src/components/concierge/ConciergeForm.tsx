@@ -35,8 +35,12 @@ import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { OfflineBanner } from './OfflineBanner';
 import { ScheduledToursDisplay } from './ScheduledToursDisplay';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
-import type { FormDataType, ConciergeDraft } from '@/types/concierge-form';
+import type { FormDataType, ConciergeDraft, CelebratoryEventType, CancelPauseReason } from '@/types/concierge-form';
 import { INITIAL_FORM_DATA, hasMeaningfulContent } from '@/types/concierge-form';
+import type { Database } from '@/integrations/supabase/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('[ConciergeForm]');
 
 /** Normalize legacy shift_type (morning/afternoon/evening) or AM/PM to 'AM' | 'PM'. Noon cutoff. */
 function normalizeShiftType(st: string): 'AM' | 'PM' {
@@ -58,7 +62,7 @@ export function ConciergeForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState<ConciergeDraft | null>(null);
-  const [arketaCheckIns, setArketaCheckIns] = useState<any[]>([]);
+  const [arketaCheckIns, setArketaCheckIns] = useState<unknown[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const { data: reportHistory = [] } = useShiftReportHistory(30);
   const [notesForShift, setNotesForShift] = useState<{id: string;from: string;text: string;}[]>([]);
@@ -68,6 +72,8 @@ export function ConciergeForm() {
   const [isEditingStaffName, setIsEditingStaffName] = useState(false);
   const [staffNameWasAutoPopulated, setStaffNameWasAutoPopulated] = useState(false);
   const staffNameInputRef = useRef<HTMLInputElement>(null);
+  const localVersionRef = useRef(localVersion);
+  const isDirtyRef = useRef(isDirty);
 
   const reportDate = formData.reportDate;
   const shiftType = formData.shiftTime;
@@ -82,6 +88,9 @@ export function ConciergeForm() {
 
   // Custom hooks
   const { activeEditors, typingFields, broadcastTyping, sessionId } = useEditorPresence(reportDate, shiftType);
+  const handleRemoteUpdate = useCallback((_data: Partial<FormDataType>) => {
+    // Handle broadcast updates from other clients (currently no-op)
+  }, []);
   const { broadcastUpdate, broadcastSaved } = useBroadcastSync({
     reportDate,
     shiftType,
@@ -94,6 +103,151 @@ export function ConciergeForm() {
   const [debouncedFormData] = useDebounce(formData, 1500);
   // Track whether the initial user-specific shift lookup has completed
   const [userShiftResolved, setUserShiftResolved] = useState(false);
+
+  const fetchArketaCheckIns = useCallback(async () => {
+    try {
+      const shiftDate = new Date(reportDate);
+      let startHour = shiftType === 'AM' ? 6 : 14;
+      let endHour = shiftType === 'AM' ? 14 : 22;
+      const isWeekend = shiftDate.getDay() === 0 || shiftDate.getDay() === 6;
+      if (isWeekend) {
+        startHour = shiftType === 'AM' ? 6 : 13;
+        endHour = shiftType === 'AM' ? 13 : 19;
+      }
+      const shiftStart = new Date(shiftDate);
+      shiftStart.setHours(startHour, 0, 0, 0);
+      const shiftEnd = new Date(shiftDate);
+      shiftEnd.setHours(endHour, 0, 0, 0);
+      const { data: classes, error: classError } = await supabase.
+        from('arketa_classes').
+        select('external_id, start_time').
+        gte('start_time', shiftStart.toISOString()).
+        lte('start_time', shiftEnd.toISOString());
+      if (classError) throw classError;
+      const classIds = (classes || []).map((c) => c.external_id);
+      if (classIds.length === 0) {
+        setArketaCheckIns([]);
+        return;
+      }
+      const { data: reservations, error } = await supabase.
+        from('arketa_reservations').
+        select('*').
+        eq('checked_in', true).
+        eq('class_date', reportDate).
+        in('class_id', classIds);
+      if (error) throw error;
+      const classStartByExternalId = new Map((classes || []).map((c) => [c.external_id, c.start_time]));
+      const sorted = (reservations || []).sort((a, b) => {
+        const tA = classStartByExternalId.get(a.class_id) || '';
+        const tB = classStartByExternalId.get(b.class_id) || '';
+        return tA.localeCompare(tB);
+      });
+      setArketaCheckIns(sorted);
+    } catch (err) {
+      logger.error('Failed to fetch Arketa check-ins:', err);
+    }
+  }, [reportDate, shiftType]);
+
+  const loadDraft = useCallback(async () => {
+    try {
+      const { data: report } = await supabase.
+        from('daily_report_history').
+        select('*').
+        eq('report_date', reportDate).
+        eq('shift_type', shiftType).
+        maybeSingle();
+      if (report && report.status === 'submitted') {
+        setIsSubmitted(true);
+        return;
+      }
+      const { data: draft } = await supabase.
+        from('concierge_drafts').
+        select('*').
+        eq('report_date', reportDate).
+        eq('shift_time', shiftType).
+        maybeSingle();
+      if (draft) {
+        const loadedFormData = draft.form_data as unknown as FormDataType;
+        const shift = loadedFormData.shiftTime;
+        setFormData({
+          ...loadedFormData,
+          cafeNotes: (loadedFormData as { cafeNotes?: string }).cafeNotes ?? '',
+          shiftTime: normalizeShiftType(shift),
+          _sessionId: sessionId
+        });
+        setLocalVersion(draft.version);
+        setLastSaved(new Date(draft.updated_at));
+      } else {
+        fetchArketaCheckIns();
+      }
+    } catch (error) {
+      logger.error('Failed to load draft:', error);
+      toast({
+        title: 'Error loading draft',
+        description: 'Please refresh the page',
+        variant: 'destructive'
+      });
+    }
+  }, [reportDate, shiftType, sessionId, toast, fetchArketaCheckIns]);
+
+  const saveDraft = useCallback(async () => {
+    if (isSaving || isSubmitted) return;
+    setIsSaving(true);
+    try {
+      const draftData = {
+        report_date: reportDate,
+        shift_time: shiftType,
+        form_data: formData as unknown as Record<string, unknown>,
+        last_updated_by: user?.email || null,
+        last_updated_by_session: sessionId
+      };
+      if (isOnline) {
+        const { data, error } = await supabase.
+          from('concierge_drafts').
+          upsert(draftData as Database["public"]["Tables"]["concierge_drafts"]["Insert"], {
+            onConflict: 'report_date,shift_time'
+          }).
+          select().
+          single();
+        if (error) throw error;
+        setLocalVersion(data.version);
+        setLastSaved(new Date());
+        setIsDirty(false);
+        await broadcastUpdate(formData);
+        await broadcastSaved();
+      } else {
+        setIsDirty(false);
+      }
+    } catch (error) {
+      logger.error('Failed to save draft:', error);
+      toast({
+        title: 'Failed to save',
+        description: 'Your changes will be saved when you reconnect',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [reportDate, shiftType, formData, user?.email, sessionId, isOnline, isSaving, isSubmitted, broadcastUpdate, broadcastSaved, toast]);
+
+  localVersionRef.current = localVersion;
+  isDirtyRef.current = isDirty;
+
+  const handleDatabaseChange = useCallback((payload: { new: ConciergeDraft | null }) => {
+    const change = payload.new;
+    if (change?.last_updated_by_session === sessionId) return;
+    const currentVersion = localVersionRef.current;
+    const currentIsDirty = isDirtyRef.current;
+    if (change && change.version > currentVersion) {
+      if (currentIsDirty) {
+        setConflictData(change);
+        setShowConflictModal(true);
+      } else {
+        setFormData(change.form_data);
+        setLocalVersion(change.version);
+      }
+    }
+  }, [sessionId]);
 
   // On mount: look up the *current user's* scheduled shift first.
   // Fall back to the wall-clock auto-detected shift only when the user
@@ -118,12 +272,12 @@ export function ConciergeForm() {
         if (slingUser) {
           // 2. Find today's shift for this specific user
           const today = new Date().toISOString().split('T')[0];
-          const { data: shift } = (await supabase.
-          from('staff_shifts' as any).
-          select('shift_start, position').
-          eq('sling_user_id', slingUser.sling_user_id).
-          eq('schedule_date', today).
-          maybeSingle()) as {data: {shift_start: string;position: string;} | null;};
+          const { data: shift } = await supabase
+            .from('staff_shifts')
+            .select('shift_start, position')
+            .eq('sling_user_id', slingUser.sling_user_id)
+            .eq('shift_date', today)
+            .maybeSingle();
 
           if (!cancelled && shift?.shift_start) {
             const startHour = new Date(shift.shift_start).getHours();
@@ -135,7 +289,7 @@ export function ConciergeForm() {
           }
         }
       } catch (error) {
-        console.error('[ConciergeForm] Failed to fetch user shift:', error);
+        logger.error('Failed to fetch user shift:', error);
       }
       // Fallback: no scheduled shift found – use wall-clock detection
       if (!cancelled) {
@@ -145,19 +299,19 @@ export function ConciergeForm() {
     }
     resolveUserShift();
     return () => {cancelled = true;};
-  }, [user?.email]);
+  }, [user?.email, autoDetectedShift, setShift]);
 
   // Auto-populate staff names from Sling when shift changes and name is empty or was auto-populated
+  const staffName = formData.staffName;
   useEffect(() => {
     if (conciergeStaffNames.length > 0) {
       const formatted = conciergeStaffNames.map((n) => n.toUpperCase()).join(' + ');
-      // Only auto-populate if staff name is empty or was previously auto-populated
-      if (!formData.staffName || staffNameWasAutoPopulated) {
+      if (!staffName || staffNameWasAutoPopulated) {
         setFormData((prev) => ({ ...prev, staffName: formatted }));
         setStaffNameWasAutoPopulated(true);
       }
     }
-  }, [conciergeStaffNames.join(','), shiftType]);
+  }, [conciergeStaffNames, shiftType, staffName, staffNameWasAutoPopulated]);
 
   // Load existing draft or report (wait until user shift is resolved so we
   // load the correct shift's draft on first render)
@@ -165,14 +319,14 @@ export function ConciergeForm() {
     if (userShiftResolved) {
       loadDraft();
     }
-  }, [reportDate, shiftType, userShiftResolved]);
+  }, [reportDate, shiftType, userShiftResolved, loadDraft]);
 
   // Auto-save when form changes
   useEffect(() => {
     if (isDirty && !isSubmitted) {
       saveDraft();
     }
-  }, [debouncedFormData]);
+  }, [debouncedFormData, isDirty, isSubmitted, saveDraft]);
 
   // Supabase Realtime subscription for database changes
   useEffect(() => {
@@ -189,7 +343,7 @@ export function ConciergeForm() {
     return () => {
       channel.unsubscribe();
     };
-  }, [reportDate, shiftType, sessionId]);
+  }, [reportDate, shiftType, sessionId, handleDatabaseChange]);
 
   // Auto-submit hook
   const { willAutoSubmit, timeUntilSubmitFormatted } = useAutoSubmitConcierge(
@@ -199,160 +353,6 @@ export function ConciergeForm() {
     handleSubmit,
     isSubmitted
   );
-
-  async function loadDraft() {
-    try {
-      // Check for submitted report first
-      const { data: report } = await supabase.
-      from('daily_report_history').
-      select('*').
-      eq('report_date', reportDate).
-      eq('shift_type', shiftType).
-      maybeSingle();
-
-      if (report && report.status === 'submitted') {
-        setIsSubmitted(true);
-        // Load read-only data from report
-        return;
-      }
-
-      // Load draft
-      const { data: draft } = await supabase.
-      from('concierge_drafts').
-      select('*').
-      eq('report_date', reportDate).
-      eq('shift_time', shiftType).
-      maybeSingle();
-
-      if (draft) {
-        const loadedFormData = draft.form_data as unknown as FormDataType;
-        const shift = loadedFormData.shiftTime;
-        setFormData({
-          ...loadedFormData,
-          cafeNotes: (loadedFormData as { cafeNotes?: string }).cafeNotes ?? '',
-          shiftTime: normalizeShiftType(shift),
-          _sessionId: sessionId
-        });
-        setLocalVersion(draft.version);
-        setLastSaved(new Date(draft.updated_at));
-      } else {
-        // Staff name will be auto-populated by useConciergeShiftStaff hook
-        // Load Arketa check-ins
-        fetchArketaCheckIns();
-      }
-    } catch (error) {
-      console.error('[ConciergeForm] Failed to load draft:', error);
-      toast({
-        title: 'Error loading draft',
-        description: 'Please refresh the page',
-        variant: 'destructive'
-      });
-    }
-  }
-
-  async function fetchArketaCheckIns() {
-    try {
-      // Calculate shift start and end times
-      const shiftDate = new Date(reportDate);
-      let startHour = shiftType === 'AM' ? 6 : 14;
-      let endHour = shiftType === 'AM' ? 14 : 22;
-
-      // Check if weekend (Saturday = 6, Sunday = 0)
-      const isWeekend = shiftDate.getDay() === 0 || shiftDate.getDay() === 6;
-      if (isWeekend) {
-        startHour = shiftType === 'AM' ? 6 : 13;
-        endHour = shiftType === 'AM' ? 13 : 19;
-      }
-
-      const shiftStart = new Date(shiftDate);
-      shiftStart.setHours(startHour, 0, 0, 0);
-      const shiftEnd = new Date(shiftDate);
-      shiftEnd.setHours(endHour, 0, 0, 0);
-
-      // Reservations only have class_date; use arketa_classes for time range and ordering
-      const { data: classes, error: classError } = await supabase.
-      from('arketa_classes').
-      select('external_id, start_time').
-      gte('start_time', shiftStart.toISOString()).
-      lte('start_time', shiftEnd.toISOString());
-
-      if (classError) throw classError;
-      const classIds = (classes || []).map((c) => c.external_id);
-      if (classIds.length === 0) {
-        setArketaCheckIns([]);
-        return;
-      }
-
-      const { data: reservations, error } = await supabase.
-      from('arketa_reservations').
-      select('*').
-      eq('checked_in', true).
-      eq('class_date', reportDate).
-      in('class_id', classIds);
-
-      if (error) throw error;
-
-      const classStartByExternalId = new Map((classes || []).map((c) => [c.external_id, c.start_time]));
-      const sorted = (reservations || []).sort((a, b) => {
-        const tA = classStartByExternalId.get(a.class_id) || '';
-        const tB = classStartByExternalId.get(b.class_id) || '';
-        return tA.localeCompare(tB);
-      });
-      setArketaCheckIns(sorted);
-      console.log('[ConciergeForm] Loaded', sorted.length, 'check-ins from Arketa');
-    } catch (error) {
-      console.error('[ConciergeForm] Failed to fetch Arketa check-ins:', error);
-    }
-  }
-
-  async function saveDraft() {
-    if (isSaving || isSubmitted) return;
-
-    setIsSaving(true);
-
-    try {
-      const draftData = {
-        report_date: reportDate,
-        shift_time: shiftType,
-        form_data: formData as unknown as Record<string, unknown>,
-        last_updated_by: user?.email || null,
-        last_updated_by_session: sessionId
-      };
-
-      if (isOnline) {
-        const { data, error } = await supabase.
-        from('concierge_drafts').
-        upsert(draftData as any, {
-          onConflict: 'report_date,shift_time'
-        }).
-        select().
-        single();
-
-        if (error) throw error;
-
-        setLocalVersion(data.version);
-        setLastSaved(new Date());
-        setIsDirty(false);
-
-        // Broadcast update to other clients
-        await broadcastUpdate(formData);
-        await broadcastSaved();
-      } else {
-        // Save draft locally when offline - it will sync when back online
-        console.log('[ConciergeForm] Offline - draft saved locally, will sync when online');
-        setIsDirty(false);
-      }
-    } catch (error) {
-      console.error('[ConciergeForm] Failed to save draft:', error);
-      toast({
-        title: 'Failed to save',
-        description: 'Your changes will be saved when you reconnect',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   const isSubmittingRef = useRef(false);
 
@@ -376,16 +376,16 @@ export function ConciergeForm() {
         shift_type: shiftType,
         staff_user_id: user?.id || '',
         staff_name: formData.staffName || user?.user_metadata?.full_name || '',
-        member_feedback: formData.memberFeedback as any,
-        membership_requests: formData.membershipCancelRequests as any,
-        celebratory_events: formData.celebratoryEvents as any,
-        scheduled_tours: formData.tours as any,
-        tour_notes: formData.tours as any,
-        facility_issues: formData.facilityIssues as any,
+        member_feedback: formData.memberFeedback as Database["public"]["Tables"]["daily_report_history"]["Row"]["member_feedback"],
+        membership_requests: formData.membershipCancelRequests as Database["public"]["Tables"]["daily_report_history"]["Row"]["membership_requests"],
+        celebratory_events: formData.celebratoryEvents as Database["public"]["Tables"]["daily_report_history"]["Row"]["celebratory_events"],
+        scheduled_tours: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["scheduled_tours"],
+        tour_notes: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["tour_notes"],
+        facility_issues: formData.facilityIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["facility_issues"],
         busiest_areas: formData.busiestAreas || '',
-        system_issues: formData.systemIssues as any,
+        system_issues: formData.systemIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["system_issues"],
         management_notes: formData.managementNotes || '',
-        future_shift_notes: formData.futureNotes as any,
+        future_shift_notes: formData.futureNotes as Database["public"]["Tables"]["daily_report_history"]["Row"]["future_shift_notes"],
         cafe_notes: formData.cafeNotes || '',
         status: 'submitted',
         submitted_at: new Date().toISOString()
@@ -394,7 +394,7 @@ export function ConciergeForm() {
       // Try upsert based on date + shift
       const { error } = await supabase.
       from('daily_report_history').
-      upsert(payload as any, {
+      upsert(payload as Database["public"]["Tables"]["daily_report_history"]["Insert"], {
         onConflict: 'report_date,shift_type'
       });
 
@@ -406,7 +406,7 @@ export function ConciergeForm() {
         description: 'Your shift report has been submitted successfully'
       });
     } catch (error) {
-      console.error('[ConciergeForm] Failed to submit:', error);
+      logger.error('Failed to submit:', error);
       toast({
         title: 'Submission failed',
         description: 'Please try again',
@@ -415,31 +415,6 @@ export function ConciergeForm() {
     } finally {
       isSubmittingRef.current = false;
     }
-  }
-
-  function handleDatabaseChange(payload: any) {
-    const change = payload.new as ConciergeDraft;
-
-    // Ignore changes from same session
-    if (change?.last_updated_by_session === sessionId) return;
-
-    // Check for version conflict
-    if (change && change.version > localVersion) {
-      if (isDirty) {
-        // Show conflict modal
-        setConflictData(change);
-        setShowConflictModal(true);
-      } else {
-        // Auto-accept remote if no local changes
-        setFormData(change.form_data);
-        setLocalVersion(change.version);
-      }
-    }
-  }
-
-  function handleRemoteUpdate(data: Partial<FormDataType>) {
-    // Handle broadcast updates from other clients
-    console.log('[ConciergeForm] Remote update received');
   }
 
   function handleAcceptRemote() {
@@ -716,7 +691,7 @@ export function ConciergeForm() {
                 value={feedback.sentiment}
                 onValueChange={(v) => {
                   const updated = [...formData.memberFeedback];
-                  updated[i].sentiment = v as any;
+                  updated[i].sentiment = v as 'positive' | 'neutral' | 'negative';
                   updateFormField('memberFeedback', updated);
                 }}
                 disabled={isSubmitted}>
@@ -772,7 +747,7 @@ export function ConciergeForm() {
                   value={request.requestType}
                   onValueChange={(v) => {
                     const updated = [...formData.membershipCancelRequests];
-                    updated[i].requestType = v as any;
+                    updated[i].requestType = v as 'cancel' | 'hold' | 'pause';
                     updateFormField('membershipCancelRequests', updated);
                   }}
                   disabled={isSubmitted}>
@@ -812,7 +787,7 @@ export function ConciergeForm() {
                   value={request.reason ?? ''}
                   onValueChange={(v) => {
                     const updated = [...formData.membershipCancelRequests];
-                    updated[i].reason = v as any;
+                    updated[i].reason = v as CancelPauseReason;
                     updateFormField('membershipCancelRequests', updated);
                   }}
                   disabled={isSubmitted}>
@@ -920,7 +895,7 @@ export function ConciergeForm() {
                 value={event.eventType}
                 onValueChange={(v) => {
                   const updated = [...formData.celebratoryEvents];
-                  updated[i].eventType = v as any;
+                  updated[i].eventType = v as CelebratoryEventType;
                   updateFormField('celebratoryEvents', updated);
                 }}
                 disabled={isSubmitted}>
@@ -1123,7 +1098,7 @@ export function ConciergeForm() {
                 value={issue.issueType}
                 onValueChange={(v) => {
                   const updated = [...formData.systemIssues];
-                  updated[i].issueType = v as any;
+                  updated[i].issueType = v;
                   updateFormField('systemIssues', updated);
                 }}
                 disabled={isSubmitted}>
@@ -1241,7 +1216,7 @@ export function ConciergeForm() {
                 value={note.targetShift}
                 onValueChange={(v) => {
                   const updated = [...formData.futureNotes];
-                  updated[i].targetShift = v as any;
+                  updated[i].targetShift = v as 'AM' | 'PM';
                   updateFormField('futureNotes', updated);
                 }}
                 disabled={isSubmitted}>

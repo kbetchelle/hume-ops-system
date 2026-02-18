@@ -380,7 +380,7 @@ function ChecklistDialog({
           <Label htmlFor="role_type">Role Type</Label>
           <Select
             value={formData.role_type}
-            onValueChange={(value) => setFormData({ ...formData, role_type: value as any })}
+            onValueChange={(value) => setFormData({ ...formData, role_type: value as BoHChecklist['role_type'] })}
           >
             <SelectTrigger>
               <SelectValue />

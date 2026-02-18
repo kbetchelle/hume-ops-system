@@ -174,6 +174,7 @@ export function AnnouncementTargetSelector({
 /**
  * Get display label for target departments
  */
+// eslint-disable-next-line react-refresh/only-export-components -- Component and getTargetLabel helper exported for use by announcement UI
 export function getTargetLabel(targetDepartments: string[] | null): string {
   if (!targetDepartments || targetDepartments.length === 0) {
     return "Everyone";

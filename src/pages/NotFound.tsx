@@ -1,5 +1,8 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("[NotFound]");
 
 const OAUTH_RELOAD_KEY = "hume_oauth_reload_attempts";
 const MAX_OAUTH_RELOADS = 1;
@@ -21,7 +24,7 @@ const NotFound = () => {
       return;
     }
     sessionStorage.removeItem(OAUTH_RELOAD_KEY);
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    logger.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
   // Don't render 404 UI for OAuth callback

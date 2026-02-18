@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface BoHChecklist {
   id: string;
@@ -187,7 +188,7 @@ export function useCreateBoHChecklist() {
     mutationFn: async (checklist: Partial<BoHChecklist>) => {
       const { data, error } = await supabase
         .from('boh_checklists')
-        .insert([checklist] as any)
+        .insert([checklist as Database["public"]["Tables"]["boh_checklists"]["Insert"]])
         .select()
         .single();
       if (error) throw error;
@@ -243,7 +244,7 @@ export function useCreateBoHItem() {
     mutationFn: async (item: Partial<BoHChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('boh_checklist_items')
-        .insert([item] as any)
+        .insert([item as Database["public"]["Tables"]["boh_checklist_items"]["Insert"]])
         .select()
         .single();
       if (error) throw error;

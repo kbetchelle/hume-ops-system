@@ -65,6 +65,7 @@ export function PdfViewer({ fileUrl, className }: PdfViewerProps) {
         pdf.destroy();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup uses pdf from closure; adding pdf would retrigger effect after load
   }, [fileUrl]);
 
   // Render current page

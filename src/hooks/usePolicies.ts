@@ -111,7 +111,7 @@ export function useCreatePolicy() {
 
       const lastUpdatedBy = profile?.full_name ?? user?.email ?? "Manager";
 
-      const { data, error } = await (supabase.from("club_policies") as any)
+      const { data, error } = await supabase.from("club_policies")
         .insert({
           title: input.category ?? "Untitled",
           content: input.content,
@@ -153,7 +153,7 @@ export function useUpdatePolicy() {
 
       const lastUpdatedBy = profile?.full_name ?? user?.email ?? "Manager";
 
-      const { data, error } = await (supabase.from("club_policies") as any)
+      const { data, error } = await supabase.from("club_policies")
         .update({
           title: rest.category ?? "Untitled",
           content: rest.content,

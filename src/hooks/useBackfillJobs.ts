@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useRef, useCallback } from "react";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("[useBackfillJobs]");
 
 export interface BackfillJob {
   id: string;
@@ -151,7 +154,7 @@ export function useBackfillJobs() {
       queryClient.invalidateQueries({ queryKey: ["backfill-jobs"] });
     },
     onError: (error: Error) => {
-      console.error("Failed to continue job:", error);
+      logger.error("Failed to continue job:", error);
     },
   });
 
@@ -176,7 +179,7 @@ export function useBackfillJobs() {
     for (const job of jobsToRetry) {
       // Mark this job as being continued
       continuingJobsRef.current.add(job.id);
-      console.log(`[useBackfillJobs] Auto-continuing job ${job.id}`);
+      logger.log(`Auto-continuing job ${job.id}`);
       
       continueJob.mutate(job, {
         onSettled: () => {
@@ -214,12 +217,12 @@ export function useBackfillJobs() {
           table: "backfill_jobs",
         },
         (payload) => {
-          console.log("[useBackfillJobs] Realtime update:", payload.eventType);
+          logger.log("Realtime update:", payload.eventType);
           queryClient.invalidateQueries({ queryKey: ["backfill-jobs"] });
         }
       )
       .subscribe((status) => {
-        console.log("[useBackfillJobs] Realtime subscription status:", status);
+        logger.log("Realtime subscription status:", status);
       });
 
     return () => {

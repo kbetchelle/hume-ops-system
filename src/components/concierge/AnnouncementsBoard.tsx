@@ -71,8 +71,11 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
   const { data: userRoles } = useUserRoles(user?.id);
   const queryClient = useQueryClient();
   
-  // When contextRole is set, filter only by that role (dashboard-aware)
-  const roles = contextRole ? [contextRole] : (userRoles?.map((r) => r.role) || []);
+  // When contextRole is set, filter only by that role (dashboard-aware); memoize so filteredAnnouncements useMemo stays stable
+  const roles = useMemo(
+    () => (contextRole ? [contextRole] : (userRoles?.map((r) => r.role) || [])),
+    [contextRole, userRoles]
+  );
   const [activeTab, setActiveTab] = useState<'all' | 'weekly' | 'announcements'>('all');
 
   const { data: announcements, isLoading } = useQuery({

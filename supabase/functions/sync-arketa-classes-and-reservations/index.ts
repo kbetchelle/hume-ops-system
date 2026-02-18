@@ -18,6 +18,20 @@ interface WrapperRequest {
   triggeredBy?: string;
 }
 
+function parseJson<T>(text: string): T | null {
+  try {
+    return text ? (JSON.parse(text) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseErrorBody(text: string): string {
+  const parsed = parseJson<{ error?: string }>(text);
+  if (parsed && typeof parsed.error === 'string') return parsed.error;
+  return text || 'Unknown error';
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -75,9 +89,10 @@ Deno.serve(async (req) => {
         headers: authHeaders,
         body: JSON.stringify(payload),
       });
+      const classesText = await classesRes.text();
       classesData = classesRes.ok
-        ? (await classesRes.json().catch(() => ({})))
-        : { success: false, error: await classesRes.text() };
+        ? (parseJson(classesText) ?? {})
+        : { success: false, error: parseErrorBody(classesText) };
       classesOk = classesRes.ok && classesData.success !== false;
     } catch (classesErr) {
       classesData = { success: false, error: classesErr instanceof Error ? classesErr.message : String(classesErr) };
@@ -97,9 +112,10 @@ Deno.serve(async (req) => {
         headers: authHeaders,
         body: JSON.stringify(payload),
       });
+      const reservationsText = await reservationsRes.text();
       reservationsData = reservationsRes.ok
-        ? (await reservationsRes.json().catch(() => ({})))
-        : { success: false, error: await reservationsRes.text() };
+        ? (parseJson(reservationsText) ?? {})
+        : { success: false, error: parseErrorBody(reservationsText) };
       reservationsOk = reservationsRes.ok && reservationsData.success !== false && !reservationsData.error;
     } catch (resErr) {
       reservationsData = { success: false, error: resErr instanceof Error ? resErr.message : String(resErr) };
@@ -144,7 +160,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Build response ────────────────────────────────────────────────
-    const success = classesOk && reservationsOk;
+    const success = classesOk && reservationsOk && stagingOk;
     const durationMs = Date.now() - startTime;
 
     const classesSyncedCount = (classesData.syncedCount as number) ?? 0;

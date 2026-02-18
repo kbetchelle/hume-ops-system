@@ -107,11 +107,12 @@ export function ResourcePageEditorPage() {
     }
   }, [existingPage]);
 
-  // Mark as having unsaved changes when content changes
+  // Mark as having unsaved changes when content changes (intentional: only run when form fields change, not when existingPage loads)
   useEffect(() => {
     if (existingPage) {
       setHasUnsavedChanges(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only run when form fields change, not when existingPage loads
   }, [contentJson, title, isPublished, assignedRoles, tags, coverImageUrl]);
 
   const handleSave = async (publish: boolean) => {

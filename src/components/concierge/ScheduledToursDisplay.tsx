@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,7 @@ export function ScheduledToursDisplay({ reportDate, disabled }: ScheduledToursDi
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchTours = async (isRefresh = false) => {
+  const fetchTours = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
@@ -45,11 +45,11 @@ export function ScheduledToursDisplay({ reportDate, disabled }: ScheduledToursDi
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [reportDate]);
 
   useEffect(() => {
     fetchTours();
-  }, [reportDate]);
+  }, [fetchTours]);
 
   const formatTime = (iso: string) => {
     try {

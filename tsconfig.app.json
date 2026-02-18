@@ -15,7 +15,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* Linting - REMEDIATION_PLAN.md Phase 7.3: strictness enabled incrementally (strictNullChecks, noImplicitAny, noUnusedLocals/noUnusedParameters) per directory, not globally */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,

@@ -51,12 +51,12 @@ export function useManagementInbox(searchTerm?: string) {
     queryKey: [INBOX_FLAGS_KEY],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("resource_outdated_flags" as any)
+        .from("resource_outdated_flags")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as any[];
+      return data ?? [];
     },
     enabled: !!user?.id,
   });
@@ -102,12 +102,12 @@ export function useManagementInbox(searchTerm?: string) {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from("inbox_reads" as any)
+        .from("inbox_reads")
         .select("item_type, item_id")
         .eq("user_id", user.id);
 
       if (error) throw error;
-      return (data ?? []) as unknown as { item_type: string; item_id: string }[];
+      return (data ?? []) as { item_type: string; item_id: string }[];
     },
     enabled: !!user?.id,
   });
@@ -275,7 +275,7 @@ export function useUnreadInboxCount() {
         await Promise.all([
           supabase.from("staff_qa").select("id"),
           supabase
-            .from("resource_outdated_flags" as any)
+            .from("resource_outdated_flags")
             .select("id"),
           supabase
             .from("daily_report_history")
@@ -287,7 +287,7 @@ export function useUnreadInboxCount() {
             .from("sick_day_requests")
             .select("id"),
           supabase
-            .from("inbox_reads" as any)
+            .from("inbox_reads")
             .select("item_type, item_id")
             .eq("user_id", user.id),
         ]);
@@ -343,13 +343,13 @@ export function useMarkInboxRead() {
     }) => {
       if (!user?.id) return;
 
-      const { error } = await supabase.from("inbox_reads" as any).upsert(
+      const { error } = await supabase.from("inbox_reads").upsert(
         {
           user_id: user.id,
           item_type: itemType,
           item_id: itemId,
           read_at: new Date().toISOString(),
-        } as any,
+        },
         { onConflict: "user_id,item_type,item_id" }
       );
 

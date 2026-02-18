@@ -26,7 +26,7 @@ export function useCanEditPage(pageId: string | undefined) {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      const userRolesList = (roles ?? []).map((r: any) => r.role);
+      const userRolesList = (roles ?? []).map((r: { role: string }) => r.role);
       const isManager =
         userRolesList.includes("admin") || userRolesList.includes("manager");
 
@@ -50,8 +50,8 @@ export function useCanEditPage(pageId: string | undefined) {
       }
 
       // Check if user is a delegated editor
-      const { data, error } = await (supabase
-        .from("resource_page_editors" as any) as any)
+      const { data, error } = await supabase
+        .from("resource_page_editors")
         .select("id")
         .eq("page_id", pageId)
         .eq("user_id", user.id)

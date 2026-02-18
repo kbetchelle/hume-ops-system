@@ -41,14 +41,15 @@ export function useBackfillJob(jobType: BackfillJobType) {
     queryKey: ["active-backfill-job", jobType, activeJobId],
     queryFn: async () => {
       if (!activeJobId) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("backfill_jobs")
           .select("*")
           .eq("job_type", jobType)
           .in("status", ["pending", "running"])
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
+        if (error) throw error;
         if (data) {
           setActiveJobId(data.id);
           return data;
@@ -60,7 +61,7 @@ export function useBackfillJob(jobType: BackfillJobType) {
         .select("*")
         .eq("id", activeJobId)
         .single();
-      if (error) return null;
+      if (error) throw error;
       return data;
     },
     refetchInterval: activeJobId ? 2000 : 10000,

@@ -60,14 +60,12 @@ export default function ConciergeDashboard() {
     switch (activeView) {
       case "home":
         return (
-          <div className="flex p-4">
-            <div className="flex flex-wrap gap-4" style={{ minWidth: '850px' }}>
-              <div className="flex-1 min-w-[400px]">
-                <EmbeddedChecklist />
-              </div>
-              <div className="flex-1 min-w-[400px]">
-                <UpcomingTodayCard />
-              </div>
+          <div className="flex flex-wrap gap-4 p-4">
+            <div className="flex-1 basis-[450px] min-w-[450px]">
+              <EmbeddedChecklist />
+            </div>
+            <div className="flex-1 basis-[450px] min-w-[450px]">
+              <UpcomingTodayCard />
             </div>
           </div>);
 

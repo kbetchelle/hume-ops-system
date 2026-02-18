@@ -35,8 +35,9 @@ import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { OfflineBanner } from './OfflineBanner';
 import { ScheduledToursDisplay } from './ScheduledToursDisplay';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
-import type { FormDataType, ConciergeDraft } from '@/types/concierge-form';
+import type { FormDataType, ConciergeDraft, CelebratoryEventType, CancelPauseReason } from '@/types/concierge-form';
 import { INITIAL_FORM_DATA, hasMeaningfulContent } from '@/types/concierge-form';
+import type { Database } from '@/integrations/supabase/types';
 
 /** Normalize legacy shift_type (morning/afternoon/evening) or AM/PM to 'AM' | 'PM'. Noon cutoff. */
 function normalizeShiftType(st: string): 'AM' | 'PM' {
@@ -58,7 +59,7 @@ export function ConciergeForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState<ConciergeDraft | null>(null);
-  const [arketaCheckIns, setArketaCheckIns] = useState<any[]>([]);
+  const [arketaCheckIns, setArketaCheckIns] = useState<unknown[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const { data: reportHistory = [] } = useShiftReportHistory(30);
   const [notesForShift, setNotesForShift] = useState<{id: string;from: string;text: string;}[]>([]);
@@ -200,7 +201,7 @@ export function ConciergeForm() {
       if (isOnline) {
         const { data, error } = await supabase.
           from('concierge_drafts').
-          upsert(draftData as any, {
+          upsert(draftData as Database["public"]["Tables"]["concierge_drafts"]["Insert"], {
             onConflict: 'report_date,shift_time'
           }).
           select().
@@ -229,8 +230,8 @@ export function ConciergeForm() {
   localVersionRef.current = localVersion;
   isDirtyRef.current = isDirty;
 
-  const handleDatabaseChange = useCallback((payload: any) => {
-    const change = payload.new as ConciergeDraft;
+  const handleDatabaseChange = useCallback((payload: { new: ConciergeDraft | null }) => {
+    const change = payload.new;
     if (change?.last_updated_by_session === sessionId) return;
     const currentVersion = localVersionRef.current;
     const currentIsDirty = isDirtyRef.current;
@@ -268,12 +269,12 @@ export function ConciergeForm() {
         if (slingUser) {
           // 2. Find today's shift for this specific user
           const today = new Date().toISOString().split('T')[0];
-          const { data: shift } = (await supabase.
-          from('staff_shifts' as any).
-          select('shift_start, position').
-          eq('sling_user_id', slingUser.sling_user_id).
-          eq('schedule_date', today).
-          maybeSingle()) as {data: {shift_start: string;position: string;} | null;};
+          const { data: shift } = await supabase
+            .from('staff_shifts')
+            .select('shift_start, position')
+            .eq('sling_user_id', slingUser.sling_user_id)
+            .eq('shift_date', today)
+            .maybeSingle();
 
           if (!cancelled && shift?.shift_start) {
             const startHour = new Date(shift.shift_start).getHours();
@@ -372,16 +373,16 @@ export function ConciergeForm() {
         shift_type: shiftType,
         staff_user_id: user?.id || '',
         staff_name: formData.staffName || user?.user_metadata?.full_name || '',
-        member_feedback: formData.memberFeedback as any,
-        membership_requests: formData.membershipCancelRequests as any,
-        celebratory_events: formData.celebratoryEvents as any,
-        scheduled_tours: formData.tours as any,
-        tour_notes: formData.tours as any,
-        facility_issues: formData.facilityIssues as any,
+        member_feedback: formData.memberFeedback as Database["public"]["Tables"]["daily_report_history"]["Row"]["member_feedback"],
+        membership_requests: formData.membershipCancelRequests as Database["public"]["Tables"]["daily_report_history"]["Row"]["membership_requests"],
+        celebratory_events: formData.celebratoryEvents as Database["public"]["Tables"]["daily_report_history"]["Row"]["celebratory_events"],
+        scheduled_tours: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["scheduled_tours"],
+        tour_notes: formData.tours as Database["public"]["Tables"]["daily_report_history"]["Row"]["tour_notes"],
+        facility_issues: formData.facilityIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["facility_issues"],
         busiest_areas: formData.busiestAreas || '',
-        system_issues: formData.systemIssues as any,
+        system_issues: formData.systemIssues as Database["public"]["Tables"]["daily_report_history"]["Row"]["system_issues"],
         management_notes: formData.managementNotes || '',
-        future_shift_notes: formData.futureNotes as any,
+        future_shift_notes: formData.futureNotes as Database["public"]["Tables"]["daily_report_history"]["Row"]["future_shift_notes"],
         cafe_notes: formData.cafeNotes || '',
         status: 'submitted',
         submitted_at: new Date().toISOString()
@@ -390,7 +391,7 @@ export function ConciergeForm() {
       // Try upsert based on date + shift
       const { error } = await supabase.
       from('daily_report_history').
-      upsert(payload as any, {
+      upsert(payload as Database["public"]["Tables"]["daily_report_history"]["Insert"], {
         onConflict: 'report_date,shift_type'
       });
 
@@ -687,7 +688,7 @@ export function ConciergeForm() {
                 value={feedback.sentiment}
                 onValueChange={(v) => {
                   const updated = [...formData.memberFeedback];
-                  updated[i].sentiment = v as any;
+                  updated[i].sentiment = v as 'positive' | 'neutral' | 'negative';
                   updateFormField('memberFeedback', updated);
                 }}
                 disabled={isSubmitted}>
@@ -743,7 +744,7 @@ export function ConciergeForm() {
                   value={request.requestType}
                   onValueChange={(v) => {
                     const updated = [...formData.membershipCancelRequests];
-                    updated[i].requestType = v as any;
+                    updated[i].requestType = v as 'cancel' | 'hold' | 'pause';
                     updateFormField('membershipCancelRequests', updated);
                   }}
                   disabled={isSubmitted}>
@@ -783,7 +784,7 @@ export function ConciergeForm() {
                   value={request.reason ?? ''}
                   onValueChange={(v) => {
                     const updated = [...formData.membershipCancelRequests];
-                    updated[i].reason = v as any;
+                    updated[i].reason = v as CancelPauseReason;
                     updateFormField('membershipCancelRequests', updated);
                   }}
                   disabled={isSubmitted}>
@@ -891,7 +892,7 @@ export function ConciergeForm() {
                 value={event.eventType}
                 onValueChange={(v) => {
                   const updated = [...formData.celebratoryEvents];
-                  updated[i].eventType = v as any;
+                  updated[i].eventType = v as CelebratoryEventType;
                   updateFormField('celebratoryEvents', updated);
                 }}
                 disabled={isSubmitted}>
@@ -1094,7 +1095,7 @@ export function ConciergeForm() {
                 value={issue.issueType}
                 onValueChange={(v) => {
                   const updated = [...formData.systemIssues];
-                  updated[i].issueType = v as any;
+                  updated[i].issueType = v;
                   updateFormField('systemIssues', updated);
                 }}
                 disabled={isSubmitted}>
@@ -1212,7 +1213,7 @@ export function ConciergeForm() {
                 value={note.targetShift}
                 onValueChange={(v) => {
                   const updated = [...formData.futureNotes];
-                  updated[i].targetShift = v as any;
+                  updated[i].targetShift = v as 'AM' | 'PM';
                   updateFormField('futureNotes', updated);
                 }}
                 disabled={isSubmitted}>

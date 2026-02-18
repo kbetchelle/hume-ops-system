@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface CafeChecklist {
   id: string;
@@ -184,7 +185,7 @@ export function useCreateCafeChecklist() {
     mutationFn: async (checklist: Partial<CafeChecklist>) => {
       const { data, error } = await supabase
         .from('cafe_checklists')
-        .insert([checklist] as any)
+        .insert([checklist as Database["public"]["Tables"]["cafe_checklists"]["Insert"]])
         .select()
         .single();
       if (error) throw error;
@@ -240,7 +241,7 @@ export function useCreateCafeItem() {
     mutationFn: async (item: Partial<CafeChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('cafe_checklist_items')
-        .insert([item] as any)
+        .insert([item as Database["public"]["Tables"]["cafe_checklist_items"]["Insert"]])
         .select()
         .single();
       if (error) throw error;

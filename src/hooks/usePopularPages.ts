@@ -12,18 +12,18 @@ export function usePopularPages(limit: number = 6) {
     queryFn: async () => {
       // Get recently updated pages
       const { data: recentPages, error: recentError } = await supabase
-        .from("resource_pages" as any)
+        .from("resource_pages")
         .select("*")
         .eq("is_published", true)
         .order("updated_at", { ascending: false })
-        .limit(limit) as any;
+        .limit(limit);
 
       if (recentError) throw recentError;
 
-      // Get most read pages (by counting reads)
-      const { data: readCounts, error: readsError } = await supabase
+      // Get most read pages (by counting reads per page_id in JS)
+      const { data: readRows, error: readsError } = await supabase
         .from("resource_page_reads")
-        .select("page_id, count")
+        .select("page_id")
         .limit(100);
 
       if (readsError) {
@@ -32,8 +32,8 @@ export function usePopularPages(limit: number = 6) {
 
       // Count reads per page
       const readCountMap = new Map<string, number>();
-      if (readCounts) {
-        readCounts.forEach((record: any) => {
+      if (readRows) {
+        readRows.forEach((record: { page_id: string }) => {
           const pageId = record.page_id;
           readCountMap.set(pageId, (readCountMap.get(pageId) || 0) + 1);
         });
@@ -41,13 +41,13 @@ export function usePopularPages(limit: number = 6) {
 
       // Get pages with highest read counts
       const { data: allPages, error: allPagesError } = await supabase
-        .from("resource_pages" as any)
+        .from("resource_pages")
         .select("*")
-        .eq("is_published", true) as any;
+        .eq("is_published", true);
 
       if (allPagesError) throw allPagesError;
 
-      const pagesWithReads = (allPages || []).map((page: any) => ({
+      const pagesWithReads = (allPages || []).map((page: ResourcePage) => ({
         ...page,
         readCount: readCountMap.get(page.id) || 0
       }));

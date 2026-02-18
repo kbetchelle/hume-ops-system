@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface ConciergeChecklist {
   id: string;
@@ -184,7 +185,7 @@ export function useCreateConciergeChecklist() {
     mutationFn: async (checklist: Partial<ConciergeChecklist>) => {
       const { data, error } = await supabase
         .from('concierge_checklists')
-        .insert([checklist] as any)
+        .insert([checklist as Database["public"]["Tables"]["concierge_checklists"]["Insert"]])
         .select()
         .single();
       if (error) throw error;
@@ -240,7 +241,7 @@ export function useCreateConciergeItem() {
     mutationFn: async (item: Partial<ConciergeChecklistItem> & { checklist_id: string }) => {
       const { data, error } = await supabase
         .from('concierge_checklist_items')
-        .insert([item] as any)
+        .insert([item as Database["public"]["Tables"]["concierge_checklist_items"]["Insert"]])
         .select()
         .single();
       if (error) throw error;

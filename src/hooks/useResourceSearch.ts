@@ -101,15 +101,15 @@ function useAllResources() {
       const [groupsResult, itemsResult, pagesResult, policiesResult] =
         await Promise.all([
           supabase
-            .from("quick_link_groups" as any)
+            .from("quick_link_groups")
             .select("id, title, description, display_order, assigned_roles")
             .order("display_order", { ascending: true }),
           supabase
-            .from("quick_link_items" as any)
+            .from("quick_link_items")
             .select("id, group_id, name, url, display_order")
             .order("display_order", { ascending: true }),
           supabase
-            .from("resource_pages" as any)
+            .from("resource_pages")
             .select("id, title, content, assigned_roles, tags, search_text")
             .eq("is_published", true)
             .order("created_at", { ascending: false }),

@@ -142,7 +142,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  await supabase.from("backfill_jobs").update({ processing_date: `${chunk.start} → ${chunk.end}` }).eq("id", jobId);
+  await supabase.from("backfill_jobs").update({ processing_date: chunk.start }).eq("id", jobId);
 
   // Determine sync function and history table based on job type
   const chunkConfig = getSyncConfig(jobType);

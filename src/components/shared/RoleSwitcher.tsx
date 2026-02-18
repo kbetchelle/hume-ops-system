@@ -106,7 +106,7 @@ export function RoleSwitcher({ collapsed = false, variant = "sidebar" }: RoleSwi
               key={userRole.id}
               onClick={() => handleSwitchRole(userRole.role)}
               className={cn("flex items-center justify-between rounded-none cursor-pointer", isSidebar && "text-xs uppercase tracking-widest")}
-              style={isCurrentView ? { backgroundColor: "hsl(0 0% 0%)", color: "hsl(0 0% 100%)" } : undefined}
+              style={isCurrentView ? { backgroundColor: "hsl(0 0% 90%)", color: "hsl(0 0% 0%)" } : undefined}
             >
               <span className={cn("text-xs uppercase tracking-widest", isCurrentView && "font-semibold")}>
                 {getRoleLabel(userRole.role)}

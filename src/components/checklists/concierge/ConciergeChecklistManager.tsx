@@ -230,7 +230,7 @@ export function ConciergeChecklistManager() {
                     return (
                       <div>
                         {Object.entries(grouped).map(([group, groupItems]) => (
-                          <Collapsible key={group} defaultOpen>
+                          <Collapsible key={group} defaultOpen className="mt-3 first:mt-0">
                             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
                               <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
                               <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>

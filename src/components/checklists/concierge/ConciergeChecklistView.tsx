@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Calendar, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -231,7 +232,10 @@ export function ConciergeChecklistView() {
               const allDone = sectionCompleted === sectionItems.length;
               return (
                 <Collapsible key={section} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                  <CollapsibleTrigger className={cn(
+                    "flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors border-l-4",
+                    currentSectionIdx % 2 === 0 ? 'border-l-add-skyBlue' : 'border-l-green-500'
+                  )}>
                     <span className="font-semibold text-sm">{section}</span>
                     <div className="flex items-center gap-2">
                       <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">

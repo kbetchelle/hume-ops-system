@@ -566,7 +566,7 @@ export function EmbeddedChecklist() {
           <>
 
             <div className="space-y-0">
-            {timeGroups.map((group) => {
+            {timeGroups.map((group, groupIndex) => {
               const isExpanded = expandedGroups.has(group.timeHint);
               const progressPct =
                 group.totalCount > 0
@@ -582,7 +582,7 @@ export function EmbeddedChecklist() {
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="w-full justify-between p-4 h-auto rounded-none hover:bg-muted/50"
+                      className={`w-full justify-between p-4 h-auto rounded-none hover:bg-muted/50 border-l-4 ${groupIndex % 2 === 0 ? 'border-l-add-skyBlue' : 'border-l-green-500'}`}
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (

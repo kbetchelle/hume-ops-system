@@ -225,6 +225,10 @@ Do not enable strict `noImplicitAny` / `noUnusedLocals` globally in one step; re
 | 6.1 | RichTextEditor safety comment or sanitize | ☑ |
 | 6.2 | ResponseTemplatesWithAI innerHTML comment or safe strip | ☑ |
 | 6.4 | Empty interfaces + react-refresh (optional) | ☑ |
+| 7.1 | TODOs in ChecklistTaskComponents (tickets / tracked) | ☑ |
+| 7.2 | Console statements gated (logger + ConciergeForm, useBackfillJobs, registerSW, main, NotFound) | ☑ |
+| 7.3 | TypeScript strictness documented (incremental) | ☑ |
+| 7.4 | Test coverage (auth/NotFound, policy/sanitizeHtml, ConciergeForm submit contract) | ☑ |
 
 ---
 

@@ -220,7 +220,8 @@ export function MultipleChoiceTask({
   onUpdate,
   disabled,
 }: TaskComponentProps & { options?: string[] }) {
-  const options = ["Option 1", "Option 2", "Option 3"]; // TODO: Make configurable
+  // Tracked REMEDIATION_PLAN.md Phase 7.1: make options configurable via task config / checklist item metadata
+  const options = ["Option 1", "Option 2", "Option 3"];
 
   return (
     <RadioGroup
@@ -244,7 +245,7 @@ export function EmployeeTask({
   onUpdate,
   disabled,
 }: TaskComponentProps) {
-  // TODO: Fetch actual staff list from database
+  // Tracked REMEDIATION_PLAN.md Phase 7.1: fetch staff list from database (e.g. sling_users / staff_shifts)
   const employees = ["Staff 1", "Staff 2", "Staff 3"];
 
   return (

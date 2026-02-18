@@ -7,6 +7,10 @@
  * - Push notifications (future)
  */
 
+import { createLogger } from "./logger";
+
+const swLogger = createLogger("[SW]");
+
 export interface SWRegistrationOptions {
   onUpdate?: (registration: ServiceWorkerRegistration) => void;
   onSuccess?: (registration: ServiceWorkerRegistration) => void;
@@ -21,13 +25,13 @@ export async function registerServiceWorker(
   const { onUpdate, onSuccess, onOfflineReady } = options;
 
   if (!('serviceWorker' in navigator)) {
-    console.log('[SW] Service workers are not supported');
+    swLogger.log('Service workers are not supported');
     return null;
   }
 
   // Only register in production or when explicitly enabled
   if (import.meta.env.DEV && !import.meta.env.VITE_ENABLE_SW) {
-    console.log('[SW] Service worker disabled in development');
+    swLogger.log('Service worker disabled in development');
     return null;
   }
 
@@ -37,7 +41,7 @@ export async function registerServiceWorker(
     });
 
     swRegistration = registration;
-    console.log('[SW] Service worker registered:', registration.scope);
+    swLogger.log('Service worker registered:', registration.scope);
 
     // Check if there's an update available
     registration.addEventListener('updatefound', () => {
@@ -48,11 +52,11 @@ export async function registerServiceWorker(
         if (newWorker.state === 'installed') {
           if (navigator.serviceWorker.controller) {
             // New update available
-            console.log('[SW] New content available, refresh to update');
+            swLogger.log('New content available, refresh to update');
             onUpdate?.(registration);
           } else {
             // Content cached for offline use
-            console.log('[SW] Content cached for offline use');
+            swLogger.log('Content cached for offline use');
             onSuccess?.(registration);
             onOfflineReady?.();
           }
@@ -70,7 +74,7 @@ export async function registerServiceWorker(
 
     return registration;
   } catch (error) {
-    console.error('[SW] Service worker registration failed:', error);
+    swLogger.error('Service worker registration failed:', error);
     return null;
   }
 }
@@ -91,7 +95,7 @@ export function getServiceWorkerRegistration(): ServiceWorkerRegistration | null
 
 export function requestSync(tag: string = 'upload-pending'): Promise<void> {
   if (!swRegistration || !('sync' in swRegistration)) {
-    console.log('[SW] Background sync not supported');
+    swLogger.log('Background sync not supported');
     return Promise.resolve();
   }
 

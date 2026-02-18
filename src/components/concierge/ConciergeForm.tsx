@@ -38,6 +38,9 @@ import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import type { FormDataType, ConciergeDraft, CelebratoryEventType, CancelPauseReason } from '@/types/concierge-form';
 import { INITIAL_FORM_DATA, hasMeaningfulContent } from '@/types/concierge-form';
 import type { Database } from '@/integrations/supabase/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('[ConciergeForm]');
 
 /** Normalize legacy shift_type (morning/afternoon/evening) or AM/PM to 'AM' | 'PM'. Noon cutoff. */
 function normalizeShiftType(st: string): 'AM' | 'PM' {
@@ -141,7 +144,7 @@ export function ConciergeForm() {
       });
       setArketaCheckIns(sorted);
     } catch (err) {
-      console.error('[ConciergeForm] Failed to fetch Arketa check-ins:', err);
+      logger.error('Failed to fetch Arketa check-ins:', err);
     }
   }, [reportDate, shiftType]);
 
@@ -178,7 +181,7 @@ export function ConciergeForm() {
         fetchArketaCheckIns();
       }
     } catch (error) {
-      console.error('[ConciergeForm] Failed to load draft:', error);
+      logger.error('Failed to load draft:', error);
       toast({
         title: 'Error loading draft',
         description: 'Please refresh the page',
@@ -216,7 +219,7 @@ export function ConciergeForm() {
         setIsDirty(false);
       }
     } catch (error) {
-      console.error('[ConciergeForm] Failed to save draft:', error);
+      logger.error('Failed to save draft:', error);
       toast({
         title: 'Failed to save',
         description: 'Your changes will be saved when you reconnect',
@@ -286,7 +289,7 @@ export function ConciergeForm() {
           }
         }
       } catch (error) {
-        console.error('[ConciergeForm] Failed to fetch user shift:', error);
+        logger.error('Failed to fetch user shift:', error);
       }
       // Fallback: no scheduled shift found – use wall-clock detection
       if (!cancelled) {
@@ -403,7 +406,7 @@ export function ConciergeForm() {
         description: 'Your shift report has been submitted successfully'
       });
     } catch (error) {
-      console.error('[ConciergeForm] Failed to submit:', error);
+      logger.error('Failed to submit:', error);
       toast({
         title: 'Submission failed',
         description: 'Please try again',

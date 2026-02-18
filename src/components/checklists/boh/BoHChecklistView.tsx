@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useActiveRole } from '@/hooks/useActiveRole';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BoHChecklistItem } from './BoHChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -27,6 +28,7 @@ interface BoHChecklistWithItems {
 export function BoHChecklistView() {
   const { user } = useAuth();
   const { data: userRolesData } = useUserRoles(user?.id);
+  const { activeRole } = useActiveRole();
   const { t } = useLanguage();
   const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -37,9 +39,10 @@ export function BoHChecklistView() {
   const detectedShift = isWeekend ? (currentHour < 13 ? 'AM' : 'PM') : (currentHour < 14 ? 'AM' : 'PM');
   const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
 
-  const userBoHRole = roles.find(r => 
-    ['floater', 'male_spa_attendant', 'female_spa_attendant'].includes(r.role)
-  );
+  const bohRoles = ['floater', 'male_spa_attendant', 'female_spa_attendant'];
+  const userBoHRole = (activeRole && bohRoles.includes(activeRole))
+    ? roles.find(r => r.role === activeRole)
+    : roles.find(r => bohRoles.includes(r.role));
 
   const { data: checklist, isLoading } = useQuery({
     queryKey: ['boh-checklist', shiftTime, isWeekend, userBoHRole?.role],

@@ -513,7 +513,7 @@ export function EmbeddedChecklist() {
             {checklist?.title || checklistType.title}
           </p>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-[12px]">
               {completedCount}/{totalCount} complete
             </Badge>
             {!isOnline && (

@@ -508,10 +508,10 @@ export function EmbeddedChecklist() {
     <Card className="w-full border-2 border-border shadow-md bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <p className="flex items-center gap-2 font-semibold" style={{ fontSize: '15.75px' }}>
             <CheckSquare className="h-5 w-5" />
             {checklist?.title || checklistType.title}
-          </CardTitle>
+          </p>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
               {completedCount}/{totalCount} complete

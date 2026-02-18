@@ -316,14 +316,20 @@ export function useSyncArketaClassesAndReservations() {
       queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
       const classes = data?.classes ?? {};
       const reservations = data?.reservations ?? {};
+      const syncFromStaging = data?.syncFromStaging ?? {};
       const c = classes.syncedCount ?? 0;
       const r = reservations.syncedCount ?? 0;
-      const errorDetail = [classes.error, reservations.error].filter(Boolean).join("; ") || null;
+      const errorParts = [
+        classes.error && `Classes: ${classes.error}`,
+        reservations.error && `Reservations: ${reservations.error}`,
+        syncFromStaging.error && `Staging: ${syncFromStaging.error}`,
+      ].filter(Boolean);
+      const errorDetail = errorParts.length > 0 ? errorParts.join(" · ") : null;
       toast({
         title: data?.success ? "Arketa Sync Complete" : "Arketa Sync Completed With Errors",
         description: data?.success
           ? `Classes: ${c}, Reservations: ${r}`
-          : errorDetail ?? `Classes: ${c}, Reservations: ${r}. Check logs for errors.`,
+          : errorDetail ?? `Classes: ${c}, Reservations: ${r}. Check Sync Log History for details.`,
         variant: data?.success ? "default" : "destructive",
       });
     },

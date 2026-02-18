@@ -9,6 +9,7 @@ import {
   FileText,
   BellOff,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ import {
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
 import { useSyncArketaClassesAndReservations } from "@/hooks/useArketaApi";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // API sync configuration - maps sync types to their staging/target tables
 const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
@@ -73,54 +75,100 @@ function getDefaultArketaDateRange() {
   };
 }
 
-function ArketaClassesAndReservationsSync() {
+function ArketaClassesAndReservationsSync({
+  onViewLogHistory,
+}: {
+  onViewLogHistory?: () => void;
+}) {
   const defaultRange = getDefaultArketaDateRange();
   const [startDate, setStartDate] = useState(defaultRange.start_date);
   const [endDate, setEndDate] = useState(defaultRange.end_date);
   const syncBoth = useSyncArketaClassesAndReservations();
+  const lastResult = syncBoth.data;
+  const hasErrors = lastResult && lastResult.success === false;
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-sm font-medium">Arketa (Classes + Reservations)</span>
-      <div className="flex items-center gap-2">
-        <Label htmlFor="arketa-start" className="text-xs text-muted-foreground whitespace-nowrap">Start</Label>
-        <Input
-          id="arketa-start"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="h-8 w-[140px]"
-        />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium">Arketa (Classes + Reservations)</span>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="arketa-start" className="text-xs text-muted-foreground whitespace-nowrap">Start</Label>
+          <Input
+            id="arketa-start"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-8 w-[140px]"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="arketa-end" className="text-xs text-muted-foreground whitespace-nowrap">End</Label>
+          <Input
+            id="arketa-end"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="h-8 w-[140px]"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => syncBoth.mutate({ start_date: startDate, end_date: endDate })}
+          disabled={syncBoth.isPending}
+          className="gap-1"
+        >
+          {syncBoth.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Syncing…
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4" />
+              Sync classes then reservations
+            </>
+          )}
+        </Button>
+        <span className="text-xs text-muted-foreground">Classes run first, then reservations (same range)</span>
       </div>
-      <div className="flex items-center gap-2">
-        <Label htmlFor="arketa-end" className="text-xs text-muted-foreground whitespace-nowrap">End</Label>
-        <Input
-          id="arketa-end"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="h-8 w-[140px]"
-        />
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => syncBoth.mutate({ start_date: startDate, end_date: endDate })}
-        disabled={syncBoth.isPending}
-        className="gap-1"
-      >
-        {syncBoth.isPending ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Syncing…
-          </>
-        ) : (
-          <>
-            <Play className="h-4 w-4" />
-            Sync classes then reservations
-          </>
-        )}
-      </Button>
-      <span className="text-xs text-muted-foreground">Classes run first, then reservations (same range)</span>
+      {hasErrors && (
+        <Alert variant="destructive" className="rounded-none">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Sync completed with errors</AlertTitle>
+          <AlertDescription asChild>
+            <div className="mt-1 space-y-1 text-sm">
+              {lastResult.classes?.error && (
+                <p><strong>Classes:</strong> {String(lastResult.classes.error)}</p>
+              )}
+              {lastResult.reservations?.error && (
+                <p><strong>Reservations:</strong> {String(lastResult.reservations.error)}</p>
+              )}
+              {lastResult.syncFromStaging?.error && (
+                <p><strong>Staging → history:</strong> {String(lastResult.syncFromStaging.error)}</p>
+              )}
+              {onViewLogHistory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                  onClick={onViewLogHistory}
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  View Sync Log History
+                </Button>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Troubleshooting: ensure <code className="bg-muted px-1">ARKETA_API_KEY</code> and{" "}
+        <code className="bg-muted px-1">ARKETA_PARTNER_ID</code> are set in Supabase; deploy{" "}
+        <code className="bg-muted px-1">sync-arketa-classes</code>,{" "}
+        <code className="bg-muted px-1">sync-arketa-reservations</code>, and{" "}
+        <code className="bg-muted px-1">sync-arketa-classes-and-reservations</code>.
+      </p>
     </div>
   );
 }
@@ -344,11 +392,19 @@ function SyncOverviewTable() {
 }
 
 // Sync Log History Table Component
-function SyncLogHistoryTable() {
+function SyncLogHistoryTable({
+  apiFilter: controlledApiFilter,
+  setApiFilter: setControlledApiFilter,
+}: {
+  apiFilter?: string;
+  setApiFilter?: (v: string) => void;
+} = {}) {
+  const [internalFilter, setInternalFilter] = useState<string>("all");
+  const apiFilter = controlledApiFilter ?? internalFilter;
+  const setApiFilter = setControlledApiFilter ?? setInternalFilter;
   const [page, setPage] = useState(1);
-  const [apiFilter, setApiFilter] = useState<string>("all");
   const [showErrorsOnly, setShowErrorsOnly] = useState(false);
-  
+
   const { data, isLoading, error, refetch } = useApiLogs({
     page,
     pageSize: 15,
@@ -529,6 +585,8 @@ function SyncLogHistoryTable() {
 
 export default function ApiSyncingPage() {
   const { isLoading, refetch } = useSyncSchedules();
+  const [syncTab, setSyncTab] = useState("overview");
+  const [historyApiFilter, setHistoryApiFilter] = useState("all");
 
   return (
     <DashboardLayout title="API Syncing">
@@ -566,12 +624,17 @@ export default function ApiSyncingPage() {
             </p>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-4">
-            <ArketaClassesAndReservationsSync />
+            <ArketaClassesAndReservationsSync
+              onViewLogHistory={() => {
+                setSyncTab("history");
+                setHistoryApiFilter("arketa_classes");
+              }}
+            />
           </CardContent>
         </Card>
 
         {/* Tabs for Overview and History */}
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs value={syncTab} onValueChange={setSyncTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="overview" className="gap-2">
               <Clock className="h-4 w-4" />
@@ -609,7 +672,10 @@ export default function ApiSyncingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <SyncLogHistoryTable />
+                <SyncLogHistoryTable
+                  apiFilter={historyApiFilter}
+                  setApiFilter={setHistoryApiFilter}
+                />
               </CardContent>
             </Card>
           </TabsContent>

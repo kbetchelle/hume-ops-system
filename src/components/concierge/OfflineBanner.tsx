@@ -1,34 +1,40 @@
-import { AlertTriangle, Wifi, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Stub component for offline status banner
-export function OfflineBanner({ 
-  isOnline = false, 
-  queueSize,
-  onRetry 
-}: { 
-  isOnline?: boolean;
+interface OfflineBannerProps {
   queueSize: number;
-  onRetry: () => void;
-}) {
-  if (isOnline) return null;
+  onRetry?: () => void;
+}
 
+export function OfflineBanner({ queueSize, onRetry }: OfflineBannerProps) {
   return (
-    <Alert variant="destructive" className="mb-4">
-      <AlertTriangle className="h-4 w-4" />
-      <AlertDescription>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wifi className="h-4 w-4" />
-            <span>You're offline. {queueSize > 0 && `${queueSize} changes queued.`}</span>
+    <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
+      <div className="flex items-center gap-3">
+        <WifiOff className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div>
+          <div className="text-sm font-medium text-orange-900 dark:text-orange-100">
+            You're offline
           </div>
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Retry
-          </Button>
+          <div className="text-xs text-orange-700 dark:text-orange-300">
+            {queueSize > 0 ? (
+              <span>{queueSize} change{queueSize !== 1 ? 's' : ''} queued for sync</span>
+            ) : (
+              <span>Changes will be saved locally and synced when you reconnect</span>
+            )}
+          </div>
         </div>
-      </AlertDescription>
-    </Alert>
+      </div>
+      {onRetry && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          className="gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </Button>
+      )}
+    </div>
   );
 }

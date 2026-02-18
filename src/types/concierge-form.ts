@@ -1,143 +1,161 @@
-export interface FeedbackItem {
-  id: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
+// Type definitions for Concierge Shift Report System
+
+export interface FutureNoteEntry {
+  id?: string;
+  targetDate: string; // YYYY-MM-DD
+  targetShift: 'AM' | 'PM';
+  note: string;
+}
+
+export interface MemberFeedbackEntry {
+  id?: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
   text: string;
 }
 
-export interface FacilityIssue {
-  id: string;
-  description: string;
-  photoUrl: string | null;
-}
-
-export interface SystemIssue {
-  id: string;
-  issueType: string;
-  description: string;
-  photoUrl: string | null;
-}
-
-export type CelebratoryEventType =
-  | 'new_baby'
-  | 'new_job'
-  | 'new_house'
-  | 'marriage_engagement'
-  | 'personal_accomplishment'
-  | 'birthday'
-  | 'anniversary'
-  | 'other';
-
-export interface CelebratoryEvent {
-  id: string;
-  memberName: string;
-  eventType: CelebratoryEventType;
-  date: string;
-  timing?: string; // e.g. "Upcoming"
-  accomplishmentDetails?: string;
-}
-
-export interface Tour {
-  id: string;
+export interface CancelRequestEntry {
+  id?: string;
   name: string;
-  followupCompleted: boolean;
-}
-
-export type CancelPauseReason =
-  | 'moving'
-  | 'commute'
-  | 'financial'
-  | 'travel'
-  | 'illness'
-  | 'other';
-
-export interface MembershipCancelRequest {
-  id: string;
-  name: string;
-  email: string;
-  membershipType: string;
-  requestType: 'cancel' | 'hold' | 'pause';
-  endDate: string;
+  email?: string;
+  membershipType?: string;
+  requestType: 'cancel' | 'pause' | 'hold';
+  endDate?: string;
   reason?: CancelPauseReason;
   otherReasonText?: string;
-  paidPause?: boolean; // for pause: paid vs non-paid
+  paidPause?: boolean;
   pauseStartDate?: string;
   pauseEndDate?: string;
 }
 
-export interface FutureNote {
-  id: string;
-  targetDate: string;
-  targetShift: string;
-  note: string;
+export type CelebratoryEventType = 'new_baby' | 'new_job' | 'new_house' | 'marriage_engagement' | 'personal_accomplishment' | 'birthday' | 'anniversary' | 'other';
+
+export type CancelPauseReason = 'moving' | 'commute' | 'financial' | 'travel' | 'illness' | 'other';
+
+export interface CelebratoryEventEntry {
+  id?: string;
+  memberName: string;
+  eventType: CelebratoryEventType | 'birthday' | 'anniversary' | 'wedding' | 'promotion';
+  date?: string;
+  timing?: string;
+  accomplishmentDetails?: string;
+}
+
+export interface TourEntry {
+  id?: string;
+  name: string;
+  followupCompleted: boolean;
+}
+
+export interface FacilityIssueEntry {
+  id?: string;
+  description: string;
+  photoUrl: string | null;
+}
+
+export interface SystemIssueEntry {
+  id?: string;
+  issueType: 'arketa' | 'jolt' | 'database' | 'question' | '';
+  description: string;
+  photoUrl: string | null;
 }
 
 export interface FormDataType {
-  reportDate: string;
-  shiftTime: string;
+  reportDate: string; // YYYY-MM-DD (PST timezone)
+  shiftTime: 'AM' | 'PM';
   staffName: string;
-  memberFeedback: FeedbackItem[];
-  celebratoryEventsNA: boolean;
-  celebratoryEvents: CelebratoryEvent[];
-  tours: Tour[];
-  membershipCancelRequests: MembershipCancelRequest[];
-  facilityIssues: FacilityIssue[];
+
+  // Arrays with structured entries
+  futureNotes: FutureNoteEntry[];
+  memberFeedback: MemberFeedbackEntry[];
+  membershipCancelRequests: CancelRequestEntry[];
+  celebratoryEvents: CelebratoryEventEntry[];
+  tours: TourEntry[];
+  facilityIssues: FacilityIssueEntry[];
+  systemIssues: SystemIssueEntry[];
+
+  // Freeform text
   busiestAreas: string;
-  systemIssuesNA: boolean;
-  systemIssues: SystemIssue[];
   managementNotes: string;
+  cafeNotes?: string;
+
+  // N/A checkboxes
+  celebratoryEventsNA: boolean;
+  systemIssuesNA: boolean;
   futureShiftNotesNA: boolean;
-  futureNotes: FutureNote[];
-  cafeNotes: string;
-  _sessionId?: string; // Optional session tracking ID
+
+  // Meta fields
+  _sessionId?: string; // For tracking multi-device same-user edits
+}
+
+export interface EditorInfo {
+  userId: string;
+  userName: string;
+  sessionId: string;
+  focusedField?: string;
+  lastActivity: number; // timestamp
 }
 
 export interface ConciergeDraft {
   id: string;
   report_date: string;
-  shift_time: string;
+  shift_time: 'AM' | 'PM';
   form_data: FormDataType;
+  last_updated_by: string | null;
+  last_updated_by_session: string | null;
   version: number;
-  last_updated_by: string;
-  last_updated_by_session: string;
-  last_updated_at: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface BroadcastMessage {
+  type: 'data_updated' | 'user_typing' | 'user_saved' | 'request_sync';
+  sessionId: string;
+  userId: string;
+  userName: string;
+  data?: Partial<FormDataType>;
+  field?: string;
+  timestamp: number;
+}
+
 export const INITIAL_FORM_DATA: FormDataType = {
   reportDate: new Date().toISOString().split('T')[0],
-  shiftTime: 'AM',
+  shiftTime: new Date().getHours() < 14 ? 'AM' : 'PM',
   staffName: '',
+  futureNotes: [],
   memberFeedback: [],
-  celebratoryEventsNA: false,
+  membershipCancelRequests: [],
   celebratoryEvents: [],
   tours: [],
-  membershipCancelRequests: [],
   facilityIssues: [],
-  busiestAreas: '',
-  systemIssuesNA: false,
   systemIssues: [],
+  busiestAreas: '',
   managementNotes: '',
-  futureShiftNotesNA: false,
-  futureNotes: [],
   cafeNotes: '',
+  celebratoryEventsNA: false,
+  systemIssuesNA: false,
+  futureShiftNotesNA: false,
 };
 
-export function hasMeaningfulContent(formData: FormDataType): boolean {
-  const hasArrayContent = (arr: any[]) => arr.length > 0;
-  const hasStringContent = (str: string) => str.trim().length > 0;
+// Helper to generate unique session ID
+export function generateSessionId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
+// Helper to check if form has meaningful content
+export function hasMeaningfulContent(formData: FormDataType): boolean {
   return (
-    hasStringContent(formData.staffName) ||
-    hasArrayContent(formData.memberFeedback) ||
-    hasArrayContent(formData.celebratoryEvents) ||
-    hasArrayContent(formData.tours) ||
-    hasArrayContent(formData.membershipCancelRequests) ||
-    hasArrayContent(formData.facilityIssues) ||
-    hasStringContent(formData.busiestAreas) ||
-    hasArrayContent(formData.systemIssues) ||
-    hasStringContent(formData.managementNotes) ||
-    hasArrayContent(formData.futureNotes) ||
-    hasStringContent(formData.cafeNotes)
+    formData.memberFeedback.length > 0 ||
+    formData.membershipCancelRequests.length > 0 ||
+    formData.celebratoryEvents.length > 0 ||
+    formData.tours.length > 0 ||
+    formData.facilityIssues.length > 0 ||
+    formData.systemIssues.length > 0 ||
+    formData.futureNotes.length > 0 ||
+    formData.busiestAreas.trim().length > 0 ||
+    formData.managementNotes.trim().length > 0 ||
+    (formData.cafeNotes?.trim().length ?? 0) > 0 ||
+    formData.celebratoryEventsNA ||
+    formData.systemIssuesNA ||
+    formData.futureShiftNotesNA
   );
 }

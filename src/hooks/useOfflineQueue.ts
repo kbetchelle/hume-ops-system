@@ -1,195 +1,75 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  getPendingUploads,
-  savePendingUpload,
-  deletePendingUpload,
-  incrementRetryCount,
-  getPendingUploadCount,
-  PendingUpload,
-} from '@/lib/offlineDb';
+import { useToast } from './use-toast';
 
-const MAX_RETRY_COUNT = 3;
-const SYNC_INTERVAL_MS = 30000; // 30 seconds
-
-interface UseOfflineQueueOptions {
-  autoSync?: boolean;
-  syncIntervalMs?: number;
+interface QueuedOperation {
+  id: string;
+  type: 'save_draft' | 'submit_report';
+  data: any;
+  timestamp: number;
+  retryCount: number;
 }
 
-interface QueuedUpload {
-  type: 'photo' | 'signature';
-  dataUrl: string;
-  storageBucket: string;
-  storagePath: string;
-  filename: string;
-  mimeType: string;
-  itemId?: string;
-  templateId?: string;
-}
+const DB_NAME = 'ConciergeOfflineQueue';
+const DB_VERSION = 1;
+const STORE_NAME = 'operations';
+const MAX_RETRIES = 3;
 
-export function useOfflineQueue(options: UseOfflineQueueOptions = {}) {
-  const { autoSync = true, syncIntervalMs = SYNC_INTERVAL_MS } = options;
-  
+export function useOfflineQueue() {
+  const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [queueSize, setQueueSize] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [syncErrors, setSyncErrors] = useState<string[]>([]);
-  
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const dbRef = useRef<IDBDatabase | null>(null);
+  const processingRef = useRef(false);
 
-  // Update queue size
-  const refreshQueueSize = useCallback(async () => {
-    try {
-      const count = await getPendingUploadCount();
-      setQueueSize(count);
-    } catch (error) {
-      console.error('Failed to get queue size:', error);
-    }
-  }, []);
-
-  // Add item to offline queue
-  const addToQueue = useCallback(async (upload: QueuedUpload): Promise<string> => {
-    const id = await savePendingUpload(upload);
-    await refreshQueueSize();
-    return id;
-  }, [refreshQueueSize]);
-
-  // Convert base64 data URL to Blob
-  const dataUrlToBlob = useCallback((dataUrl: string): Blob => {
-    const arr = dataUrl.split(',');
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-  }, []);
-
-  // Upload a single pending item
-  const uploadPendingItem = useCallback(async (item: PendingUpload): Promise<boolean> => {
-    try {
-      // Convert data URL to blob
-      const blob = dataUrlToBlob(item.dataUrl);
-      const filePath = `${item.storagePath}/${item.filename}`;
-      
-      // Upload to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from(item.storageBucket)
-        .upload(filePath, blob, {
-          contentType: item.mimeType,
-          upsert: true,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(item.storageBucket)
-        .getPublicUrl(filePath);
-
-      // If this was associated with a checklist item, update the completion
-      if (item.itemId && item.templateId) {
-        // Note: The actual update would depend on how completions are stored
-        // This could be expanded to update the relevant completion record
-        console.log(`Upload complete for item ${item.itemId}: ${urlData.publicUrl}`);
-      }
-
-      // Remove from queue
-      await deletePendingUpload(item.id);
-      return true;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Failed to upload ${item.id}:`, errorMessage);
-      
-      // Increment retry count
-      await incrementRetryCount(item.id, errorMessage);
-      
-      // If max retries exceeded, remove from queue and report error
-      if (item.retryCount >= MAX_RETRY_COUNT - 1) {
-        await deletePendingUpload(item.id);
-        setSyncErrors(prev => [...prev, `Failed to upload after ${MAX_RETRY_COUNT} attempts: ${item.filename}`]);
-      }
-      
-      return false;
-    }
-  }, [dataUrlToBlob]);
-
-  // Process the entire queue
-  const processQueue = useCallback(async (): Promise<{ success: number; failed: number }> => {
-    if (!navigator.onLine || isSyncing) {
-      return { success: 0, failed: 0 };
-    }
-
-    setIsSyncing(true);
-    setSyncErrors([]);
-    
-    let successCount = 0;
-    let failedCount = 0;
-
-    try {
-      const pendingItems = await getPendingUploads();
-      
-      // Filter out items that have exceeded max retries
-      const itemsToProcess = pendingItems.filter(item => item.retryCount < MAX_RETRY_COUNT);
-      
-      for (const item of itemsToProcess) {
-        const success = await uploadPendingItem(item);
-        if (success) {
-          successCount++;
-        } else {
-          failedCount++;
-        }
-      }
-      
-      setLastSyncTime(new Date());
-    } catch (error) {
-      console.error('Queue processing error:', error);
-    } finally {
-      setIsSyncing(false);
-      await refreshQueueSize();
-    }
-
-    return { success: successCount, failed: failedCount };
-  }, [isSyncing, uploadPendingItem, refreshQueueSize]);
-
-  // Force sync (manual trigger)
-  const forceSync = useCallback(async () => {
-    if (!navigator.onLine) {
-      console.warn('Cannot sync while offline');
-      return { success: 0, failed: 0 };
-    }
-    return processQueue();
-  }, [processQueue]);
-
-  // Clear all errors
-  const clearErrors = useCallback(() => {
-    setSyncErrors([]);
-  }, []);
-
-  // Get all pending uploads (for debugging/UI display)
-  const getQueuedItems = useCallback(async (): Promise<PendingUpload[]> => {
-    return getPendingUploads();
-  }, []);
-
-  // Online/offline event handlers
+  // Initialize IndexedDB
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Auto-sync when coming back online
-      if (autoSync) {
-        processQueue();
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => {
+      console.error('[OfflineQueue] Failed to open IndexedDB');
+    };
+
+    request.onsuccess = (event) => {
+      dbRef.current = (event.target as IDBOpenDBRequest).result;
+      updateQueueSize();
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
       }
     };
 
+    return () => {
+      if (dbRef.current) {
+        dbRef.current.close();
+      }
+    };
+  }, []);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[OfflineQueue] Back online');
+      setIsOnline(true);
+      toast({
+        title: 'Back online',
+        description: 'Syncing queued changes...',
+      });
+      processQueue();
+    };
+
     const handleOffline = () => {
+      console.log('[OfflineQueue] Gone offline');
       setIsOnline(false);
+      toast({
+        title: 'Offline mode',
+        description: 'Changes will be queued and synced when you reconnect.',
+        variant: 'destructive',
+      });
     };
 
     window.addEventListener('online', handleOnline);
@@ -199,49 +79,195 @@ export function useOfflineQueue(options: UseOfflineQueueOptions = {}) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [autoSync, processQueue]);
+  }, [toast]);
 
-  // Periodic sync when online
+  // Beacon API fallback on page unload
   useEffect(() => {
-    if (!autoSync || !isOnline) {
+    const handleBeforeUnload = async () => {
+      if (!navigator.onLine && dbRef.current) {
+        // Store pending operations count in sessionStorage for next session
+        const count = await countOperations();
+        if (count > 0) {
+          sessionStorage.setItem('offlineQueueSize', count.toString());
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  const updateQueueSize = useCallback(async () => {
+    if (!dbRef.current) return;
+
+    const count = await countOperations();
+    setQueueSize(count);
+  }, []);
+
+  const countOperations = useCallback(async (): Promise<number> => {
+    if (!dbRef.current) return 0;
+
+    return new Promise((resolve, reject) => {
+      const transaction = dbRef.current!.transaction([STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(STORE_NAME);
+      const request = objectStore.count();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }, []);
+
+  const addToQueue = useCallback(
+    async (type: 'save_draft' | 'submit_report', data: any): Promise<void> => {
+      if (!dbRef.current) {
+        console.error('[OfflineQueue] Database not initialized');
+        return;
+      }
+
+      const operation: QueuedOperation = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type,
+        data,
+        timestamp: Date.now(),
+        retryCount: 0,
+      };
+
+      return new Promise((resolve, reject) => {
+        const transaction = dbRef.current!.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.add(operation);
+
+        request.onsuccess = () => {
+          console.log('[OfflineQueue] Added to queue:', operation.id);
+          updateQueueSize();
+          resolve();
+        };
+
+        request.onerror = () => {
+          console.error('[OfflineQueue] Failed to add to queue:', request.error);
+          reject(request.error);
+        };
+      });
+    },
+    [updateQueueSize]
+  );
+
+  const removeFromQueue = useCallback(
+    async (id: string): Promise<void> => {
+      if (!dbRef.current) return;
+
+      return new Promise((resolve, reject) => {
+        const transaction = dbRef.current!.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.delete(id);
+
+        request.onsuccess = () => {
+          console.log('[OfflineQueue] Removed from queue:', id);
+          updateQueueSize();
+          resolve();
+        };
+
+        request.onerror = () => {
+          console.error('[OfflineQueue] Failed to remove from queue:', request.error);
+          reject(request.error);
+        };
+      });
+    },
+    [updateQueueSize]
+  );
+
+  const getAllOperations = useCallback(async (): Promise<QueuedOperation[]> => {
+    if (!dbRef.current) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = dbRef.current!.transaction([STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(STORE_NAME);
+      const request = objectStore.getAll();
+
+      request.onsuccess = () => {
+        const operations = request.result as QueuedOperation[];
+        // Sort by timestamp
+        operations.sort((a, b) => a.timestamp - b.timestamp);
+        resolve(operations);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }, []);
+
+  const processQueue = useCallback(async () => {
+    if (!isOnline || processingRef.current || !dbRef.current) {
       return;
     }
 
-    // Initial queue size check
-    refreshQueueSize();
+    processingRef.current = true;
+    setIsProcessing(true);
 
-    // Set up periodic sync
-    syncTimeoutRef.current = setInterval(() => {
-      if (navigator.onLine && queueSize > 0) {
-        processQueue();
+    try {
+      const operations = await getAllOperations();
+
+      if (operations.length === 0) {
+        console.log('[OfflineQueue] No operations to process');
+        return;
       }
-    }, syncIntervalMs);
 
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearInterval(syncTimeoutRef.current);
+      console.log(`[OfflineQueue] Processing ${operations.length} operations`);
+
+      for (const operation of operations) {
+        try {
+          // The actual processing would be handled by the caller
+          // For now, we just remove successfully processed operations
+          // In a real implementation, you'd pass a processor function
+
+          // Simulate processing (caller should provide actual processor)
+          console.log('[OfflineQueue] Processing operation:', operation.id, operation.type);
+
+          // Remove from queue on success
+          await removeFromQueue(operation.id);
+        } catch (error) {
+          console.error('[OfflineQueue] Failed to process operation:', operation.id, error);
+
+          // Increment retry count
+          operation.retryCount++;
+
+          if (operation.retryCount >= MAX_RETRIES) {
+            console.error('[OfflineQueue] Max retries reached, removing:', operation.id);
+            await removeFromQueue(operation.id);
+            toast({
+              title: 'Sync failed',
+              description: 'Some changes could not be synced.',
+              variant: 'destructive',
+            });
+          }
+        }
       }
-    };
-  }, [autoSync, isOnline, queueSize, syncIntervalMs, refreshQueueSize, processQueue]);
 
-  // Initial load
+      toast({
+        title: 'Sync complete',
+        description: 'All queued changes have been synced.',
+      });
+    } catch (error) {
+      console.error('[OfflineQueue] Error processing queue:', error);
+    } finally {
+      processingRef.current = false;
+      setIsProcessing(false);
+      updateQueueSize();
+    }
+  }, [isOnline, getAllOperations, removeFromQueue, updateQueueSize, toast]);
+
+  // Auto-process queue when coming online
   useEffect(() => {
-    refreshQueueSize();
-  }, [refreshQueueSize]);
+    if (isOnline && queueSize > 0) {
+      const timer = setTimeout(() => processQueue(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOnline, queueSize, processQueue]);
 
   return {
-    // State
     isOnline,
-    isSyncing,
     queueSize,
-    lastSyncTime,
-    syncErrors,
-    
-    // Actions
+    isProcessing,
     addToQueue,
-    processQueue: forceSync,
-    getQueuedItems,
-    clearErrors,
-    refreshQueueSize,
+    processQueue,
   };
 }

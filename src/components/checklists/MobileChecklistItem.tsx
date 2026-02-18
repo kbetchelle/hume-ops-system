@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getTaskColorClass } from "./checklistColors";
 import {
   CheckboxTask,
   YesNoTask,
@@ -34,6 +35,7 @@ interface MobileChecklistItemProps {
   onToggle?: () => void;
   onUpdate?: (value: string) => void;
   disabled?: boolean;
+  checkboxIndex?: number;
 }
 
 export function MobileChecklistItem({
@@ -43,6 +45,7 @@ export function MobileChecklistItem({
   onToggle,
   onUpdate,
   disabled,
+  checkboxIndex,
 }: MobileChecklistItemProps) {
   const { t } = useLanguage();
   
@@ -91,32 +94,16 @@ export function MobileChecklistItem({
     }
   };
 
-  // Determine color class based on item color
-  const getColorClass = () => {
-    if (!item.color) return "";
-    
-    const colorMap: Record<string, string> = {
-      red: "border-l-add-crimson bg-add-crimson/5",
-      orange: "border-l-add-amber bg-add-amber/5",
-      yellow: "border-l-yellow-500 bg-yellow-500/5",
-      green: "border-l-green-500 bg-green-500/5",
-      blue: "border-l-add-skyBlue bg-add-skyBlue/5",
-      purple: "border-l-purple-500 bg-purple-500/5",
-      gray: "border-l-gray-500 bg-gray-500/5",
-      teal: "border-l-add-olive bg-add-olive/5",
-      pink: "border-l-add-burntOrange bg-add-burntOrange/5",
-    };
-    
-    return colorMap[item.color] || "";
-  };
+  // Determine color class based on task type
+  const colorClass = getTaskColorClass(item.task_type, checkboxIndex);
 
   return (
     <div
       className={cn(
         "p-4 border-b border-l-4 transition-all",
         "hover:bg-muted/50",
-        "touch-manipulation", // Optimize for touch devices
-        getColorClass(),
+        "touch-manipulation",
+        colorClass,
         isCompleted && "bg-muted/30 opacity-75"
       )}
     >

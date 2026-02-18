@@ -182,7 +182,7 @@ export function BoHChecklistView() {
               const allDone = sectionCompleted === sectionItems.length;
               return (
                 <Collapsible key={section} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors border">
                     <span className="font-semibold text-sm">{section}</span>
                     <div className="flex items-center gap-2">
                       <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">
@@ -191,7 +191,7 @@ export function BoHChecklistView() {
                       <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
                     </div>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                  <CollapsibleContent className="space-y-3 pt-3">
                     {filteredItems.map((item: any) => (
                       <BoHChecklistItem
                         key={item.id}

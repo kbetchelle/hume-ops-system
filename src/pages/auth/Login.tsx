@@ -126,9 +126,9 @@ export default function Login() {
                     <FormLabel>Password</FormLabel>
                     <Link 
                       to="/forgot-password" 
-                      className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+                      className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 font-medium"
                     >
-                      Forgot Password
+                      Forgot?
                     </Link>
                   </div>
                   <FormControl>

@@ -100,7 +100,7 @@ export function MobileChecklistItem({
   return (
     <div
       className={cn(
-        "p-4 border-b border-l-4 transition-all",
+        "p-4 border border-l-4 rounded-lg transition-all",
         "hover:bg-muted/50",
         "touch-manipulation",
         colorClass,

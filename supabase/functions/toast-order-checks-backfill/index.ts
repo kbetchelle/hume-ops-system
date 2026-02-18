@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
     }
 
     const batchId = crypto.randomUUID();
-    let currentDate = cursorDate;
+    const currentDate = cursorDate;
     let currentPage = cursorPage;
     const allOrdersForDay: Record<string, unknown>[] = [];
 

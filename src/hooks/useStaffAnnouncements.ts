@@ -74,7 +74,7 @@ export function useActiveStaffAnnouncements(userRole?: string) {
     queryFn: async () => {
       const now = new Date().toISOString();
       
-      let query = supabase
+      const query = supabase
         .from("staff_announcements")
         .select("*")
         .eq("is_active", true)

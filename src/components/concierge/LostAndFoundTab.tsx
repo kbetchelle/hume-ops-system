@@ -233,7 +233,7 @@ export function LostAndFoundTab() {
   const unclaimedItems = useMemo(() => items.filter((i) => i.status === "unclaimed"), [items]);
 
   const filteredAndSortedItems = useMemo(() => {
-    let filtered = items.filter((item) => {
+    const filtered = items.filter((item) => {
       if (item.archived_at) return false; // exclude archived items from found items tab
       const matchesSearch =
       searchQuery === "" ||

@@ -117,7 +117,7 @@ serve(async (req) => {
     // Insert in batches of 50
     const batchSize = 50;
     let inserted = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);

@@ -44,7 +44,7 @@ export function useConciergeShiftStaff(
         .map((s: any) => s.sling_user_id)
         .filter((id: any) => id != null);
 
-      let userNameMap = new Map<number, string>();
+      const userNameMap = new Map<number, string>();
 
       if (slingUserIds.length > 0) {
         const { data: slingUsers, error: usersError } = await supabase

@@ -17,7 +17,7 @@ export function useStaffMessages(filter?: {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      let query = supabase
+      const query = supabase
         .from('staff_messages')
         .select('*')
         .eq('is_sent', true)

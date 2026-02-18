@@ -220,7 +220,7 @@ Do not enable strict `noImplicitAny` / `noUnusedLocals` globally in one step; re
 | 2.7 | CSVImportMapper eslint-disable | ☑ |
 | 3.1 | npm audit fix (and optionally upgrade ESLint stack) | ☑ |
 | 3.3 | tailwind.config.ts require → import or disable | ☑ |
-| 4.x | React hooks exhaustive-deps (ConciergeForm + list in 4.2) | ☐ |
+| 4.x | React hooks exhaustive-deps (ConciergeForm + list in 4.2) | ☑ |
 | 5.x | Reduce `any` (priority areas first) | ☐ |
 | 6.1 | RichTextEditor safety comment or sanitize | ☐ |
 | 6.2 | ResponseTemplatesWithAI innerHTML comment or safe strip | ☐ |

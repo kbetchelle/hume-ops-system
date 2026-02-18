@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { Calendar, Clock } from "lucide-react";
@@ -72,7 +72,7 @@ export function ShiftEventsMiniCalendar() {
 
   const isLoading = classesLoading || toursLoading;
 
-  const filterByShift = (startTime: string): boolean => {
+  const filterByShift = useCallback((startTime: string): boolean => {
     try {
       const eventDate = parseISO(startTime);
       const eventHour = eventDate.getHours() + eventDate.getMinutes() / 60;
@@ -81,7 +81,7 @@ export function ShiftEventsMiniCalendar() {
     } catch {
       return true;
     }
-  };
+  }, [currentShift]);
 
   const events: ScheduleEvent[] = useMemo(() => {
     const classEvents: ScheduleEvent[] = (classes || [])
@@ -112,7 +112,7 @@ export function ShiftEventsMiniCalendar() {
     return [...classEvents, ...tourEvents].sort(
       (a, b) => a.sortTime.getTime() - b.sortTime.getTime()
     );
-  }, [classes, tours, currentShift]);
+  }, [classes, tours, filterByShift]);
 
   return (
     <Card className="rounded-none border border-border">

@@ -79,6 +79,7 @@ export function useBackfillJob(jobType: BackfillJobType) {
       const timer = setTimeout(() => { setActiveJobId(null); queryClient.invalidateQueries({ queryKey: ["sync-logs-with-details"] }); }, 3000);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to status transition; activeJob object identity changes on refetch would reset the timeout
   }, [activeJob?.status, queryClient, jobType]);
 
   // For classes, completed_dates tracks chunks not days; total_days is the original day count but completed_dates is chunk count

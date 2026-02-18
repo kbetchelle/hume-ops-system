@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore } from "date-fns";
 import { Calendar, Clock, Users, Dumbbell, MapPin } from "lucide-react";
@@ -90,7 +90,7 @@ export function UpcomingTodayCard() {
 
   const isLoading = toursLoading || classesLoading;
 
-  const filterByShift = (startTime: string): boolean => {
+  const filterByShift = useCallback((startTime: string): boolean => {
     try {
       const eventDate = parseISO(startTime);
       const eventHour = eventDate.getHours() + eventDate.getMinutes() / 60;
@@ -99,7 +99,7 @@ export function UpcomingTodayCard() {
     } catch {
       return true;
     }
-  };
+  }, [currentShift]);
 
   const unifiedEvents: UnifiedEvent[] = useMemo(() => {
     const tourEvents: UnifiedEvent[] = (tours || [])
@@ -146,7 +146,7 @@ export function UpcomingTodayCard() {
     return [...tourEvents, ...classEvents].sort(
       (a, b) => a.sortTime.getTime() - b.sortTime.getTime()
     );
-  }, [tours, classes, currentShift]);
+  }, [tours, classes, filterByShift]);
 
   // Filter to only show upcoming events (future or within last 30 minutes)
   const upcomingEvents = unifiedEvents.filter((event) => {

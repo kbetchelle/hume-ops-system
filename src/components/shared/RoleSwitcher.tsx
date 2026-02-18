@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,17 +65,18 @@ export function RoleSwitcher() {
         
         {availableRoles.map((userRole) => {
           const isCurrentView = currentViewRole === userRole.role;
-          return (
+           return (
             <DropdownMenuItem
               key={userRole.id}
               onClick={() => handleSwitchRole(userRole.role)}
               className="flex items-center justify-between rounded-none cursor-pointer"
+              style={isCurrentView ? { backgroundColor: 'hsl(0 0% 0%)', color: 'hsl(0 0% 100%)' } : undefined}
             >
-              <span className="text-xs uppercase tracking-widest">
+              <span className={cn("text-xs uppercase tracking-widest", isCurrentView && "font-semibold")}>
                 {getRoleLabel(userRole.role)}
               </span>
               {isCurrentView && (
-                <Check className="h-4 w-4 text-primary" />
+                <Check className="h-4 w-4" />
               )}
             </DropdownMenuItem>
           );

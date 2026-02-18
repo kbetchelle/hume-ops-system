@@ -8,6 +8,7 @@ import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
 import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
 import { ConciergeForm } from "@/components/concierge/ConciergeForm";
+import { PastReportsView } from "@/components/concierge/PastReportsView";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
@@ -25,9 +26,11 @@ import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useQuickLinkGroupsByRole, useResourcePagesByRole } from "@/hooks/useStaffResources";
 import { usePolicies } from "@/hooks/usePolicies";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
+  const [reportView, setReportView] = useState<"current" | "past">("current");
   const isMobile = useIsMobile();
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
   const { activeRole } = useActiveRole();
@@ -84,7 +87,18 @@ export default function ConciergeDashboard() {
         return (
           <div className="p-6 md:p-8">
             <div className="max-w-3xl mx-auto">
-              <ConciergeForm />
+              <Tabs value={reportView} onValueChange={(v) => setReportView(v as "current" | "past")}>
+                <TabsList className="mb-4 rounded-none w-full sm:w-auto">
+                  <TabsTrigger value="current" className="rounded-none">Current shift</TabsTrigger>
+                  <TabsTrigger value="past" className="rounded-none">Past reports</TabsTrigger>
+                </TabsList>
+                <TabsContent value="current">
+                  <ConciergeForm />
+                </TabsContent>
+                <TabsContent value="past">
+                  <PastReportsView />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>);
 

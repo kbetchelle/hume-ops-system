@@ -102,6 +102,25 @@ export function useShiftReportHistory(limit = 30) {
   });
 }
 
+/** Submitted reports only, for Past Reports view. Client-side search/pagination. */
+export function useSubmittedShiftReports(limit = 200) {
+  return useQuery({
+    queryKey: ["submittedShiftReports", limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_report_history")
+        .select("*")
+        .eq("status", "submitted")
+        .order("report_date", { ascending: false })
+        .order("shift_type", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 export function useSaveShiftReport() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -157,6 +176,7 @@ export function useSaveShiftReport() {
         queryKey: ["shiftReport", variables.report_date, variables.shift_type],
       });
       queryClient.invalidateQueries({ queryKey: ["shiftReportHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["submittedShiftReports"] });
       toast({
         title: variables.status === "submitted" ? "Report submitted" : "Report saved",
         description:

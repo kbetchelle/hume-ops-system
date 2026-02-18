@@ -28,6 +28,7 @@ import { useAutoSubmitConcierge } from '@/hooks/useAutoSubmitConcierge';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { useConciergeShiftStaff } from '@/hooks/useConciergeShiftStaff';
 import { useCurrentShift } from '@/hooks/useCurrentShift';
+import { useShiftReportHistory } from '@/hooks/useShiftReports';
 import { ActiveEditorsBar } from './ActiveEditorsBar';
 import { ConflictModal } from './ConflictModal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
@@ -59,7 +60,7 @@ export function ConciergeForm() {
   const [conflictData, setConflictData] = useState<ConciergeDraft | null>(null);
   const [arketaCheckIns, setArketaCheckIns] = useState<any[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [reportHistory, setReportHistory] = useState<{report_date: string;shift_type: string;staff_name: string | null;status: string | null;submitted_at: string | null;}[]>([]);
+  const { data: reportHistory = [] } = useShiftReportHistory(30);
   const [notesForShift, setNotesForShift] = useState<{id: string;from: string;text: string;}[]>([]);
   const [photoUploadOpen, setPhotoUploadOpen] = useState<{type: 'facility' | 'system';index: number;} | null>(null);
 
@@ -627,9 +628,9 @@ export function ConciergeForm() {
             </DialogHeader>
             <ScrollArea className="h-[60vh] pr-4">
               <div className="space-y-2">
-                {reportHistory.map((r, i) =>
+                {(reportHistory as { id?: string; report_date: string; shift_type: string; staff_name: string | null; status: string | null }[]).map((r) =>
                 <button
-                  key={i}
+                  key={r.id ?? r.report_date + r.shift_type}
                   type="button"
                   onClick={() => {
                     setFormData((prev) => ({ ...prev, reportDate: r.report_date, shiftTime: normalizeShiftType(r.shift_type) }));

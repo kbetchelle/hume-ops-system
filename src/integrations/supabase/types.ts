@@ -5677,19 +5677,10 @@ export type Database = {
           sling_user_id: number
         }[]
       }
-      upsert_arketa_classes_from_staging:
-        | {
-            Args: { p_sync_batch_id: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
-        | {
-            Args: { p_sync_batch_id: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.upsert_arketa_classes_from_staging(p_sync_batch_id => text), public.upsert_arketa_classes_from_staging(p_sync_batch_id => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
+      upsert_arketa_classes_from_staging: {
+        Args: { p_sync_batch_id: string }
+        Returns: number
+      }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]

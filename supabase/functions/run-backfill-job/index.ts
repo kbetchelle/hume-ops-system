@@ -77,7 +77,7 @@ function getSyncConfig(jobType: JobType) {
 }
 
 /** Handle arketa_classes with wide-range syncs (7-day chunks) instead of day-by-day */
-async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>) {
+async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
   const startDate = new Date(job.start_date);
   const endDate = new Date(job.end_date);
   const CHUNK_DAYS = 7;
@@ -144,33 +144,39 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
 
   await supabase.from("backfill_jobs").update({ processing_date: `${chunk.start} → ${chunk.end}` }).eq("id", jobId);
 
-  // Count existing classes in this chunk's date range before sync
-  const { count: existingBefore } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true }).gte("class_date", chunk.start).lte("class_date", chunk.end);
+  // Determine sync function and history table based on job type
+  const chunkConfig = getSyncConfig(jobType);
+  const syncFunctionName = chunkConfig.syncFunction;
+  const historyTable = jobType === "arketa_classes_and_reservations" ? "arketa_reservations_history" : "arketa_classes";
+
+  // Count existing records in this chunk's date range before sync
+  const { count: existingBefore } = await supabase.from(historyTable).select("*", { count: "exact", head: true }).gte(chunkConfig.dateColumn, chunk.start).lte(chunkConfig.dateColumn, chunk.end);
   const existingCount = existingBefore || 0;
 
   let chunkResult: SyncResult;
   try {
-    const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-arketa-classes`, {
+    const syncBody = jobType === "arketa_classes_and_reservations"
+      ? { start_date: chunk.start, end_date: chunk.end, triggeredBy: "backfill-job" }
+      : { startDate: chunk.start, endDate: chunk.end };
+    const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-      body: JSON.stringify({ startDate: chunk.start, endDate: chunk.end }),
+      body: JSON.stringify(syncBody),
     });
     const syncData = await syncResponse.json();
 
     if (!syncResponse.ok) {
       chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" };
     } else {
-      const recordCount = syncData?.syncedCount ?? syncData?.totalFetched ?? 0;
-      const totalFetched = syncData?.totalFetched ?? 0;
+      const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
       await new Promise(resolve => setTimeout(resolve, 500));
-      const { count: afterCount } = await supabase.from("arketa_classes").select("*", { count: "exact", head: true }).gte("class_date", chunk.start).lte("class_date", chunk.end);
+      const { count: afterCount } = await supabase.from(historyTable).select("*", { count: "exact", head: true }).gte(chunkConfig.dateColumn, chunk.start).lte(chunkConfig.dateColumn, chunk.end);
       const newRecords = Math.max(0, (afterCount || 0) - existingCount);
       totalRecords += recordCount;
       totalNewRecords += newRecords;
 
       const hitPageLimit = totalFetched > 0 && totalFetched % 400 === 0;
       chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit };
-
       if (hitPageLimit) {
         console.log(`[run-backfill-job] Classes chunk ${chunk.start}-${chunk.end} hit 400 page limit (fetched ${totalFetched}). Scheduling 2-min cooldown.`);
       }
@@ -302,9 +308,11 @@ Deno.serve(async (req) => {
 
     await supabase.from("backfill_jobs").update({ status: "running", started_at: job.started_at || new Date().toISOString() }).eq("id", jobId);
 
-    // ── Arketa Classes: wide-range sync (not day-by-day) ──
-    if (jobType === "arketa_classes") {
-      return await handleClassesBackfill(supabase, job, jobId, corsHeaders);
+    // ── Arketa Classes (and Classes+Reservations): wide-range sync (not day-by-day) ──
+    // The Arketa API returns incomplete/empty results for single-day queries,
+    // so we must use 7-day chunks for any job type that syncs classes.
+    if (jobType === "arketa_classes" || jobType === "arketa_classes_and_reservations") {
+      return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
     }
 
     const startDate = new Date(job.start_date);

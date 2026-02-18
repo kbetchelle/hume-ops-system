@@ -25,7 +25,7 @@ export function RoleSwitcher() {
     if (path.includes("/dashboard/manager")) return "manager";
     if (path.includes("/dashboard/concierge")) return "concierge";
     if (path.includes("/dashboard/trainer")) return "trainer";
-    if (path.includes("/dashboard/spa")) return "female_spa_attendant";
+    if (path.includes("/dashboard/spa")) return activeRole === "male_spa_attendant" ? "male_spa_attendant" : "female_spa_attendant";
     if (path.includes("/dashboard/floater")) return "floater";
     if (path.includes("/dashboard/cafe")) return "cafe";
     return activeRole;

@@ -582,7 +582,7 @@ export function EmbeddedChecklist() {
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className={`w-full justify-between p-4 h-auto rounded-none hover:bg-muted/50 border-l-4 ${groupIndex % 2 === 0 ? 'border-l-add-skyBlue' : 'border-l-green-500'}`}
+                      className="w-full justify-between p-4 h-auto rounded-none hover:bg-muted/50 bg-muted/50 border"
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (

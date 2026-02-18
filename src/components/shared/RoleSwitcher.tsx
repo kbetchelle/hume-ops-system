@@ -63,9 +63,7 @@ export function RoleSwitcher() {
       <DropdownMenuContent align="end" className="rounded-none w-48 bg-background border border-border z-50">
         
         {availableRoles.map((userRole) => {
-          const isCurrentView = currentViewRole === userRole.role || 
-            (currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant") ||
-            (currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant");
+          const isCurrentView = currentViewRole === userRole.role;
           return (
             <DropdownMenuItem
               key={userRole.id}

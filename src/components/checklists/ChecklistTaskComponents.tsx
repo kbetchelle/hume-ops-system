@@ -132,7 +132,7 @@ export function PhotoTask({
           size="sm"
           onClick={() => setIsPhotoModalOpen(true)}
           disabled={disabled}
-          className="gap-2 min-h-[44px] min-w-[44px]"
+          className="gap-2 text-[12.75px] p-[5px] min-h-0 min-w-0"
         >
           <Camera className="h-4 w-4" />
           {completionValue ? "Retake Photo" : "Take Photo"}
@@ -204,7 +204,7 @@ export function SignatureTask({
           variant="outline"
           size="sm"
           onClick={() => setIsSignatureModalOpen(true)}
-          className="gap-2 min-h-[44px] min-w-[44px] text-[10px]"
+          className="gap-2 text-[12.75px] p-[5px] min-h-0 min-w-0"
         >
           <Pen className="h-4 w-4" />
           {completionValue ? "Update Signature" : "Sign"}

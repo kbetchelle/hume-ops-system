@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bold, Italic, Link, List, ListOrdered, Palette, Underline } from "lucide-react";
+import { sanitizeHtml } from "@/lib/utils";
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -49,7 +51,7 @@ export function RichTextEditor({
   // Set initial value on mount, and re-sync when value changes externally
   useEffect(() => {
     if (editorRef.current && (!isInitializedRef.current || value !== lastExternalValueRef.current)) {
-      editorRef.current.innerHTML = value;
+      editorRef.current.innerHTML = sanitizeHtml(value);
       isInitializedRef.current = true;
       lastExternalValueRef.current = value;
     }

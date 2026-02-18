@@ -222,9 +222,9 @@ Do not enable strict `noImplicitAny` / `noUnusedLocals` globally in one step; re
 | 3.3 | tailwind.config.ts require → import or disable | ☑ |
 | 4.x | React hooks exhaustive-deps (ConciergeForm + list in 4.2) | ☑ |
 | 5.x | Reduce `any` (priority areas first) | ☐ |
-| 6.1 | RichTextEditor safety comment or sanitize | ☐ |
-| 6.2 | ResponseTemplatesWithAI innerHTML comment or safe strip | ☐ |
-| 6.4 | Empty interfaces + react-refresh (optional) | ☐ |
+| 6.1 | RichTextEditor safety comment or sanitize | ☑ |
+| 6.2 | ResponseTemplatesWithAI innerHTML comment or safe strip | ☑ |
+| 6.4 | Empty interfaces + react-refresh (optional) | ☑ |
 
 ---
 

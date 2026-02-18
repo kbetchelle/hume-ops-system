@@ -32,7 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { sanitizeHtml } from "@/lib/utils";
+import { sanitizeHtml, stripHtml } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useAuth } from "@/hooks/useAuth";
@@ -759,10 +759,7 @@ export function ResponseTemplatesWithAI() {
       if (aiTemplateGuide !== "none") {
         const guide = templates.find(t => t.id === aiTemplateGuide);
         if (guide) {
-          // Strip HTML tags for clean context
-          const div = document.createElement("div");
-          div.innerHTML = guide.content;
-          templateContext = `Title: ${guide.title}\nCategory: ${guide.category}\n\n${div.textContent || div.innerText}`;
+          templateContext = `Title: ${guide.title}\nCategory: ${guide.category}\n\n${stripHtml(guide.content)}`;
         }
       }
 

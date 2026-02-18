@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SignaturePad } from '@/components/ui/SignaturePad';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
+import { getTaskColorClass } from '@/components/checklists/checklistColors';
 
 interface ConciergeChecklistItemProps {
   item: any;
@@ -16,7 +17,6 @@ interface ConciergeChecklistItemProps {
   checklistId: string;
   completionDate: string;
   shiftTime: string;
-  checkboxIndex?: number;
 }
 
 export function ConciergeChecklistItem({
@@ -25,7 +25,6 @@ export function ConciergeChecklistItem({
   checklistId,
   completionDate,
   shiftTime,
-  checkboxIndex = 0,
 }: ConciergeChecklistItemProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -74,34 +73,8 @@ export function ConciergeChecklistItem({
     await handleToggle(undefined, undefined, signatureData);
   };
 
-  // Color map for left border and background styling
-  const colorBorderMap: Record<string, string> = {
-    red: 'border-l-add-crimson',
-    orange: 'border-l-add-amber',
-    yellow: 'border-l-yellow-500',
-    green: 'border-l-green-500',
-    blue: 'border-l-add-skyBlue',
-    purple: 'border-l-purple-500',
-    gray: 'border-l-gray-500',
-    teal: 'border-l-add-olive',
-    pink: 'border-l-add-burntOrange',
-  };
-  const colorBgMap: Record<string, string> = {
-    red: 'bg-add-crimson/5',
-    orange: 'bg-add-amber/5',
-    yellow: 'bg-yellow-500/5',
-    green: 'bg-green-500/5',
-    blue: 'bg-add-skyBlue/5',
-    purple: 'bg-purple-500/5',
-    gray: 'bg-gray-500/5',
-    teal: 'bg-add-olive/5',
-    pink: 'bg-add-burntOrange/5',
-  };
-  // For checkbox items, alternate between blue and green based on checkboxIndex
-  const effectiveColor = item.task_type === 'checkbox' 
-    ? (checkboxIndex % 2 === 0 ? 'blue' : 'green') 
-    : item.color;
-  const colorBorderClass = effectiveColor ? `border-l-4 ${colorBorderMap[effectiveColor] || ''} ${colorBgMap[effectiveColor] || ''}` : '';
+  // Use standardized task-type-based color
+  const colorBorderClass = getTaskColorClass(item.task_type);
 
   // Header type
   if (item.task_type === 'header') {

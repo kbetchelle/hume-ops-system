@@ -6,7 +6,8 @@ import { ConciergeChecklistItem } from './ConciergeChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Calendar, ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -195,7 +196,7 @@ export function ConciergeChecklistView() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 relative">
+        <CardContent className="space-y-3 relative">
           {showCompletedOverlay && (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer rounded-b-lg"
@@ -209,24 +210,46 @@ export function ConciergeChecklistView() {
             </div>
           )}
           {(() => {
-            const sorted = checklist.concierge_checklist_items
+            const items = checklist.concierge_checklist_items
               ?.sort((a: any, b: any) => a.sort_order - b.sort_order) || [];
-            const filtered = effectiveHideCompleted
-              ? sorted.filter((item: any) => !completionMap.get(item.id)?.completed_at)
-              : sorted;
-            let cbIdx = 0;
-            return filtered.map((item: any) => {
-              const idx = item.task_type === 'checkbox' ? cbIdx++ : 0;
+            // Group by time_hint (like BoH does)
+            const grouped: Record<string, any[]> = {};
+            items.forEach((item: any) => {
+              const section = item.time_hint || 'Other';
+              if (!grouped[section]) grouped[section] = [];
+              grouped[section].push(item);
+            });
+            return Object.entries(grouped).map(([section, sectionItems]) => {
+              const filteredItems = effectiveHideCompleted
+                ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
+                : sectionItems;
+              if (filteredItems.length === 0) return null;
+              const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
+              const allDone = sectionCompleted === sectionItems.length;
               return (
-                <ConciergeChecklistItem
-                  key={item.id}
-                  item={item}
-                  completion={completionMap.get(item.id)}
-                  checklistId={checklist.id}
-                  completionDate={selectedDate}
-                  shiftTime={shiftTime}
-                  checkboxIndex={idx}
-                />
+                <Collapsible key={section} defaultOpen>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-semibold text-sm">{section}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">
+                        {sectionCompleted}/{sectionItems.length}
+                      </Badge>
+                      <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                    {filteredItems.map((item: any) => (
+                      <ConciergeChecklistItem
+                        key={item.id}
+                        item={item}
+                        completion={completionMap.get(item.id)}
+                        checklistId={checklist.id}
+                        completionDate={selectedDate}
+                        shiftTime={shiftTime}
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               );
             });
           })()}

@@ -191,7 +191,7 @@ export function BoHChecklistView() {
                       <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
                     </div>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-3 pt-3">
+                  <CollapsibleContent className="pt-3">
                     {filteredItems.map((item: any) => (
                       <BoHChecklistItem
                         key={item.id}

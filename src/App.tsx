@@ -29,7 +29,8 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
 import ConciergeDashboard from "./pages/dashboards/ConciergeDashboard";
 import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
-import SpaDashboard from "./pages/dashboards/SpaDashboard";
+import MaleSpaDashboard from "./pages/dashboards/MaleSpaDashboard";
+import FemaleSpaDashboard from "./pages/dashboards/FemaleSpaDashboard";
 import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
 import CafeDashboard from "./pages/dashboards/CafeDashboard";
 import EventDrinksPage from "./pages/dashboards/EventDrinksPage";
@@ -190,9 +191,21 @@ const App = () => (
             />
             <Route
               path="/dashboard/spa"
+              element={<Navigate to="/dashboard/spa/female" replace />}
+            />
+            <Route
+              path="/dashboard/spa/female"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant"]}>
-                  <SpaDashboard />
+                  <FemaleSpaDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/spa/male"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant"]}>
+                  <MaleSpaDashboard />
                 </ProtectedRoute>
               }
             />

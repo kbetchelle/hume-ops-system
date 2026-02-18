@@ -1,20 +1,25 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { getRoleDashboardPath } from "@/hooks/useUserRoles";
 import { AppRole } from "@/types/roles";
+import { toast } from "sonner";
 
-export function RoleSwitcher() {
+interface RoleSwitcherProps {
+  collapsed?: boolean;
+  variant?: "sidebar" | "header";
+}
+
+export function RoleSwitcher({ collapsed = false, variant = "sidebar" }: RoleSwitcherProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeRole, setActiveRole, availableRoles, getRoleLabel } = useActiveRole();
@@ -26,10 +31,10 @@ export function RoleSwitcher() {
     if (path.includes("/dashboard/manager")) return "manager";
     if (path.includes("/dashboard/concierge")) return "concierge";
     if (path.includes("/dashboard/trainer")) return "trainer";
+    if (path.includes("/dashboard/spa/male")) return "male_spa_attendant";
+    if (path.includes("/dashboard/spa/female")) return "female_spa_attendant";
     if (path.includes("/dashboard/spa")) {
-      if (activeRole === "male_spa_attendant" || activeRole === "female_spa_attendant") {
-        return activeRole;
-      }
+      if (activeRole === "male_spa_attendant" || activeRole === "female_spa_attendant") return activeRole;
       return null;
     }
     if (path.includes("/dashboard/floater")) return "floater";
@@ -38,44 +43,70 @@ export function RoleSwitcher() {
   };
 
   const currentViewRole = getCurrentViewRole();
-
-  // Show if user has multiple roles (managers or admins who can switch between roles)
-  const hasManagerRole = availableRoles.some((r) => r.role === "manager");
-  const hasAdminRole = availableRoles.some((r) => r.role === "admin");
   const hasMultipleRoles = availableRoles.length > 1;
 
-  // Only show if user has manager/admin role AND has multiple roles to switch between
-  if (!(hasManagerRole || hasAdminRole) || !hasMultipleRoles) {
-    return null;
+  // Single role: show Badge (or null when collapsed)
+  if (!hasMultipleRoles) {
+    if (collapsed) return null;
+    return (
+      <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
+        {currentViewRole ? getRoleLabel(currentViewRole) : "No Role"}
+      </Badge>
+    );
   }
 
   const handleSwitchRole = (role: string) => {
     setActiveRole(role as AppRole);
     navigate(getRoleDashboardPath(role as AppRole));
+    toast.success(`Switched to ${getRoleLabel(role as AppRole)} view`);
   };
+
+  const isSidebar = variant === "sidebar";
+  const isHeader = variant === "header";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant={isHeader ? "outline" : "ghost"}
           size="sm"
-          className="w-full gap-2 rounded-none text-xs uppercase tracking-widest justify-start px-0 h-auto py-1"
+          className={cn(
+            "gap-2 rounded-none text-xs uppercase tracking-widest",
+            isSidebar && "w-full justify-start px-0 h-auto py-1",
+            isSidebar && collapsed && "h-8 w-8 p-0",
+            isHeader && "h-8"
+          )}
         >
-          <span className="pl-2 whitespace-normal text-left leading-tight">{currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}</span>
+          {isSidebar && !collapsed && (
+            <span className="pl-2 whitespace-normal text-left leading-tight">
+              {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Switch View"}
+            </span>
+          )}
+          {isHeader && (
+            <>
+              <ArrowLeftRight className="h-4 w-4" />
+              <span className="text-[10px] uppercase tracking-widest">
+                {currentViewRole ? getRoleLabel(currentViewRole) : "Select Role"}
+              </span>
+            </>
+          )}
           <ChevronDown className="h-3 w-3 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="rounded-none w-48 bg-background border border-border z-50">
+      <DropdownMenuContent
+        align="start"
+        side={isSidebar ? "top" : "bottom"}
+        className="rounded-none w-48 bg-background border border-border z-50"
+      >
         
         {availableRoles.map((userRole) => {
           const isCurrentView = currentViewRole === userRole.role;
-           return (
+          return (
             <DropdownMenuItem
               key={userRole.id}
               onClick={() => handleSwitchRole(userRole.role)}
-              className="flex items-center justify-between rounded-none cursor-pointer"
-              style={isCurrentView ? { backgroundColor: 'hsl(0 0% 0%)', color: 'hsl(0 0% 100%)' } : undefined}
+              className={cn("flex items-center justify-between rounded-none cursor-pointer", isSidebar && "text-xs uppercase tracking-widest")}
+              style={isCurrentView ? { backgroundColor: "hsl(0 0% 0%)", color: "hsl(0 0% 100%)" } : undefined}
             >
               <span className={cn("text-xs uppercase tracking-widest", isCurrentView && "font-semibold")}>
                 {getRoleLabel(userRole.role)}

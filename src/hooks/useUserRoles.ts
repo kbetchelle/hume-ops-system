@@ -151,8 +151,8 @@ export function getRoleDashboardPath(role: AppRole): string {
     manager: '/dashboard/manager',
     concierge: '/dashboard/concierge',
     trainer: '/dashboard/trainer',
-    female_spa_attendant: '/dashboard/spa',
-    male_spa_attendant: '/dashboard/spa',
+    female_spa_attendant: '/dashboard/spa/female',
+    male_spa_attendant: '/dashboard/spa/male',
     floater: '/dashboard/floater',
     cafe: '/dashboard/cafe',
   };

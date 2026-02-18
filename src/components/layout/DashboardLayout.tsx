@@ -22,6 +22,7 @@ const RESOURCE_SUB_ITEMS = [
   { title: "Resource Pages", url: "/dashboard/resources/pages", icon: FileText },
 ];
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
+import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { toast } from "sonner";
 import { ROLES, AppRole } from "@/types/roles";
 import humeLogo from "@/assets/hume-logo.png";
@@ -316,7 +317,9 @@ function SidebarNav() {
     if (path.startsWith("/dashboard/admin")) return "admin";
     if (path.startsWith("/dashboard/manager")) return "manager";
     if (path.startsWith("/dashboard/floater")) return "floater";
-    if (path.startsWith("/dashboard/spa")) return "female_spa_attendant";
+    if (path.startsWith("/dashboard/spa/male")) return "male_spa_attendant";
+    if (path.startsWith("/dashboard/spa/female")) return "female_spa_attendant";
+    if (path.startsWith("/dashboard/spa")) return activeRole === "male_spa_attendant" ? "male_spa_attendant" : "female_spa_attendant";
     return activeRole;
   };
   const effectiveRole = getEffectiveRole();
@@ -353,7 +356,12 @@ function SidebarNav() {
   ];
 
   // BoH grouped nav items
-  const bohChecklistUrl = effectiveRole === "floater" ? "/dashboard/floater" : "/dashboard/spa";
+  const bohChecklistUrl =
+    effectiveRole === "floater"
+      ? "/dashboard/floater"
+      : effectiveRole === "male_spa_attendant"
+        ? "/dashboard/spa/male"
+        : "/dashboard/spa/female";
   const bohMainItems: NavItem[] = [{ title: "Checklists", url: bohChecklistUrl, icon: ClipboardList }];
   const bohCommsItems: NavItem[] = [
     { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
@@ -420,7 +428,7 @@ function SidebarNav() {
         {/* User greeting and role switcher at top */}
         <div className={cn("px-3 pb-3 space-y-0", collapsed && "px-2")}>
           <UserInfoDropdown collapsed={collapsed} />
-          <RoleSwitcher collapsed={collapsed} />
+          <RoleSwitcher collapsed={collapsed} variant="sidebar" />
         </div>
 
         {/* BoH / Cafe grouped navigation */}
@@ -558,81 +566,6 @@ function SidebarNav() {
       
       {/* Bottom spacer removed - greeting and role switcher moved to top */}
     </Sidebar>;
-}
-function RoleSwitcher({
-  collapsed = false
-}: {
-  collapsed?: boolean;
-}) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const {
-    activeRole,
-    setActiveRole,
-    availableRoles,
-    getRoleLabel
-  } = useActiveRole();
-
-  // Detect which role view is currently being displayed based on the URL path
-  const getCurrentViewRole = (): AppRole | null => {
-    const path = location.pathname;
-    if (path.includes("/dashboard/admin")) return "admin";
-    if (path.includes("/dashboard/manager")) return "manager";
-    if (path.includes("/dashboard/concierge")) return "concierge";
-    if (path.includes("/dashboard/trainer")) return "trainer";
-    if (path.includes("/dashboard/spa")) return "female_spa_attendant"; // or male_spa_attendant - same view
-    if (path.includes("/dashboard/floater")) return "floater";
-    if (path.includes("/dashboard/cafe")) return "cafe";
-    // For generic pages like /dashboard/reports, fall back to activeRole
-    return activeRole;
-  };
-  const currentViewRole = getCurrentViewRole();
-  if (availableRoles.length <= 1) {
-    if (collapsed) {
-      return null;
-    }
-    return <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
-        {currentViewRole ? getRoleLabel(currentViewRole) : "No Role"}
-      </Badge>;
-  }
-  const handleRoleSwitch = (role: AppRole) => {
-    setActiveRole(role);
-    // Navigate to the appropriate dashboard for the new role
-    const paths: Record<AppRole, string> = {
-      admin: "/dashboard/admin",
-      manager: "/dashboard/manager",
-      concierge: "/dashboard/concierge",
-      trainer: "/dashboard/trainer",
-      female_spa_attendant: "/dashboard/spa",
-      male_spa_attendant: "/dashboard/spa",
-      floater: "/dashboard/floater",
-      cafe: "/dashboard/cafe"
-    };
-    navigate(paths[role]);
-    toast.success(`Switched to ${getRoleLabel(role)} view`);
-  };
-  return <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("gap-2 rounded-none border-0 justify-start", collapsed ? "h-8 w-8 p-0" : "h-auto py-0 w-full px-0")}>
-          {!collapsed && <>
-              <span className="text-xs uppercase tracking-widest flex-1 text-left pl-2 whitespace-normal leading-tight">
-                {currentViewRole ? `${getRoleLabel(currentViewRole)} Role View` : "Select Role"}
-              </span>
-              <ChevronDown className="h-3 w-3 shrink-0" />
-            </>}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-48 rounded-none bg-background border border-border z-50">
-        
-        {availableRoles.map(userRole => {
-        const roleInfo = ROLES.find(r => r.value === userRole.role);
-        const isCurrentView = currentViewRole === userRole.role || currentViewRole === "female_spa_attendant" && userRole.role === "male_spa_attendant" || currentViewRole === "male_spa_attendant" && userRole.role === "female_spa_attendant";
-        return <DropdownMenuItem key={userRole.id} onClick={() => handleRoleSwitch(userRole.role)} className={cn("text-xs uppercase tracking-widest cursor-pointer rounded-none", isCurrentView && "bg-muted")}>
-              {getRoleLabel(userRole.role)}
-            </DropdownMenuItem>;
-      })}
-      </DropdownMenuContent>
-    </DropdownMenu>;
 }
 function UserInfoDropdown({
   collapsed = false

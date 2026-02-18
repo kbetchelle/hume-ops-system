@@ -24,6 +24,8 @@ Will install typescript-eslint@8.14.0, which is a breaking change
 1. Run `npm audit fix` (no `--force`) to apply safe fixes only.
 2. If vulnerabilities remain, upgrade ESLint and typescript-eslint to latest compatible versions and re-run audit, or accept the moderate risk (ReDoS in ESLint’s ajv when using `$data`, which this project may not use).
 
+**Phase 3 outcome:** `npm audit fix` was run (no `--force`); safe fixes were applied. Moderate ajv/ESLint chain issues remain. Risk accepted: ReDoS in ajv applies when using `$data`; this project uses ESLint flat config and does not use that option. Re-run audit periodically.
+
 ---
 
 ## Phase 1: Critical & security (do first)
@@ -216,8 +218,8 @@ Do not enable strict `noImplicitAny` / `noUnusedLocals` globally in one step; re
 | 2.4 | BuildStatusModal irregular whitespace | ☑ |
 | 2.6 | registerSW.ts @ts-expect-error | ☑ |
 | 2.7 | CSVImportMapper eslint-disable | ☑ |
-| 3.1 | npm audit fix (and optionally upgrade ESLint stack) | ☐ |
-| 3.3 | tailwind.config.ts require → import or disable | ☐ |
+| 3.1 | npm audit fix (and optionally upgrade ESLint stack) | ☑ |
+| 3.3 | tailwind.config.ts require → import or disable | ☑ |
 | 4.x | React hooks exhaustive-deps (ConciergeForm + list in 4.2) | ☐ |
 | 5.x | Reduce `any` (priority areas first) | ☐ |
 | 6.1 | RichTextEditor safety comment or sanitize | ☐ |

@@ -289,8 +289,25 @@ export function useSyncArketaClassesAndReservations() {
       const { data, error } = await supabase.functions.invoke("sync-arketa-classes-and-reservations", {
         body: params || {},
       });
-      if (error) throw error;
-      return data;
+      // Backend returns 502 for partial failure but still sends a full JSON body. Treat that as
+      // a result so onSuccess can show "Completed With Errors" instead of going to onError.
+      const hasResultBody =
+        data &&
+        typeof data === "object" &&
+        ("success" in data || "classes" in data || "reservations" in data);
+      if (hasResultBody) {
+        return data;
+      }
+      // No usable body (e.g. 500, network error): throw with backend message if present
+      const fromBody =
+        typeof data?.error === "string"
+          ? data.error
+          : [data?.classes?.error, data?.reservations?.error]
+              .filter(Boolean)
+              .map((e) => (typeof e === "string" ? e : JSON.stringify(e)))
+              .join("; ");
+      const message = fromBody || (error as Error)?.message ?? String(error);
+      throw new Error(message);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["arketaClasses"] });
@@ -301,19 +318,21 @@ export function useSyncArketaClassesAndReservations() {
       const reservations = data?.reservations ?? {};
       const c = classes.syncedCount ?? 0;
       const r = reservations.syncedCount ?? 0;
+      const errorDetail = [classes.error, reservations.error].filter(Boolean).join("; ") || null;
       toast({
         title: data?.success ? "Arketa Sync Complete" : "Arketa Sync Completed With Errors",
         description: data?.success
           ? `Classes: ${c}, Reservations: ${r}`
-          : `Classes: ${c}, Reservations: ${r}. Check logs for errors.`,
+          : errorDetail ?? `Classes: ${c}, Reservations: ${r}. Check logs for errors.`,
         variant: data?.success ? "default" : "destructive",
       });
     },
     onError: (error) => {
       console.error("Failed to sync Arketa classes + reservations:", error);
+      const message = error instanceof Error ? error.message : String(error);
       toast({
         title: "Sync Failed",
-        description: "Failed to run Arketa classes and reservations sync.",
+        description: message,
         variant: "destructive",
       });
     },

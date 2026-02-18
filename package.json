@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "supabase:deploy-backfill": "supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions"
+    "supabase:deploy-backfill": "supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-classes sync-arketa-classes-and-reservations sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

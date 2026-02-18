@@ -23,13 +23,32 @@ Deno.serve(async (req) => {
   if (corsResponse) return corsResponse;
   const corsHeaders = getCorsHeaders(req);
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
+  let supabaseUrl: string;
+  let supabaseKey: string;
+  let supabase: ReturnType<typeof createClient>;
   const startTime = Date.now();
-  const body = (await req.json().catch(() => ({}))) as WrapperRequest;
-  const triggeredBy = body.triggeredBy ?? 'manual';
+  let body: WrapperRequest = {};
+  let triggeredBy = 'manual';
+
+  try {
+    supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    supabase = createClient(supabaseUrl, supabaseKey);
+    body = (await req.json().catch(() => ({}))) as WrapperRequest;
+    triggeredBy = body.triggeredBy ?? 'manual';
+  } catch (initErr) {
+    const msg = initErr instanceof Error ? initErr.message : String(initErr);
+    return new Response(
+      JSON.stringify({ success: false, error: `Initialization failed: ${msg}` }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   try {
     const today = new Date();
@@ -187,18 +206,21 @@ Deno.serve(async (req) => {
     const message = err instanceof Error ? err.message : String(err);
     const durationMs = Date.now() - startTime;
 
-    // Log the failure
-    await logApiCall(supabase, {
-      apiName: 'arketa_classes',
-      endpoint: '/classes+reservations',
-      syncSuccess: false,
-      durationMs,
-      recordsProcessed: 0,
-      recordsInserted: 0,
-      responseStatus: 500,
-      errorMessage: message,
-      triggeredBy,
-    });
+    try {
+      await logApiCall(supabase, {
+        apiName: 'arketa_classes',
+        endpoint: '/classes+reservations',
+        syncSuccess: false,
+        durationMs,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: message,
+        triggeredBy,
+      });
+    } catch (logErr) {
+      console.error('[sync-arketa-classes-and-reservations] Failed to log error:', logErr);
+    }
 
     return new Response(
       JSON.stringify({ success: false, error: message }),

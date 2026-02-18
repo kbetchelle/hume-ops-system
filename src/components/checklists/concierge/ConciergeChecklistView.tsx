@@ -232,10 +232,7 @@ export function ConciergeChecklistView() {
               const allDone = sectionCompleted === sectionItems.length;
               return (
                 <Collapsible key={section} defaultOpen>
-                  <CollapsibleTrigger className={cn(
-                    "flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors border-l-4",
-                    currentSectionIdx % 2 === 0 ? 'border-l-add-skyBlue' : 'border-l-green-500'
-                  )}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors border">
                     <span className="font-semibold text-sm">{section}</span>
                     <div className="flex items-center gap-2">
                       <Badge variant={allDone ? 'default' : 'secondary'} className="text-xs">

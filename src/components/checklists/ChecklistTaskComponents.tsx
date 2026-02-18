@@ -204,7 +204,7 @@ export function SignatureTask({
           variant="outline"
           size="sm"
           onClick={() => setIsSignatureModalOpen(true)}
-          className="gap-2 min-h-[44px] min-w-[44px]"
+          className="gap-2 min-h-[44px] min-w-[44px] text-[10px]"
         >
           <Pen className="h-4 w-4" />
           {completionValue ? "Update Signature" : "Sign"}

@@ -53,7 +53,7 @@ import {
   type CreatePolicyInput,
   type UpdatePolicyInput,
 } from "@/hooks/usePolicies";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeHtml } from "@/lib/utils";
 import { format } from "date-fns";
 
 function PolicyCreateEditDialog({
@@ -529,7 +529,7 @@ export function PolicyManagement() {
                     </div>
                     <div 
                       className="text-sm text-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
-                      dangerouslySetInnerHTML={{ __html: policy.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(policy.content) }}
                     />
                   </div>
                   <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />

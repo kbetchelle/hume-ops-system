@@ -5,12 +5,6 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// #region agent log
-const log1={location:'client.ts:7',message:'Supabase client initialization',data:{hasUrl:!!SUPABASE_URL,hasKey:!!SUPABASE_PUBLISHABLE_KEY,url:SUPABASE_URL?.substring(0,30)},timestamp:Date.now(),hypothesisId:'H7'};
-console.log('[DEBUG]',log1);
-fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(log1)}).catch((e)=>console.warn('[DEBUG] Fetch failed:',e));
-// #endregion
-
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

@@ -131,6 +131,15 @@
     @apply text-[10px] uppercase tracking-widest;
   }
 
+  /* Standardize all sidebar nav span elements */
+  [data-sidebar="menu-button"] span,
+  [data-sidebar="menu-button"] a span {
+    font-size: 12px !important;
+    height: 22.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
   /* Table rows - subtle borders */
   .fog-table-row {
     @apply border-b border-zinc-100;

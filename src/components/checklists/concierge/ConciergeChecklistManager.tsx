@@ -476,25 +476,14 @@ function ItemDialog({
             </Select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="time_hint">Time Hint</Label>
-            <Input
-              id="time_hint"
-              value={formData.time_hint || ''}
-              onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
-              placeholder="e.g., 7:00 AM - 8:00 AM"
-            />
-          </div>
-          <div>
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              value={formData.category || ''}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="e.g., Opening, Closing"
-            />
-          </div>
+        <div>
+          <Label htmlFor="time_hint">Time Hint</Label>
+          <Input
+            id="time_hint"
+            value={formData.time_hint || ''}
+            onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
+            placeholder="e.g., 7:00 AM - 8:00 AM"
+          />
         </div>
         <div>
           <Label htmlFor="label_spanish">Spanish Label (Optional)</Label>

@@ -246,17 +246,6 @@ export function ConciergeSidebar({
               align="start" 
               side="bottom"
             >
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-[10px] uppercase tracking-widest font-normal">
-                    {profile?.full_name || "User"}
-                  </p>
-                  <p className="text-[10px] tracking-wide text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem 
                 onClick={() => navigate("/dashboard/profile")} 
                 className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"

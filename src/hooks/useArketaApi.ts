@@ -306,7 +306,7 @@ export function useSyncArketaClassesAndReservations() {
               .filter(Boolean)
               .map((e) => (typeof e === "string" ? e : JSON.stringify(e)))
               .join("; ");
-      const message = fromBody || (error as Error)?.message ?? String(error);
+      const message = fromBody || ((error as Error)?.message ?? String(error));
       throw new Error(message);
     },
     onSuccess: (data) => {

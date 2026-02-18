@@ -609,7 +609,7 @@ export function EmbeddedChecklist() {
 
                   <CollapsibleContent>
                     <div className="border-t">
-                      {group.items.map((item) => {
+                      {group.items.map((item, idx) => {
                         const completion = completionMap.get(item.id);
                         const isCompleted = !!completion;
 
@@ -622,6 +622,7 @@ export function EmbeddedChecklist() {
                             onToggle={() => handleToggle(item.id)}
                             onUpdate={(value) => handleUpdate(item.id, value)}
                             disabled={toggleMutation.isPending}
+                            checkboxIndex={item.task_type === 'checkbox' ? idx : undefined}
                           />
                         );
                       })}

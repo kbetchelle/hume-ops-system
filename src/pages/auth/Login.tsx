@@ -229,7 +229,7 @@ export default function Login() {
           </form>
         </Form>
 
-        <p className="text-xs text-center uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs text-center uppercase tracking-widest text-muted-foreground font-medium">
           No account?{" "}
           <Link to="/signup" className="underline underline-offset-4 hover:opacity-70 transition-opacity duration-300 text-foreground">
             Create one

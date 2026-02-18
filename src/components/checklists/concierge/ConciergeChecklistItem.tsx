@@ -17,6 +17,7 @@ interface ConciergeChecklistItemProps {
   checklistId: string;
   completionDate: string;
   shiftTime: string;
+  checkboxIndex?: number;
 }
 
 export function ConciergeChecklistItem({
@@ -25,6 +26,7 @@ export function ConciergeChecklistItem({
   checklistId,
   completionDate,
   shiftTime,
+  checkboxIndex = 0,
 }: ConciergeChecklistItemProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -74,7 +76,7 @@ export function ConciergeChecklistItem({
   };
 
   // Use standardized task-type-based color
-  const colorBorderClass = getTaskColorClass(item.task_type);
+  const colorBorderClass = getTaskColorClass(item.task_type, checkboxIndex);
 
   // Header type
   if (item.task_type === 'header') {

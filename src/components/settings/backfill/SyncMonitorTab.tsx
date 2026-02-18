@@ -6,6 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Activity } from "lucide-react";
 import { format } from "date-fns";
 
+interface SyncResultEntry {
+  date: string;
+  success: boolean;
+  error?: string;
+  newRecords: number;
+  recordCount: number;
+}
+
 interface BackfillJobRow {
   id: string;
   api_source: string;
@@ -21,6 +29,17 @@ interface BackfillJobRow {
   created_at: string;
   cumulative_inserted: number | null;
   cumulative_updated: number | null;
+  results: SyncResultEntry[] | null;
+}
+
+function hasFailedSyncs(job: BackfillJobRow): boolean {
+  if (!job.results || !Array.isArray(job.results)) return false;
+  return job.results.some((r) => !r.success);
+}
+
+function getDisplayStatus(job: BackfillJobRow): string {
+  if (job.status === "completed" && hasFailedSyncs(job)) return "failed";
+  return job.status;
 }
 
 function statusVariant(status: string): "default" | "destructive" | "outline" | "secondary" {
@@ -36,6 +55,8 @@ function statusVariant(status: string): "default" | "destructive" | "outline" | 
 
 function JobTableRow({ job }: { job: BackfillJobRow }) {
   const isActive = job.status === "running" || job.status === "pending";
+  const displayStatus = getDisplayStatus(job);
+  const failedCount = job.results?.filter((r) => !r.success).length ?? 0;
   return (
     <TableRow>
       <TableCell className="font-medium capitalize whitespace-nowrap">
@@ -46,7 +67,10 @@ function JobTableRow({ job }: { job: BackfillJobRow }) {
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1.5">
-          <Badge variant={statusVariant(job.status)} className="text-[11px] uppercase">{job.status}</Badge>
+          <Badge variant={statusVariant(displayStatus)} className="text-[11px] uppercase">{displayStatus}</Badge>
+          {failedCount > 0 && displayStatus !== "failed" && (
+            <Badge variant="destructive" className="text-[11px]">{failedCount} failed</Badge>
+          )}
           {job.sync_phase && job.sync_phase !== "idle" && (
             <Badge variant="secondary" className="text-[11px] capitalize">{job.sync_phase}</Badge>
           )}

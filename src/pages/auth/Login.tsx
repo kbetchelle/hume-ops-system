@@ -191,7 +191,7 @@ export default function Login() {
                 <Separator className="w-full" />
               </div>
               <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                <span className="bg-background px-2 text-muted-foreground">or</span>
+                <span className="bg-background px-2 text-muted-foreground font-medium">or</span>
               </div>
             </div>
 

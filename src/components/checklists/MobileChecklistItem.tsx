@@ -118,7 +118,7 @@ export function MobileChecklistItem({
           <div className="flex items-start gap-2 mb-2">
             <p
               className={cn(
-                "text-[10px] flex-1",
+                "text-[12.75px] flex-1",
                 isCompleted && "line-through text-muted-foreground"
               )}
             >

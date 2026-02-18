@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -402,6 +402,25 @@ function ItemDialog({
       is_class_triggered: false,
     }
   );
+
+  // Sync form data when the item changes (e.g., opening edit for a different item)
+  useEffect(() => {
+    if (item) {
+      setFormData(item);
+    } else {
+      setFormData({
+        task_description: '',
+        task_type: 'checkbox',
+        time_hint: '',
+        category: '',
+        color: 'gray',
+        is_high_priority: false,
+        required: false,
+        label_spanish: '',
+        is_class_triggered: false,
+      });
+    }
+  }, [item]);
 
   return (
     <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

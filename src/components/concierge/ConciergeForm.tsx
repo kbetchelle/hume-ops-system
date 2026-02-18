@@ -616,58 +616,6 @@ export function ConciergeForm() {
           </div>
 
           {/* Secondary toolbar: History, Save indicator, Auto-submit */}
-          <div className="flex flex-wrap items-center justify-between gap-3 py-2">
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setHistoryOpen(true);
-                  supabase.
-                  from('daily_report_history').
-                  select('report_date, shift_type, staff_name, status, submitted_at').
-                  order('report_date', { ascending: false }).
-                  order('shift_type', { ascending: false }).
-                  limit(30).
-                  then(({ data, error }) => {
-                    if (error) {
-                      console.error('[ConciergeForm] Failed to load report history:', error);
-                      toast({
-                        title: 'Could not load history',
-                        description: 'Please try again.',
-                        variant: 'destructive'
-                      });
-                      setReportHistory([]);
-                      return;
-                    }
-                    setReportHistory(data ?? []);
-                  });
-                }}>
-
-                <History className="h-3 w-3 mr-1" />
-                History
-              </Button>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Cloud className="h-3 w-3" />
-                <RefreshCw className="h-3 w-3" />
-              </div>
-              <AutoSaveIndicator
-                isSaving={isSaving}
-                lastSaved={lastSaved}
-                isDirty={isDirty}
-                isOnline={isOnline}
-                queueSize={queueSize} />
-
-            </div>
-            {willAutoSubmit && timeUntilSubmitFormatted &&
-            <Badge variant="secondary" className="gap-1 text-[10px]">
-                <Clock className="h-3 w-3" />
-                Auto-submit in {timeUntilSubmitFormatted}
-              </Badge>
-            }
-          </div>
         </div>
 
         {/* History Dialog */}

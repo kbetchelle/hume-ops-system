@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { getTaskColorClass } from '@/components/checklists/checklistColors';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -268,30 +269,8 @@ export function BoHChecklistManager() {
                                       <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="space-y-1 pt-2 pl-1">
-                                      {groupItems.map((item) => {
-                                        const colorBorderMap: Record<string, string> = {
-                                          red: 'border-l-add-crimson',
-                                          orange: 'border-l-add-amber',
-                                          yellow: 'border-l-yellow-500',
-                                          green: 'border-l-green-500',
-                                          blue: 'border-l-add-skyBlue',
-                                          purple: 'border-l-purple-500',
-                                          gray: 'border-l-gray-500',
-                                          teal: 'border-l-add-olive',
-                                          pink: 'border-l-add-burntOrange',
-                                        };
-                                        const colorBgMap: Record<string, string> = {
-                                          red: 'bg-add-crimson/5',
-                                          orange: 'bg-add-amber/5',
-                                          yellow: 'bg-yellow-500/5',
-                                          green: 'bg-green-500/5',
-                                          blue: 'bg-add-skyBlue/5',
-                                          purple: 'bg-purple-500/5',
-                                          gray: 'bg-gray-500/5',
-                                          teal: 'bg-add-olive/5',
-                                          pink: 'bg-add-burntOrange/5',
-                                        };
-                                        const colorClass = item.color ? `border-l-4 ${colorBorderMap[item.color] || ''} ${colorBgMap[item.color] || ''}` : '';
+                                      {groupItems.map((item, idx) => {
+                                        const colorClass = getTaskColorClass(item.task_type, idx);
                                         return (
                                         <div
                                           key={item.id}
@@ -307,12 +286,6 @@ export function BoHChecklistManager() {
                                             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                                               <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
                                               {item.category && <span>• {item.category}</span>}
-                                              {item.color && (
-                                                <span className="flex items-center gap-1">
-                                                  <span className={`h-2 w-2 rounded-full bg-${item.color}-500`}></span>
-                                                  {item.color}
-                                                </span>
-                                              )}
                                             </div>
                                           </div>
                                           <div className="flex gap-1">

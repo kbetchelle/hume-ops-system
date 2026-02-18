@@ -18,4 +18,4 @@ export interface SyncProgress {
   startTime: number | null;
 }
 
-export type BackfillJobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "toast_orders";
+export type BackfillJobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "arketa_classes_and_reservations" | "toast_orders";

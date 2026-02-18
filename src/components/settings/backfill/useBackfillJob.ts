@@ -9,6 +9,7 @@ function getCountQueryKey(jobType: BackfillJobType): string[] {
   switch (jobType) {
     case "arketa_reservations": return ["total-reservations-count"];
     case "arketa_classes": return ["arketa-classes-count"];
+    case "arketa_classes_and_reservations": return ["total-reservations-count", "arketa-classes-count"];
     case "toast_orders": return ["toast-sales-count"];
     default: return ["total-payments-count"];
   }
@@ -19,6 +20,7 @@ function getApiSource(jobType: BackfillJobType): string {
 }
 
 function getDataType(jobType: BackfillJobType): string {
+  if (jobType === "arketa_classes_and_reservations") return "classes_and_reservations";
   return jobType.replace("arketa_", "").replace("toast_", "");
 }
 
@@ -75,7 +77,9 @@ export function useBackfillJob(jobType: BackfillJobType) {
 
   useEffect(() => {
     if (activeJob && (activeJob.status === "completed" || activeJob.status === "cancelled" || activeJob.status === "failed")) {
-      queryClient.invalidateQueries({ queryKey: getCountQueryKey(jobType) });
+      getCountQueryKey(jobType).forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
       const timer = setTimeout(() => { setActiveJobId(null); queryClient.invalidateQueries({ queryKey: ["sync-logs-with-details"] }); }, 3000);
       return () => clearTimeout(timer);
     }

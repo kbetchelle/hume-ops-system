@@ -1,6 +1,8 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useSyncSchedules } from "@/hooks/useSyncSchedule";
+import { formatDistanceToNow } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { 
   Table,
@@ -370,7 +372,14 @@ function FieldMappingTable({ fields }: { fields: FieldMapping[] }) {
   );
 }
 
-function EndpointCard({ endpoint }: { endpoint: ApiEndpointInfo }) {
+interface SyncScheduleInfo {
+  last_run_at: string | null;
+  last_status: string | null;
+  is_enabled: boolean;
+}
+
+function EndpointCard({ endpoint, syncSchedule }: { endpoint: ApiEndpointInfo; syncSchedule?: SyncScheduleInfo | null }) {
+  const isHealthy = syncSchedule ? (syncSchedule.last_status === "success" || syncSchedule.last_status === "healthy") : null;
   return (
     <Card className="border border-border rounded-none">
       <CardHeader className="pb-4">
@@ -387,6 +396,19 @@ function EndpointCard({ endpoint }: { endpoint: ApiEndpointInfo }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {syncSchedule != null && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Sync status:</span>
+            {syncSchedule.last_run_at ? (
+              <span className="text-muted-foreground">{formatDistanceToNow(new Date(syncSchedule.last_run_at), { addSuffix: true })}</span>
+            ) : (
+              <span className="text-muted-foreground">Never</span>
+            )}
+            {isHealthy === true && <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>}
+            {isHealthy === false && <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Error</Badge>}
+            {!syncSchedule.is_enabled && <Badge variant="secondary">Disabled</Badge>}
+          </div>
+        )}
         {/* Overview Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1">
@@ -538,6 +560,12 @@ function EndpointCard({ endpoint }: { endpoint: ApiEndpointInfo }) {
 }
 
 export default function ApiDataMappingPage() {
+  const { data: schedules } = useSyncSchedules();
+  const scheduleBySyncType = (schedules ?? []).reduce<Record<string, SyncScheduleInfo>>((acc, s) => {
+    acc[s.sync_type] = { last_run_at: s.last_run_at, last_status: s.last_status, is_enabled: s.is_enabled };
+    return acc;
+  }, {});
+
   return (
     <DashboardLayout title="API Data Mapping">
       <div className="space-y-8">
@@ -605,7 +633,7 @@ export default function ApiDataMappingPage() {
         {/* Endpoint Cards */}
         <div className="space-y-6">
           {API_ENDPOINTS.map((endpoint) => (
-            <EndpointCard key={endpoint.id} endpoint={endpoint} />
+            <EndpointCard key={endpoint.id} endpoint={endpoint} syncSchedule={scheduleBySyncType[endpoint.id]} />
           ))}
         </div>
       </div>

@@ -14,7 +14,7 @@ interface SyncResult {
   hitPageLimit?: boolean;
 }
 
-type JobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "toast_orders";
+type JobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "arketa_classes_and_reservations" | "toast_orders";
 
 function eachDayOfInterval(start: Date, end: Date): Date[] {
   const dates: Date[] = [];
@@ -55,6 +55,14 @@ function getSyncConfig(jobType: JobType) {
         dateColumn: "created_at_api",
         transferApi: "arketa_payments" as const,
         needsTransfer: true,
+      };
+    case "arketa_classes_and_reservations":
+      return {
+        syncFunction: "sync-arketa-classes-and-reservations",
+        historyTable: "arketa_reservations_history",
+        dateColumn: "class_date",
+        transferApi: null,
+        needsTransfer: false,
       };
     case "arketa_reservations":
     default:
@@ -218,26 +226,41 @@ function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknow
   if (jobType === "toast_orders") {
     return { start_date: dateStr, end_date: dateStr };
   }
+  if (jobType === "arketa_classes_and_reservations") {
+    return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
+  }
   return { startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", manual: true, noLimit: true };
 }
 
 /** Extract record count from sync response based on job type */
-function extractRecordCount(jobType: JobType, syncData: any): { recordCount: number; totalFetched: number } {
+function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>): { recordCount: number; totalFetched: number } {
   if (jobType === "toast_orders") {
     return {
-      recordCount: syncData?.ordersThisRun ?? 0,
-      totalFetched: syncData?.ordersThisRun ?? 0,
+      recordCount: (syncData?.ordersThisRun as number) ?? 0,
+      totalFetched: (syncData?.ordersThisRun as number) ?? 0,
     };
   }
   if (jobType === "arketa_classes") {
     return {
-      recordCount: syncData?.syncedCount ?? syncData?.totalFetched ?? 0,
-      totalFetched: syncData?.totalFetched ?? 0,
+      recordCount: (syncData?.syncedCount as number) ?? (syncData?.totalFetched as number) ?? 0,
+      totalFetched: (syncData?.totalFetched as number) ?? 0,
     };
   }
+  if (jobType === "arketa_classes_and_reservations") {
+    const classes = syncData?.classes as Record<string, unknown> | undefined;
+    const reservations = syncData?.reservations as Record<string, unknown> | undefined;
+    const reservationsSynced = (reservations?.syncedCount as number) ?? 0;
+    const classesFetched = (classes?.totalFetched as number) ?? 0;
+    const reservationsFetched = (reservations?.totalFetched as number) ?? 0;
+    return {
+      recordCount: reservationsSynced,
+      totalFetched: classesFetched + reservationsFetched,
+    };
+  }
+  const data = syncData?.data as Record<string, unknown> | undefined;
   return {
-    recordCount: syncData?.data?.reservations_synced ?? syncData?.data?.payments_synced ?? syncData?.data?.payments_staged ?? syncData?.recordsInserted ?? syncData?.recordsProcessed ?? 0,
-    totalFetched: syncData?.totalFetched ?? 0,
+    recordCount: (data?.reservations_synced as number) ?? (data?.payments_synced as number) ?? (data?.payments_staged as number) ?? (syncData?.recordsInserted as number) ?? (syncData?.recordsProcessed as number) ?? 0,
+    totalFetched: (syncData?.totalFetched as number) ?? 0,
   };
 }
 
@@ -340,7 +363,7 @@ Deno.serve(async (req) => {
         if (!syncResponse.ok) {
           results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
         } else {
-          const { recordCount, totalFetched } = extractRecordCount(jobType, syncData);
+          const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
           await new Promise(resolve => setTimeout(resolve, 500));
           const { count: afterCount } = await supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
           const newRecords = Math.max(0, (afterCount || 0) - existingCount);

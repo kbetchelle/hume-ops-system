@@ -65,6 +65,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
+    const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
+    if (!ARKETA_API_KEY || !ARKETA_PARTNER_ID) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Arketa API credentials not configured. Set ARKETA_API_KEY and ARKETA_PARTNER_ID in Supabase Edge Function secrets.',
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const today = new Date();
     const defaultStart = new Date(today);
     defaultStart.setDate(defaultStart.getDate() - 7);
@@ -188,21 +200,24 @@ Deno.serve(async (req) => {
       triggeredBy,
     });
 
+    const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
+    const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
     const responseBody = {
       success,
       syncedCount: totalSyncedCount,
+      totalFetched: classesTotalFetched + reservationsTotalFetched,
       dateRange: { startDate, endDate },
       durationMs,
       classes: {
         success: classesOk,
         syncedCount: classesSyncedCount,
-        totalFetched: (classesData.totalFetched as number) ?? 0,
+        totalFetched: classesTotalFetched,
         error: classesData.error ?? null,
       },
       reservations: {
         success: reservationsOk,
         syncedCount: reservationsSyncedCount,
-        totalFetched: (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0,
+        totalFetched: reservationsTotalFetched,
         error: reservationsData.error ?? null,
       },
       syncFromStaging: {

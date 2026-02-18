@@ -395,7 +395,7 @@ function SyncLogHistoryTable({
                       <div>
                         <div>{format(new Date(log.created_at), "MMM d,")}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(log.created_at), "HH:mm:ss")}
+                          {format(new Date(log.created_at), "h:mm:ss a")}
                         </div>
                       </div>
                     ) : (

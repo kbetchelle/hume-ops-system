@@ -51,55 +51,164 @@ Deno.serve(async (req) => {
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
-    // Fetch classes without date params (Arketa API 500s on start_date/end_date).
-    // Cap at 1 page to avoid pagination 500 errors on page 2+.
+    // 3-tier fetch strategy (mirrors sync-arketa-reservations Tier 3 discovery)
+    // Arketa API 500s on date params and pagination page 2+, so we fetch page 1 and filter locally.
     const allClasses: any[] = [];
-    const MAX_PAGES = 1;
-    let cursor: string | undefined;
-    let page = 0;
+    let strategy = 'none';
 
-    do {
-      const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
-      url.searchParams.set('limit', String(limit));
-      if (cursor) url.searchParams.set('start_after', cursor);
+    const parseClassList = (data: unknown): any[] => {
+      if (Array.isArray(data)) return data;
+      const obj = data as Record<string, unknown>;
+      return (obj.items ?? obj.data ?? obj.classes ?? []) as any[];
+    };
 
-      const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+    const extractClassDate = (cls: any): string | null => {
+      const st = cls.start_time ?? cls.startTime;
+      if (!st) return cls.start_date ?? cls.startDate ?? cls.date ?? cls.class_date ?? null;
+      try {
+        const dtf = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Los_Angeles',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+        });
+        return dtf.format(new Date(st));
+      } catch { return null; }
+    };
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Body unavailable');
-        return new Response(
-          JSON.stringify({ error: `Arketa classes API error: ${response.status}`, details: errorText }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    const filterToRange = (list: any[]) =>
+      list.filter(c => {
+        const d = extractClassDate(c);
+        return d && d >= startDate && d <= endDate;
+      });
+
+    // Strategy A: Try reverse sort params to get newest classes first
+    const sortParams = [
+      { sort: 'created_at', order: 'desc' },
+      { sort: 'start_time', order: 'desc' },
+      { sort_by: 'date', sort_order: 'desc' },
+      { order_by: 'start_date', direction: 'desc' },
+    ];
+
+    for (const params of sortParams) {
+      if (allClasses.length > 0) break;
+      try {
+        const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
+        url.searchParams.set('limit', String(limit));
+        for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+        console.log(`[classes-sync] Strategy A: Trying reverse sort with ${JSON.stringify(params)}...`);
+        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+
+        if (response.ok) {
+          const data = await response.json();
+          const all = parseClassList(data);
+          const matched = filterToRange(all);
+
+          const firstDate = extractClassDate(all[0]);
+          const lastDate = extractClassDate(all[all.length - 1]);
+          const isReversed = firstDate && lastDate && firstDate > lastDate;
+
+          console.log(`[classes-sync] Strategy A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window`);
+
+          if (matched.length > 0) {
+            allClasses.push(...matched);
+            strategy = `reverse_sort:${Object.values(params).join(',')}`;
+            break;
+          }
+          if (!isReversed) continue;
+        } else {
+          console.log(`[classes-sync] Strategy A: sort ${JSON.stringify(params)} returned ${response.status}, trying next...`);
+        }
+      } catch {
+        continue;
       }
+    }
 
-      const data = await response.json();
-      const pageData = Array.isArray(data) ? data : (data.items ?? data.classes ?? data.data ?? []);
-      allClasses.push(...pageData);
-      page++;
-      cursor = page < MAX_PAGES
-        ? (data.pagination?.nextCursor ?? (pageData.length === limit ? pageData[pageData.length - 1]?.id : undefined))
-        : undefined;
-    } while (cursor);
+    // Strategy B: Cursor skip-ahead using a known recent class ID from the DB
+    if (allClasses.length === 0) {
+      const { data: cursorRow } = await supabase
+        .from('arketa_classes')
+        .select('external_id, class_date')
+        .lt('class_date', startDate)
+        .order('class_date', { ascending: false })
+        .limit(1);
+
+      const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
+
+      if (skipCursor) {
+        console.log(`[classes-sync] Strategy B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
+        try {
+          const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
+          url.searchParams.set('limit', String(limit));
+          url.searchParams.set('start_after', skipCursor.external_id);
+
+          const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+
+          if (response.ok) {
+            const data = await response.json();
+            const all = parseClassList(data);
+            const matched = filterToRange(all);
+            const firstDate = extractClassDate(all[0]);
+            const lastDate = extractClassDate(all[all.length - 1]);
+
+            console.log(`[classes-sync] Strategy B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window`);
+            if (matched.length > 0) {
+              allClasses.push(...matched);
+              strategy = 'cursor_skip_ahead';
+            }
+          } else {
+            console.log(`[classes-sync] Strategy B: Cursor skip returned ${response.status}`);
+          }
+        } catch (err) {
+          console.log(`[classes-sync] Strategy B: Cursor skip failed: ${err}`);
+        }
+      } else {
+        console.log('[classes-sync] Strategy B: No earlier class found in DB for cursor skip-ahead');
+      }
+    }
+
+    // Strategy C: Plain first page (original fallback behavior)
+    if (allClasses.length === 0) {
+      console.log('[classes-sync] Strategy C: Falling back to plain first page fetch...');
+      try {
+        const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
+        url.searchParams.set('limit', String(limit));
+
+        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+
+        if (response.ok) {
+          const data = await response.json();
+          const all = parseClassList(data);
+          const matched = filterToRange(all);
+          console.log(`[classes-sync] Strategy C: Plain fetch returned ${all.length} classes, ${matched.length} in target window`);
+          allClasses.push(...matched);
+          strategy = 'plain_first_page';
+        }
+      } catch (err) {
+        console.log(`[classes-sync] Strategy C: Plain fetch failed: ${err}`);
+      }
+    }
+
+    if (strategy === 'none' && allClasses.length === 0) {
+      strategy = 'none_matched';
+    }
+
+    console.log(`[classes-sync] Final: ${allClasses.length} classes via strategy '${strategy}' for range ${startDate}–${endDate}`);
 
     const syncBatchId = crypto.randomUUID();
     const syncedAt = new Date().toISOString();
 
     const stagingRows: Record<string, unknown>[] = [];
     for (const cls of allClasses) {
-      const startTime = cls.start_time;
+      const startTime = cls.start_time ?? cls.startTime;
       if (!startTime) continue;
 
       const name = cls.name ?? cls.class_name ?? 'Unknown Class';
       const instructorName = cls.instructor_name ??
         (cls.instructor ? `${cls.instructor.first_name ?? ''} ${cls.instructor.last_name ?? ''}`.trim() : null);
-      const dtf = new Intl.DateTimeFormat('en-CA', {
+      const classDate = extractClassDate(cls) ?? new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Los_Angeles',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-      const classDate = dtf.format(new Date(startTime));
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(new Date(startTime));
 
       stagingRows.push({
         external_id: String(cls.id),
@@ -158,6 +267,7 @@ Deno.serve(async (req) => {
         totalFetched: allClasses.length,
         startDate,
         endDate,
+        strategy,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

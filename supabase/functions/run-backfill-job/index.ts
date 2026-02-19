@@ -107,9 +107,10 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   }
   
   // Re-sync last successful chunk on restart to catch missed records
+  // But skip if there's only one chunk total — otherwise it loops forever
   const successKeys = [...completedChunks];
   const lastSuccessChunk = successKeys.length > 0 ? successKeys[successKeys.length - 1] : null;
-  if (lastSuccessChunk) {
+  if (lastSuccessChunk && chunks.length > 1) {
     completedChunks.delete(lastSuccessChunk);
     resultsByKey.delete(lastSuccessChunk);
   }

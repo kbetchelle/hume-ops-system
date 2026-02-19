@@ -15,7 +15,7 @@ export default function BackfillSyncLog({ results, isRunning, totalRecords, tota
 
   const successCount = results.filter(r => r.success).length;
   const failedCount = results.filter(r => !r.success).length;
-  const alreadyStored = totalRecords - totalNewRecords;
+  const updatedCount = Math.max(0, totalRecords - totalNewRecords);
 
   return (
     <Card>
@@ -35,8 +35,8 @@ export default function BackfillSyncLog({ results, isRunning, totalRecords, tota
               <span className="font-semibold">{totalNewRecords.toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Badge variant="secondary">Already stored</Badge>
-              <span className="font-semibold">{Math.max(0, alreadyStored).toLocaleString()}</span>
+              <Badge variant="secondary">Updated</Badge>
+              <span className="font-semibold">{updatedCount.toLocaleString()}</span>
             </div>
             {failedCount > 0 && (
               <div className="flex items-center gap-1.5">
@@ -71,7 +71,9 @@ export default function BackfillSyncLog({ results, isRunning, totalRecords, tota
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <span>{r.recordCount} pulled</span>
                   <span className="text-green-600">+{r.newRecords} new</span>
-                  <span>{r.existingBefore} existed</span>
+                  {r.existingBefore > 0 && (
+                    <span className="text-muted-foreground">{r.existingBefore} pre-existing</span>
+                  )}
                 </div>
               </div>
               {r.error && (

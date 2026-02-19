@@ -82,12 +82,14 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   const endDate = new Date(job.end_date);
   const CHUNK_DAYS = 7;
   
-  // Build weekly chunks
+  // Build weekly chunks with 1-day overlap to prevent boundary gaps.
+  // The Arketa API often excludes the end date, so overlapping ensures
+  // every day is covered. Upserts by unique key make duplicates harmless.
   const chunks: { start: string; end: string }[] = [];
   const cur = new Date(startDate);
   while (cur <= endDate) {
     const chunkEnd = new Date(cur);
-    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS - 1);
+    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS);
     if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
     chunks.push({ start: formatDate(cur), end: formatDate(chunkEnd) });
     cur.setDate(cur.getDate() + CHUNK_DAYS);

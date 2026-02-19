@@ -18,7 +18,6 @@ import {
 import { getNotificationRoute } from '@/lib/notificationRoutes';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
 
-
 export default function NotificationsPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -39,24 +38,19 @@ export default function NotificationsPage() {
   const dismissNotification = useDismissNotification();
   const clearAll = useClearAllNotifications();
 
-  const isAdminOrManager = (roles || []).some(
-    (r) => r.role === 'admin' || r.role === 'manager'
-  );
-
   const notifications = data?.pages.flat() || [];
 
   return (
     <DashboardLayout title={t('Notifications', 'Notificaciones')}>
-      <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-4">
-        {/* Header Card */}
-        <Card className="rounded-none">
+      <div className="p-4 md:p-8 max-w-3xl mx-auto">
+        <Card className="rounded-none overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
               <Bell className="h-4 w-4" />
               {t('Notification Center', 'Centro de Notificaciones')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 pb-0">
             {/* Actions row */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-2">
@@ -103,10 +97,8 @@ export default function NotificationsPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
 
-        {/* Notification List */}
-        <Card className="rounded-none overflow-hidden">
+          {/* Notification List */}
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useNotificationCenter';
 import { getNotificationRoute } from '@/lib/notificationRoutes';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
-import { AdminNotificationPanel } from '@/components/notifications/AdminNotificationPanel';
+
 
 export default function NotificationsPage() {
   const { t } = useLanguage();
@@ -151,9 +151,6 @@ export default function NotificationsPage() {
             </div>
           )}
         </Card>
-
-        {/* Admin Panel */}
-        {isAdminOrManager && <AdminNotificationPanel />}
       </div>
     </DashboardLayout>
   );

@@ -66,6 +66,7 @@ import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
 import DataPatternsPage from "./pages/admin/DataPatternsPage";
 import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import BugReportsPage from "./pages/admin/BugReportsPage";
+import DevTestingPage from "./pages/admin/DevTestingPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -721,6 +722,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <BugReportsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Testing (Dev Tools) for Admin/Manager */}
+            <Route
+              path="/dashboard/testing"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <DevTestingPage />
                 </ProtectedRoute>
               }
             />

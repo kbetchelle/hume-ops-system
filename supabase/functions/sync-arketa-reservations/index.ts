@@ -299,11 +299,19 @@ Deno.serve(async (req) => {
     const classIdsInBatch = [...new Set(stagingRows.map((r) => r.class_id).filter((id): id is string => Boolean(id && id.trim())))];
     let knownClassIds = new Set<string>();
     if (classIdsInBatch.length > 0) {
-      const { data: classRows } = await supabase
-        .from('arketa_classes')
-        .select('external_id')
-        .in('external_id', classIdsInBatch);
-      knownClassIds = new Set((classRows ?? []).map((r: { external_id: string }) => r.external_id));
+      // Chunk the lookup to avoid the default 1000-row PostgREST limit
+      const CHUNK = 500;
+      for (let i = 0; i < classIdsInBatch.length; i += CHUNK) {
+        const slice = classIdsInBatch.slice(i, i + CHUNK);
+        const { data: classRows } = await supabase
+          .from('arketa_classes')
+          .select('external_id')
+          .in('external_id', slice)
+          .limit(slice.length);
+        for (const r of (classRows ?? []) as { external_id: string }[]) {
+          knownClassIds.add(r.external_id);
+        }
+      }
     }
     const skippedRows = stagingRows.filter(
       (r) => !r.class_id?.trim() || !knownClassIds.has(r.class_id)

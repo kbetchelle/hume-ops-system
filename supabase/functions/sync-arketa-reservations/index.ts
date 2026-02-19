@@ -141,69 +141,160 @@ async function fetchAllReservations(
   let classes = (classRows ?? []) as { external_id: string; name?: string; start_time?: string; class_date?: string }[];
   logger?.info(`Found ${classes.length} classes in DB for date range`);
 
-  // Tier 3: If DB has 0 classes, fetch class IDs directly from the API (first page only)
+  // Tier 3: If DB has 0 classes, discover class IDs from the API using smart strategies
   if (classes.length === 0) {
-    logger?.info(`Tier 3: No classes in DB, fetching classes directly from API to discover class IDs...`);
-    try {
-      const classesUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-      classesUrl.searchParams.set('limit', '500');
-      // Don't set start_date/end_date - those cause 500 errors on Arketa
-      const { response: classesResponse, attempts: classAttempts } = await fetchWithRetry(
-        classesUrl.toString(),
-        { method: 'GET', headers }
-      );
-      totalAttempts += classAttempts;
+    logger?.info(`Tier 3: No classes in DB for ${startDate}–${endDate}, trying API discovery...`);
 
-      if (classesResponse.ok) {
-        const classesData = await classesResponse.json();
-        const classList = Array.isArray(classesData)
-          ? classesData
-          : (classesData.items || classesData.data || classesData.classes || []);
+    const parseClassList = (data: unknown): Record<string, unknown>[] => {
+      if (Array.isArray(data)) return data;
+      const obj = data as Record<string, unknown>;
+      return (obj.items || obj.data || obj.classes || []) as Record<string, unknown>[];
+    };
 
-        // Filter locally to the target date range
-        const filteredClasses = classList
-          .map((c: Record<string, unknown>) => {
-            const classDate = (c.start_date || c.startDate || c.date || c.class_date || 
-              (c.start_time ? new Date(c.start_time as string).toISOString().split('T')[0] : null)) as string | null;
-            return {
-              external_id: String(c.id || c.external_id || ''),
-              name: (c.name || c.title || 'Unknown Class') as string,
-              start_time: (c.start_time || c.startTime || '') as string,
-              class_date: classDate,
-            };
-          })
-          .filter((c: { external_id: string; class_date: string | null }) => {
-            if (!c.class_date || !c.external_id) return false;
-            return c.class_date >= startDate && c.class_date <= endDate;
-          });
+    const mapClassRecord = (c: Record<string, unknown>) => {
+      const classDate = (c.start_date || c.startDate || c.date || c.class_date ||
+        (c.start_time ? new Date(c.start_time as string).toISOString().split('T')[0] : null)) as string | null;
+      return {
+        external_id: String(c.id || c.external_id || ''),
+        name: (c.name || c.title || 'Unknown Class') as string,
+        start_time: (c.start_time || c.startTime || '') as string,
+        class_date: classDate,
+      };
+    };
 
-        logger?.info(`Tier 3: API returned ${classList.length} classes total, ${filteredClasses.length} match date range ${startDate}–${endDate}`);
-        classes = filteredClasses;
+    const filterToRange = (list: ReturnType<typeof mapClassRecord>[]) =>
+      list.filter(c => c.class_date && c.external_id && c.class_date >= startDate && c.class_date <= endDate);
 
-        // Also insert these as stub classes into arketa_classes so future syncs don't need Tier 3
-        if (filteredClasses.length > 0) {
-          const stubRows = filteredClasses.map((c: { external_id: string; name: string; start_time: string; class_date: string | null }) => ({
-            external_id: c.external_id,
-            name: c.name,
-            start_time: c.start_time || new Date().toISOString(),
-            class_date: c.class_date,
-            status: 'discovered_via_reservation_sync',
-            synced_at: new Date().toISOString(),
-          }));
-          const { error: stubErr } = await supabase
-            .from('arketa_classes')
-            .upsert(stubRows, { onConflict: 'external_id,class_date' });
-          if (stubErr) {
-            logger?.warn('Failed to insert stub classes', stubErr);
-          } else {
-            logger?.info(`Inserted ${stubRows.length} stub classes into arketa_classes`);
+    let discovered: ReturnType<typeof mapClassRecord>[] = [];
+
+    // Strategy A: Try reverse sort params to get newest classes first
+    const sortParams = [
+      { sort: 'created_at', order: 'desc' },
+      { sort: 'start_time', order: 'desc' },
+      { sort_by: 'date', sort_order: 'desc' },
+      { order_by: 'start_date', direction: 'desc' },
+    ];
+
+    for (const params of sortParams) {
+      if (discovered.length > 0) break;
+      try {
+        const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
+        url.searchParams.set('limit', '500');
+        for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+        logger?.info(`Tier 3A: Trying reverse sort with ${JSON.stringify(params)}...`);
+        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+        totalAttempts += attempts;
+
+        if (response.ok) {
+          const data = await response.json();
+          const all = parseClassList(data).map(mapClassRecord);
+          const matched = filterToRange(all);
+
+          // Check if results are actually sorted differently from default (oldest-first)
+          const firstDate = all[0]?.class_date;
+          const lastDate = all[all.length - 1]?.class_date;
+          const isReversed = firstDate && lastDate && firstDate > lastDate;
+
+          logger?.info(`Tier 3A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window`);
+
+          if (matched.length > 0) {
+            discovered = matched;
+            break;
           }
+          // If not reversed, this sort param had no effect — try next
+          if (!isReversed) continue;
+        } else {
+          logger?.info(`Tier 3A: sort ${JSON.stringify(params)} returned ${response.status}, trying next...`);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    // Strategy B: Cursor skip-ahead using a known recent class ID from the DB
+    if (discovered.length === 0) {
+      // Find a class ID just before our target date range from the local DB
+      const { data: cursorRow } = await supabase
+        .from('arketa_classes')
+        .select('external_id, class_date')
+        .lt('class_date', startDate)
+        .order('class_date', { ascending: false })
+        .limit(1);
+
+      const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
+
+      if (skipCursor) {
+        logger?.info(`Tier 3B: Using cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date}) to jump near ${startDate}...`);
+        try {
+          const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
+          url.searchParams.set('limit', '500');
+          url.searchParams.set('start_after', skipCursor.external_id);
+
+          const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+          totalAttempts += attempts;
+
+          if (response.ok) {
+            const data = await response.json();
+            const all = parseClassList(data).map(mapClassRecord);
+            const matched = filterToRange(all);
+            const firstDate = all[0]?.class_date;
+            const lastDate = all[all.length - 1]?.class_date;
+
+            logger?.info(`Tier 3B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window`);
+            if (matched.length > 0) discovered = matched;
+          } else {
+            logger?.warn(`Tier 3B: Cursor skip returned ${response.status}`);
+          }
+        } catch (err) {
+          logger?.warn('Tier 3B: Cursor skip failed', err as object);
         }
       } else {
-        logger?.warn(`Tier 3: Classes API returned ${classesResponse.status}, cannot discover class IDs from API`);
+        logger?.info('Tier 3B: No earlier class found in DB for cursor skip-ahead');
       }
-    } catch (tier3Err) {
-      logger?.warn('Tier 3: Failed to fetch classes from API', tier3Err as object);
+    }
+
+    // Strategy C: Fallback to plain first page (original behavior)
+    if (discovered.length === 0) {
+      logger?.info('Tier 3C: Falling back to plain first page fetch...');
+      try {
+        const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
+        url.searchParams.set('limit', '500');
+        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+        totalAttempts += attempts;
+
+        if (response.ok) {
+          const data = await response.json();
+          const all = parseClassList(data).map(mapClassRecord);
+          discovered = filterToRange(all);
+          logger?.info(`Tier 3C: Plain fetch returned ${all.length} classes, ${discovered.length} in target window`);
+        }
+      } catch {
+        logger?.warn('Tier 3C: Plain fetch failed');
+      }
+    }
+
+    // Persist discovered classes as stubs
+    if (discovered.length > 0) {
+      classes = discovered;
+      const stubRows = discovered.map(c => ({
+        external_id: c.external_id,
+        name: c.name,
+        start_time: c.start_time || new Date().toISOString(),
+        class_date: c.class_date,
+        status: 'discovered_via_reservation_sync',
+        synced_at: new Date().toISOString(),
+      }));
+      const { error: stubErr } = await supabase
+        .from('arketa_classes')
+        .upsert(stubRows, { onConflict: 'external_id,class_date' });
+      if (stubErr) {
+        logger?.warn('Failed to insert stub classes', stubErr);
+      } else {
+        logger?.info(`Inserted ${stubRows.length} stub classes into arketa_classes`);
+      }
+    } else {
+      logger?.warn(`Tier 3: All strategies exhausted — no classes found for ${startDate}–${endDate}`);
     }
   }
 

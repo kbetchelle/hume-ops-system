@@ -358,7 +358,6 @@ Deno.serve(async (req) => {
         gross_sales_other: Math.round(grossSalesOther * 100) / 100,
         gross_sales_arketa: Math.round(grossSalesArketa * 100) / 100,
         cafe_sales: Math.round(cafeNetSales * 100) / 100,
-        cafe_net_sales: Math.round(cafeNetSales * 100) / 100,
         cafe_gross_sales: Math.round(cafeGrossSales * 100) / 100,
         cafe_order_count: cafeOrderCount,
         total_sales: Math.round(totalSales * 100) / 100,

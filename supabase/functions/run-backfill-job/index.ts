@@ -4,6 +4,8 @@ import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const BATCH_BREAK_MS = 20_000; // 20-second break between batches
+
 interface SyncResult {
   date: string;
   existingBefore: number;
@@ -76,59 +78,18 @@ function getSyncConfig(jobType: JobType) {
   }
 }
 
-/** Handle arketa_classes with wide-range syncs (7-day chunks) instead of day-by-day */
+/**
+ * Cursor-based backfill for arketa_classes (and classes+reservations).
+ * Instead of date-range chunks, finds the last synced class and paginates forward
+ * using start_after_id + hasMore from the API, with 20s breaks between batches.
+ */
 async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
-  const startDate = new Date(job.start_date);
-  const endDate = new Date(job.end_date);
-  const CHUNK_DAYS = 7;
-  
-  // Build weekly chunks with 1-day overlap to prevent boundary gaps.
-  // The Arketa API often excludes the end date, so overlapping ensures
-  // every day is covered. Upserts by unique key make duplicates harmless.
-  const chunks: { start: string; end: string }[] = [];
-  const cur = new Date(startDate);
-  while (cur <= endDate) {
-    const chunkEnd = new Date(cur);
-    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS);
-    if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
-    chunks.push({ start: formatDate(cur), end: formatDate(chunkEnd) });
-    cur.setDate(cur.getDate() + CHUNK_DAYS);
-  }
+  const startDate = job.start_date;
+  const endDate = job.end_date;
+  const config = getSyncConfig(jobType);
+  const historyTable = jobType === "arketa_classes_and_reservations" ? "arketa_reservations_history" : "arketa_classes";
 
-  // Deduplicate results by chunk key, keeping latest entry per chunk
-  const rawResults: SyncResult[] = job.results || [];
-  const resultsByKey = new Map<string, SyncResult>();
-  for (const r of rawResults) {
-    resultsByKey.set(r.date, r);
-  }
-
-  // Identify successfully completed chunks
-  const completedChunks = new Set<string>();
-  for (const [key, r] of resultsByKey) {
-    if (r.success) completedChunks.add(key);
-  }
-  
-  // Remove failed entries so they get retried
-  for (const [key, r] of resultsByKey) {
-    if (!r.success) resultsByKey.delete(key);
-  }
-
-  const remainingChunks = chunks.filter(c => !completedChunks.has(`${c.start}_${c.end}`));
-
-  if (remainingChunks.length === 0) {
-    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null, completed_dates: chunks.length }).eq("id", jobId);
-    return new Response(JSON.stringify({ success: true, completed: true, totalChunks: chunks.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // Process one chunk at a time (each is already a wide-range API call)
-  const chunk = remainingChunks[0];
-  const results: SyncResult[] = [...resultsByKey.values()];
-  let totalRecords = job.total_records || 0;
-  let totalNewRecords = job.total_new_records || 0;
-  const chunkKey = `${chunk.start}_${chunk.end}`;
-
+  // Check for cancellation
   const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
   if (currentJob?.status === "cancelled") {
     return new Response(JSON.stringify({ success: true, cancelled: true }), {
@@ -136,22 +97,50 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  await supabase.from("backfill_jobs").update({ processing_date: chunk.start }).eq("id", jobId);
+  // Find the cursor: use the last synced class's external_id ordered by class_date
+  // If job has a stored batch_cursor from a previous run, use that
+  let startAfterId: string | undefined = job.batch_cursor || undefined;
 
-  // Determine sync function and history table based on job type
-  const chunkConfig = getSyncConfig(jobType);
-  const syncFunctionName = chunkConfig.syncFunction;
-  const historyTable = jobType === "arketa_classes_and_reservations" ? "arketa_reservations_history" : "arketa_classes";
+  if (!startAfterId) {
+    // Find the last class in the DB that's within or before the backfill range
+    const { data: lastSynced } = await supabase
+      .from("arketa_classes")
+      .select("external_id, class_date")
+      .lte("class_date", endDate)
+      .order("class_date", { ascending: false })
+      .limit(1);
 
-  // Count existing records in this chunk's date range before sync
-  const { count: existingBefore } = await supabase.from(historyTable).select("*", { count: "exact", head: true }).gte(chunkConfig.dateColumn, chunk.start).lte(chunkConfig.dateColumn, chunk.end);
+    const lastClass = (lastSynced as { external_id: string; class_date: string }[] | null)?.[0];
+    if (lastClass) {
+      startAfterId = lastClass.external_id;
+      console.log(`[backfill] Starting cursor from last synced class ${startAfterId} (date ${lastClass.class_date})`);
+    } else {
+      console.log(`[backfill] No existing classes found, starting from beginning`);
+    }
+  }
+
+  // Count existing records before sync
+  const { count: existingBefore } = await supabase
+    .from(historyTable)
+    .select("*", { count: "exact", head: true })
+    .gte(config.dateColumn, startDate)
+    .lte(config.dateColumn, endDate);
   const existingCount = existingBefore || 0;
 
-  let chunkResult: SyncResult;
+  await supabase.from("backfill_jobs").update({ processing_date: startDate }).eq("id", jobId);
+
+  // Call the sync function with start_after_id for cursor-based pagination
+  const syncFunctionName = config.syncFunction;
+  let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; nextStartAfterId?: string; hasMore?: boolean; error?: string } = {
+    success: false, error: 'Not executed',
+  };
+
   try {
     const syncBody = jobType === "arketa_classes_and_reservations"
-      ? { start_date: chunk.start, end_date: chunk.end, triggeredBy: "backfill-job" }
-      : { startDate: chunk.start, endDate: chunk.end };
+      ? { start_date: startDate, end_date: endDate, triggeredBy: "backfill-job", start_after_id: startAfterId }
+      : { startDate, endDate, start_after_id: startAfterId };
+
+    console.log(`[backfill] Calling ${syncFunctionName} with start_after_id=${startAfterId ?? 'none'}`);
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
@@ -160,63 +149,100 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     const syncData = await syncResponse.json();
 
     if (!syncResponse.ok) {
-      chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" };
+      syncResult = { success: false, error: syncData.error || `Sync returned ${syncResponse.status}` };
     } else {
-      const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const { count: afterCount } = await supabase.from(historyTable).select("*", { count: "exact", head: true }).gte(chunkConfig.dateColumn, chunk.start).lte(chunkConfig.dateColumn, chunk.end);
-      const newRecords = Math.max(0, (afterCount || 0) - existingCount);
-      totalRecords += recordCount;
-      totalNewRecords += newRecords;
-
-      const hitPageLimit = totalFetched > 0 && totalFetched % 400 === 0;
-      chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit };
-      if (hitPageLimit) {
-        console.log(`[run-backfill-job] Classes chunk ${chunk.start}-${chunk.end} hit 400 page limit (fetched ${totalFetched}). Scheduling 2-min cooldown.`);
-      }
+      syncResult = {
+        success: syncData?.success !== false,
+        syncedCount: syncData?.syncedCount ?? 0,
+        totalFetched: syncData?.totalFetched ?? 0,
+        nextStartAfterId: syncData?.nextStartAfterId ?? null,
+        hasMore: syncData?.hasMore ?? false,
+        error: syncData?.error,
+      };
     }
   } catch (err) {
-    chunkResult = { date: chunkKey, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 
-  // Upsert result by chunk key (replace any previous entry for this chunk)
-  const existingIdx = results.findIndex(r => r.date === chunkKey);
-  if (existingIdx !== -1) {
-    results[existingIdx] = chunkResult;
-  } else {
-    results.push(chunkResult);
-  }
+  // Count records after sync
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const { count: afterCount } = await supabase
+    .from(historyTable)
+    .select("*", { count: "exact", head: true })
+    .gte(config.dateColumn, startDate)
+    .lte(config.dateColumn, endDate);
+  const newRecords = Math.max(0, (afterCount || 0) - existingCount);
 
-  await supabase.from("backfill_jobs").update({ completed_dates: results.filter(r => r.success).length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+  const totalRecords = (job.total_records || 0) + (syncResult.syncedCount ?? 0);
+  const totalNewRecords = (job.total_new_records || 0) + newRecords;
+  const batchesCompleted = (job.total_batches_completed || 0) + 1;
 
-  // Completion = every chunk has a successful result
-  const successfulChunkKeys = new Set(results.filter(r => r.success).map(r => r.date));
-  const allChunkKeys = chunks.map(c => `${c.start}_${c.end}`);
-  const isComplete = allChunkKeys.every(k => successfulChunkKeys.has(k));
+  // Build result entry
+  const results: SyncResult[] = [...(job.results || [])];
+  const batchKey = `batch_${batchesCompleted}`;
+  results.push({
+    date: batchKey,
+    existingBefore: existingCount,
+    newRecords,
+    recordCount: syncResult.syncedCount ?? 0,
+    success: syncResult.success,
+    error: syncResult.error,
+  });
+
+  // Determine if backfill is complete
+  const isComplete = !syncResult.hasMore || !syncResult.nextStartAfterId || syncResult.totalFetched === 0;
 
   if (isComplete) {
-    await supabase.from("backfill_jobs").update({ status: "completed", completed_at: new Date().toISOString(), processing_date: null, completed_dates: chunks.length }).eq("id", jobId);
-    return new Response(JSON.stringify({ success: true, completed: true, totalChunks: chunks.length, totalRecords, totalNewRecords }), {
+    await supabase.from("backfill_jobs").update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      processing_date: null,
+      total_records: totalRecords,
+      total_new_records: totalNewRecords,
+      total_batches_completed: batchesCompleted,
+      batch_cursor: null,
+      results,
+    }).eq("id", jobId);
+
+    return new Response(JSON.stringify({
+      success: true,
+      completed: true,
+      totalRecords,
+      totalNewRecords,
+      batchesCompleted,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Apply cooldown if page limit was hit
-  if (chunkResult.hitPageLimit) {
-    await supabase.from("backfill_jobs").update({
-      retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
-    }).eq("id", jobId);
-    await new Promise(resolve => setTimeout(resolve, 120_000));
-  }
+  // Not complete — save cursor and schedule next batch with 20s break
+  await supabase.from("backfill_jobs").update({
+    total_records: totalRecords,
+    total_new_records: totalNewRecords,
+    total_batches_completed: batchesCompleted,
+    batch_cursor: syncResult.nextStartAfterId,
+    results,
+  }).eq("id", jobId);
 
-  // Schedule next chunk (includes retrying failed chunks)
+  console.log(`[backfill] Batch ${batchesCompleted} done: ${syncResult.syncedCount} synced, ${newRecords} new. Next cursor: ${syncResult.nextStartAfterId}. Waiting ${BATCH_BREAK_MS / 1000}s...`);
+
+  // 20-second break between batches to avoid timeouts
+  await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+
+  // Trigger next batch
   fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
     body: JSON.stringify({ jobId }),
-  }).catch(err => console.error("Failed to trigger next chunk:", err));
+  }).catch(err => console.error("Failed to trigger next batch:", err));
 
-  return new Response(JSON.stringify({ success: true, completed: false, processedChunks: successfulChunkKeys.size, totalChunks: chunks.length }), {
+  return new Response(JSON.stringify({
+    success: true,
+    completed: false,
+    batchesCompleted,
+    nextCursor: syncResult.nextStartAfterId,
+    hasMore: syncResult.hasMore,
+  }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
@@ -302,9 +328,7 @@ Deno.serve(async (req) => {
 
     await supabase.from("backfill_jobs").update({ status: "running", started_at: job.started_at || new Date().toISOString() }).eq("id", jobId);
 
-    // ── Arketa Classes (and Classes+Reservations): wide-range sync (not day-by-day) ──
-    // The Arketa API returns incomplete/empty results for single-day queries,
-    // so we must use 7-day chunks for any job type that syncs classes.
+    // ── Arketa Classes (and Classes+Reservations): cursor-based backfill ──
     if (jobType === "arketa_classes" || jobType === "arketa_classes_and_reservations") {
       return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
     }
@@ -372,10 +396,9 @@ Deno.serve(async (req) => {
           totalRecords += recordCount;
           totalNewRecords += newRecords;
           
-          // Detect if the sync hit the page limit (totalFetched is a multiple of the page size)
           const hitPageLimit = totalFetched > 0 && totalFetched % (jobType === "toast_orders" ? 100 : 400) === 0;
           if (hitPageLimit) {
-            console.log(`[run-backfill-job] Page limit likely hit for ${dateStr} (fetched ${totalFetched}). Will schedule 2-min cooldown.`);
+            console.log(`[run-backfill-job] Page limit likely hit for ${dateStr} (fetched ${totalFetched}). Will schedule break.`);
             batchHitPageLimit = true;
           }
           
@@ -386,6 +409,12 @@ Deno.serve(async (req) => {
       }
 
       await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+
+      // 20-second break between each date in the batch
+      if (datesToProcess.indexOf(date) < datesToProcess.length - 1) {
+        console.log(`[run-backfill-job] ${BATCH_BREAK_MS / 1000}s break between dates...`);
+        await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+      }
     }
 
     // Transfer staging → history after each batch (only for types that use staging)
@@ -409,16 +438,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If page limit was hit, schedule a 2-minute cooldown before continuing
-    if (batchHitPageLimit) {
-      console.log(`[run-backfill-job] Page limit hit — scheduling 2-minute cooldown before next batch`);
-      await supabase.from("backfill_jobs").update({ 
-        retry_scheduled_at: new Date(Date.now() + 120_000).toISOString(),
-        processing_date: null,
-      }).eq("id", jobId);
-      
-      await new Promise(resolve => setTimeout(resolve, 120_000));
-    }
+    // Break before triggering next batch
+    console.log(`[run-backfill-job] ${BATCH_BREAK_MS / 1000}s break before next batch...`);
+    await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
 
     fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
       method: "POST",
@@ -426,7 +448,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ jobId }),
     }).catch(err => console.error("Failed to trigger next batch:", err));
 
-    return new Response(JSON.stringify({ success: true, completed: false, processedDates: results.length, totalDates: allDates.length, remainingDates: allDates.length - results.length, cooldown: batchHitPageLimit }), {
+    return new Response(JSON.stringify({ success: true, completed: false, processedDates: results.length, totalDates: allDates.length, remainingDates: allDates.length - results.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

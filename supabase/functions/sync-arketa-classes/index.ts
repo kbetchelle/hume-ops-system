@@ -1,12 +1,13 @@
 /**
  * sync-arketa-classes: Populate arketa_classes for a date range via staging.
- * Fetches from API → inserts into arketa_classes_staging → upserts to arketa_classes on (external_id, class_date) → deletes from staging.
+ * Fetches from API (no date filter — fetches ALL classes) → filters client-side →
+ * inserts into arketa_classes_staging → upserts to arketa_classes on (external_id, class_date) → deletes from staging.
  * See docs/ARKETA_ARCHITECTURE.md — arketa_classes is the master catalog of class_ids for reservation sync.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
-import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
 
 interface SyncClassesRequest {
   start_date?: string;
@@ -44,63 +45,45 @@ Deno.serve(async (req) => {
     defaultEnd.setDate(defaultEnd.getDate() + 7);
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
-    const limit = body.limit ?? 400;
 
-    // Build list of auth header sets to try: Bearer first, then x-api-key fallback
-    const authHeaderSets: Record<string, string>[] = [];
-    try {
-      const token = await getArketaToken(supabaseUrl, supabaseKey);
-      authHeaderSets.push(getArketaHeaders(token));
-    } catch {
-      // Token fetch failed, skip Bearer
-    }
-    // Always add API key as fallback (may be the only one if token fetch failed)
-    authHeaderSets.push(getArketaApiKeyHeaders(ARKETA_API_KEY));
+    // Auth: use x-api-key header (matches working implementation)
+    const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
 
     const allClasses: any[] = [];
     let cursor: string | undefined;
-    let activeHeaders: Record<string, string> | null = null;
 
     do {
       const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
-      url.searchParams.set('limit', String(limit));
-      url.searchParams.set('start_date', startDate);
-      url.searchParams.set('end_date', endDate);
+      url.searchParams.set('limit', '500');
       url.searchParams.set('include_cancelled', 'true');
-      url.searchParams.set('include_past', 'true');
-      url.searchParams.set('include_completed', 'true');
-      if (cursor) url.searchParams.set('cursor', cursor);
+      // No start_date/end_date — fetch all classes (matches working app)
+      // No include_past/include_completed — only include_cancelled
+      if (cursor) url.searchParams.set('start_after', cursor);
 
-      let response: Response | null = null;
-      let lastErrorText = '';
+      const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 
-      // If we already found working headers, use them; otherwise try each auth set
-      const headersToTry = activeHeaders ? [activeHeaders] : authHeaderSets;
-      for (const headers of headersToTry) {
-        const { response: res } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-        if (res.ok) {
-          response = res;
-          activeHeaders = headers; // Lock to working auth for subsequent pages
-          break;
-        }
-        // Not ok — capture error and try next auth method
-        lastErrorText = await res.clone().text().catch(() => 'Body unavailable');
-        const authType = 'Authorization' in headers ? 'Bearer' : 'x-api-key';
-        console.warn(`[sync-arketa-classes] ${authType} auth returned ${res.status}, trying next auth method...`);
-      }
-
-      if (!response) {
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Body unavailable');
         return new Response(
-          JSON.stringify({ error: `Arketa classes API error after trying all auth methods`, details: lastErrorText }),
+          JSON.stringify({ error: `Arketa classes API error: ${response.status}`, details: errorText }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const data = await response.json();
-      const page = Array.isArray(data) ? data : (data.classes ?? data.data ?? data.items ?? []);
+      const page = Array.isArray(data) ? data : (data.items ?? data.classes ?? data.data ?? []);
       allClasses.push(...page);
-      cursor = data.pagination?.nextCursor;
+      // Only paginate if the API returns an explicit cursor
+      cursor = data.pagination?.nextCursor ?? data.pagination?.next_cursor;
     } while (cursor);
+
+    // Client-side date filtering: only persist classes within the requested range
+    const dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
 
     const syncBatchId = crypto.randomUUID();
     const syncedAt = new Date().toISOString();
@@ -110,16 +93,14 @@ Deno.serve(async (req) => {
       const startTime = cls.start_time;
       if (!startTime) continue;
 
+      const classDate = dtf.format(new Date(startTime));
+
+      // Filter to requested date range
+      if (classDate < startDate || classDate > endDate) continue;
+
       const name = cls.name ?? cls.class_name ?? 'Unknown Class';
       const instructorName = cls.instructor_name ??
         (cls.instructor ? `${cls.instructor.first_name ?? ''} ${cls.instructor.last_name ?? ''}`.trim() : null);
-      const dtf = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Los_Angeles',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-      const classDate = dtf.format(new Date(startTime));
 
       stagingRows.push({
         external_id: String(cls.id),

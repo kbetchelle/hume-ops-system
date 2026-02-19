@@ -31,6 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2, ThumbsUp, ThumbsDown, Send } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { sanitizeHtml, stripHtml } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
@@ -143,6 +145,93 @@ function SortableTemplateItem({ template }: { template: ResponseTemplate }) {
   );
 }
 
+// MarkOutdatedButton with tooltip + dialog for adding a comment
+function MarkOutdatedButton({ 
+  template, 
+  handleMarkOutdated 
+}: { 
+  template: ResponseTemplate; 
+  handleMarkOutdated: (template: ResponseTemplate, note: string) => void;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!note.trim()) return;
+    setSubmitting(true);
+    await handleMarkOutdated(template, note.trim());
+    setSubmitting(false);
+    setNote("");
+    setDialogOpen(false);
+  };
+
+  const handleCancel = () => {
+    setNote("");
+    setDialogOpen(false);
+  };
+
+  return (
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDialogOpen(true)}
+              className="h-8 rounded-none text-warning"
+            >
+              <AlertTriangle className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="rounded-none">
+            <p className="text-xs">Click to report template as outdated</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <DialogContent className="max-w-md rounded-none">
+          <DialogHeader>
+            <DialogTitle className="text-sm uppercase tracking-wider">
+              Report as Outdated
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Report &lsquo;{template.title}&rsquo; as potentially outdated. Your comment will be sent to the manager.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="outdated-note" className="text-xs uppercase tracking-wider">
+              Comment
+            </Label>
+            <Textarea
+              id="outdated-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What appears outdated about this template?"
+              rows={4}
+              className="rounded-none text-xs"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancel} className="rounded-none">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!note.trim() || submitting}
+              className="rounded-none"
+            >
+              {submitting ? "Sending…" : "Send Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // TemplateList component for rendering templates within a category
 interface TemplateListProps {
   templates: ResponseTemplate[];
@@ -153,7 +242,7 @@ interface TemplateListProps {
   copiedId: string | null;
   handleCopy: (template: ResponseTemplate) => void;
   handleOpenDialog: (template: ResponseTemplate) => void;
-  handleMarkOutdated: (template: ResponseTemplate) => void;
+  handleMarkOutdated: (template: ResponseTemplate, note: string) => void;
   handleClearOutdated: (template: ResponseTemplate) => void;
   handleToggleActive: (template: ResponseTemplate) => void;
   handleDelete: (template: ResponseTemplate) => void;
@@ -262,17 +351,7 @@ function TemplateList({
             <div className="flex items-center gap-2">
               {editMode && canEdit ? (
                 <>
-                  {!template.is_outdated ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMarkOutdated(template)}
-                      className="h-8 rounded-none text-warning"
-                      title="Mark as outdated"
-                    >
-                      <AlertTriangle className="h-3 w-3" />
-                    </Button>
-                  ) : (
+                  {template.is_outdated && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -309,18 +388,23 @@ function TemplateList({
                   )}
                 </>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCopy(template)}
-                  className="h-8 rounded-none"
-                >
-                  {copiedId === template.id ? (
-                    <Check className="h-3 w-3" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
+                <div className="flex items-center gap-1">
+                  {!template.is_outdated && (
+                    <MarkOutdatedButton template={template} handleMarkOutdated={handleMarkOutdated} />
                   )}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(template)}
+                    className="h-8 rounded-none"
+                  >
+                    {copiedId === template.id ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -926,7 +1010,7 @@ export function ResponseTemplatesWithAI() {
     }
   };
 
-  const handleMarkOutdated = async (template: ResponseTemplate) => {
+  const handleMarkOutdated = async (template: ResponseTemplate, note: string) => {
     if (!user) return;
     
     // Get user's full name from profile
@@ -956,11 +1040,12 @@ export function ResponseTemplatesWithAI() {
       return;
     }
 
-    // Create notification for managers
+    // Create notification for managers with note
     const { error: notifyError } = await insertInto("template_outdated_notifications", {
       template_id: template.id,
       marked_by_user_id: user.id,
       marked_by_name: staffName,
+      note: note,
     });
 
     if (notifyError) {

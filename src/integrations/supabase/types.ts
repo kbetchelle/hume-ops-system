@@ -5176,6 +5176,7 @@ export type Database = {
           is_read: boolean | null
           marked_by_name: string
           marked_by_user_id: string
+          note: string | null
           read_at: string | null
           template_id: string
         }
@@ -5185,6 +5186,7 @@ export type Database = {
           is_read?: boolean | null
           marked_by_name: string
           marked_by_user_id: string
+          note?: string | null
           read_at?: string | null
           template_id: string
         }
@@ -5194,6 +5196,7 @@ export type Database = {
           is_read?: boolean | null
           marked_by_name?: string
           marked_by_user_id?: string
+          note?: string | null
           read_at?: string | null
           template_id?: string
         }

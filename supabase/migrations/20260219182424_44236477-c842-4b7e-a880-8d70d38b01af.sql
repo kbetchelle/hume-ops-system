@@ -1,0 +1,1 @@
+ALTER TABLE public.template_outdated_notifications ADD COLUMN note text;

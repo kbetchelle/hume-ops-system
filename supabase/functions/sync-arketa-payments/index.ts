@@ -16,7 +16,7 @@ import { logApiCall } from '../_shared/apiLogger.ts';
  */
 
 const PAGE_LIMIT = 25;
-const MAX_PAGES = 200; // 25 × 200 = 5,000 records safety cap
+const MAX_PAGES = 30; // Cap at 30 pages (~750 records) per invocation to avoid timeout
 const UPSERT_BATCH = 100;
 const MAX_RETRIES = 8;
 const BASE_DELAY_MS = 3000;

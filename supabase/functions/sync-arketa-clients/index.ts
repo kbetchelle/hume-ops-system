@@ -1,7 +1,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
-import { fetchWithRetry, withRetry, isRetryableSupabaseError } from "../_shared/retry.ts";
+import { fetchWithRetry } from "../_shared/retry.ts";
 import { logApiCall } from "../_shared/apiLogger.ts";
+
+/**
+ * sync-arketa-clients
+ *
+ * Fetches clients from Arketa Partner API with cursor-based pagination.
+ * Batched upserts (100 at a time) and a per-invocation page cap (MAX_PAGES)
+ * to stay within edge function timeout. Cursor is saved to
+ * `api_sync_status` so the next invocation resumes where this one left off.
+ */
+
+const UPSERT_BATCH = 100;
+const MAX_PAGES = 30; // ~30 pages should fit within 50s safely
 
 interface PartnerClient {
   id: string;
@@ -9,42 +21,29 @@ interface PartnerClient {
   name?: string;
   firstName?: string;
   lastName?: string;
+  first_name?: string;
+  last_name?: string;
   phone?: string;
   createdAt?: string;
   updatedAt?: string;
   tags?: string[];
   customFields?: Record<string, unknown>;
+  custom_fields?: Record<string, unknown>;
   referrer?: string;
   emailMarketingOptIn?: boolean;
+  email_mkt_opt_in?: boolean;
   smsMarketingOptIn?: boolean;
+  sms_mkt_opt_in?: boolean;
   dateOfBirth?: string;
+  date_of_birth?: string;
   lifecycleStage?: string;
+  lifecycle_stage?: string;
   [key: string]: unknown;
-}
-
-interface PaginatedResponse {
-  data: PartnerClient[];
-  pagination?: {
-    nextCursor?: string;
-    hasMore?: boolean;
-  };
-}
-
-interface SyncResult {
-  success: boolean;
-  synced: number;
-  syncedCount?: number;
-  total: number;
-  failed: number;
-  failedRecordIds: string[];
-  errors: Array<{ id: string; error: string }>;
-  retryAttempts: number;
 }
 
 // deno-lint-ignore no-explicit-any
 async function getValidToken(supabase: any): Promise<string> {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-  
   const { response } = await fetchWithRetry(
     `${SUPABASE_URL}/functions/v1/refresh-arketa-token`,
     {
@@ -62,81 +61,46 @@ async function getValidToken(supabase: any): Promise<string> {
   }
 
   const result = await response.json();
-  
-  if (!result.success) {
-    throw new Error(result.error || "Failed to get valid token");
-  }
-
+  if (!result.success) throw new Error(result.error || "Failed to get valid token");
   return result.access_token;
 }
 
-// Build client name from available fields
 function buildClientName(client: PartnerClient): string | null {
   if (client.name) return client.name;
-  const parts = [client.firstName, client.lastName].filter(Boolean);
+  const first = client.firstName || client.first_name;
+  const last = client.lastName || client.last_name;
+  const parts = [first, last].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
-// deno-lint-ignore no-explicit-any
-async function upsertClientWithRetry(
-  supabase: any,
-  client: PartnerClient
-): Promise<{ success: boolean; error?: string; attempts: number }> {
-  const clientData = {
+function toDbRow(client: PartnerClient) {
+  // Some clients may not have email — use a placeholder to satisfy NOT NULL
+  const email = client.email || `no-email-${client.id}@placeholder.local`;
+  return {
     external_id: client.id,
-    client_email: client.email,
+    client_email: email,
     client_name: buildClientName(client),
     client_phone: client.phone || null,
     client_tags: client.tags || [],
-    custom_fields: client.customFields || {},
+    custom_fields: client.customFields || client.custom_fields || {},
     referrer: client.referrer || null,
-    email_mkt_opt_in: client.emailMarketingOptIn ?? false,
-    sms_mkt_opt_in: client.smsMarketingOptIn ?? false,
-    date_of_birth: client.dateOfBirth || null,
-    lifecycle_stage: client.lifecycleStage || null,
+    email_mkt_opt_in: client.emailMarketingOptIn ?? client.email_mkt_opt_in ?? false,
+    sms_mkt_opt_in: client.smsMarketingOptIn ?? client.sms_mkt_opt_in ?? false,
+    date_of_birth: client.dateOfBirth || client.date_of_birth || null,
+    lifecycle_stage: client.lifecycleStage || client.lifecycle_stage || null,
     raw_data: client,
     last_synced_at: new Date().toISOString(),
   };
-
-  try {
-    const { result, attempts } = await withRetry(
-      async () => {
-        const { error: upsertError } = await supabase
-          .from("arketa_clients")
-          .upsert(clientData, { 
-            onConflict: "external_id",
-            ignoreDuplicates: false 
-          });
-
-        if (upsertError && !isRetryableSupabaseError(upsertError)) {
-          throw upsertError;
-        }
-        return { error: upsertError };
-      },
-      { maxAttempts: 3 },
-      `upsert client ${client.id}`
-    );
-
-    if (result.error) {
-      return { success: false, error: result.error.message || "Unknown error", attempts };
-    }
-    return { success: true, attempts };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return { success: false, error: errorMessage, attempts: 3 };
-  }
 }
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
-
   const corsHeaders = getCorsHeaders(req);
 
   // deno-lint-ignore no-explicit-any
   let supabase: any;
   let syncLogId: string | null = null;
-  let totalRetryAttempts = 0;
   const startTime = Date.now();
 
   try {
@@ -144,147 +108,134 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!ARKETA_PARTNER_ID) {
-      throw new Error("ARKETA_PARTNER_ID is not configured");
-    }
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase configuration missing");
-    }
+    if (!ARKETA_PARTNER_ID) throw new Error("ARKETA_PARTNER_ID is not configured");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase configuration missing");
 
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get a valid token (will refresh if needed)
+    // Get a valid token
     const accessToken = await getValidToken(supabase);
-    console.log("[sync-arketa-clients] Obtained valid access token for Arketa API");
+    console.log("[sync-arketa-clients] Obtained valid access token");
+
+    // Load saved cursor for resumability
+    const { data: syncStatus } = await supabase
+      .from("api_sync_status")
+      .select("last_processed_date")
+      .eq("api_name", "arketa_clients")
+      .single();
+
+    let savedCursor: string | null = syncStatus?.last_processed_date || null;
+
+    // Parse body for reset option
+    const body = await req.json().catch(() => ({}));
+    if (body?.reset_cursor) {
+      savedCursor = null;
+      console.log("[sync-arketa-clients] Cursor reset requested");
+    }
 
     // Create sync log entry
     const { data: syncLog, error: syncLogError } = await supabase
       .from("client_sync_log")
-      .insert({ 
-        status: "running",
-        retry_attempts: 0,
-        success_count: 0,
-        failure_count: 0,
-        failed_record_ids: []
-      })
+      .insert({ status: "running", retry_attempts: 0, success_count: 0, failure_count: 0, failed_record_ids: [] })
       .select()
       .single();
-
-    if (syncLogError) {
-      console.error("[sync-arketa-clients] Failed to create sync log:", syncLogError);
-    } else {
-      syncLogId = syncLog.id;
-    }
+    if (!syncLogError) syncLogId = syncLog.id;
 
     const BASE_URL = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0/${ARKETA_PARTNER_ID}`;
-    
+
     let allClients: PartnerClient[] = [];
-    let nextCursor: string | undefined = undefined;
+    let nextCursor: string | undefined = savedCursor || undefined;
     let hasMore = true;
+    let pageCount = 0;
 
-    // Fetch all clients with pagination and retry logic
-    while (hasMore) {
+    // Fetch clients with pagination, capped at MAX_PAGES per invocation
+    while (hasMore && pageCount < MAX_PAGES) {
       const url = new URL(`${BASE_URL}/clients`);
-      if (nextCursor) {
-        url.searchParams.set("cursor", nextCursor);
-      }
+      if (nextCursor) url.searchParams.set("cursor", nextCursor);
 
-      console.log("[sync-arketa-clients] Fetching clients from:", url.toString());
+      console.log(`[sync-arketa-clients] Page ${pageCount + 1}, cursor: ${nextCursor || 'start'}`);
 
-      const { response, attempts } = await fetchWithRetry(url.toString(), {
+      const { response } = await fetchWithRetry(url.toString(), {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
       });
-      
-      totalRetryAttempts += attempts - 1; // Only count retries, not first attempt
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Partner API error [${response.status}]: ${errorText}`
-        );
+        throw new Error(`Partner API error [${response.status}]: ${errorText}`);
       }
 
-      const result: PaginatedResponse = await response.json();
-      
-      if (result.data && Array.isArray(result.data)) {
-        allClients = [...allClients, ...result.data];
-      }
+      const result = await response.json();
+      const items = result?.items || result?.data || [];
+      if (Array.isArray(items)) allClients = [...allClients, ...items];
 
-      nextCursor = result.pagination?.nextCursor;
-      hasMore = result.pagination?.hasMore ?? false;
+      nextCursor = result?.pagination?.nextCursor;
+      hasMore = result?.pagination?.hasMore ?? false;
+      pageCount++;
     }
 
-    console.log(`[sync-arketa-clients] Fetched ${allClients.length} clients from Partner API`);
+    console.log(`[sync-arketa-clients] Fetched ${allClients.length} clients in ${pageCount} pages (hasMore: ${hasMore})`);
 
-    // Upsert clients into database with retry logic
-    let syncedCount = 0;
-    const failedRecordIds: string[] = [];
-    const errors: Array<{ id: string; error: string }> = [];
-
+    // Deduplicate by external_id (keep last occurrence) to avoid
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const deduped = new Map<string, ReturnType<typeof toDbRow>>();
     for (const client of allClients) {
-      const result = await upsertClientWithRetry(supabase, client);
-      totalRetryAttempts += result.attempts - 1;
-      
-      if (result.success) {
-        syncedCount++;
+      deduped.set(client.id, toDbRow(client));
+    }
+    const dbRows = Array.from(deduped.values());
+    console.log(`[sync-arketa-clients] ${allClients.length} fetched → ${dbRows.length} unique clients`);
+    let syncedCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < dbRows.length; i += UPSERT_BATCH) {
+      const batch = dbRows.slice(i, i + UPSERT_BATCH);
+      const { error: upsertError } = await supabase
+        .from("arketa_clients")
+        .upsert(batch, { onConflict: "external_id", ignoreDuplicates: false });
+
+      if (upsertError) {
+        console.error(`[sync-arketa-clients] Batch ${Math.floor(i / UPSERT_BATCH) + 1} failed:`, upsertError.message);
+        failedCount += batch.length;
+        errors.push(upsertError.message);
       } else {
-        console.error(`[sync-arketa-clients] Failed to upsert client ${client.id}:`, result.error);
-        failedRecordIds.push(client.id);
-        errors.push({ id: client.id, error: result.error || "Unknown error" });
+        syncedCount += batch.length;
       }
     }
 
-    // Determine final status
-    let finalStatus: string;
-    if (failedRecordIds.length === 0) {
-      finalStatus = "completed";
-    } else if (syncedCount === 0) {
-      finalStatus = "failed";
-    } else if (syncedCount > 0 && failedRecordIds.length > 0) {
-      finalStatus = "partial_success";
-    } else {
-      finalStatus = "completed_with_errors";
-    }
+    // Save cursor for next invocation (null if fully done)
+    const cursorToSave = hasMore ? (nextCursor || null) : null;
+    await supabase.from("api_sync_status").upsert({
+      api_name: "arketa_clients",
+      last_sync_at: new Date().toISOString(),
+      last_sync_success: failedCount === 0,
+      last_sync_status: hasMore ? "partial" : "success",
+      last_records_processed: allClients.length,
+      last_records_inserted: syncedCount,
+      last_processed_date: cursorToSave,
+      last_error_message: errors.length > 0 ? errors.join("; ") : null,
+    }, { onConflict: "api_name" });
 
-    // Update sync log with detailed results
+    // Update sync log
+    const finalStatus = failedCount === 0 ? (hasMore ? "partial" : "completed") : "partial_success";
     if (syncLogId) {
-      await supabase
-        .from("client_sync_log")
-        .update({
-          status: finalStatus,
-          completed_at: new Date().toISOString(),
-          records_synced: syncedCount,
-          success_count: syncedCount,
-          failure_count: failedRecordIds.length,
-          failed_record_ids: failedRecordIds,
-          retry_attempts: totalRetryAttempts,
-          error_message: errors.length > 0 
-            ? errors.map(e => `${e.id}: ${e.error}`).join("; ") 
-            : null,
-        })
-        .eq("id", syncLogId);
+      await supabase.from("client_sync_log").update({
+        status: finalStatus,
+        completed_at: new Date().toISOString(),
+        records_synced: syncedCount,
+        success_count: syncedCount,
+        failure_count: failedCount,
+        error_message: errors.length > 0 ? errors.join("; ") : null,
+      }).eq("id", syncLogId);
     }
 
-    const syncResult: SyncResult = {
-      success: failedRecordIds.length === 0,
-      synced: syncedCount,
-      syncedCount,
-      total: allClients.length,
-      failed: failedRecordIds.length,
-      failedRecordIds,
-      errors,
-      retryAttempts: totalRetryAttempts,
-    };
-
-    // Log to api_logs for Sync Log History visibility
     await logApiCall(supabase, {
       apiName: 'arketa_clients',
       endpoint: '/clients',
-      syncSuccess: failedRecordIds.length === 0,
+      syncSuccess: failedCount === 0,
       durationMs: Date.now() - startTime,
       recordsProcessed: allClients.length,
       recordsInserted: syncedCount,
@@ -293,29 +244,31 @@ Deno.serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify(syncResult),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({
+        success: failedCount === 0,
+        synced: syncedCount,
+        syncedCount,
+        total: allClients.length,
+        failed: failedCount,
+        pages: pageCount,
+        hasMore,
+        status: hasMore ? "partial_will_resume" : "completed",
+        errors: errors.length > 0 ? errors : undefined,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[sync-arketa-clients] Sync error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-    // Update sync log to failed status
     if (syncLogId && supabase) {
-      await supabase
-        .from("client_sync_log")
-        .update({
-          status: "failed",
-          completed_at: new Date().toISOString(),
-          error_message: errorMessage,
-          retry_attempts: totalRetryAttempts,
-        })
-        .eq("id", syncLogId);
+      await supabase.from("client_sync_log").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        error_message: errorMessage,
+      }).eq("id", syncLogId);
     }
 
-    // Log failure to api_logs
     if (supabase) {
       await logApiCall(supabase, {
         apiName: 'arketa_clients',
@@ -325,26 +278,14 @@ Deno.serve(async (req) => {
         recordsProcessed: 0,
         recordsInserted: 0,
         responseStatus: 500,
-        errorMessage: errorMessage,
+        errorMessage,
         triggeredBy: 'manual',
       });
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage,
-        synced: 0,
-        total: 0,
-        failed: 0,
-        failedRecordIds: [],
-        errors: [],
-        retryAttempts: totalRetryAttempts,
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: false, error: errorMessage, synced: 0, total: 0 }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

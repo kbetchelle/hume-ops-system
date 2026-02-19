@@ -1287,6 +1287,20 @@ export function ResponseTemplatesWithAI() {
                   <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed border-t pt-3">
                     {aiOutput}
                   </div>
+                  <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <p>
+                      <span className="font-medium">Please note:</span> AI models can and will produce hallucinations on occasion. A hallucination is a false or misleading statement presented as the truth. Please double check all responses before sending them to ensure policies are accurate.
+                      <br />
+                      Reference:{" "}
+                      <a
+                        href="/dashboard/resources/pages/3d5aa6f1-f06e-4696-bddf-554d8e045988?returnTo=/dashboard/concierge"
+                        className="underline font-medium hover:text-amber-900 dark:hover:text-amber-200"
+                      >
+                        HUME Concierge Internal Policies
+                      </a>
+                    </p>
+                  </div>
                 </div>
               )}
             </TabsContent>

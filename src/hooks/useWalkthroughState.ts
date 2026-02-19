@@ -144,7 +144,7 @@ export function useMarkPageHintViewed() {
     mutationFn: async (hintId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      const { error } = await supabase.rpc("walkthrough_mark_hint_viewed", {
+      const { error } = await (supabase.rpc as any)("walkthrough_mark_hint_viewed", {
         _hint_id: hintId,
       });
       if (error) throw error;

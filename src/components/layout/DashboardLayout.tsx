@@ -628,12 +628,6 @@ function UserInfoDropdown({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
-          <DropdownMenuLabel className="font-normal">
-            <p className="text-xs uppercase tracking-widest font-normal">
-              {profile?.full_name || "User"}
-            </p>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bell className="mr-2 h-3 w-3" />
             {t("Notifications", "Notificaciones")}

@@ -40,7 +40,7 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'staff_announcements': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'staff_announcement_reads': { management: ['select', 'insert'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   'staff_messages': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
-  'staff_message_reads': { management: ['select', 'insert'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'staff_message_reads': { management: ['select', 'insert', 'update'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
   'shift_reports': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'] },
   'club_policies': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'staff_qa': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
@@ -52,6 +52,14 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'lost_and_found': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
   'lost_and_found_member_requests': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert', 'update'], staff: ['select', 'insert', 'update'] },
   'staff_documents': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  // Push / notifications
+  'staff_push_subscriptions': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'notification_history': { management: ['select', 'insert', 'update'], concierge: ['select'], staff: ['select'] },
+  'notification_triggers': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
+  'class_type_mappings': { management: ['select', 'insert', 'update', 'delete'] },
+  'staff_message_reactions': { management: ['select', 'insert', 'delete'], concierge: ['select', 'insert', 'delete'], staff: ['select', 'insert', 'delete'] },
+  'staff_message_groups': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'staff_message_drafts': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   // Backfill tables
   'backfill_jobs': { management: ['select', 'insert', 'update', 'delete'] },
   'checklist_templates': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },

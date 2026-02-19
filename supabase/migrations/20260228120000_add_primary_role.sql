@@ -2,8 +2,9 @@
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS primary_role app_role NULL;
 
--- Extend admin_get_all_users to return primary_role
-CREATE OR REPLACE FUNCTION public.admin_get_all_users()
+-- Extend admin_get_all_users to return primary_role (must DROP first when changing return type)
+DROP FUNCTION IF EXISTS public.admin_get_all_users();
+CREATE FUNCTION public.admin_get_all_users()
 RETURNS TABLE (
   user_id uuid,
   email text,

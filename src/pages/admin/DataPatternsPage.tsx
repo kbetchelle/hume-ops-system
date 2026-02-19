@@ -1,10 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Database, GitBranch, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Database, GitBranch, AlertTriangle, Play, RefreshCw, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { toast } from "sonner";
+
+// ── Types ─────────────────────────────────────────────────────────
 
 interface ClassFromReservations {
   class_id: string;
@@ -31,11 +37,51 @@ interface DateCoverage {
   has_reservations: boolean;
 }
 
+// ── Sync helpers ──────────────────────────────────────────────────
+
+async function triggerReservationSync(startDate: string, endDate: string) {
+  const { data, error } = await supabase.functions.invoke("sync-arketa-reservations", {
+    body: { startDate, endDate, triggeredBy: "data-patterns" },
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function triggerClassesSync(startDate: string, endDate: string) {
+  const { data, error } = await supabase.functions.invoke("sync-arketa-classes", {
+    body: { startDate, endDate, triggeredBy: "data-patterns" },
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function createStubClasses(classes: { class_id: string; class_name: string | null; class_date: string | null }[]) {
+  const rows = classes.map((c) => ({
+    external_id: c.class_id,
+    name: c.class_name ?? "Unknown (from reservation)",
+    class_date: c.class_date ?? new Date().toISOString().split("T")[0],
+    start_time: c.class_date ? `${c.class_date}T00:00:00Z` : new Date().toISOString(),
+    synced_at: new Date().toISOString(),
+    status: "stub_from_reservation",
+  }));
+
+  // Batch upsert in chunks of 50
+  for (let i = 0; i < rows.length; i += 50) {
+    const chunk = rows.slice(i, i + 50);
+    const { error } = await (supabase as any)
+      .from("arketa_classes")
+      .upsert(chunk, { onConflict: "external_id,class_date" });
+    if (error) throw error;
+  }
+  return rows.length;
+}
+
+// ── Hooks ─────────────────────────────────────────────────────────
+
 function useClassesFromReservations() {
   return useQuery({
     queryKey: ["data-patterns", "classes-from-reservations"],
     queryFn: async () => {
-      // Get distinct class_id/class_name combos from reservations history
       const { data: resClasses, error } = await (supabase as any)
         .from("arketa_reservations_history")
         .select("class_id, class_name, class_date")
@@ -44,7 +90,6 @@ function useClassesFromReservations() {
         .limit(5000);
       if (error) throw error;
 
-      // Group by class_id
       const grouped = new Map<string, { class_name: string | null; class_date: string | null; count: number; checked_in: number }>();
       for (const r of resClasses ?? []) {
         const existing = grouped.get(r.class_id);
@@ -55,10 +100,8 @@ function useClassesFromReservations() {
         }
       }
 
-      // Check which exist in arketa_classes
       const classIds = [...grouped.keys()];
       const existingIds = new Set<string>();
-      // Chunk lookups to avoid URL length limits
       for (let i = 0; i < classIds.length; i += 200) {
         const chunk = classIds.slice(i, i + 200);
         const { data: found } = await (supabase as any)
@@ -89,7 +132,6 @@ function useOrphanedClasses() {
   return useQuery({
     queryKey: ["data-patterns", "orphaned-classes"],
     queryFn: async () => {
-      // Get classes that have booked_count > 0 but no reservations in history
       const { data: classes, error } = await (supabase as any)
         .from("arketa_classes")
         .select("external_id, name, class_date, booked_count")
@@ -135,7 +177,6 @@ function useDateCoverage() {
   return useQuery({
     queryKey: ["data-patterns", "date-coverage"],
     queryFn: async () => {
-      // Get last 60 days of class dates
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       const startStr = sixtyDaysAgo.toISOString().split("T")[0];
@@ -168,19 +209,15 @@ function useDateCoverage() {
       for (const d of allDates) {
         const cc = classCountByDate.get(d) ?? 0;
         const rc = resCountByDate.get(d) ?? 0;
-        coverage.push({
-          class_date: d,
-          classes_count: cc,
-          reservations_count: rc,
-          has_classes: cc > 0,
-          has_reservations: rc > 0,
-        });
+        coverage.push({ class_date: d, classes_count: cc, reservations_count: rc, has_classes: cc > 0, has_reservations: rc > 0 });
       }
       return coverage.sort((a, b) => b.class_date.localeCompare(a.class_date));
     },
     staleTime: 60_000,
   });
 }
+
+// ── Components ────────────────────────────────────────────────────
 
 function SectionLoader() {
   return (
@@ -192,18 +229,84 @@ function SectionLoader() {
 
 function DateCoverageSection() {
   const { data, isLoading } = useDateCoverage();
+  const queryClient = useQueryClient();
   const gaps = data?.filter((d) => d.has_classes !== d.has_reservations) ?? [];
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [syncing, setSyncing] = useState(false);
+
+  const toggleDate = (date: string) => {
+    setSelectedDates((prev) => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedDates.size === gaps.length) {
+      setSelectedDates(new Set());
+    } else {
+      setSelectedDates(new Set(gaps.map((g) => g.class_date)));
+    }
+  };
+
+  const handleSync = async () => {
+    if (selectedDates.size === 0) return;
+    setSyncing(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const date of selectedDates) {
+      const gap = gaps.find((g) => g.class_date === date);
+      if (!gap) continue;
+      try {
+        if (gap.has_classes && !gap.has_reservations) {
+          await triggerReservationSync(date, date);
+        } else {
+          await triggerClassesSync(date, date);
+        }
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setSyncing(false);
+    setSelectedDates(new Set());
+    queryClient.invalidateQueries({ queryKey: ["data-patterns"] });
+    if (errorCount === 0) {
+      toast.success(`Synced ${successCount} date(s) successfully`);
+    } else {
+      toast.warning(`${successCount} succeeded, ${errorCount} failed`);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <GitBranch className="h-4 w-4" />
-          Date Coverage Gaps (Last 60 Days)
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Dates where classes exist but no reservations, or vice versa
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              Date Coverage Gaps (Last 60 Days)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Dates where classes exist but no reservations, or vice versa. Select rows to sync missing data.
+            </p>
+          </div>
+          {gaps.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedDates.size === 0 || syncing}
+              onClick={handleSync}
+              className="shrink-0"
+            >
+              {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+              Sync {selectedDates.size > 0 ? `(${selectedDates.size})` : "Selected"}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -215,15 +318,28 @@ function DateCoverageSection() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <Checkbox
+                      checked={selectedDates.size === gaps.length && gaps.length > 0}
+                      onCheckedChange={selectAll}
+                    />
+                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Classes</TableHead>
                   <TableHead>Reservations</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {gaps.map((g) => (
                   <TableRow key={g.class_date}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedDates.has(g.class_date)}
+                        onCheckedChange={() => toggleDate(g.class_date)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{g.class_date}</TableCell>
                     <TableCell>{g.classes_count}</TableCell>
                     <TableCell>{g.reservations_count}</TableCell>
@@ -239,6 +355,9 @@ function DateCoverageSection() {
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {g.has_classes && !g.has_reservations ? "Will sync reservations" : "Will sync classes"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -252,17 +371,85 @@ function DateCoverageSection() {
 
 function OrphanedClassesSection() {
   const { data, isLoading } = useOrphanedClasses();
+  const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [syncing, setSyncing] = useState(false);
+
+  const toggleId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const visible = (data ?? []).slice(0, 100);
+    if (selectedIds.size === visible.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visible.map((c) => `${c.external_id}|${c.class_date}`)));
+    }
+  };
+
+  const handleFetchReservations = async () => {
+    if (selectedIds.size === 0) return;
+    setSyncing(true);
+
+    // Group selected orphans by date, then sync reservations for each unique date
+    const dateSet = new Set<string>();
+    for (const key of selectedIds) {
+      const date = key.split("|")[1];
+      if (date) dateSet.add(date);
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    for (const date of dateSet) {
+      try {
+        await triggerReservationSync(date, date);
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setSyncing(false);
+    setSelectedIds(new Set());
+    queryClient.invalidateQueries({ queryKey: ["data-patterns"] });
+    if (errorCount === 0) {
+      toast.success(`Triggered reservation sync for ${successCount} date(s)`);
+    } else {
+      toast.warning(`${successCount} succeeded, ${errorCount} failed`);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          Orphaned Classes (Booked but No Reservations)
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Classes with booked_count &gt; 0 but zero reservation records in history
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Orphaned Classes
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Booked but no reservation records. Select to fetch reservations.
+            </p>
+          </div>
+          {(data?.length ?? 0) > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedIds.size === 0 || syncing}
+              onClick={handleFetchReservations}
+              className="shrink-0"
+            >
+              {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+              Fetch ({selectedIds.size})
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -274,6 +461,12 @@ function OrphanedClassesSection() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <Checkbox
+                      checked={selectedIds.size === Math.min(data.length, 100) && data.length > 0}
+                      onCheckedChange={selectAll}
+                    />
+                  </TableHead>
                   <TableHead>Class ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Date</TableHead>
@@ -281,14 +474,20 @@ function OrphanedClassesSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.slice(0, 100).map((c) => (
-                  <TableRow key={`${c.external_id}-${c.class_date}`}>
-                    <TableCell className="font-mono text-xs">{c.external_id.slice(0, 12)}…</TableCell>
-                    <TableCell className="text-xs">{c.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.class_date}</TableCell>
-                    <TableCell>{c.booked_count}</TableCell>
-                  </TableRow>
-                ))}
+                {data.slice(0, 100).map((c) => {
+                  const key = `${c.external_id}|${c.class_date}`;
+                  return (
+                    <TableRow key={key}>
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(key)} onCheckedChange={() => toggleId(key)} />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{c.external_id.slice(0, 12)}…</TableCell>
+                      <TableCell className="text-xs">{c.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.class_date}</TableCell>
+                      <TableCell>{c.booked_count}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             {data.length > 100 && (
@@ -303,18 +502,70 @@ function OrphanedClassesSection() {
 
 function ReservationClassMappingSection() {
   const { data, isLoading } = useClassesFromReservations();
+  const queryClient = useQueryClient();
   const missingInClasses = data?.filter((d) => !d.exists_in_classes) ?? [];
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+
+  const toggleId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const visible = missingInClasses.slice(0, 100);
+    if (selectedIds.size === visible.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visible.map((c) => c.class_id)));
+    }
+  };
+
+  const handleCreateStubs = async () => {
+    if (selectedIds.size === 0) return;
+    setCreating(true);
+    try {
+      const toCreate = missingInClasses.filter((c) => selectedIds.has(c.class_id));
+      const count = await createStubClasses(toCreate);
+      toast.success(`Created ${count} stub class record(s) from reservation data`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["data-patterns"] });
+    } catch (err) {
+      toast.error(`Failed to create stubs: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Database className="h-4 w-4" />
-          Classes Discovered from Reservations
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Unique class_ids found in reservations history — highlights those missing from arketa_classes
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Classes from Reservations
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Class IDs in reservations but missing from classes table. Select to create stub records.
+            </p>
+          </div>
+          {missingInClasses.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedIds.size === 0 || creating}
+              onClick={handleCreateStubs}
+              className="shrink-0"
+            >
+              {creating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+              Create Stubs ({selectedIds.size})
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -336,6 +587,12 @@ function ReservationClassMappingSection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8">
+                        <Checkbox
+                          checked={selectedIds.size === Math.min(missingInClasses.length, 100) && missingInClasses.length > 0}
+                          onCheckedChange={selectAll}
+                        />
+                      </TableHead>
                       <TableHead>Class ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Last Date</TableHead>
@@ -345,6 +602,9 @@ function ReservationClassMappingSection() {
                   <TableBody>
                     {missingInClasses.slice(0, 100).map((c) => (
                       <TableRow key={c.class_id}>
+                        <TableCell>
+                          <Checkbox checked={selectedIds.has(c.class_id)} onCheckedChange={() => toggleId(c.class_id)} />
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{c.class_id.slice(0, 12)}…</TableCell>
                         <TableCell className="text-xs">{c.class_name ?? "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{c.class_date ?? "—"}</TableCell>
@@ -370,6 +630,7 @@ export default function DataPatternsPage() {
           <h1 className="text-2xl font-bold">Data Patterns</h1>
           <p className="text-muted-foreground text-sm">
             Cross-reference Arketa API endpoints to find data gaps, orphaned records, and mapping inconsistencies.
+            Select rows and use actions to resolve issues.
           </p>
         </div>
         <DateCoverageSection />

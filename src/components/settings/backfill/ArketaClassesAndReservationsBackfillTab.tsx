@@ -21,7 +21,7 @@ export default function ArketaClassesAndReservationsBackfillTab() {
       if (error) throw error;
       return count || 0;
     },
-    refetchInterval: syncProgress.isRunning ? 5000 : 60000,
+    refetchInterval: 5000,
   });
 
   const { data: classesCount } = useQuery({
@@ -31,7 +31,7 @@ export default function ArketaClassesAndReservationsBackfillTab() {
       if (error) throw error;
       return count || 0;
     },
-    refetchInterval: syncProgress.isRunning ? 5000 : 60000,
+    refetchInterval: 5000,
   });
 
   return (

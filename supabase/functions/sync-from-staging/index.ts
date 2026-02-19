@@ -131,7 +131,7 @@ async function transferReservations(
     }
 
     const countBefore = await getHistoryCount(supabase, "arketa_reservations_history");
-    const toUpsert = rows.map((r: Record<string, unknown>) => ({
+    const mapped = rows.map((r: Record<string, unknown>) => ({
       reservation_id: r.reservation_id ?? r.arketa_reservation_id,
       client_id: r.client_id ?? null,
       reservation_type: r.reservation_type ?? null,
@@ -155,6 +155,14 @@ async function transferReservations(
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
     })).filter((r: any) => r.reservation_id && r.class_id);
+
+    // Deduplicate by (reservation_id, class_id) — keep last occurrence to prevent
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time" errors
+    const deduped = new Map<string, typeof mapped[0]>();
+    for (const r of mapped) {
+      deduped.set(`${r.reservation_id}::${r.class_id}`, r);
+    }
+    const toUpsert = [...deduped.values()];
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);

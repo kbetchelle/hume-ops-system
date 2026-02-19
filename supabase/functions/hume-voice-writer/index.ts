@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,6 +87,33 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Fetch internal policies from database
+    let policySection = "";
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && serviceRoleKey) {
+        const supabase = createClient(supabaseUrl, serviceRoleKey);
+        const { data: policyPage, error: policyError } = await supabase
+          .from("resource_pages")
+          .select("search_text")
+          .eq("id", "3d5aa6f1-f06e-4696-bddf-554d8e045988")
+          .eq("is_published", true)
+          .single();
+
+        if (policyError || !policyPage?.search_text) {
+          console.warn("Could not fetch internal policies:", policyError?.message || "No content found");
+        } else {
+          const policyText = policyPage.search_text.slice(0, 15000);
+          policySection = `\n\n## HUME Internal Policies (Authoritative Reference)\nThe following are the official internal policies. Your responses must align with these rules. Never contradict them. Do not quote them directly or reference them as "policy" — instead, communicate the information naturally in the HUME voice.\n\n${policyText}`;
+        }
+      }
+    } catch (policyFetchError) {
+      console.warn("Failed to fetch policies:", policyFetchError);
+    }
+
+    const systemPrompt = HUME_VOICE_SYSTEM_PROMPT + policySection;
+
     let userPrompt = "";
 
     if (mode === "compose") {
@@ -114,7 +142,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: HUME_VOICE_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   RefreshCw,
@@ -9,6 +9,9 @@ import {
   FileText,
   BellOff,
   Loader2,
+  ChevronDown,
+  ChevronRight,
+  Activity,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-// Note: Switch and Label still used in SyncLogHistoryTable for error filter
 import {
   Select,
   SelectContent,
@@ -42,25 +44,135 @@ import {
   type SyncSchedule,
 } from "@/hooks/useSyncSchedule";
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
+import { supabase } from "@/integrations/supabase/client";
 
-// API sync configuration - maps sync types to their staging/target tables
-const API_CONFIG: Record<string, { stagingTable: string | null; targetTable: string }> = {
-  arketa_classes: { stagingTable: "arketa_classes_staging + arketa_reservations_staging", targetTable: "arketa_classes + arketa_reservations_history" },
-  arketa_clients: { stagingTable: "arketa_clients_staging", targetTable: "arketa_clients" },
-  arketa_reservations: { stagingTable: "arketa_reservations_staging", targetTable: "arketa_reservations" },
-  arketa_payments: { stagingTable: "arketa_payments_staging", targetTable: "arketa_payments" },
-  arketa_instructors: { stagingTable: "arketa_instructors_staging", targetTable: "arketa_instructors" },
-  arketa_subscriptions: { stagingTable: "arketa_subscriptions_staging", targetTable: "arketa_subscriptions" },
-  sling_users: { stagingTable: "sling_users_staging", targetTable: "sling_users" },
-  sling_shifts: { stagingTable: "sling_shifts_staging", targetTable: "staff_shifts" },
-  toast_sales: { stagingTable: "toast_staging", targetTable: "toast_sales" },
-  toast_backfill: { stagingTable: "toast_staging", targetTable: "toast_sales" },
-  calendly_events: { stagingTable: "scheduled_tours_staging", targetTable: "scheduled_tours" },
+// API sync configuration - maps sync types to their staging/target tables and parameters
+const API_CONFIG: Record<string, {
+  stagingTable: string | null;
+  targetTable: string;
+  parameters: { name: string; value: string; description?: string }[];
+}> = {
+  arketa_classes: {
+    stagingTable: "arketa_classes_staging + arketa_reservations_staging",
+    targetTable: "arketa_classes + arketa_reservations_history",
+    parameters: [
+      { name: "limit", value: "500", description: "Records per page" },
+      { name: "date_range", value: "-7 to +7 days", description: "Default date window" },
+      { name: "strategy", value: "3-tier (Reverse Sort → Cursor Skip → Plain)", description: "Fetch strategy" },
+      { name: "MAX_PAGES", value: "30", description: "Pagination safety cap" },
+      { name: "local_filter", value: "true", description: "Date filtering in edge function" },
+    ],
+  },
+  arketa_clients: {
+    stagingTable: "arketa_clients_staging",
+    targetTable: "arketa_clients",
+    parameters: [
+      { name: "limit", value: "100", description: "Records per page" },
+      { name: "dedup", value: "external_id", description: "Dedup key before upsert" },
+      { name: "batch_size", value: "100", description: "Upsert batch size" },
+    ],
+  },
+  arketa_reservations: {
+    stagingTable: "arketa_reservations_staging",
+    targetTable: "arketa_reservations",
+    parameters: [
+      { name: "source", value: "DB-driven (arketa_classes)", description: "Iterates local class IDs" },
+      { name: "date_range", value: "-7 to +7 days", description: "Default date window" },
+      { name: "fallback", value: "API Discovery (3-tier)", description: "When DB is empty" },
+    ],
+  },
+  arketa_payments: {
+    stagingTable: "arketa_payments_staging",
+    targetTable: "arketa_payments",
+    parameters: [
+      { name: "limit", value: "100", description: "Records per cursor page" },
+      { name: "cursor", value: "start_after (ID-based)", description: "Pagination method" },
+      { name: "MAX_PAGES", value: "30", description: "Pages per invocation" },
+    ],
+  },
+  arketa_instructors: {
+    stagingTable: "arketa_instructors_staging",
+    targetTable: "arketa_instructors",
+    parameters: [
+      { name: "endpoint", value: "/staff", description: "API path" },
+    ],
+  },
+  arketa_subscriptions: {
+    stagingTable: "arketa_subscriptions_staging",
+    targetTable: "arketa_subscriptions",
+    parameters: [
+      { name: "limit", value: "100", description: "Records per page" },
+      { name: "cursor", value: "start_after", description: "Pagination method" },
+      { name: "MAX_PAGES", value: "30", description: "Pages per invocation" },
+    ],
+  },
+  sling_users: {
+    stagingTable: "sling_users_staging",
+    targetTable: "sling_users",
+    parameters: [
+      { name: "endpoint", value: "/users", description: "Sling API path" },
+      { name: "org_id", value: "SLING_ORG_ID", description: "Organization filter" },
+    ],
+  },
+  sling_shifts: {
+    stagingTable: "sling_shifts_staging",
+    targetTable: "staff_shifts",
+    parameters: [
+      { name: "endpoint", value: "/reports/roster", description: "Sling API path" },
+      { name: "date_range", value: "-7 to +14 days", description: "Roster window" },
+      { name: "org_id", value: "SLING_ORG_ID", description: "Organization filter" },
+    ],
+  },
+  toast_sales: {
+    stagingTable: "toast_staging",
+    targetTable: "toast_sales",
+    parameters: [
+      { name: "endpoint", value: "/orders/v2/orders", description: "Toast API path" },
+      { name: "date_range", value: "yesterday → today", description: "Default business date range" },
+      { name: "pageSize", value: "100", description: "Records per page" },
+      { name: "restaurant_guid", value: "TOAST_RESTAURANT_GUID", description: "Restaurant ID" },
+    ],
+  },
+  toast_backfill: {
+    stagingTable: "toast_staging",
+    targetTable: "toast_sales",
+    parameters: [
+      { name: "job_type", value: "backfill", description: "Historical data load" },
+    ],
+  },
+  calendly_events: {
+    stagingTable: "scheduled_tours_staging",
+    targetTable: "scheduled_tours",
+    parameters: [
+      { name: "endpoint", value: "/scheduled_events", description: "Calendly API path" },
+      { name: "date_range", value: "-7 to +30 days", description: "Event window" },
+      { name: "status", value: "active", description: "Event status filter" },
+      { name: "org_uri", value: "CALENDLY_ORGANIZATION_URI", description: "Organization filter" },
+    ],
+  },
+  daily_report_aggregation: {
+    stagingTable: null,
+    targetTable: "daily_reports",
+    parameters: [
+      { name: "sources", value: "arketa_reservations_history, arketa_payments, toast_sales, scheduled_tours, daily_report_history, arketa_classes, Open-Meteo", description: "Input data sources" },
+      { name: "date", value: "today (default)", description: "Aggregation date" },
+      { name: "sync_source", value: "auto | manual", description: "Trigger source" },
+      { name: "conflict", value: "report_date (upsert)", description: "Dedup strategy" },
+    ],
+  },
+  daily_schedule: {
+    stagingTable: null,
+    targetTable: "daily_schedule",
+    parameters: [
+      { name: "sources", value: "arketa_classes + arketa_reservations_history", description: "Input data" },
+      { name: "window", value: "today → today+7", description: "Operational window" },
+      { name: "method", value: "refresh_daily_schedule RPC", description: "Delete + re-insert per date" },
+    ],
+  },
 };
 
 function StatusBadge({ status, isHealthy }: { status: string | boolean | null; isHealthy?: boolean }) {
   if (isHealthy !== undefined) {
-    // For overview table - HEALTHY/ERROR badges
     return isHealthy ? (
       <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
         <CheckCircle2 className="h-3 w-3" />
@@ -74,7 +186,6 @@ function StatusBadge({ status, isHealthy }: { status: string | boolean | null; i
     );
   }
 
-  // For log table - SUCCESS/FAILED badges
   if (status === "success" || status === true) {
     return (
       <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
@@ -119,6 +230,107 @@ function formatNextSync(nextRunAt: string | null, intervalMinutes: number): stri
   }
 }
 
+// Expandable detail panel for a sync row — shows parameters and recent logs
+function SyncDetailPanel({ syncType, isRunning }: { syncType: string; isRunning: boolean }) {
+  const config = API_CONFIG[syncType] || { parameters: [] };
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLogs = useCallback(async () => {
+    const { data } = await supabase
+      .from("api_logs")
+      .select("id, sync_success, records_processed, records_inserted, duration_ms, error_message, created_at, triggered_by, endpoint")
+      .eq("api_name", syncType)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    setRecentLogs(data ?? []);
+    setLoading(false);
+  }, [syncType]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  // Poll faster when a sync is running
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, [isRunning, fetchLogs]);
+
+  const formatDuration = (ms: number | null): string => {
+    if (ms === null) return "—";
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
+
+  return (
+    <div className="bg-muted/20 border-t border-border px-6 py-4 space-y-4">
+      {/* Parameters */}
+      <div>
+        <h4 className="text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Activity className="h-3 w-3" />
+          Sync Parameters
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {config.parameters.map((p) => (
+            <div key={p.name} className="bg-background border border-border rounded-sm px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{p.name}</div>
+              <div className="text-xs font-mono mt-0.5">{p.value}</div>
+              {p.description && (
+                <div className="text-[10px] text-muted-foreground mt-0.5">{p.description}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Logs */}
+      <div>
+        <h4 className="text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+          {isRunning && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+          Recent Sync History
+          {isRunning && <span className="text-[10px] text-primary font-medium ml-1">LIVE</span>}
+        </h4>
+        {loading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : recentLogs.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No sync logs found for this endpoint</p>
+        ) : (
+          <div className="space-y-1.5">
+            {recentLogs.map((log) => (
+              <div
+                key={log.id}
+                className={`flex items-center gap-3 px-3 py-2 rounded-sm text-xs border ${
+                  !log.sync_success ? "bg-destructive/5 border-destructive/20" : "bg-background border-border"
+                }`}
+              >
+                <StatusBadge status={log.sync_success ? "success" : "failed"} />
+                <span className="text-muted-foreground">
+                  {log.created_at ? format(new Date(log.created_at), "MMM d, h:mm:ss a") : "—"}
+                </span>
+                <span className="font-mono">
+                  {log.records_processed ?? 0} processed
+                  {log.records_inserted > 0 && (
+                    <span className="text-primary ml-1">(+{log.records_inserted} new)</span>
+                  )}
+                </span>
+                <span className="text-muted-foreground">{formatDuration(log.duration_ms)}</span>
+                <span className="text-muted-foreground">{log.triggered_by || "manual"}</span>
+                {log.error_message && (
+                  <span className="text-destructive truncate max-w-[200px]" title={log.error_message}>
+                    {log.error_message}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // API Sync Overview Table Component
 function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
@@ -126,6 +338,7 @@ function SyncOverviewTable() {
   const runSync = useRunSync();
   const intervalOptions = getIntervalOptions();
   const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const handleIntervalChange = (id: string, value: string) => {
     updateSchedule.mutate({
@@ -136,11 +349,17 @@ function SyncOverviewTable() {
 
   const handleRunNow = async (syncType: string) => {
     setRunningSyncType(syncType);
+    // Auto-expand the row being synced
+    setExpandedRow(syncType);
     try {
       await runSync.mutateAsync(syncType);
     } finally {
       setRunningSyncType(null);
     }
+  };
+
+  const toggleExpand = (syncType: string) => {
+    setExpandedRow((prev) => (prev === syncType ? null : syncType));
   };
 
   if (isLoading) {
@@ -169,6 +388,7 @@ function SyncOverviewTable() {
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30">
+            <TableHead className="font-medium w-8"></TableHead>
             <TableHead className="font-medium">API</TableHead>
             <TableHead className="font-medium">Status</TableHead>
             <TableHead className="font-medium">Last Sync</TableHead>
@@ -181,93 +401,120 @@ function SyncOverviewTable() {
         </TableHeader>
         <TableBody>
           {schedules
-            ?.filter((sync) => sync.is_enabled) // Only show enabled syncs
+            ?.filter((sync) => sync.is_enabled)
             .map((sync) => {
-            const config = API_CONFIG[sync.sync_type] || { stagingTable: null, targetTable: "—" };
+            const config = API_CONFIG[sync.sync_type] || { stagingTable: null, targetTable: "—", parameters: [] };
             const isHealthy = sync.last_status === "success" || sync.failure_count === 0;
+            const isExpanded = expandedRow === sync.sync_type;
+            const isThisRunning = runningSyncType === sync.sync_type;
 
             return (
-              <TableRow key={sync.id} className={sync.last_status === "failed" ? "bg-destructive/10" : ""}>
-                <TableCell className="font-medium">
-                  {sync.display_name}
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <StatusBadge status={null} isHealthy={isHealthy} />
-                    {!isHealthy && sync.last_error && (
-                      <p className="text-xs text-destructive max-w-[220px] truncate" title={sync.last_error}>
-                        {sync.last_error}
-                      </p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {sync.last_run_at ? (
-                    <span className="text-sm">
-                      {formatDistanceToNow(new Date(sync.last_run_at), { addSuffix: true })}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Never</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={String(sync.interval_minutes)}
-                    onValueChange={(value) => handleIntervalChange(sync.id, value)}
-                    disabled={updateSchedule.isPending}
-                  >
-                    <SelectTrigger className="w-[120px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Manual</SelectItem>
-                      {intervalOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={String(opt.value)}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-sm">
-                  {sync.interval_minutes === 0 ? "—" : formatNextSync(sync.next_run_at, sync.interval_minutes)}
-                </TableCell>
-                <TableCell>
-                  {config.stagingTable ? (
-                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                      {config.stagingTable}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                    {config.targetTable}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRunNow(sync.sync_type)}
-                    disabled={runningSyncType !== null}
-                    className="gap-1"
-                  >
-                    {runningSyncType === sync.sync_type ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-xs">Syncing...</span>
-                      </>
+              <>
+                <TableRow
+                  key={sync.id}
+                  className={`cursor-pointer transition-colors hover:bg-muted/40 ${
+                    sync.last_status === "failed" ? "bg-destructive/10" : ""
+                  } ${isExpanded ? "bg-muted/30" : ""}`}
+                  onClick={() => toggleExpand(sync.sync_type)}
+                >
+                  <TableCell className="w-8 px-2">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <>
-                        <Play className="h-4 w-4" />
-                        <span className="text-xs">Sync Now</span>
-                      </>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
-                  </Button>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {sync.display_name}
+                      {isThisRunning && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <StatusBadge status={null} isHealthy={isHealthy} />
+                      {!isHealthy && sync.last_error && (
+                        <p className="text-xs text-destructive max-w-[220px] truncate" title={sync.last_error}>
+                          {sync.last_error}
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {sync.last_run_at ? (
+                      <span className="text-sm">
+                        {formatDistanceToNow(new Date(sync.last_run_at), { addSuffix: true })}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Never</span>
+                    )}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={String(sync.interval_minutes)}
+                      onValueChange={(value) => handleIntervalChange(sync.id, value)}
+                      disabled={updateSchedule.isPending}
+                    >
+                      <SelectTrigger className="w-[120px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Manual</SelectItem>
+                        {intervalOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={String(opt.value)}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {sync.interval_minutes === 0 ? "—" : formatNextSync(sync.next_run_at, sync.interval_minutes)}
+                  </TableCell>
+                  <TableCell>
+                    {config.stagingTable ? (
+                      <Badge variant="outline" className="font-mono text-xs bg-muted/50">
+                        {config.stagingTable}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
+                      {config.targetTable}
+                    </Badge>
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRunNow(sync.sync_type)}
+                      disabled={runningSyncType !== null}
+                      className="gap-1"
+                    >
+                      {isThisRunning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-xs">Syncing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4" />
+                          <span className="text-xs">Sync Now</span>
+                        </>
+                      )}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+                {isExpanded && (
+                  <TableRow key={`${sync.id}-detail`}>
+                    <TableCell colSpan={9} className="p-0">
+                      <SyncDetailPanel syncType={sync.sync_type} isRunning={isThisRunning} />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             );
           })}
         </TableBody>
@@ -518,7 +765,7 @@ export default function ApiSyncingPage() {
                   API Sync Overview
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Frequency changes are automatically applied to background cron jobs
+                  Click any row to expand parameters and recent sync history. Frequency changes are automatically applied to background cron jobs.
                 </p>
               </CardHeader>
               <CardContent className="p-0">

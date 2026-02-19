@@ -56,7 +56,7 @@ export function useUpdatePrimaryRole() {
       userId: string;
       primaryRole: AppRole | null;
     }) => {
-      const { error } = await supabase.rpc("admin_set_primary_role", {
+      const { error } = await (supabase.rpc as any)("admin_set_primary_role", {
         _target_user_id: userId,
         _primary_role: primaryRole,
       });

@@ -18,6 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { NavLink } from "@/components/NavLink";
 import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox, Download } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
+import { useInAppNotifications } from "@/hooks/useInAppNotifications";
 
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
@@ -680,6 +681,7 @@ export function DashboardLayout({
   children,
   title
 }: DashboardLayoutProps) {
+  useInAppNotifications();
   return <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <SidebarNav />

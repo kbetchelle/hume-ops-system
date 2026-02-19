@@ -189,6 +189,49 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// Push notification handler
+self.addEventListener('push', function (event) {
+  var data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {}
+  var title = data.title || 'Notification';
+  var options = {
+    body: data.body,
+    icon: '/icons/icon-192x192.svg',
+    badge: '/icons/icon-192x192.svg',
+    data: data.data || {},
+    tag: data.type || 'hume-notification'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      var appUrl = self.location.origin + '/';
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url.indexOf(self.location.origin) !== -1) {
+          client.focus();
+          client.postMessage({ type: 'NOTIFICATION_CLICK', data: event.notification.data });
+          return;
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    })
+  );
+});
+
+// Push subscription change (resubscription can be added later)
+self.addEventListener('pushsubscriptionchange', function (event) {
+  console.log('[SW] Push subscription changed');
+});
+
 async function processPendingUploads() {
   // This will be triggered when connectivity is restored
   // The actual upload logic is handled by the useOfflineQueue hook

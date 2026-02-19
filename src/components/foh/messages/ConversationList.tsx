@@ -87,22 +87,6 @@ export function ConversationList({
 
   return (
     <>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider">
-            <MessageSquare className="h-4 w-4" />
-            Messages
-          </CardTitle>
-          <Button
-            size="sm"
-            onClick={() => setIsComposeOpen(true)}
-            className="rounded-none"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New
-          </Button>
-        </div>
-      </CardHeader>
 
       <CardContent className="space-y-4">
         {/* Search */}

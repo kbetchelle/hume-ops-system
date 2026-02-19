@@ -9,6 +9,7 @@ interface LogData {
   recordsInserted?: number;
   responseStatus?: number;
   responseBody?: unknown;
+  rawResponse?: string;
   errorMessage?: string;
   triggeredBy?: string;
 }
@@ -23,7 +24,8 @@ export async function logApiCall(supabase: SupabaseClient, data: LogData): Promi
       records_processed: data.recordsProcessed,
       records_inserted: data.recordsInserted || 0,
       response_status: data.responseStatus,
-      response_body: data.responseBody,
+      response_body: data.syncSuccess ? null : data.responseBody,
+      raw_response: data.syncSuccess ? null : (data.rawResponse ?? null),
       error_message: data.errorMessage,
       triggered_by: data.triggeredBy || 'manual',
     });

@@ -42,9 +42,21 @@ Deno.serve(async (req) => {
     // Use x-api-key auth exclusively per Arketa API spec
     const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
 
-    // Fetch all classes historically (no date filter) — local filtering applied later
+    // Compute date range for local filtering (default -7 to +30 days)
+    const today = new Date();
+    const defaultStart = new Date(today);
+    defaultStart.setDate(defaultStart.getDate() - 7);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + 30);
+    const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
+    const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
+
+    // Fetch classes without date params (Arketa API 500s on start_date/end_date).
+    // Cap at 1 page to avoid pagination 500 errors on page 2+.
     const allClasses: any[] = [];
+    const MAX_PAGES = 1;
     let cursor: string | undefined;
+    let page = 0;
 
     do {
       const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
@@ -62,19 +74,13 @@ Deno.serve(async (req) => {
       }
 
       const data = await response.json();
-      const page = Array.isArray(data) ? data : (data.items ?? data.classes ?? data.data ?? []);
-      allClasses.push(...page);
-      cursor = data.pagination?.nextCursor ?? (page.length === limit ? page[page.length - 1]?.id : undefined);
+      const pageData = Array.isArray(data) ? data : (data.items ?? data.classes ?? data.data ?? []);
+      allClasses.push(...pageData);
+      page++;
+      cursor = page < MAX_PAGES
+        ? (data.pagination?.nextCursor ?? (pageData.length === limit ? pageData[pageData.length - 1]?.id : undefined))
+        : undefined;
     } while (cursor);
-
-    // Apply local date filtering based on request params
-    const today = new Date();
-    const defaultStart = new Date(today);
-    defaultStart.setDate(defaultStart.getDate() - 30);
-    const defaultEnd = new Date(today);
-    defaultEnd.setDate(defaultEnd.getDate() + 7);
-    const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
-    const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
     const syncBatchId = crypto.randomUUID();
     const syncedAt = new Date().toISOString();

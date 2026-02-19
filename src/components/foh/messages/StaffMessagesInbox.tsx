@@ -47,6 +47,7 @@ export function StaffMessagesInbox({
   const [selectedGroup, setSelectedGroup] = useState<StaffMessageGroup | undefined>(undefined);
   const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
   const [newConversation, setNewConversation] = useState<Conversation | null>(null);
+  const [highlightMessageId, setHighlightMessageId] = useState<string | undefined>(undefined);
 
   // Data queries
   const { data: messages = [], isLoading: messagesLoading } = useStaffMessages();
@@ -70,8 +71,7 @@ export function StaffMessagesInbox({
     user?.id || ''
   );
 
-  // Filter based on view
-  const activeConversations = conversations.filter((c) => !c.isArchived);
+  // Filter based on view (ConversationList also filters by showArchived)
   const archivedConversations = conversations.filter((c) => c.isArchived);
 
   // Find selected conversation (real from messages or synthetic new conversation)
@@ -102,6 +102,7 @@ export function StaffMessagesInbox({
   const handleBack = () => {
     setSelectedConversationKey(null);
     setNewConversation(null);
+    setHighlightMessageId(undefined);
     setView('conversations');
   };
 
@@ -115,6 +116,7 @@ export function StaffMessagesInbox({
           user?.id || ''
         );
         setSelectedConversationKey(conversationKey);
+        setHighlightMessageId(initialMessageId);
         setView('conversation');
         if (onMarkRead) {
           onMarkRead(initialMessageId);
@@ -123,9 +125,10 @@ export function StaffMessagesInbox({
     }
   }, [initialMessageId, messages, user?.id, onMarkRead]);
 
-  const handleSelectConversation = (key: string) => {
+  const handleSelectConversation = (key: string, messageId?: string) => {
     setSelectedConversationKey(key);
     setNewConversation(null); // clear synthetic when selecting real conversation
+    setHighlightMessageId(messageId);
     setView('conversation');
   };
 
@@ -201,6 +204,7 @@ export function StaffMessagesInbox({
         conversation={selectedConversation}
         currentUserId={user?.id || ''}
         onBack={handleBack}
+        highlightMessageId={highlightMessageId}
       />
     );
   }
@@ -409,13 +413,15 @@ export function StaffMessagesInbox({
         </CardHeader>
         <CardContent className="p-0">
           <ConversationList
-            conversations={archivedConversations}
+            conversations={conversations}
             selectedConversationKey={selectedConversationKey}
             onSelectConversation={handleSelectConversation}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             isLoading={isLoading}
+            showArchived={true}
             onUnarchive={handleUnarchive}
+            currentUserId={user?.id || ''}
           />
         </CardContent>
       </Card>
@@ -540,12 +546,14 @@ export function StaffMessagesInbox({
         </CardHeader>
         <CardContent className="p-0">
           <ConversationList
-            conversations={activeConversations}
+            conversations={conversations}
             selectedConversationKey={selectedConversationKey}
             onSelectConversation={handleSelectConversation}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             isLoading={isLoading}
+            showArchived={false}
+            currentUserId={user?.id || ''}
           />
         </CardContent>
       </Card>

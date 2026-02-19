@@ -81,6 +81,11 @@ const ResourcePageEditorPage = lazy(() =>
     default: module.ResourcePageEditorPage
   }))
 );
+const NotificationControlCenterPage = lazy(() =>
+  import("./pages/dashboards/NotificationControlCenterPage").then(module => ({
+    default: module.default
+  }))
+);
 import ResourcesQuickLinksPage from "./pages/dashboards/ResourcesQuickLinksPage";
 import ResourcesPagesPage from "./pages/dashboards/ResourcesPagesPage";
 import ResourcesPoliciesPage from "./pages/dashboards/ResourcesPoliciesPage";
@@ -525,6 +530,22 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <StaffQAPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Notification Control Center for Managers */}
+            <Route
+              path="/dashboard/notification-center"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center h-screen">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  }>
+                    <NotificationControlCenterPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />

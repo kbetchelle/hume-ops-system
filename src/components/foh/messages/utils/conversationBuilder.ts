@@ -156,6 +156,10 @@ export function groupMessagesIntoConversations(
     const conversation = conversationMap.get(key)!;
     conversation.messages.push(message);
 
+    // Conversation is archived only when ALL messages are archived for current user
+    conversation.isArchived =
+      conversation.isArchived && archivedSet.has(message.id);
+
     // Update last message if this is more recent
     if (
       new Date(message.created_at) > new Date(conversation.lastMessage.created_at)
@@ -170,8 +174,23 @@ export function groupMessagesIntoConversations(
     }
   });
 
-  // Sort messages within each conversation by date
+  // For group conversations: populate participants from all messages
   conversationMap.forEach((conversation) => {
+    if (conversation.isGroup && conversation.messages.length > 0) {
+      const allIds = new Set<string>();
+      conversation.messages.forEach((m) => {
+        if (m.sender_id) allIds.add(m.sender_id);
+        (m.recipient_ids || []).forEach((id) => id && allIds.add(id));
+      });
+      const participantIds = Array.from(allIds).filter(
+        (id) => id !== currentUserId
+      );
+      conversation.participants = participantIds.map((id) => ({
+        userId: id,
+        name: '',
+        isGroup: false,
+      }));
+    }
     conversation.messages.sort(
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -196,8 +215,14 @@ export function getConversationTitle(
   conversation: Conversation,
   currentUserName: string
 ): string {
-  if (conversation.groupName) {
+  if (conversation.isGroup && conversation.groupName) {
     return conversation.groupName;
+  }
+  if (conversation.isGroup && conversation.participants.length > 0) {
+    return `Group (${conversation.participants.length} members)`;
+  }
+  if (conversation.isGroup) {
+    return 'Group';
   }
 
   if (conversation.participants.length === 0) {

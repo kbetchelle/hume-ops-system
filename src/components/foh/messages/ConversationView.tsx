@@ -24,12 +24,14 @@ export function ConversationView({
   conversation,
   currentUserId,
   onBack,
+  highlightMessageId,
 }: ConversationViewProps) {
   const [messageInput, setMessageInput] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [tempMessages, setTempMessages] = useState<TempMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
   const { data: staffList = [] } = useStaffList();
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutate: markRead } = useMarkMessageRead();
@@ -99,6 +101,13 @@ export function ConversationView({
   useEffect(() => {
     scrollToBottom();
   }, [displayMessages]);
+
+  // Scroll to and highlight message when navigating from search
+  useEffect(() => {
+    if (highlightMessageId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightMessageId]);
 
   // Mark unread messages as read
   useEffect(() => {
@@ -230,10 +239,15 @@ export function ConversationView({
               const canEdit = isSelf && !isTemp && isWithinEditWindow(message.created_at);
               const canDelete = isSelf && !isTemp && isWithinEditWindow(message.created_at);
               const isEditing = editingMessageId === message.id;
+              const isHighlighted = highlightMessageId === message.id;
 
               return (
-                <MessageBubble
+                <div
                   key={message.id}
+                  ref={isHighlighted ? highlightRef : undefined}
+                  className={cn(isHighlighted && 'ring-2 ring-amber-500 ring-inset rounded-lg')}
+                >
+                <MessageBubble
                   message={message}
                   isSelf={isSelf}
                   isTemp={isTemp}
@@ -270,6 +284,7 @@ export function ConversationView({
                   onToggleReaction={toggleReaction}
                   setEditingContent={setEditingContent}
                 />
+                </div>
               );
             })}
           </div>

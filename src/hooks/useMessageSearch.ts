@@ -14,11 +14,13 @@ export function useSearchMessages(query: string) {
     queryFn: async () => {
       if (!user?.id || !query.trim()) return [];
 
+      const q = query.trim();
+      const pattern = `%${q}%`;
       const { data, error } = await supabase
         .from('staff_messages')
         .select('*')
         .eq('is_sent', true)
-        .or(`content.ilike.%${query}%,subject.ilike.%${query}%`)
+        .or(`content.ilike.${pattern},subject.ilike.${pattern},sender_name.ilike.${pattern}`)
         .order('created_at', { ascending: false })
         .limit(50);
 

@@ -178,6 +178,10 @@ const managerToolsItems: SettingsSubItem[] = [{
   title: "Package Tracking",
   url: "/dashboard/package-tracking",
   icon: Package
+}, {
+  title: "Notification Center",
+  url: "/dashboard/notification-center",
+  icon: Bell
 }];
 
 // Settings menu structure for admin

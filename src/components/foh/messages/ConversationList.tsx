@@ -1,4 +1,4 @@
-import { MessageSquare, Plus, Search, ArchiveRestore } from 'lucide-react';
+import { MessageSquare, Plus, Search, ArchiveRestore, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,15 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useStaffList, useArchiveConversation } from '@/hooks/useMessaging';
+import { useStaffList } from '@/hooks/useMessaging';
+import { useSearchMessages } from '@/hooks/useMessageSearch';
+import { useDebounce } from 'use-debounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   getConversationTitle,
   getMessagePreview,
   filterConversationsByQuery,
+  buildConversationKey,
 } from './utils/conversationBuilder';
 import { SwipeableConversation } from './SwipeableConversation';
-import type { ConversationListProps } from '@/types/messaging';
+import type { ConversationListProps, StaffMessage } from '@/types/messaging';
 import { useState } from 'react';
 import { MessageComposer } from './MessageComposer';
 
@@ -26,15 +29,25 @@ export function ConversationList({
   searchQuery,
   onSearchChange,
   isLoading,
+  showArchived = false,
   onUnarchive,
+  currentUserId = '',
 }: ConversationListProps) {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const { data: staffList = [] } = useStaffList();
   const isMobile = useIsMobile();
+  const [debouncedSearch] = useDebounce(searchQuery, 300);
+  const { data: searchResults = [], isLoading: isSearching } = useSearchMessages(debouncedSearch);
+  const showSearchResults = searchQuery.trim().length > 0;
+
+  // Filter by archive status
+  const archiveFiltered = showArchived
+    ? conversations.filter((c) => c.isArchived)
+    : conversations.filter((c) => !c.isArchived);
 
   // Filter conversations by search
   const filteredConversations = filterConversationsByQuery(
-    conversations,
+    archiveFiltered,
     searchQuery
   );
 
@@ -99,8 +112,58 @@ export function ConversationList({
           />
         </div>
 
-        {/* Conversation List */}
-        {isLoading ? (
+        {/* Global Search Results (when searching) */}
+        {showSearchResults ? (
+          isSearching ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-none" />
+              ))}
+            </div>
+          ) : searchResults.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">
+              No results found
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {searchResults.map((msg: StaffMessage) => {
+                const convKey = buildConversationKey(msg, currentUserId);
+                const senderName = msg.sender_name || getStaffName(msg.sender_id || '');
+                const preview = getMessagePreview(msg.content);
+
+                return (
+                  <button
+                    key={msg.id}
+                    onClick={() => onSelectConversation(convKey, msg.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 p-3 text-left transition-colors',
+                      'hover:bg-muted/50',
+                      selectedConversationKey === convKey && 'bg-muted'
+                    )}
+                  >
+                    <Avatar className="h-8 w-8 rounded-none flex-shrink-0">
+                      <AvatarFallback className="text-xs rounded-none">
+                        {getInitials(senderName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate">{senderName}</div>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {msg.subject && (
+                          <span className="font-medium">{msg.subject}: </span>
+                        )}
+                        {preview}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                      {format(parseISO(msg.created_at), 'MMM d')}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full rounded-none" />
@@ -108,7 +171,7 @@ export function ConversationList({
           </div>
         ) : conversationsWithNames.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">
-            {searchQuery ? 'No messages found' : 'No messages yet'}
+            No messages yet
           </p>
         ) : (
           <div className="space-y-1">
@@ -119,28 +182,45 @@ export function ConversationList({
               );
               const isSelected = selectedConversationKey === conversation.key;
 
+              const isUrgent = conversation.lastMessage.is_urgent;
+              const memberCount = conversation.isGroup
+                ? conversation.participants.length
+                : 0;
+              const groupSubtitle =
+                conversation.isGroup && conversation.groupName
+                  ? `${memberCount} member${memberCount !== 1 ? 's' : ''}`
+                  : null;
+
               const conversationContent = (
                 <button
                   onClick={() => onSelectConversation(conversation.key)}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 text-left transition-colors',
+                    'w-full flex items-center gap-3 p-3 text-left transition-colors relative',
                     'hover:bg-muted/50',
                     isSelected && 'bg-muted',
                     conversation.hasUnread && 'bg-primary/5 font-medium',
-                    conversation.lastMessage.is_urgent &&
-                      'border-l-2 border-l-destructive'
+                    isUrgent && 'ring-2 ring-amber-500 ring-inset'
                   )}
                 >
-                  <Avatar className="h-8 w-8 rounded-none flex-shrink-0">
-                    <AvatarFallback className="text-xs rounded-none">
-                      {conversation.isGroup
-                        ? '👥'
-                        : getInitials(title)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {conversation.isGroup ? (
+                    <div className="h-8 w-8 rounded-none flex-shrink-0 flex items-center justify-center bg-muted">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <Avatar className="h-8 w-8 rounded-none flex-shrink-0">
+                      <AvatarFallback className="text-xs rounded-none">
+                        {getInitials(title)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
+                      {isUrgent && (
+                        <span className="text-amber-500 flex-shrink-0" title="Urgent">
+                          ⚠️
+                        </span>
+                      )}
                       {conversation.hasUnread && (
                         <span className="h-2 w-2 bg-primary rounded-full animate-pulse flex-shrink-0" />
                       )}
@@ -148,6 +228,11 @@ export function ConversationList({
                         {title}
                       </span>
                     </div>
+                    {groupSubtitle && (
+                      <p className="text-[10px] text-muted-foreground mb-0.5">
+                        {groupSubtitle}
+                      </p>
+                    )}
                     <p className="text-[10px] text-muted-foreground truncate">
                       {conversation.lastMessage.subject && (
                         <span className="font-medium">

@@ -130,12 +130,17 @@ export interface StaffMessagesInboxProps {
 export interface ConversationListProps {
   conversations: Conversation[];
   selectedConversationKey: string | null;
-  onSelectConversation: (key: string) => void;
+  /** When called from search result click, messageId is provided for scrolling/highlighting */
+  onSelectConversation: (key: string, messageId?: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   isLoading?: boolean;
+  /** When false (default), filter out archived conversations. When true, show only archived. */
+  showArchived?: boolean;
   /** When set, show an Unarchive button for each conversation (e.g. in archived view) */
   onUnarchive?: (conversation: Conversation) => void;
+  /** Current user ID for global search (deriving conversation key from message) */
+  currentUserId?: string;
 }
 
 export interface ConversationViewProps {
@@ -144,6 +149,8 @@ export interface ConversationViewProps {
   onBack: () => void;
   onSendMessage?: (content: string, replyToId?: string) => void;
   onOpenThread?: (threadId: string) => void;
+  /** When set, scroll to and highlight this message on mount */
+  highlightMessageId?: string;
 }
 
 export interface MessageComposerProps {

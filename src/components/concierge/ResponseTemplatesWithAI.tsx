@@ -1393,13 +1393,13 @@ export function ResponseTemplatesWithAI() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="rounded-none max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="rounded-none max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-sm uppercase tracking-wider font-normal">
               {editingTemplate ? "Edit Template" : "Add Template"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs">Category *</Label>

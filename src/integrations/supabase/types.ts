@@ -3354,6 +3354,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_triggers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_type: string
+          filter_by_working: boolean
+          id: string
+          is_active: boolean
+          message: string
+          target_department: string
+          timing_description: string | null
+          timing_window_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          filter_by_working?: boolean
+          id?: string
+          is_active?: boolean
+          message: string
+          target_department: string
+          timing_description?: string | null
+          timing_window_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          filter_by_working?: boolean
+          id?: string
+          is_active?: boolean
+          message?: string
+          target_department?: string
+          timing_description?: string | null
+          timing_window_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       package_location_history: {
         Row: {
           created_at: string | null

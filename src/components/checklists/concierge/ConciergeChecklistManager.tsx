@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical, X } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -392,7 +392,7 @@ function ItemDialog({
   onSave: (data: Partial<ConciergeChecklistItem>) => void;
   onClose: () => void;
 }) {
-  const [formData, setFormData] = useState<Partial<ConciergeChecklistItem>>(
+  const [formData, setFormData] = useState<Partial<ConciergeChecklistItem & { metadata?: any }>>(
     item || {
       task_description: '',
       task_type: 'checkbox',
@@ -403,10 +403,15 @@ function ItemDialog({
       required: false,
       label_spanish: '',
       is_class_triggered: false,
+      metadata: {},
     }
   );
 
-  // Sync form data when the item changes (e.g., opening edit for a different item)
+  const metadata = formData.metadata || {};
+  const setMetadata = (updates: Record<string, any>) =>
+    setFormData({ ...formData, metadata: { ...metadata, ...updates } });
+
+  // Sync form data when the item changes
   useEffect(() => {
     if (item) {
       setFormData(item);
@@ -421,9 +426,25 @@ function ItemDialog({
         required: false,
         label_spanish: '',
         is_class_triggered: false,
+        metadata: {},
       });
     }
   }, [item]);
+
+  const taskType = formData.task_type || 'checkbox';
+
+  // Descriptions for each task type
+  const taskTypeDescriptions: Record<string, string> = {
+    checkbox: 'A simple check/uncheck task.',
+    photo: 'Requires the user to upload a photo as proof of completion.',
+    signature: 'Requires a signature to confirm completion.',
+    free_response: 'Open-ended text response (multi-line).',
+    short_entry: 'Short text input (single line).',
+    multiple_choice: 'User selects from predefined answer options.',
+    yes_no: 'Simple Yes or No question.',
+    header: 'A section header (not a task) — used to organize items visually.',
+    employee: 'Employee name entry field.',
+  };
 
   return (
     <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -431,20 +452,11 @@ function ItemDialog({
         <DialogTitle>{item ? 'Edit Item' : 'Create New Item'}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="task_description">Task Description</Label>
-          <Textarea
-            id="task_description"
-            value={formData.task_description}
-            onChange={(e) => setFormData({ ...formData, task_description: e.target.value })}
-            placeholder="Enter task description"
-            rows={3}
-          />
-        </div>
+        {/* Task Type — placed first so the form adapts */}
         <div>
           <Label htmlFor="task_type">Task Type</Label>
           <Select
-            value={formData.task_type}
+            value={taskType}
             onValueChange={(value) => setFormData({ ...formData, task_type: value })}
           >
             <SelectTrigger>
@@ -458,63 +470,262 @@ function ItemDialog({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            {taskTypeDescriptions[taskType]}
+          </p>
         </div>
+
+        {/* Task Description — always shown except for header */}
         <div>
-          <Label htmlFor="time_hint">Time Hint</Label>
-          <Input
-            id="time_hint"
-            list="time-hint-suggestions"
-            value={formData.time_hint || ''}
-            onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
-            placeholder="e.g., 7:00 AM - 8:00 AM"
-          />
-          <datalist id="time-hint-suggestions">
-            {existingTimeHints.map((hint) => (
-              <option key={hint} value={hint} />
-            ))}
-          </datalist>
-        </div>
-        <div>
-          <Label htmlFor="label_spanish">Spanish Label (Optional)</Label>
+          <Label htmlFor="task_description">
+            {taskType === 'header' ? 'Header Text' : 'Task Description'}
+          </Label>
           <Textarea
-            id="label_spanish"
-            value={formData.label_spanish || ''}
-            onChange={(e) => setFormData({ ...formData, label_spanish: e.target.value })}
-            placeholder="Spanish translation"
-            rows={2}
+            id="task_description"
+            value={formData.task_description}
+            onChange={(e) => setFormData({ ...formData, task_description: e.target.value })}
+            placeholder={taskType === 'header' ? 'Enter section header text' : 'Enter task description'}
+            rows={taskType === 'header' ? 1 : 3}
           />
         </div>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="required"
-              checked={formData.required}
-              onCheckedChange={(checked) => setFormData({ ...formData, required: checked })}
-            />
-            <Label htmlFor="required">Required</Label>
+
+        {/* === TASK-TYPE-SPECIFIC FIELDS === */}
+
+        {/* Multiple Choice Options */}
+        {taskType === 'multiple_choice' && (
+          <MultipleChoiceConfig metadata={metadata} setMetadata={setMetadata} />
+        )}
+
+        {/* Yes/No — optional custom labels */}
+        {taskType === 'yes_no' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="yes_label">Yes Label</Label>
+              <Input
+                id="yes_label"
+                value={metadata.yes_label || ''}
+                onChange={(e) => setMetadata({ yes_label: e.target.value })}
+                placeholder="Yes"
+              />
+            </div>
+            <div>
+              <Label htmlFor="no_label">No Label</Label>
+              <Input
+                id="no_label"
+                value={metadata.no_label || ''}
+                onChange={(e) => setMetadata({ no_label: e.target.value })}
+                placeholder="No"
+              />
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="is_high_priority"
-              checked={formData.is_high_priority}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_high_priority: checked })}
+        )}
+
+        {/* Photo — optional instructions */}
+        {taskType === 'photo' && (
+          <div>
+            <Label htmlFor="photo_instructions">Photo Instructions (Optional)</Label>
+            <Input
+              id="photo_instructions"
+              value={metadata.photo_instructions || ''}
+              onChange={(e) => setMetadata({ photo_instructions: e.target.value })}
+              placeholder="e.g., Take a photo of the lobby area"
             />
-            <Label htmlFor="is_high_priority">High Priority</Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="is_class_triggered"
-              checked={formData.is_class_triggered}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_class_triggered: checked })}
+        )}
+
+        {/* Short Entry — optional placeholder */}
+        {taskType === 'short_entry' && (
+          <div>
+            <Label htmlFor="placeholder_text">Placeholder Text (Optional)</Label>
+            <Input
+              id="placeholder_text"
+              value={metadata.placeholder || ''}
+              onChange={(e) => setMetadata({ placeholder: e.target.value })}
+              placeholder="e.g., Enter temperature reading"
             />
-            <Label htmlFor="is_class_triggered">Class Triggered</Label>
           </div>
-        </div>
+        )}
+
+        {/* Free Response — optional placeholder */}
+        {taskType === 'free_response' && (
+          <div>
+            <Label htmlFor="placeholder_text">Placeholder Text (Optional)</Label>
+            <Input
+              id="placeholder_text"
+              value={metadata.placeholder || ''}
+              onChange={(e) => setMetadata({ placeholder: e.target.value })}
+              placeholder="e.g., Describe any issues observed"
+            />
+          </div>
+        )}
+
+        {/* === COMMON FIELDS (hidden for headers) === */}
+        {taskType !== 'header' && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="time_hint">Time Hint</Label>
+                <Input
+                  id="time_hint"
+                  list="time-hint-suggestions"
+                  value={formData.time_hint || ''}
+                  onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
+                  placeholder="e.g., 7:00 AM - 8:00 AM"
+                />
+                <datalist id="time-hint-suggestions">
+                  {existingTimeHints.map((hint) => (
+                    <option key={hint} value={hint} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <Label htmlFor="label_spanish">Spanish Label (Optional)</Label>
+                <Input
+                  id="label_spanish"
+                  value={formData.label_spanish || ''}
+                  onChange={(e) => setFormData({ ...formData, label_spanish: e.target.value })}
+                  placeholder="Spanish translation"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="required"
+                  checked={formData.required}
+                  onCheckedChange={(checked) => setFormData({ ...formData, required: checked })}
+                />
+                <Label htmlFor="required">Required</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_high_priority"
+                  checked={formData.is_high_priority}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_high_priority: checked })}
+                />
+                <Label htmlFor="is_high_priority">High Priority</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_class_triggered"
+                  checked={formData.is_class_triggered}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_class_triggered: checked })}
+                />
+                <Label htmlFor="is_class_triggered">Class Triggered</Label>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Header — only time hint */}
+        {taskType === 'header' && (
+          <div>
+            <Label htmlFor="time_hint">Time Hint</Label>
+            <Input
+              id="time_hint"
+              list="time-hint-suggestions"
+              value={formData.time_hint || ''}
+              onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
+              placeholder="e.g., 7:00 AM - 8:00 AM"
+            />
+            <datalist id="time-hint-suggestions">
+              {existingTimeHints.map((hint) => (
+                <option key={hint} value={hint} />
+              ))}
+            </datalist>
+          </div>
+        )}
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={() => onSave(formData)}>Save</Button>
       </DialogFooter>
     </DialogContent>
+  );
+}
+
+/** Sub-component for configuring multiple choice options */
+function MultipleChoiceConfig({
+  metadata,
+  setMetadata,
+}: {
+  metadata: Record<string, any>;
+  setMetadata: (updates: Record<string, any>) => void;
+}) {
+  const options: string[] = metadata.options || [];
+  const selectMode: 'single' | 'multiple' = metadata.select_mode || 'single';
+  const [newOption, setNewOption] = useState('');
+
+  const addOption = () => {
+    const trimmed = newOption.trim();
+    if (trimmed && !options.includes(trimmed)) {
+      setMetadata({ options: [...options, trimmed] });
+      setNewOption('');
+    }
+  };
+
+  const removeOption = (index: number) => {
+    setMetadata({ options: options.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div>
+        <Label>Selection Mode</Label>
+        <Select
+          value={selectMode}
+          onValueChange={(value) => setMetadata({ select_mode: value })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Select One</SelectItem>
+            <SelectItem value="multiple">Select All That Apply</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Answer Options</Label>
+        <div className="flex gap-2 mt-1">
+          <Input
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            placeholder="Add an option..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addOption();
+              }
+            }}
+          />
+          <Button type="button" size="sm" variant="outline" onClick={addOption}>
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {options.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {options.map((opt, i) => (
+              <Badge key={i} variant="secondary" className="gap-1 pr-1">
+                {opt}
+                <button
+                  type="button"
+                  onClick={() => removeOption(i)}
+                  className="ml-1 rounded-full hover:bg-muted p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        {options.length === 0 && (
+          <p className="text-xs text-muted-foreground mt-1">No options added yet. Add at least 2 options.</p>
+        )}
+      </div>
+    </div>
   );
 }

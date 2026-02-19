@@ -199,7 +199,7 @@ export function ConciergeChecklistManager() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-medium">
-                      Checklist Items ({items?.length || 0})
+                      ({items?.length || 0})
                     </h3>
                     <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
                       <DialogTrigger asChild>

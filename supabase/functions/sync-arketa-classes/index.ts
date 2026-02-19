@@ -46,16 +46,20 @@ Deno.serve(async (req) => {
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
     const limit = body.limit ?? 400;
 
-    let headers: Record<string, string>;
+    // Build list of auth header sets to try: Bearer first, then x-api-key fallback
+    const authHeaderSets: Record<string, string>[] = [];
     try {
       const token = await getArketaToken(supabaseUrl, supabaseKey);
-      headers = getArketaHeaders(token);
+      authHeaderSets.push(getArketaHeaders(token));
     } catch {
-      headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
+      // Token fetch failed, skip Bearer
     }
+    // Always add API key as fallback (may be the only one if token fetch failed)
+    authHeaderSets.push(getArketaApiKeyHeaders(ARKETA_API_KEY));
 
     const allClasses: any[] = [];
     let cursor: string | undefined;
+    let activeHeaders: Record<string, string> | null = null;
 
     do {
       const url = new URL(`${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`);
@@ -67,17 +71,32 @@ Deno.serve(async (req) => {
       url.searchParams.set('include_completed', 'true');
       if (cursor) url.searchParams.set('cursor', cursor);
 
-      const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-      const cloned = response.clone();
-      if (!response.ok) {
-        const text = await cloned.text().catch(() => 'Body unavailable');
+      let response: Response | null = null;
+      let lastErrorText = '';
+
+      // If we already found working headers, use them; otherwise try each auth set
+      const headersToTry = activeHeaders ? [activeHeaders] : authHeaderSets;
+      for (const headers of headersToTry) {
+        const { response: res } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+        if (res.ok) {
+          response = res;
+          activeHeaders = headers; // Lock to working auth for subsequent pages
+          break;
+        }
+        // Not ok — capture error and try next auth method
+        lastErrorText = await res.clone().text().catch(() => 'Body unavailable');
+        const authType = 'Authorization' in headers ? 'Bearer' : 'x-api-key';
+        console.warn(`[sync-arketa-classes] ${authType} auth returned ${res.status}, trying next auth method...`);
+      }
+
+      if (!response) {
         return new Response(
-          JSON.stringify({ error: `Arketa classes API error: ${response.status}`, details: text }),
-          { status: response.status >= 500 ? 502 : response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: `Arketa classes API error after trying all auth methods`, details: lastErrorText }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const data = await cloned.json();
+      const data = await response.json();
       const page = Array.isArray(data) ? data : (data.classes ?? data.data ?? data.items ?? []);
       allClasses.push(...page);
       cursor = data.pagination?.nextCursor;

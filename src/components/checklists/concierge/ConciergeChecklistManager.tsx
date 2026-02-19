@@ -210,6 +210,7 @@ export function ConciergeChecklistManager() {
                       </DialogTrigger>
                       <ItemDialog
                         item={editingItem}
+                        existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
                         onSave={handleSaveItem}
                         onClose={() => {
                           setIsItemDialogOpen(false);
@@ -382,10 +383,12 @@ function ChecklistDialog({
 
 function ItemDialog({
   item,
+  existingTimeHints = [],
   onSave,
   onClose,
 }: {
   item: ConciergeChecklistItem | null;
+  existingTimeHints?: string[];
   onSave: (data: Partial<ConciergeChecklistItem>) => void;
   onClose: () => void;
 }) {
@@ -460,10 +463,16 @@ function ItemDialog({
           <Label htmlFor="time_hint">Time Hint</Label>
           <Input
             id="time_hint"
+            list="time-hint-suggestions"
             value={formData.time_hint || ''}
             onChange={(e) => setFormData({ ...formData, time_hint: e.target.value })}
             placeholder="e.g., 7:00 AM - 8:00 AM"
           />
+          <datalist id="time-hint-suggestions">
+            {existingTimeHints.map((hint) => (
+              <option key={hint} value={hint} />
+            ))}
+          </datalist>
         </div>
         <div>
           <Label htmlFor="label_spanish">Spanish Label (Optional)</Label>

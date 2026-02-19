@@ -378,6 +378,25 @@ function TemplateList({
                 </>
               ) : (
                 <div className="flex items-center gap-1">
+                  {template.is_outdated && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleClearOutdated(template)}
+                            className="h-8 rounded-none text-primary"
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="rounded-none">
+                          <p className="text-xs">Mark as reviewed &amp; up to date</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   {!template.is_outdated && (
                     <MarkOutdatedButton template={template} handleMarkOutdated={handleMarkOutdated} />
                   )}

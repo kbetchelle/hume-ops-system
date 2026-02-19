@@ -10,6 +10,7 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import {
   useNotificationCenter,
   useMarkNotificationRead,
+  useMarkNotificationUnread,
   useMarkAllNotificationsRead,
   useDismissNotification,
   useClearAllNotifications,
@@ -34,6 +35,7 @@ export default function NotificationsPage() {
   } = useNotificationCenter(filter);
 
   const markRead = useMarkNotificationRead();
+  const markUnread = useMarkNotificationUnread();
   const markAllRead = useMarkAllNotificationsRead();
   const dismissNotification = useDismissNotification();
   const clearAll = useClearAllNotifications();
@@ -120,6 +122,7 @@ export default function NotificationsPage() {
                     navigate(getNotificationRoute(n.type, n.data));
                   }}
                   onMarkRead={(id) => markRead.mutate(id)}
+                  onMarkUnread={(id) => markUnread.mutate(id)}
                   onDismiss={(id) => dismissNotification.mutate(id)}
                 />
               ))}

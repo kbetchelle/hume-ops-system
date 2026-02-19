@@ -93,6 +93,25 @@ export function useMarkNotificationRead() {
 }
 
 /**
+ * Mark a single notification as unread.
+ */
+export function useMarkNotificationUnread() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('staff_notifications')
+        .update({ is_read: false })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateAll(queryClient),
+  });
+}
+
+/**
  * Mark all unread notifications as read for the current user.
  */
 export function useMarkAllNotificationsRead() {

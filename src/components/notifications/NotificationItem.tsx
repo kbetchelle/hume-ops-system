@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Sparkles,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -44,6 +46,7 @@ const notificationColors: Record<string, { bg: string; text: string }> = {
 interface NotificationItemProps {
   notification: StaffNotification;
   onMarkRead: (id: string) => void;
+  onMarkUnread: (id: string) => void;
   onDismiss: (id: string) => void;
   onClick: (notification: StaffNotification) => void;
 }
@@ -51,6 +54,7 @@ interface NotificationItemProps {
 export function NotificationItem({
   notification,
   onMarkRead,
+  onMarkUnread,
   onDismiss,
   onClick,
 }: NotificationItemProps) {
@@ -115,6 +119,22 @@ export function NotificationItem({
         {!notification.is_read && (
           <div className="h-2 w-2 bg-primary shrink-0 mt-1" />
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (notification.is_read) {
+              onMarkUnread(notification.id);
+            } else {
+              onMarkRead(notification.id);
+            }
+          }}
+          title={notification.is_read ? t('Mark as unread', 'Marcar como no leído') : t('Mark as read', 'Marcar como leído')}
+        >
+          {notification.is_read ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

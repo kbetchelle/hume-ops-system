@@ -172,7 +172,9 @@ Deno.serve(async (req) => {
     }
 
     // ── Build response ────────────────────────────────────────────────
-    const success = classesOk && reservationsOk && stagingOk;
+    // Classes sync failure is non-fatal — reservations can succeed independently
+    // via Tier 2 (DB-driven) using previously-synced class data
+    const success = reservationsOk && stagingOk;
     const durationMs = Date.now() - startTime;
 
     const classesSyncedCount = (classesData.syncedCount as number) ?? 0;

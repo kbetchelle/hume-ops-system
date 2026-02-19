@@ -61,7 +61,7 @@ export function NotificationItem({
       }}
       className={cn(
         'group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50',
-        !notification.is_read && 'bg-primary/5'
+        !notification.is_read && 'bg-[#fcb82719]'
       )}
     >
       {/* Icon */}

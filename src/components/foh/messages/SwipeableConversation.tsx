@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Archive } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import type { Conversation } from '@/types/messaging';
+
+const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
 interface SwipeableConversationProps {
   conversation: Conversation;
@@ -82,6 +83,11 @@ export function SwipeableConversation({
   const archiveOpacity = Math.min(swipeOffset / minSwipeDistance, 1);
   const showArchiveIcon = swipeOffset > 20;
 
+  // Only enable swipe on touch devices; otherwise render children only
+  if (!isTouchDevice) {
+    return <>{children}</>;
+  }
+
   return (
     <div
       ref={containerRef}
@@ -90,9 +96,9 @@ export function SwipeableConversation({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Archive background */}
+      {/* Archive background (red/amber) */}
       <div
-        className="absolute inset-0 flex items-center justify-end pr-6 bg-destructive transition-opacity"
+        className="absolute inset-0 flex items-center justify-end pr-6 bg-destructive/95 transition-opacity"
         style={{
           opacity: archiveOpacity,
         }}
@@ -100,8 +106,10 @@ export function SwipeableConversation({
         {showArchiveIcon && (
           <div className="flex items-center gap-2 text-white">
             <Archive className="h-5 w-5" />
-            {swipeOffset >= minSwipeDistance && (
+            {swipeOffset >= minSwipeDistance ? (
               <span className="text-sm font-medium">Release to archive</span>
+            ) : (
+              <span className="text-sm font-medium">Archive</span>
             )}
           </div>
         )}

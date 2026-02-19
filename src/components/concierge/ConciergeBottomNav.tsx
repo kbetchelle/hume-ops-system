@@ -5,6 +5,7 @@ interface ConciergeBottomNavProps {
   activeView: ConciergeView;
   onViewChange: (view: ConciergeView) => void;
   hasUnreadAnnouncements?: boolean;
+  unreadMessageCount?: number;
 }
 
 const tabs = [
@@ -18,6 +19,7 @@ export function ConciergeBottomNav({
   activeView,
   onViewChange,
   hasUnreadAnnouncements = false,
+  unreadMessageCount = 0,
 }: ConciergeBottomNavProps) {
   // Map the activeView to the closest tab
   const getActiveTab = () => {
@@ -34,9 +36,9 @@ export function ConciergeBottomNav({
 
   const activeTab = getActiveTab();
 
-  // Show dot on Comms tab if there are unread announcements
+  // Show dot on Comms tab if there are unread announcements or unread messages
   const showDotOnTab = (tabId: string) => {
-    if (tabId === "messages" && hasUnreadAnnouncements) return true;
+    if (tabId === "messages" && (hasUnreadAnnouncements || unreadMessageCount > 0)) return true;
     return false;
   };
 

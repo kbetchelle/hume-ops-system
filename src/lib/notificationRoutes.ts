@@ -20,6 +20,8 @@ export function getNotificationRoute(
     package_arrived: data?.packageId
       ? `/dashboard/my-packages?packageId=${data.packageId}`
       : '/dashboard/my-packages',
+    room_turnover: '/dashboard',
+    tour_alert: '/dashboard',
   };
 
   return routes[type] || '/dashboard/notifications';

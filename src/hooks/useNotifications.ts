@@ -2,7 +2,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { insertInto } from '@/lib/dataApi';
 
-export type NotificationType = 'qa_answered' | 'qa_new_question' | 'announcement' | 'message' | 'bug_report_update' | 'member_alert' | 'class_turnover' | 'mat_cleaning' | 'account_approval_pending' | 'account_approved' | 'account_rejected' | 'resource_outdated';
+export type NotificationType =
+  | 'qa_answered'
+  | 'qa_new_question'
+  | 'announcement'
+  | 'message'
+  | 'bug_report_update'
+  | 'member_alert'
+  | 'class_turnover'
+  | 'mat_cleaning'
+  | 'account_approval_pending'
+  | 'account_approved'
+  | 'account_rejected'
+  | 'resource_outdated'
+  | 'package_arrived'
+  | 'room_turnover'
+  | 'tour_alert';
 
 interface SendNotificationParams {
   userId: string;

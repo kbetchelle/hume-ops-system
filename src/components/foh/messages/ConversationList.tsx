@@ -18,6 +18,7 @@ import {
   buildConversationKey,
 } from './utils/conversationBuilder';
 import { SwipeableConversation } from './SwipeableConversation';
+import { useArchiveConversation } from '@/hooks/useMessaging';
 import type { ConversationListProps, StaffMessage } from '@/types/messaging';
 import { useState } from 'react';
 import { MessageComposer } from './MessageComposer';
@@ -36,6 +37,7 @@ export function ConversationList({
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const { data: staffList = [] } = useStaffList();
   const isMobile = useIsMobile();
+  const { mutate: archiveConversation } = useArchiveConversation();
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const { data: searchResults = [], isLoading: isSearching } = useSearchMessages(debouncedSearch);
   const showSearchResults = searchQuery.trim().length > 0;
@@ -76,9 +78,11 @@ export function ConversationList({
   };
 
   const handleArchive = (conversationKey: string) => {
-    // Archive logic will be handled by marking all messages as archived
-    // This is a placeholder - actual implementation would use useArchiveConversation hook
-    console.log('Archive conversation:', conversationKey);
+    const conv = conversationsWithNames.find((c) => c.key === conversationKey);
+    if (conv?.messages?.length) {
+      const messageIds = conv.messages.map((m) => m.id);
+      archiveConversation({ messageIds, isArchived: true });
+    }
   };
 
   return (

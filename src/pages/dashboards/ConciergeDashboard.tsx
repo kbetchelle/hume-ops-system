@@ -20,6 +20,7 @@ import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { QuickLinksTab } from "@/components/staff-resources/QuickLinksTab";
 import { ResourcePagesTab } from "@/components/staff-resources/ResourcePagesTab";
 import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
@@ -41,8 +42,7 @@ export default function ConciergeDashboard() {
   const { data: resourcePages = [], isLoading: rpLoading } = useResourcePagesByRole(effectiveRole);
   const { data: policies = [], isLoading: polLoading } = usePolicies();
 
-  // Placeholder for unread message count - will be replaced with real data
-  const unreadCount = 3;
+  const { count: unreadMessageCount } = useUnreadMessageCount();
 
   const viewTitles: Record<ConciergeView, string> = {
     home: "Home",
@@ -197,7 +197,9 @@ export default function ConciergeDashboard() {
           <ConciergeBottomNav
             activeView={activeView}
             onViewChange={setActiveView}
-            hasUnreadAnnouncements={!!hasUnreadAnnouncements} />
+            hasUnreadAnnouncements={!!hasUnreadAnnouncements}
+            unreadMessageCount={unreadMessageCount}
+          />
 
         </div>
       </SidebarProvider>);
@@ -210,7 +212,7 @@ export default function ConciergeDashboard() {
         <ConciergeSidebar
           activeView={activeView}
           onViewChange={setActiveView}
-          unreadCount={unreadCount} />
+          unreadCount={unreadMessageCount} />
 
         <div className="flex-1 flex flex-col min-w-0">
           <ConciergeHeader title={viewTitles[activeView]} />

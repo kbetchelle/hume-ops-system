@@ -3,10 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { EventTriggersTab } from "@/components/notifications/EventTriggersTab";
 import { NotificationHistoryTab } from "@/components/notifications/NotificationHistoryTab";
 import { StaffPushStatusTab } from "@/components/notifications/StaffPushStatusTab";
-
-function ScheduleSyncPlaceholder() {
-  return <h2 className="text-lg font-medium">Schedule Sync</h2>;
-}
+import { ScheduleSyncTab } from "@/components/notifications/ScheduleSyncTab";
 
 export default function NotificationControlCenterPage() {
   return (
@@ -37,7 +34,7 @@ export default function NotificationControlCenterPage() {
             <StaffPushStatusTab />
           </TabsContent>
           <TabsContent value="schedule-sync" className="mt-4">
-            <ScheduleSyncPlaceholder />
+            <ScheduleSyncTab />
           </TabsContent>
         </Tabs>
       </div>

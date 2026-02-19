@@ -138,8 +138,76 @@ async function fetchAllReservations(
     .gte('class_date', startDate)
     .lte('class_date', endDate);
 
-  const classes = (classRows ?? []) as { external_id: string; name?: string; start_time?: string; class_date?: string }[];
-  logger?.info(`Found ${classes.length} classes in DB for date range, fetching reservations for each...`);
+  let classes = (classRows ?? []) as { external_id: string; name?: string; start_time?: string; class_date?: string }[];
+  logger?.info(`Found ${classes.length} classes in DB for date range`);
+
+  // Tier 3: If DB has 0 classes, fetch class IDs directly from the API (first page only)
+  if (classes.length === 0) {
+    logger?.info(`Tier 3: No classes in DB, fetching classes directly from API to discover class IDs...`);
+    try {
+      const classesUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
+      classesUrl.searchParams.set('limit', '500');
+      // Don't set start_date/end_date - those cause 500 errors on Arketa
+      const { response: classesResponse, attempts: classAttempts } = await fetchWithRetry(
+        classesUrl.toString(),
+        { method: 'GET', headers }
+      );
+      totalAttempts += classAttempts;
+
+      if (classesResponse.ok) {
+        const classesData = await classesResponse.json();
+        const classList = Array.isArray(classesData)
+          ? classesData
+          : (classesData.items || classesData.data || classesData.classes || []);
+
+        // Filter locally to the target date range
+        const filteredClasses = classList
+          .map((c: Record<string, unknown>) => {
+            const classDate = (c.start_date || c.startDate || c.date || c.class_date || 
+              (c.start_time ? new Date(c.start_time as string).toISOString().split('T')[0] : null)) as string | null;
+            return {
+              external_id: String(c.id || c.external_id || ''),
+              name: (c.name || c.title || 'Unknown Class') as string,
+              start_time: (c.start_time || c.startTime || '') as string,
+              class_date: classDate,
+            };
+          })
+          .filter((c: { external_id: string; class_date: string | null }) => {
+            if (!c.class_date || !c.external_id) return false;
+            return c.class_date >= startDate && c.class_date <= endDate;
+          });
+
+        logger?.info(`Tier 3: API returned ${classList.length} classes total, ${filteredClasses.length} match date range ${startDate}–${endDate}`);
+        classes = filteredClasses;
+
+        // Also insert these as stub classes into arketa_classes so future syncs don't need Tier 3
+        if (filteredClasses.length > 0) {
+          const stubRows = filteredClasses.map((c: { external_id: string; name: string; start_time: string; class_date: string | null }) => ({
+            external_id: c.external_id,
+            name: c.name,
+            start_time: c.start_time || new Date().toISOString(),
+            class_date: c.class_date,
+            status: 'discovered_via_reservation_sync',
+            synced_at: new Date().toISOString(),
+          }));
+          const { error: stubErr } = await supabase
+            .from('arketa_classes')
+            .upsert(stubRows, { onConflict: 'external_id,class_date' });
+          if (stubErr) {
+            logger?.warn('Failed to insert stub classes', stubErr);
+          } else {
+            logger?.info(`Inserted ${stubRows.length} stub classes into arketa_classes`);
+          }
+        }
+      } else {
+        logger?.warn(`Tier 3: Classes API returned ${classesResponse.status}, cannot discover class IDs from API`);
+      }
+    } catch (tier3Err) {
+      logger?.warn('Tier 3: Failed to fetch classes from API', tier3Err as object);
+    }
+  }
+
+  logger?.info(`Fetching reservations for ${classes.length} classes...`);
 
   const allReservations: ReservationWithMeta[] = [];
   for (const cls of classes) {

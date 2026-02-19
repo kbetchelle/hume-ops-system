@@ -332,7 +332,7 @@ function TemplateList({
                 {template.is_outdated && (
                   <Badge variant="outline" className="rounded-none text-xs border-warning text-warning">
                     <AlertTriangle className="h-3 w-3 mr-1" />
-                    Outdated
+                    Under Review
                   </Badge>
                 )}
               </div>

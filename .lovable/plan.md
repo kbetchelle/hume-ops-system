@@ -1,35 +1,37 @@
 
 
-## Add Location Name to Arketa Classes
+## Feed Internal Policies into the AI Writer
 
-### What This Does
-Adds a `location_name` column to the `arketa_classes` table and populates it by looking up the `location_id` against the Arketa locations endpoint during class sync. Based on the API response you shared, the locations data is small (6 records) and static, so we fetch it once at the start of each sync and use it as a lookup map.
+### What Changes
+The `hume-voice-writer` backend function will fetch the published "HUME Concierge Internal Policies" resource page from the database and inject its full text into the system prompt as a policy reference section. This ensures every AI-generated response respects the actual rules (pause policy, guest limits, pricing, cancellation terms, etc.) without the concierge needing to remember or paste them.
 
-### Location Data (from your API response)
-| ID | Name | Active |
-|----|------|--------|
-| ZpbZcKknSQeHKmmtYtes | HUME | Yes |
-| exQWcsxbNQKOn17d0Nif | HUME | Deleted |
-| zQUVWkrRHeqhThff6gh0 | High Roof | Deleted |
-| H2mCPKfGZBrnpxgnxrPm | Ground Floor Studio | Deleted |
-| A7d5KXnbKYTMW7NWPV7d | Reformer Studio | Deleted |
-| fUTW1Ezl7j8Y6u046LK1 | Reformer Studio | Deleted |
+### How It Works
 
-### Technical Details
+1. **Backend function (`hume-voice-writer`)** -- on every request:
+   - Create a Supabase service-role client inside the function
+   - Query `resource_pages` for the published policy page (matching by title or a known ID)
+   - Append the policy text to the system prompt as a new `## Internal Policies` section with clear instructions: "Your responses must never contradict these rules. Reference them when relevant but never quote them verbatim or say 'per our policy.'"
 
-**1. Database migration:**
-- Add `location_name TEXT` column to `arketa_classes`
-- Add `location_name TEXT` column to `arketa_classes_staging`
-- Update `upsert_arketa_classes_from_staging` RPC to include `location_name` in the INSERT/upsert
-- Backfill existing rows using the known location ID-to-name mapping
+2. **System prompt addition** (appended dynamically):
+   ```
+   ## HUME Internal Policies (Authoritative Reference)
+   The following are the official internal policies. Your responses must
+   align with these rules. Never contradict them. Do not quote them
+   directly or reference them as "policy" -- instead, communicate the
+   information naturally in the HUME voice.
 
-**2. Edge function changes (`supabase/functions/sync-arketa-classes/index.ts`):**
-- At the start of the sync, fetch the `/locations` endpoint once to build a `Map<string, string>` of location ID to name
-- When building staging rows, look up `cls.location_id` in the map to set `location_name`
-- Add `location_name` to the staging insert
+   [full policy text inserted here]
+   ```
 
-**3. No changes needed to:**
-- The 3-tier fetch strategy or pagination logic
-- CORS, auth, or retry logic
-- The `daily_schedule` refresh function (it doesn't use location_name)
+3. **No frontend changes needed** -- the AI Writer UI stays exactly the same. The policy context is injected server-side automatically.
+
+### Why This Approach
+- Policies are fetched live from the database, so any updates managers make to the policy page are immediately reflected in AI responses
+- The policy text is ~5,700 characters, well within model context limits
+- No changes to the client-side code or UI required
+- The system prompt instructs the model to internalize the rules without citing "policy" (matching the existing voice guidelines)
+
+### Edge Cases
+- If the policy page is unpublished or missing, the function still works -- it just omits the policy section and logs a warning
+- If the page grows very large in the future, the text is truncated to a safe limit (e.g., 15,000 characters) to stay within token budgets
 

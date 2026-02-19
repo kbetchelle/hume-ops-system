@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
-import { getArketaToken, getArketaHeaders, getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { ARKETA_URLS } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 import { logApiCall } from '../_shared/apiLogger.ts';
 
@@ -40,13 +40,33 @@ interface SyncRequest {
 
 type ReservationWithMeta = ArketaReservation & { class_name?: string; class_date?: string };
 
+/**
+ * Build Bearer headers using the API key directly (matches working app).
+ * The working app uses `Authorization: Bearer {ARKETA_API_KEY}`.
+ */
+function getArketaBearerHeaders(apiKey: string): Record<string, string> {
+  return {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+/**
+ * Build x-api-key headers (used for classes endpoint).
+ */
+function getArketaApiKeyHeaders(apiKey: string): Record<string, string> {
+  return {
+    'x-api-key': apiKey,
+    'Content-Type': 'application/json',
+  };
+}
+
 // See docs/ARKETA_ARCHITECTURE.md: reservations are nested under classes; 3-tier fetch (direct /reservations → DB-driven → classes-based).
 async function fetchAllReservations(
   partnerId: string,
-  headers: Record<string, string>,
+  apiKey: string,
   startDate: string,
   endDate: string,
-  limit: number,
   supabase: ReturnType<typeof createClient>,
   classId?: string,
   logger?: ReturnType<typeof createSyncLogger>
@@ -54,110 +74,120 @@ async function fetchAllReservations(
   let totalAttempts = 0;
   let pagesProcessed = 0;
 
-  // If a specific classId is provided, fetch reservations for that class only
+  // Reservations use Bearer {API_KEY} auth (matches working app)
+  const bearerHeaders = getArketaBearerHeaders(apiKey);
+  // Classes endpoint uses x-api-key auth
+  const apiKeyHeaders = getArketaApiKeyHeaders(apiKey);
+
+  // If a specific classId is provided, fetch reservations for that class only (with pagination)
   if (classId) {
-    const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${classId}/reservations`);
-    logger?.info(`Fetching reservations for class ${classId}...`);
+    const allRes: ReservationWithMeta[] = [];
+    let cursor: string | undefined;
+    do {
+      const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${classId}/reservations`);
+      url.searchParams.set('limit', '500');
+      if (cursor) url.searchParams.set('start_after', cursor);
+      logger?.info(`Fetching reservations for class ${classId}${cursor ? ` (cursor: ${cursor})` : ''}...`);
 
-    const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-    totalAttempts += attempts;
-    pagesProcessed++;
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    const reservations: ArketaReservation[] = Array.isArray(responseData)
-      ? responseData
-      : (responseData.items || responseData.data || responseData.reservations || responseData.bookings || []);
-
-    return { reservations: reservations as ReservationWithMeta[], totalAttempts, pagesProcessed };
-  }
-
-  // Tier 1: Try direct /reservations (and variants). Often 0 or 404.
-  const tier1Endpoints = [
-    `${ARKETA_URLS.prod}/${partnerId}/reservations?start_date=${startDate}&end_date=${endDate}&limit=${limit}`,
-    `${ARKETA_URLS.prod}/${partnerId}/bookings?start_date=${startDate}&end_date=${endDate}&limit=${limit}`,
-    `${ARKETA_URLS.prod}/${partnerId}/schedule/reservations?start_date=${startDate}&end_date=${endDate}&limit=${limit}`,
-  ];
-  for (const tier1Url of tier1Endpoints) {
-    try {
-      const { response, attempts } = await fetchWithRetry(tier1Url, { method: 'GET', headers });
+      const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers: bearerHeaders });
       totalAttempts += attempts;
       pagesProcessed++;
-      if (!response.ok) continue;
-      const data = await response.json();
-      const list = Array.isArray(data) ? data : (data.items || data.data || data.reservations || data.bookings || []);
-      if (list.length > 0) {
-        logger?.info(`Tier 1 returned ${list.length} reservations`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      const reservations: ArketaReservation[] = Array.isArray(responseData)
+        ? responseData
+        : (responseData.items || responseData.data || responseData.reservations || responseData.bookings || []);
+      allRes.push(...(reservations as ReservationWithMeta[]));
+      cursor = responseData.pagination?.nextCursor ?? responseData.pagination?.next_cursor;
+    } while (cursor);
+
+    return { reservations: allRes, totalAttempts, pagesProcessed };
+  }
+
+  // Tier 1: Try direct /reservations with pagination (and variant endpoints). Often 0 or 404.
+  const tier1Bases = [
+    `${ARKETA_URLS.prod}/${partnerId}/reservations`,
+    `${ARKETA_URLS.prod}/${partnerId}/bookings`,
+    `${ARKETA_URLS.prod}/${partnerId}/schedule/reservations`,
+  ];
+  for (const baseUrl of tier1Bases) {
+    try {
+      const allTier1: ReservationWithMeta[] = [];
+      let t1Cursor: string | undefined;
+      let gotData = false;
+      do {
+        const url = new URL(baseUrl);
+        url.searchParams.set('start_date', startDate);
+        url.searchParams.set('end_date', endDate);
+        url.searchParams.set('limit', '500');
+        if (t1Cursor) url.searchParams.set('start_after', t1Cursor);
+
+        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers: bearerHeaders });
+        totalAttempts += attempts;
+        pagesProcessed++;
+        if (!response.ok) break;
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.items || data.data || data.reservations || data.bookings || []);
+        if (list.length > 0) gotData = true;
         const withMeta: ReservationWithMeta[] = list.map((r: ArketaReservation) => ({
           ...r,
           class_id: r.class_id ?? (r as { classId?: string }).classId,
           class_name: (r as ReservationWithMeta).class_name ?? null,
           class_date: (r as ReservationWithMeta).class_date ?? (r.start_time ? new Date(r.start_time).toISOString().split('T')[0] : null),
         }));
-        return { reservations: withMeta, totalAttempts, pagesProcessed };
+        allTier1.push(...withMeta);
+        t1Cursor = data.pagination?.nextCursor ?? data.pagination?.next_cursor;
+      } while (t1Cursor);
+
+      if (gotData) {
+        logger?.info(`Tier 1 returned ${allTier1.length} reservations`);
+        return { reservations: allTier1, totalAttempts, pagesProcessed };
       }
     } catch {
       continue;
     }
   }
 
-  // Tier 2 removed: DB-driven approach was flawed — it only fetched reservations for
-  // classes already in history, causing incomplete results when partial data existed
-  // from scheduled syncs. Always fall through to Tier 3 for complete class-based discovery.
-
   // Tier 3: Classes-based — GET /classes then per-class reservations (guaranteed to discover all classes)
   logger?.info(`Tier 3: Fetching classes for ${startDate} to ${endDate} to get reservations...`);
 
-  // Try Bearer auth first, then x-api-key fallback for classes endpoint
-  const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY') ?? '';
-  const apiKeyHeaders = getArketaApiKeyHeaders(ARKETA_API_KEY);
-  const authHeaderSets = [headers]; // Bearer headers passed in
-  if (ARKETA_API_KEY) authHeaderSets.push(apiKeyHeaders);
+  const today = new Date().toISOString().split('T')[0];
+  const isPastRange = endDate < today;
 
   const allClasses: { id: string; name?: string; start_time?: string }[] = [];
   let classCursor: string | undefined;
-  let activeClassHeaders: Record<string, string> | null = null;
 
   do {
     const classUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-    classUrl.searchParams.set('limit', String(limit));
+    classUrl.searchParams.set('limit', '100');
     classUrl.searchParams.set('start_date', startDate);
     classUrl.searchParams.set('end_date', endDate);
-    classUrl.searchParams.set('include_cancelled', 'true');
-    classUrl.searchParams.set('include_past', 'true');
-    classUrl.searchParams.set('include_completed', 'true');
-    if (classCursor) classUrl.searchParams.set('cursor', classCursor);
+    classUrl.searchParams.set('include_canceled', 'true'); // single L (matches working app)
+    classUrl.searchParams.set('status', 'all');
+    if (isPastRange) {
+      classUrl.searchParams.set('include_completed', 'true');
+      classUrl.searchParams.set('include_past', 'true');
+    }
+    if (classCursor) classUrl.searchParams.set('start_after', classCursor);
 
-    let classResponse: Response | null = null;
-    let lastErrorText = '';
+    const { response, attempts } = await fetchWithRetry(classUrl.toString(), { method: 'GET', headers: apiKeyHeaders });
+    totalAttempts += attempts;
+    pagesProcessed++;
 
-    const headersToTry = activeClassHeaders ? [activeClassHeaders] : authHeaderSets;
-    for (const h of headersToTry) {
-      const { response, attempts } = await fetchWithRetry(classUrl.toString(), { method: 'GET', headers: h });
-      totalAttempts += attempts;
-      pagesProcessed++;
-      if (response.ok) {
-        classResponse = response;
-        activeClassHeaders = h;
-        break;
-      }
-      lastErrorText = await response.clone().text().catch(() => 'Body unavailable');
-      const authType = 'Authorization' in h ? 'Bearer' : 'x-api-key';
-      logger?.warn(`${authType} auth returned ${response.status} for classes, trying next...`);
+    if (!response.ok) {
+      const errorText = await response.clone().text().catch(() => 'Body unavailable');
+      throw new Error(`Arketa classes API error: ${response.status} - ${errorText}`);
     }
 
-    if (!classResponse) {
-      throw new Error(`Arketa classes API error after trying all auth methods: ${lastErrorText}`);
-    }
-
-    const classData = await classResponse.json();
+    const classData = await response.json();
     const classes = Array.isArray(classData) ? classData : (classData.items || classData.data || classData.classes || []);
     allClasses.push(...classes);
-    classCursor = classData.pagination?.nextCursor;
+    classCursor = classData.pagination?.nextCursor ?? classData.pagination?.next_cursor;
   } while (classCursor);
 
   logger?.info(`Found ${allClasses.length} classes, fetching reservations for each...`);
@@ -168,28 +198,36 @@ async function fetchAllReservations(
     const className = (cls as { name?: string }).name || 'Unknown Class';
     const startTime = (cls as { start_time?: string }).start_time;
     const classDate = startTime ? new Date(startTime).toISOString().split('T')[0] : undefined;
-    const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${cid}/reservations`);
 
+    // Per-class reservations with pagination (Tier 2)
+    let resCursor: string | undefined;
     try {
-      const { response, attempts } = await fetchWithRetry(resUrl.toString(), { method: 'GET', headers });
-      totalAttempts += attempts;
-      pagesProcessed++;
+      do {
+        const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${cid}/reservations`);
+        resUrl.searchParams.set('limit', '500');
+        if (resCursor) resUrl.searchParams.set('start_after', resCursor);
 
-      if (!response.ok) {
-        if (response.status === 404) continue;
-        logger?.warn(`Error fetching reservations for class ${cid}: ${response.status}`);
-        continue;
-      }
+        const { response, attempts } = await fetchWithRetry(resUrl.toString(), { method: 'GET', headers: bearerHeaders });
+        totalAttempts += attempts;
+        pagesProcessed++;
 
-      const resData = await response.json();
-      const reservations: ArketaReservation[] = Array.isArray(resData)
-        ? resData
-        : (resData.items || resData.data || resData.reservations || resData.bookings || []);
+        if (!response.ok) {
+          if (response.status === 404) break;
+          logger?.warn(`Error fetching reservations for class ${cid}: ${response.status}`);
+          break;
+        }
 
-      for (const res of reservations) {
-        if (!res.class_id) res.class_id = cid;
-        allReservations.push({ ...res, class_name: className, class_date: classDate });
-      }
+        const resData = await response.json();
+        const reservations: ArketaReservation[] = Array.isArray(resData)
+          ? resData
+          : (resData.items || resData.data || resData.reservations || resData.bookings || []);
+
+        for (const res of reservations) {
+          if (!res.class_id) res.class_id = cid;
+          allReservations.push({ ...res, class_name: className, class_date: classDate });
+        }
+        resCursor = resData.pagination?.nextCursor ?? resData.pagination?.next_cursor;
+      } while (resCursor);
     } catch (err) {
       logger?.warn(`Failed to fetch reservations for class ${cid}`);
       continue;
@@ -233,28 +271,15 @@ Deno.serve(async (req) => {
     defaultEnd.setDate(defaultEnd.getDate() + 7);
     const startDate = body.startDate || body.start_date || defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate || body.end_date || defaultEnd.toISOString().split('T')[0];
-    const limit = body.limit || 400;
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);
 
-    // Try to get token via refresh flow, fall back to API key
-    let headers: Record<string, string>;
-    try {
-      const token = await getArketaToken(supabaseUrl, supabaseKey);
-      headers = getArketaHeaders(token);
-      logger.info('Using OAuth token for authentication');
-    } catch (tokenError) {
-      logger.warn('Token refresh failed, using API key', { error: tokenError instanceof Error ? tokenError.message : String(tokenError) });
-      headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
-    }
-
-    // Fetch all reservations with pagination
+    // Fetch all reservations — auth is handled inside fetchAllReservations
     const { reservations, totalAttempts, pagesProcessed } = await fetchAllReservations(
       ARKETA_PARTNER_ID,
-      headers,
+      ARKETA_API_KEY,
       startDate,
       endDate,
-      limit,
       supabase as any,
       body.class_id,
       logger
@@ -262,7 +287,7 @@ Deno.serve(async (req) => {
 
     logger.info(`Total fetched: ${reservations.length} reservations in ${pagesProcessed} page(s), ${totalAttempts} API attempt(s)`);
 
-    // Map to CSV fields only - write to staging
+    // Map to staging rows
     const syncBatchId = crypto.randomUUID();
     const checkedIn = (r: ArketaReservation) => r.checked_in === true || ['checked_in', 'ATTENDED', 'attended', 'completed', 'COMPLETED'].includes(r.status || '');
     const stagingRows = reservations
@@ -295,7 +320,7 @@ Deno.serve(async (req) => {
       })
       .filter((r) => r.reservation_id);
 
-    // Identify rows with no matching class_id (empty or not in arketa_classes) and log to api_sync_skipped_records
+    // Identify rows with no matching class_id and log to api_sync_skipped_records
     const classIdsInBatch = [...new Set(stagingRows.map((r) => r.class_id).filter((id): id is string => Boolean(id && id.trim())))];
     let knownClassIds = new Set<string>();
     if (classIdsInBatch.length > 0) {
@@ -324,7 +349,7 @@ Deno.serve(async (req) => {
       logger?.info(`Logged ${skippedRows.length} reservations with no matching class_id to api_sync_skipped_records`);
     }
 
-    // Only insert rows with a valid matching class_id into staging; skipped rows are logged but not persisted
+    // Only insert rows with a valid matching class_id into staging
     const rowsToInsert = stagingRows.filter(
       (r) => Boolean(r.class_id?.trim()) && knownClassIds.has(r.class_id)
     );
@@ -369,7 +394,7 @@ Deno.serve(async (req) => {
       triggeredBy: body.triggeredBy || 'manual',
     });
 
-    // Refresh daily_schedule for the synced date range (after reservations are in staging; trigger will refresh again when sync-from-staging runs)
+    // Refresh daily_schedule for the synced date range
     try {
       const refreshUrl = `${supabaseUrl}/functions/v1/refresh-daily-schedule`;
       await fetch(refreshUrl, {
@@ -407,7 +432,6 @@ Deno.serve(async (req) => {
     logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
-    // Log failure to api_logs (need supabase client for this)
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

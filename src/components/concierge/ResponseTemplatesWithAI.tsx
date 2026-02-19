@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2 } from "lucide-react";
+import { Search, Copy, Sparkles, Check, Plus, Pencil, Trash2, Settings, AlertTriangle, GripVertical, FolderPlus, ArrowUpDown, RefreshCw, Loader2, PenLine, Wand2, ThumbsUp, ThumbsDown, Send } from "lucide-react";
 import { toast } from "sonner";
 import { sanitizeHtml, stripHtml } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
@@ -482,6 +482,10 @@ export function ResponseTemplatesWithAI() {
   const [aiTemplateGuide, setAiTemplateGuide] = useState<string>("none");
   const [aiOutput, setAiOutput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<"positive" | "negative" | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [suggestedTemplate, setSuggestedTemplate] = useState<ResponseTemplate | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -752,6 +756,9 @@ export function ResponseTemplatesWithAI() {
 
     setAiLoading(true);
     setAiOutput("");
+    setFeedbackRating(null);
+    setFeedbackText("");
+    setFeedbackSubmitted(false);
 
     try {
       // Find template context if selected
@@ -785,6 +792,30 @@ export function ResponseTemplatesWithAI() {
   const handleCopyAiOutput = () => {
     navigator.clipboard.writeText(aiOutput);
     toast.success("Copied to clipboard");
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackRating || !user) return;
+    setFeedbackLoading(true);
+    try {
+      const { error } = await insertInto("ai_writer_feedback", {
+        user_id: user.id,
+        rating: feedbackRating,
+        feedback_text: feedbackText.trim() || null,
+        ai_input: aiInput,
+        ai_output: aiOutput,
+        ai_mode: aiWriterMode,
+        template_guide_id: aiTemplateGuide !== "none" ? aiTemplateGuide : null,
+      });
+      if (error) throw error;
+      setFeedbackSubmitted(true);
+      toast.success("Feedback submitted");
+    } catch (err) {
+      console.error("Feedback error:", err);
+      toast.error("Failed to submit feedback");
+    } finally {
+      setFeedbackLoading(false);
+    }
   };
 
   const handleOpenDialog = (template?: ResponseTemplate) => {
@@ -1301,6 +1332,57 @@ export function ResponseTemplatesWithAI() {
                       </a>
                     </p>
                   </div>
+
+                  {/* Feedback Section */}
+                  {!feedbackSubmitted ? (
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Was this response helpful?</span>
+                        <Button
+                          variant={feedbackRating === "positive" ? "default" : "ghost"}
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-none"
+                          onClick={() => setFeedbackRating(feedbackRating === "positive" ? null : "positive")}
+                        >
+                          <ThumbsUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant={feedbackRating === "negative" ? "destructive" : "ghost"}
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-none"
+                          onClick={() => setFeedbackRating(feedbackRating === "negative" ? null : "negative")}
+                        >
+                          <ThumbsDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      {feedbackRating && (
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder={feedbackRating === "negative" ? "What could be improved?" : "What did it get right?"}
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            className="rounded-none text-xs flex-1"
+                            onKeyDown={(e) => e.key === "Enter" && handleSubmitFeedback()}
+                          />
+                          <Button
+                            size="sm"
+                            className="rounded-none h-9 text-xs"
+                            onClick={handleSubmitFeedback}
+                            disabled={feedbackLoading}
+                          >
+                            {feedbackLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        Thanks for your feedback
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>

@@ -1,56 +1,35 @@
 
 
-## Add Cursor-Based Pagination to Classes Sync
+## Add Location Name to Arketa Classes
 
-### Problem
-The `sync-arketa-classes` function currently fetches only the first page of results and applies local date filtering. This limits it to ~500 records per call. However, the Arketa API does support cursor-based pagination via `pagination.nextCursor` and `start_after` -- this is already used successfully in the backfill and clients sync functions.
+### What This Does
+Adds a `location_name` column to the `arketa_classes` table and populates it by looking up the `location_id` against the Arketa locations endpoint during class sync. Based on the API response you shared, the locations data is small (6 records) and static, so we fetch it once at the start of each sync and use it as a lookup map.
 
-The known constraint is that *page-number-based* pagination and *date query parameters* cause 500 errors. Cursor-based pagination (`start_after`) may work fine, as evidenced by the backfill function paginating through classes without issues.
-
-### Solution
-Add a pagination loop to the classes sync that follows `pagination.nextCursor` from the API response, continuing to fetch pages until either:
-- No more pages (`hasMore` is false or no `nextCursor`)
-- The fetched classes are past the target date range (no point continuing)
-- A safety cap is hit (e.g., 30 pages to stay within the 60-second gateway timeout)
+### Location Data (from your API response)
+| ID | Name | Active |
+|----|------|--------|
+| ZpbZcKknSQeHKmmtYtes | HUME | Yes |
+| exQWcsxbNQKOn17d0Nif | HUME | Deleted |
+| zQUVWkrRHeqhThff6gh0 | High Roof | Deleted |
+| H2mCPKfGZBrnpxgnxrPm | Ground Floor Studio | Deleted |
+| A7d5KXnbKYTMW7NWPV7d | Reformer Studio | Deleted |
+| fUTW1Ezl7j8Y6u046LK1 | Reformer Studio | Deleted |
 
 ### Technical Details
 
-**File:** `supabase/functions/sync-arketa-classes/index.ts`
+**1. Database migration:**
+- Add `location_name TEXT` column to `arketa_classes`
+- Add `location_name TEXT` column to `arketa_classes_staging`
+- Update `upsert_arketa_classes_from_staging` RPC to include `location_name` in the INSERT/upsert
+- Backfill existing rows using the known location ID-to-name mapping
 
-**Changes to each strategy tier:**
+**2. Edge function changes (`supabase/functions/sync-arketa-classes/index.ts`):**
+- At the start of the sync, fetch the `/locations` endpoint once to build a `Map<string, string>` of location ID to name
+- When building staging rows, look up `cls.location_id` in the map to set `location_name`
+- Add `location_name` to the staging insert
 
-1. **Strategy A (Reverse Sort):** After the initial fetch, check `response.pagination.nextCursor`. If present and we still need more data, loop with `start_after` cursor until we've covered the target date range or hit the page cap.
-
-2. **Strategy B (Cursor Skip-ahead):** Same pagination loop -- after the initial skip-ahead fetch, continue following cursors.
-
-3. **Strategy C (Plain Fallback):** Same pagination loop -- follow cursors from the plain first page forward.
-
-**Pagination loop logic (shared across all strategies):**
-```text
-let cursor = response.pagination?.nextCursor
-let pageCount = 1
-const MAX_PAGES = 30
-
-while (cursor && pageCount < MAX_PAGES) {
-  fetch with start_after = cursor
-  parse classes from response
-  filter to date range
-  add matches to allClasses
-  
-  // Early exit: if all classes in this page are past endDate, stop
-  cursor = response.pagination?.nextCursor
-  pageCount++
-}
-```
-
-**Safety measures:**
-- MAX_PAGES cap of 30 to stay within the 60-second timeout
-- Early termination if a page returns classes entirely outside (after) the target date range
-- If any page returns a 500, stop pagination gracefully and use what we have so far
-- Log page count and total classes fetched for debugging
-
-**Response updates:**
-- Add `pagesFetched` to the response JSON alongside existing `strategy` field
-
-No changes to the staging insert, RPC upsert, or other downstream logic.
+**3. No changes needed to:**
+- The 3-tier fetch strategy or pagination logic
+- CORS, auth, or retry logic
+- The `daily_schedule` refresh function (it doesn't use location_name)
 

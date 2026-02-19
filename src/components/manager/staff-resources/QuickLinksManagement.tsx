@@ -426,7 +426,7 @@ export function QuickLinksManagement() {
                         ) : (
                           <ChevronRight className="h-4 w-4 shrink-0" />
                         )}
-                        <h3 className="font-medium">{group.title}</h3>
+                        <h3 className="font-medium text-base">{group.title}</h3>
                       </button>
                       <Badge variant="secondary" className="rounded-none text-[10px]">
                         {group.items.length}{" "}

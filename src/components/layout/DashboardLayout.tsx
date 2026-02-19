@@ -634,6 +634,10 @@ function UserInfoDropdown({
             </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border" />
+          <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
+            <Bell className="mr-2 h-3 w-3" />
+            {t("Notifications", "Notificaciones")}
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
             Profile
@@ -641,10 +645,6 @@ function UserInfoDropdown({
           <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
             Account Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-[10px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
-            <Bell className="mr-2 h-3 w-3" />
-            {t("Notifications", "Notificaciones")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">

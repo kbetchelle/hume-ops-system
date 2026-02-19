@@ -1,37 +1,55 @@
 
 
-## Feed Internal Policies into the AI Writer
+## Add AI Writer Feedback System
 
-### What Changes
-The `hume-voice-writer` backend function will fetch the published "HUME Concierge Internal Policies" resource page from the database and inject its full text into the system prompt as a policy reference section. This ensures every AI-generated response respects the actual rules (pause policy, guest limits, pricing, cancellation terms, etc.) without the concierge needing to remember or paste them.
+### What It Does
+After the AI generates a response, a small feedback section appears below the hallucination warning. Staff can rate the response (thumbs up/down) and optionally leave a note explaining what was wrong or what could be improved. This feedback is stored in the database and injected into the AI's system prompt as learning examples, so the model progressively adapts to HUME's preferences.
 
-### How It Works
+### Database
 
-1. **Backend function (`hume-voice-writer`)** -- on every request:
-   - Create a Supabase service-role client inside the function
-   - Query `resource_pages` for the published policy page (matching by title or a known ID)
-   - Append the policy text to the system prompt as a new `## Internal Policies` section with clear instructions: "Your responses must never contradict these rules. Reference them when relevant but never quote them verbatim or say 'per our policy.'"
+**New table: `ai_writer_feedback`**
 
-2. **System prompt addition** (appended dynamically):
-   ```
-   ## HUME Internal Policies (Authoritative Reference)
-   The following are the official internal policies. Your responses must
-   align with these rules. Never contradict them. Do not quote them
-   directly or reference them as "policy" -- instead, communicate the
-   information naturally in the HUME voice.
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid (PK) | |
+| user_id | uuid | Who submitted the feedback |
+| rating | text | `positive` or `negative` |
+| feedback_text | text (nullable) | Optional note from the user |
+| ai_input | text | The original prompt/situation |
+| ai_output | text | The generated response |
+| ai_mode | text | `compose` or `polish` |
+| template_guide_id | uuid (nullable) | Which template was used, if any |
+| created_at | timestamptz | |
 
-   [full policy text inserted here]
-   ```
+RLS: authenticated users can insert their own rows; managers/admins can read all rows.
 
-3. **No frontend changes needed** -- the AI Writer UI stays exactly the same. The policy context is injected server-side automatically.
+### Frontend Changes (ResponseTemplatesWithAI.tsx)
 
-### Why This Approach
-- Policies are fetched live from the database, so any updates managers make to the policy page are immediately reflected in AI responses
-- The policy text is ~5,700 characters, well within model context limits
-- No changes to the client-side code or UI required
-- The system prompt instructs the model to internalize the rules without citing "policy" (matching the existing voice guidelines)
+Below the hallucination warning, add a compact feedback row:
 
-### Edge Cases
-- If the policy page is unpublished or missing, the function still works -- it just omits the policy section and logs a warning
-- If the page grows very large in the future, the text is truncated to a safe limit (e.g., 15,000 characters) to stay within token budgets
+- Two icon buttons: **ThumbsUp** and **ThumbsDown**
+- When clicked, the selected button highlights and a small optional text input slides in: *"What could be improved?"* (for negative) or *"What did it get right?"* (for positive)
+- A small "Submit" button saves the feedback
+- After submission, the row shows a "Thanks for your feedback" confirmation and locks
 
+### Backend Changes (hume-voice-writer edge function)
+
+- After fetching the policy text, also fetch the **5 most recent negative feedback entries** from `ai_writer_feedback`
+- Append them to the system prompt as a new section:
+
+```
+## Recent Feedback (Learning Context)
+Staff have flagged these patterns to avoid or improve:
+1. [feedback_text] — regarding: [truncated ai_input]
+2. ...
+```
+
+- This gives the model concrete examples of what to avoid, effectively "training" it through prompt context without actual fine-tuning
+- Only negative feedback is included (positive feedback confirms the model is on track but doesn't need corrective action)
+- Capped at 5 entries and truncated to stay within token limits
+
+### Technical Details
+
+- Feedback is saved via the `data-api` edge function (consistent with the rest of the app)
+- The `ai_input` and `ai_output` are stored so managers can later review what triggered the feedback
+- The backend truncates each feedback entry to ~200 characters to keep the prompt lean

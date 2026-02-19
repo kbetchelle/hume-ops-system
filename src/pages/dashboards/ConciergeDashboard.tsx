@@ -10,7 +10,7 @@ import { ConciergeChecklistView } from "@/components/checklists/concierge/Concie
 import { ConciergeForm } from "@/components/concierge/ConciergeForm";
 import { PastReportsView } from "@/components/concierge/PastReportsView";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
-import { StaffMessagesInbox } from "@/components/concierge/StaffMessagesInbox";
+import { StaffMessagesInbox } from "@/components/foh/messages";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
 import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplatesWithAI";
 import { StaffResourcesView } from "@/components/staff-resources/StaffResourcesView";
@@ -104,13 +104,8 @@ export default function ConciergeDashboard() {
 
       case "messages":
         return (
-          <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Messages
-            </h2>
-            <div className="max-w-3xl">
-              <StaffMessagesInbox />
-            </div>
+          <div className="h-[calc(100vh-4rem)] p-4 md:p-8">
+            <StaffMessagesInbox />
           </div>);
 
       case "announcements":

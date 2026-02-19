@@ -165,9 +165,26 @@ export default function ReportsPage() {
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <h3 className="font-medium">Weekly Export</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Week: {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Week: {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}
+                    </span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={weekStart}
+                          onSelect={(d) => d && setWeekStart(getWeekStart(d))}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"

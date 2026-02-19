@@ -209,6 +209,7 @@ export function ConciergeSidebar({
           label: "Messages",
           icon: MessageSquare,
           badge: unreadCount > 0 ? unreadCount : undefined,
+          route: "/dashboard/messages",
         },
         { id: "announcements", label: "Announcements", icon: Megaphone, hasUnreadDot: hasUnreadAnnouncements },
       ],

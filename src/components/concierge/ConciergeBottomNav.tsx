@@ -1,4 +1,5 @@
 import { Home, FileText, MessageSquare, Wrench } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { ConciergeView } from "./ConciergeSidebar";
 
 interface ConciergeBottomNavProps {
@@ -11,7 +12,7 @@ interface ConciergeBottomNavProps {
 const tabs = [
   { id: "home" as const, label: "Home", icon: Home },
   { id: "report" as const, label: "Report", icon: FileText },
-  { id: "messages" as const, label: "Comms", icon: MessageSquare },
+  { id: "messages" as const, label: "Comms", icon: MessageSquare, route: "/dashboard/messages" },
   { id: "templates" as const, label: "Tools", icon: Wrench },
 ];
 
@@ -21,6 +22,8 @@ export function ConciergeBottomNav({
   hasUnreadAnnouncements = false,
   unreadMessageCount = 0,
 }: ConciergeBottomNavProps) {
+  const navigate = useNavigate();
+
   // Map the activeView to the closest tab
   const getActiveTab = () => {
     if (tabs.some((t) => t.id === activeView)) return activeView;
@@ -52,7 +55,13 @@ export function ConciergeBottomNav({
           return (
             <button
               key={tab.id}
-              onClick={() => onViewChange(tab.id)}
+              onClick={() => {
+                if ('route' in tab && tab.route) {
+                  navigate(tab.route);
+                } else {
+                  onViewChange(tab.id);
+                }
+              }}
               className={`
                 flex flex-col items-center justify-center
                 flex-1 h-full relative

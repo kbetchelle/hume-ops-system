@@ -56,6 +56,12 @@ BEGIN
 END;
 $function$;
 
--- Clean up existing daily_schedule records outside the 7-day window
-DELETE FROM public.daily_schedule 
-WHERE schedule_date < CURRENT_DATE OR schedule_date > CURRENT_DATE + 7;
+-- Clean up existing daily_schedule records outside the 7-day window (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'daily_schedule') THEN
+    DELETE FROM public.daily_schedule
+    WHERE schedule_date < CURRENT_DATE OR schedule_date > CURRENT_DATE + 7;
+  END IF;
+END;
+$$;

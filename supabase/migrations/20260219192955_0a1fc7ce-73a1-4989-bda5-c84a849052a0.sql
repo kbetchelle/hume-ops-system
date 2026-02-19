@@ -1,5 +1,5 @@
-
-CREATE TABLE public.notification_triggers (
+-- Idempotent: safe when notification_triggers was created by a later migration (e.g. 20260227000001) or repair.
+CREATE TABLE IF NOT EXISTS public.notification_triggers (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   event_type TEXT NOT NULL,
   target_department TEXT NOT NULL,
@@ -15,22 +15,31 @@ CREATE TABLE public.notification_triggers (
 
 ALTER TABLE public.notification_triggers ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can view triggers"
-  ON public.notification_triggers FOR SELECT
-  USING (auth.uid() IS NOT NULL);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'notification_triggers' AND policyname = 'Authenticated users can view triggers') THEN
+    CREATE POLICY "Authenticated users can view triggers"
+      ON public.notification_triggers FOR SELECT
+      USING (auth.uid() IS NOT NULL);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'notification_triggers' AND policyname = 'Managers and admins can insert triggers') THEN
+    CREATE POLICY "Managers and admins can insert triggers"
+      ON public.notification_triggers FOR INSERT
+      WITH CHECK (public.is_manager_or_admin(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'notification_triggers' AND policyname = 'Managers and admins can update triggers') THEN
+    CREATE POLICY "Managers and admins can update triggers"
+      ON public.notification_triggers FOR UPDATE
+      USING (public.is_manager_or_admin(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'notification_triggers' AND policyname = 'Managers and admins can delete triggers') THEN
+    CREATE POLICY "Managers and admins can delete triggers"
+      ON public.notification_triggers FOR DELETE
+      USING (public.is_manager_or_admin(auth.uid()));
+  END IF;
+END $$;
 
-CREATE POLICY "Managers and admins can insert triggers"
-  ON public.notification_triggers FOR INSERT
-  WITH CHECK (public.is_manager_or_admin(auth.uid()));
-
-CREATE POLICY "Managers and admins can update triggers"
-  ON public.notification_triggers FOR UPDATE
-  USING (public.is_manager_or_admin(auth.uid()));
-
-CREATE POLICY "Managers and admins can delete triggers"
-  ON public.notification_triggers FOR DELETE
-  USING (public.is_manager_or_admin(auth.uid()));
-
+DROP TRIGGER IF EXISTS update_notification_triggers_updated_at ON public.notification_triggers;
 CREATE TRIGGER update_notification_triggers_updated_at
   BEFORE UPDATE ON public.notification_triggers
   FOR EACH ROW

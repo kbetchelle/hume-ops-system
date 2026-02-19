@@ -179,3 +179,19 @@
     box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3);
   }
 }
+
+/* Walkthrough overlay: hand-drawn arrow stroke drawing animation */
+@keyframes walkthrough-arrow-draw {
+  from {
+    stroke-dashoffset: var(--walkthrough-path-length, 100);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walkthrough-arrow-path {
+    animation-duration: 0.15s !important;
+  }
+}

@@ -40,6 +40,14 @@ function useSidebar() {
   return context;
 }
 
+/**
+ * Optional sidebar context. Returns null when used outside SidebarProvider.
+ * Use for components (e.g. walkthrough overlay) that may render with or without a sidebar.
+ */
+function useOptionalSidebar(): SidebarContext | null {
+  return React.useContext(SidebarContext);
+}
+
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -634,4 +642,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useOptionalSidebar,
 };

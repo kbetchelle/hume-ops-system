@@ -39,6 +39,7 @@ export default {
           amber: "#fcb827",
           burntOrange: "#f6821f",
           crimson: "#e03a3c",
+          purple: "#7c3aed",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

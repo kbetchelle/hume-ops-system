@@ -100,12 +100,13 @@ export function MobileChecklistItem({
   return (
     <div
       className={cn(
-        "p-4 border border-l-4 rounded-lg transition-all",
+        "border border-l-4 rounded-lg transition-all",
         "hover:bg-muted/50",
         "touch-manipulation",
         colorClass,
         isCompleted && "bg-muted/30 opacity-75"
       )}
+      style={{ padding: '10px' }}
     >
       <div className="flex items-start gap-4">
         {/* Task component (checkbox, photo button, etc.) */}

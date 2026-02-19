@@ -336,17 +336,6 @@ function TemplateList({
                   </Badge>
                 )}
               </div>
-              <div className="flex gap-1 mt-1 flex-wrap">
-                {template.tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="outline"
-                    className="text-[10px] rounded-none"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
             </div>
             <div className="flex items-center gap-2">
               {editMode && canEdit ? (

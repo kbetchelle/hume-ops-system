@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -351,6 +351,19 @@ function ChecklistDialog({
       is_active: true,
     }
   );
+
+  useEffect(() => {
+    setFormData(
+      checklist || {
+        title: '',
+        description: '',
+        role_type: 'floater',
+        shift_time: 'AM',
+        is_weekend: false,
+        is_active: true,
+      }
+    );
+  }, [checklist]);
 
   return (
     <DialogContent>

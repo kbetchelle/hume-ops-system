@@ -1348,6 +1348,7 @@ export type Database = {
           is_class_triggered: boolean | null
           is_high_priority: boolean | null
           label_spanish: string | null
+          metadata: Json | null
           required: boolean | null
           sort_order: number
           task_description: string
@@ -1364,6 +1365,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order: number
           task_description: string
@@ -1380,6 +1382,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order?: number
           task_description?: string
@@ -1616,6 +1619,7 @@ export type Database = {
           is_class_triggered: boolean | null
           is_high_priority: boolean | null
           label_spanish: string | null
+          metadata: Json | null
           required: boolean | null
           sort_order: number
           task_description: string
@@ -1632,6 +1636,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order: number
           task_description: string
@@ -1648,6 +1653,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order?: number
           task_description?: string
@@ -2079,6 +2085,7 @@ export type Database = {
           is_class_triggered: boolean | null
           is_high_priority: boolean | null
           label_spanish: string | null
+          metadata: Json | null
           required: boolean | null
           sort_order: number
           task_description: string
@@ -2095,6 +2102,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order: number
           task_description: string
@@ -2111,6 +2119,7 @@ export type Database = {
           is_class_triggered?: boolean | null
           is_high_priority?: boolean | null
           label_spanish?: string | null
+          metadata?: Json | null
           required?: boolean | null
           sort_order?: number
           task_description?: string

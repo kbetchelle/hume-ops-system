@@ -105,53 +105,9 @@ async function fetchAllReservations(
     }
   }
 
-  // Tier 2: DB-driven — distinct class_id (and class_name, class_date) from arketa_reservations_history, then fetch per class
-  const { data: historyRows } = await supabase
-    .from('arketa_reservations_history')
-    .select('class_id, class_name, class_date')
-    .gte('class_date', startDate)
-    .lte('class_date', endDate);
-
-  const seen = new Set<string>();
-  const classRows: { class_id: string; class_name: string | null; class_date: string | null }[] = [];
-  for (const row of (historyRows ?? []) as any[]) {
-    const key = `${row.class_id ?? ''}:${row.class_date ?? ''}`;
-    if (row.class_id && !seen.has(key)) {
-      seen.add(key);
-      classRows.push({
-        class_id: row.class_id,
-        class_name: row.class_name ?? null,
-        class_date: row.class_date ?? null,
-      });
-    }
-  }
-
-  if (classRows.length > 0) {
-    logger?.info(`Tier 2: fetching reservations for ${classRows.length} known classes from history`);
-    const tier2Reservations: ReservationWithMeta[] = [];
-    for (const { class_id, class_name, class_date } of classRows) {
-      try {
-        const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${class_id}/reservations`);
-        resUrl.searchParams.set('limit', '500');
-        const { response, attempts } = await fetchWithRetry(resUrl.toString(), { method: 'GET', headers });
-        totalAttempts += attempts;
-        pagesProcessed++;
-        if (!response.ok) continue;
-        const resData = await response.json();
-        const list = Array.isArray(resData) ? resData : (resData.items || resData.data || resData.reservations || resData.bookings || []);
-        for (const res of list) {
-          if (!res.class_id) res.class_id = class_id;
-          tier2Reservations.push({ ...res, class_name: class_name ?? undefined, class_date: class_date ?? undefined });
-        }
-      } catch {
-        continue;
-      }
-    }
-    if (tier2Reservations.length > 0) {
-      logger?.info(`Tier 2 returned ${tier2Reservations.length} reservations`);
-      return { reservations: tier2Reservations, totalAttempts, pagesProcessed };
-    }
-  }
+  // Tier 2 removed: DB-driven approach was flawed — it only fetched reservations for
+  // classes already in history, causing incomplete results when partial data existed
+  // from scheduled syncs. Always fall through to Tier 3 for complete class-based discovery.
 
   // Tier 3: Classes-based — GET /classes then per-class reservations (guaranteed to discover all classes)
   logger?.info(`Tier 3: Fetching classes for ${startDate} to ${endDate} to get reservations...`);

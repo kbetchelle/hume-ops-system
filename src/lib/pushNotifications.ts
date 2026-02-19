@@ -41,7 +41,7 @@ export async function subscribeToPush(staffId: string): Promise<boolean> {
   const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
   let subscription: PushSubscription;
   try {
-    subscription = await sw.pushManager.subscribe({
+    subscription = await (sw as any).pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey,
     });
@@ -76,7 +76,7 @@ export async function subscribeToPush(staffId: string): Promise<boolean> {
  */
 export async function unsubscribeFromPush(): Promise<void> {
   const sw = await navigator.serviceWorker.ready;
-  const sub = await sw.pushManager.getSubscription();
+  const sub = await (sw as any).pushManager.getSubscription();
   if (!sub) {
     return;
   }
@@ -100,7 +100,7 @@ export async function isSubscribedToPush(): Promise<boolean> {
   }
 
   const getSub = (): Promise<PushSubscription | null> =>
-    navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription());
+    navigator.serviceWorker.ready.then((reg) => (reg as any).pushManager.getSubscription());
 
   const timeout = new Promise<null>((_, reject) =>
     setTimeout(() => reject(new Error('timeout')), 3000)

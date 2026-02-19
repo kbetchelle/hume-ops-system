@@ -112,7 +112,35 @@ serve(async (req) => {
       console.warn("Failed to fetch policies:", policyFetchError);
     }
 
-    const systemPrompt = HUME_VOICE_SYSTEM_PROMPT + policySection;
+    // Fetch recent negative feedback for learning context
+    let feedbackSection = "";
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && serviceRoleKey) {
+        const supabaseFb = createClient(supabaseUrl, serviceRoleKey);
+        const { data: negFeedback, error: fbError } = await supabaseFb
+          .from("ai_writer_feedback")
+          .select("feedback_text, ai_input")
+          .eq("rating", "negative")
+          .not("feedback_text", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (!fbError && negFeedback && negFeedback.length > 0) {
+          const items = negFeedback.map((f, i) => {
+            const text = (f.feedback_text || "").slice(0, 200);
+            const context = (f.ai_input || "").slice(0, 100);
+            return `${i + 1}. ${text} — regarding: "${context}"`;
+          }).join("\n");
+          feedbackSection = `\n\n## Recent Feedback (Learning Context)\nStaff have flagged these patterns to avoid or improve:\n${items}`;
+        }
+      }
+    } catch (fbFetchError) {
+      console.warn("Failed to fetch feedback:", fbFetchError);
+    }
+
+    const systemPrompt = HUME_VOICE_SYSTEM_PROMPT + policySection + feedbackSection;
 
     let userPrompt = "";
 

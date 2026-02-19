@@ -97,6 +97,42 @@ export type Database = {
           },
         ]
       }
+      ai_writer_feedback: {
+        Row: {
+          ai_input: string
+          ai_mode: string
+          ai_output: string
+          created_at: string
+          feedback_text: string | null
+          id: string
+          rating: string
+          template_guide_id: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_input: string
+          ai_mode: string
+          ai_output: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          rating: string
+          template_guide_id?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_input?: string
+          ai_mode?: string
+          ai_output?: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          rating?: string
+          template_guide_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       api_credentials: {
         Row: {
           access_token: string

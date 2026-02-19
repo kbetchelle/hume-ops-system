@@ -115,7 +115,7 @@ export function MobileChecklistItem({
 
         {/* Task description and metadata */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <p
               className={cn(
                 "text-[12.75px] flex-1",

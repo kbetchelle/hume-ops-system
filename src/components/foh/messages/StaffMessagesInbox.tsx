@@ -530,7 +530,7 @@ export function StaffMessagesInbox({
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => setNewConversationDialogOpen(true)}
+                onClick={handleNewMessage}
                 className="rounded-none"
               >
                 <Plus className="h-4 w-4 mr-2" />

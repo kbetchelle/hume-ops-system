@@ -20,7 +20,7 @@ export interface NotificationHistoryWithStaff extends NotificationHistoryRecord 
 }
 
 async function fetchNotificationHistory(): Promise<NotificationHistoryWithStaff[]> {
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await (supabase as any)
     .from('notification_history')
     .select('*')
     .order('sent_at', { ascending: false })
@@ -106,13 +106,12 @@ export function useMarkNotificationFailed() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await updateTable(
-        'notification_history',
-        { user_marked_failed: true },
-        [eq('id', id)]
-      );
+      const { error } = await (supabase as any)
+        .from('notification_history')
+        .update({ user_marked_failed: true })
+        .eq('id', id);
       if (error) throw error;
-      return data;
+      return null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-history'] });

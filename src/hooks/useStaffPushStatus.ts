@@ -40,7 +40,7 @@ async function fetchStaffPushStatus(): Promise<StaffPushStatusItem[]> {
 
   if (rolesError) throw rolesError;
 
-  const { data: subs, error: subsError } = await supabase
+  const { data: subs, error: subsError } = await (supabase as any)
     .from('staff_push_subscriptions')
     .select('staff_id, device_info')
     .in('staff_id', userIds);

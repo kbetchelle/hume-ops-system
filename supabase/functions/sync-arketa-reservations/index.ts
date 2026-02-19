@@ -112,8 +112,15 @@ async function fetchAllReservations(
   // Tier 3: Classes-based — GET /classes then per-class reservations (guaranteed to discover all classes)
   logger?.info(`Tier 3: Fetching classes for ${startDate} to ${endDate} to get reservations...`);
 
+  // Try Bearer auth first, then x-api-key fallback for classes endpoint
+  const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY') ?? '';
+  const apiKeyHeaders = getArketaApiKeyHeaders(ARKETA_API_KEY);
+  const authHeaderSets = [headers]; // Bearer headers passed in
+  if (ARKETA_API_KEY) authHeaderSets.push(apiKeyHeaders);
+
   const allClasses: { id: string; name?: string; start_time?: string }[] = [];
   let classCursor: string | undefined;
+  let activeClassHeaders: Record<string, string> | null = null;
 
   do {
     const classUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
@@ -125,16 +132,29 @@ async function fetchAllReservations(
     classUrl.searchParams.set('include_completed', 'true');
     if (classCursor) classUrl.searchParams.set('cursor', classCursor);
 
-    const { response, attempts } = await fetchWithRetry(classUrl.toString(), { method: 'GET', headers });
-    totalAttempts += attempts;
-    pagesProcessed++;
+    let classResponse: Response | null = null;
+    let lastErrorText = '';
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Arketa classes API error: ${response.status} - ${errorText}`);
+    const headersToTry = activeClassHeaders ? [activeClassHeaders] : authHeaderSets;
+    for (const h of headersToTry) {
+      const { response, attempts } = await fetchWithRetry(classUrl.toString(), { method: 'GET', headers: h });
+      totalAttempts += attempts;
+      pagesProcessed++;
+      if (response.ok) {
+        classResponse = response;
+        activeClassHeaders = h;
+        break;
+      }
+      lastErrorText = await response.clone().text().catch(() => 'Body unavailable');
+      const authType = 'Authorization' in h ? 'Bearer' : 'x-api-key';
+      logger?.warn(`${authType} auth returned ${response.status} for classes, trying next...`);
     }
 
-    const classData = await response.json();
+    if (!classResponse) {
+      throw new Error(`Arketa classes API error after trying all auth methods: ${lastErrorText}`);
+    }
+
+    const classData = await classResponse.json();
     const classes = Array.isArray(classData) ? classData : (classData.items || classData.data || classData.classes || []);
     allClasses.push(...classes);
     classCursor = classData.pagination?.nextCursor;

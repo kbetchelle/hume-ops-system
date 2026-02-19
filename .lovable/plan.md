@@ -1,104 +1,64 @@
 
 
-# Apply Image Color Palette as Global Design Tokens
+# Fix Arketa Classes and Reservations Sync
 
-## Hex Codes from Image
+## Problem
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| Olive | #818807 | Checklist: deep cleaning / teal replacement |
-| Sky Blue | #6CA2E8 | Checklist: recurring hourly / blue replacement |
-| Amber | #F28B0C | Checklist: opening/setup (orange), badge default |
-| Burnt Orange | #F2600C | Alert warning, badge destructive |
-| Crimson | #D9310B | Alert destructive, high-priority tasks |
+The sync functions use different API parameters than the working implementation, causing HTTP 500 errors from the Arketa API for recent dates.
 
----
+## Key Differences Found
+
+| Parameter | Working App | Our Implementation |
+|---|---|---|
+| **Classes: date filter** | No date filter (fetches all) | `start_date` + `end_date` (causes 500) |
+| **Pagination cursor** | `start_after={cursor}` | `cursor={cursor}` |
+| **Page size** | `limit=500` (classes), `limit=100` (Tier 3) | `limit=400` |
+| **Classes params** | Only `include_cancelled=true` | Also `include_past=true`, `include_completed=true` |
+| **Tier 3 class listing** | `include_canceled=true` (one L), `status=all` | `include_cancelled=true` (two Ls), no `status` param |
+| **Reservations auth** | `Authorization: Bearer {API_KEY}` directly | OAuth token flow with API key fallback |
 
 ## Changes
 
-### 1. Create global color constant `add_color`
+### 1. `supabase/functions/sync-arketa-classes/index.ts`
 
-**File:** `src/lib/constants.ts`
+- Remove `start_date` and `end_date` query params (fetch all classes, no date filter)
+- Change `cursor` param to `start_after`
+- Change `limit` default to `500`
+- Remove `include_past` and `include_completed` params (keep only `include_cancelled=true`)
+- Read `pagination.nextCursor` or `pagination.next_cursor` from response for `start_after`
+- After fetching all classes, filter to only those within the requested date range before staging (so the function still respects caller's date range for what gets persisted)
 
-Add a new exported constant containing all 5 hex codes:
+### 2. `supabase/functions/sync-arketa-reservations/index.ts`
 
-```typescript
-export const add_color = {
-  olive: "#818807",
-  skyBlue: "#6CA2E8",
-  amber: "#F28B0C",
-  burntOrange: "#F2600C",
-  crimson: "#D9310B",
-} as const;
-```
+**Tier 1 (direct /reservations):**
+- Change `limit` to `500`
+- Add `start_after` pagination support (currently only fetches one page)
 
-### 2. Register colors in Tailwind config
+**Tier 3 (class listing for discovery):**
+- Change `limit` to `100`
+- Change `include_cancelled` to `include_canceled` (one L)
+- Add `status=all` param
+- Add `include_completed=true` and `include_past=true` only for past date ranges
+- Change `cursor` to `start_after`
 
-**File:** `tailwind.config.ts`
+**Per-class reservations (Tier 2):**
+- Add `limit=500` and `start_after` pagination support
 
-Add an `add` color group under `extend.colors` so these are available as Tailwind utilities (e.g., `bg-add-olive`, `border-l-add-amber`):
+**Auth for reservations:**
+- Use `Authorization: Bearer {ARKETA_API_KEY}` directly (the API key as a Bearer token, not OAuth)
 
-```typescript
-add: {
-  olive: "#818807",
-  skyBlue: "#6CA2E8",
-  amber: "#F28B0C",
-  burntOrange: "#F2600C",
-  crimson: "#D9310B",
-},
-```
+### 3. `supabase/functions/sync-arketa-classes-and-reservations/index.ts`
 
-### 3. Update Badge component
+- No structural changes needed; it delegates to the above two functions
 
-**File:** `src/components/ui/badge.tsx`
+### 4. `supabase/functions/run-backfill-job/index.ts`
 
-Add new color-specific variants using the palette:
+- No structural changes needed; it delegates to sync functions
 
-| Variant | Style |
-|---------|-------|
-| `default` | `bg-add-amber/10 border-add-amber text-add-amber` |
-| `destructive` | `bg-add-crimson/10 border-add-crimson text-add-crimson` |
-| `secondary` | `bg-add-skyBlue/10 border-add-skyBlue text-add-skyBlue` |
-| `outline` | `border-add-burntOrange text-add-burntOrange` |
+## Technical Details
 
-### 4. Update Alert component
-
-**File:** `src/components/ui/alert.tsx`
-
-| Variant | Style |
-|---------|-------|
-| `default` | Keep as-is (neutral) |
-| `destructive` | `border-add-crimson/50 text-add-crimson [&>svg]:text-add-crimson` |
-
-Add a new `warning` variant:
-- `border-add-burntOrange/50 text-add-burntOrange [&>svg]:text-add-burntOrange`
-
-### 5. Update checklist color maps
-
-**Files:** `BoHChecklistItem.tsx` and `MobileChecklistItem.tsx`
-
-Replace the Tailwind default color borders with the new palette for the most-used categories:
-
-| DB color value | Old class | New class |
-|----------------|-----------|-----------|
-| orange | `border-l-orange-500` | `border-l-add-amber` |
-| red | `border-l-red-500` | `border-l-add-crimson` |
-| blue | `border-l-blue-500` | `border-l-add-skyBlue` |
-| teal | `border-l-teal-500` | `border-l-add-olive` |
-| pink | `border-l-pink-500` | `border-l-add-burntOrange` |
-
-The remaining colors (yellow, green, purple, gray) stay as Tailwind defaults since they are not part of this palette.
-
----
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `src/lib/constants.ts` | Add `add_color` constant with 5 hex codes |
-| `tailwind.config.ts` | Register `add` color group |
-| `src/components/ui/badge.tsx` | Update variant colors to use palette |
-| `src/components/ui/alert.tsx` | Update destructive + add warning variant |
-| `src/components/checklists/boh/BoHChecklistItem.tsx` | Update colorBorderMap to use `add-*` classes |
-| `src/components/checklists/MobileChecklistItem.tsx` | Update colorMap to use `add-*` classes |
+- The root cause of the 500 error is likely the `start_date`/`end_date` parameters on the classes endpoint, which the working app does not use at all
+- The wrong cursor parameter name (`cursor` vs `start_after`) may cause silent pagination failures (only first page returned)
+- The spelling difference (`cancelled` vs `canceled`) may cause the API to ignore the parameter entirely
+- Client-side date filtering after fetch ensures we don't regress the staging/upsert logic
 

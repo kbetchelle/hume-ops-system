@@ -318,6 +318,7 @@ export type Database = {
           is_cancelled: boolean | null
           is_deleted: boolean | null
           location_id: string | null
+          location_name: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -341,6 +342,7 @@ export type Database = {
           is_cancelled?: boolean | null
           is_deleted?: boolean | null
           location_id?: string | null
+          location_name?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -364,6 +366,7 @@ export type Database = {
           is_cancelled?: boolean | null
           is_deleted?: boolean | null
           location_id?: string | null
+          location_name?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null
@@ -389,6 +392,7 @@ export type Database = {
           is_cancelled: boolean | null
           is_deleted: boolean | null
           location_id: string | null
+          location_name: string | null
           name: string
           raw_data: Json | null
           room_name: string | null
@@ -412,6 +416,7 @@ export type Database = {
           is_cancelled?: boolean | null
           is_deleted?: boolean | null
           location_id?: string | null
+          location_name?: string | null
           name: string
           raw_data?: Json | null
           room_name?: string | null
@@ -435,6 +440,7 @@ export type Database = {
           is_cancelled?: boolean | null
           is_deleted?: boolean | null
           location_id?: string | null
+          location_name?: string | null
           name?: string
           raw_data?: Json | null
           room_name?: string | null

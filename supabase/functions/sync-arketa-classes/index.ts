@@ -168,6 +168,26 @@ Deno.serve(async (req) => {
       return { classes: collected, pageCount };
     };
 
+    // --- Fetch location map for name lookups ---
+    const locationMap = new Map<string, string>();
+    try {
+      const locUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/locations`;
+      console.log('[classes-sync] Fetching locations for name lookup...');
+      const { response: locResp } = await fetchWithRetry(locUrl, { method: 'GET', headers });
+      if (locResp.ok) {
+        const locData = await locResp.json();
+        const locItems = (locData as any)?.items ?? [];
+        for (const loc of locItems) {
+          if (loc.id && loc.name) locationMap.set(String(loc.id), loc.name);
+        }
+        console.log(`[classes-sync] Loaded ${locationMap.size} locations`);
+      } else {
+        console.log(`[classes-sync] Locations fetch returned ${locResp.status}, proceeding without names`);
+      }
+    } catch (err) {
+      console.log(`[classes-sync] Locations fetch failed: ${err}, proceeding without names`);
+    }
+
     // --- 3-tier fetch strategy ---
     const allClasses: any[] = [];
     let strategy = 'none';
@@ -360,6 +380,7 @@ Deno.serve(async (req) => {
         status: cls.status ?? 'scheduled',
         room_name: cls.room?.name ?? null,
         location_id: cls.location_id ?? null,
+        location_name: cls.location_id ? (locationMap.get(String(cls.location_id)) ?? null) : null,
         updated_at_api: cls.updated_at ?? cls.updatedAt ?? null,
         raw_data: cls,
         synced_at: syncedAt,

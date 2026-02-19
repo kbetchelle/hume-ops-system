@@ -59,11 +59,14 @@ Deno.serve(async (req) => {
       return (obj.items ?? obj.data ?? obj.classes ?? []) as any[];
     };
 
-    const extractPagination = (data: unknown): { nextCursor?: string; hasMore?: boolean } => {
+    const extractPagination = (data: unknown): { nextStartAfterId?: string; hasMore?: boolean } => {
       const obj = data as Record<string, unknown>;
       const p = obj.pagination as Record<string, unknown> | undefined;
       if (!p) return {};
-      return { nextCursor: p.nextCursor as string | undefined, hasMore: p.hasMore as boolean | undefined };
+      return {
+        nextStartAfterId: (p.nextStartAfterId ?? p.nextCursor) as string | undefined,
+        hasMore: p.hasMore as boolean | undefined,
+      };
     };
 
     const extractClassDate = (cls: any): string | null => {
@@ -84,7 +87,7 @@ Deno.serve(async (req) => {
         return d && d >= startDate && d <= endDate;
       });
 
-    // Returns true if every class on the page is past the target endDate (early exit signal)
+    // Returns true if every class on the page is outside the target range (early exit signal)
     const allPastEndDate = (list: any[]): boolean => {
       if (list.length === 0) return false;
       return list.every(c => {
@@ -93,30 +96,38 @@ Deno.serve(async (req) => {
       });
     };
 
+    const allBeforeStartDate = (list: any[]): boolean => {
+      if (list.length === 0) return false;
+      return list.every(c => {
+        const d = extractClassDate(c);
+        return d && d < startDate;
+      });
+    };
+
     /**
-     * Paginate through additional pages using cursor-based pagination.
+     * Paginate using start_after ID and hasMore flag from Arketa API.
      * Returns the classes collected across all subsequent pages plus total page count.
      */
-    const paginateWithCursor = async (
-      initialCursor: string | undefined,
+    const paginateWithStartAfter = async (
+      initialStartAfterId: string | undefined,
       initialPageCount: number,
       baseUrl: string,
       extraParams?: Record<string, string>,
     ): Promise<{ classes: any[]; pageCount: number }> => {
       const collected: any[] = [];
-      let cursor = initialCursor;
+      let startAfterId = initialStartAfterId;
       let pageCount = initialPageCount;
 
-      while (cursor && pageCount < MAX_PAGES) {
+      while (startAfterId && pageCount < MAX_PAGES) {
         try {
           const url = new URL(baseUrl);
           url.searchParams.set('limit', String(limit));
-          url.searchParams.set('start_after', cursor);
+          url.searchParams.set('start_after', startAfterId);
           if (extraParams) {
             for (const [k, v] of Object.entries(extraParams)) url.searchParams.set(k, v);
           }
 
-          console.log(`[classes-sync] Pagination page ${pageCount + 1}: cursor=${cursor}`);
+          console.log(`[classes-sync] Pagination page ${pageCount + 1}: start_after=${startAfterId}`);
           const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 
           if (!response.ok) {
@@ -129,17 +140,24 @@ Deno.serve(async (req) => {
           const matched = filterToRange(pageClasses);
           const pagination = extractPagination(data);
 
-          console.log(`[classes-sync] Page ${pageCount + 1}: ${pageClasses.length} classes, ${matched.length} in range`);
+          console.log(`[classes-sync] Page ${pageCount + 1}: ${pageClasses.length} classes, ${matched.length} in range, hasMore=${pagination.hasMore}`);
           collected.push(...matched);
 
-          // Early exit: if all classes on this page are past the target range, stop
+          // Early exit: if all classes on this page are outside the target range, stop
           if (allPastEndDate(pageClasses)) {
             console.log(`[classes-sync] All classes on page ${pageCount + 1} are past ${endDate}, stopping`);
             break;
           }
+          if (allBeforeStartDate(pageClasses)) {
+            console.log(`[classes-sync] All classes on page ${pageCount + 1} are before ${startDate}, stopping`);
+            break;
+          }
 
-          cursor = pagination.nextCursor;
-          if (pagination.hasMore === false) cursor = undefined;
+          // Use hasMore + nextStartAfterId to continue
+          if (pagination.hasMore === false || !pagination.nextStartAfterId) {
+            break;
+          }
+          startAfterId = pagination.nextStartAfterId;
           pageCount++;
         } catch (err) {
           console.log(`[classes-sync] Pagination error on page ${pageCount + 1}: ${err}`);
@@ -184,17 +202,20 @@ Deno.serve(async (req) => {
           const lastDate = extractClassDate(all[all.length - 1]);
           const isReversed = firstDate && lastDate && firstDate > lastDate;
 
-          console.log(`[classes-sync] Strategy A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window, nextCursor=${pagination.nextCursor ?? 'none'}`);
+          console.log(`[classes-sync] Strategy A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
 
-          if (matched.length > 0) {
+          // Even if page 1 has 0 matches, if reversed and hasMore, the next pages
+          // go backwards in time and may contain our target range
+          const shouldPaginate = pagination.hasMore && pagination.nextStartAfterId && isReversed;
+
+          if (matched.length > 0 || shouldPaginate) {
             allClasses.push(...matched);
             strategy = `reverse_sort:${Object.values(params).join(',')}`;
             totalPages = 1;
 
-            // Paginate for more
-            if (pagination.nextCursor) {
-              const { classes: more, pageCount } = await paginateWithCursor(
-                pagination.nextCursor, 1, classesBaseUrl, params as Record<string, string>
+            if (pagination.hasMore && pagination.nextStartAfterId) {
+              const { classes: more, pageCount } = await paginateWithStartAfter(
+                pagination.nextStartAfterId, 1, classesBaseUrl, params as Record<string, string>
               );
               allClasses.push(...more);
               totalPages = pageCount;
@@ -239,16 +260,16 @@ Deno.serve(async (req) => {
             const firstDate = extractClassDate(all[0]);
             const lastDate = extractClassDate(all[all.length - 1]);
 
-            console.log(`[classes-sync] Strategy B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window, nextCursor=${pagination.nextCursor ?? 'none'}`);
+            console.log(`[classes-sync] Strategy B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
             if (matched.length > 0 || all.length > 0) {
               allClasses.push(...matched);
               strategy = 'cursor_skip_ahead';
               totalPages = 1;
 
               // Paginate for more
-              if (pagination.nextCursor) {
-                const { classes: more, pageCount } = await paginateWithCursor(
-                  pagination.nextCursor, 1, classesBaseUrl
+              if (pagination.hasMore && pagination.nextStartAfterId) {
+                const { classes: more, pageCount } = await paginateWithStartAfter(
+                  pagination.nextStartAfterId, 1, classesBaseUrl
                 );
                 allClasses.push(...more);
                 totalPages = pageCount;
@@ -281,15 +302,15 @@ Deno.serve(async (req) => {
           const matched = filterToRange(all);
           const pagination = extractPagination(data);
 
-          console.log(`[classes-sync] Strategy C: Plain fetch returned ${all.length} classes, ${matched.length} in target window, nextCursor=${pagination.nextCursor ?? 'none'}`);
+          console.log(`[classes-sync] Strategy C: Plain fetch returned ${all.length} classes, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
           allClasses.push(...matched);
           strategy = 'plain_first_page';
           totalPages = 1;
 
           // Paginate for more
-          if (pagination.nextCursor) {
-            const { classes: more, pageCount } = await paginateWithCursor(
-              pagination.nextCursor, 1, classesBaseUrl
+          if (pagination.hasMore && pagination.nextStartAfterId) {
+            const { classes: more, pageCount } = await paginateWithStartAfter(
+              pagination.nextStartAfterId, 1, classesBaseUrl
             );
             allClasses.push(...more);
             totalPages = pageCount;

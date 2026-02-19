@@ -1,27 +1,56 @@
 
 
-## Add Reverse Sort Strategy to Classes Sync
+## Add Cursor-Based Pagination to Classes Sync
 
 ### Problem
-The `sync-arketa-classes` function only fetches the first page of classes in default (oldest-first) order, returning records from Jul-Aug 2024. It lacks the reverse sort strategy already proven to work in the reservations sync, which successfully retrieves recent data (Apr-Dec 2026).
+The `sync-arketa-classes` function currently fetches only the first page of results and applies local date filtering. This limits it to ~500 records per call. However, the Arketa API does support cursor-based pagination via `pagination.nextCursor` and `start_after` -- this is already used successfully in the backfill and clients sync functions.
+
+The known constraint is that *page-number-based* pagination and *date query parameters* cause 500 errors. Cursor-based pagination (`start_after`) may work fine, as evidenced by the backfill function paginating through classes without issues.
 
 ### Solution
-Add the same multi-strategy fetch logic from `sync-arketa-reservations` to `sync-arketa-classes`, trying reverse sort parameters first, then cursor skip-ahead, then falling back to the plain first page.
+Add a pagination loop to the classes sync that follows `pagination.nextCursor` from the API response, continuing to fetch pages until either:
+- No more pages (`hasMore` is false or no `nextCursor`)
+- The fetched classes are past the target date range (no point continuing)
+- A safety cap is hit (e.g., 30 pages to stay within the 60-second gateway timeout)
 
 ### Technical Details
 
 **File:** `supabase/functions/sync-arketa-classes/index.ts`
 
-1. **Replace the single fetch block** (lines 56-83) with a 3-tier strategy:
-   - **Strategy A (Reverse Sort):** Try sort params (`sort=created_at&order=desc`, `sort=start_time&order=desc`, etc.) to get newest classes on page 1
-   - **Strategy B (Cursor Skip-ahead):** Query `arketa_classes` for a recent `external_id` and use it as `start_after` to jump past old records
-   - **Strategy C (Plain Fallback):** Original behavior -- fetch first page in default order
+**Changes to each strategy tier:**
 
-2. **Add local date filtering:** After fetching, filter results to only include classes within the requested `startDate`-`endDate` range (already computed on lines 46-52)
+1. **Strategy A (Reverse Sort):** After the initial fetch, check `response.pagination.nextCursor`. If present and we still need more data, loop with `start_after` cursor until we've covered the target date range or hit the page cap.
 
-3. **Add logging:** Include console logs for each strategy attempt showing record counts and date ranges returned, matching the pattern used in the reservations sync
+2. **Strategy B (Cursor Skip-ahead):** Same pagination loop -- after the initial skip-ahead fetch, continue following cursors.
 
-4. **Return metadata:** Add `strategy` field to the response JSON so callers know which tier succeeded
+3. **Strategy C (Plain Fallback):** Same pagination loop -- follow cursors from the plain first page forward.
 
-The staging insert, RPC upsert, and response logic remain unchanged -- only the fetch portion is replaced.
+**Pagination loop logic (shared across all strategies):**
+```text
+let cursor = response.pagination?.nextCursor
+let pageCount = 1
+const MAX_PAGES = 30
+
+while (cursor && pageCount < MAX_PAGES) {
+  fetch with start_after = cursor
+  parse classes from response
+  filter to date range
+  add matches to allClasses
+  
+  // Early exit: if all classes in this page are past endDate, stop
+  cursor = response.pagination?.nextCursor
+  pageCount++
+}
+```
+
+**Safety measures:**
+- MAX_PAGES cap of 30 to stay within the 60-second timeout
+- Early termination if a page returns classes entirely outside (after) the target date range
+- If any page returns a 500, stop pagination gracefully and use what we have so far
+- Log page count and total classes fetched for debugging
+
+**Response updates:**
+- Add `pagesFetched` to the response JSON alongside existing `strategy` field
+
+No changes to the staging insert, RPC upsert, or other downstream logic.
 

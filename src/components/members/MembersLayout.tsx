@@ -13,7 +13,7 @@ function MembersHeader({ title }: { title: string }) {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background">
+    <header className="sticky top-0 z-50 border-b border-border bg-background shrink-0">
       <div className="flex h-20 items-center justify-between px-4 md:px-6">
         <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
           {title}
@@ -35,11 +35,11 @@ function MembersHeader({ title }: { title: string }) {
 export function MembersLayout({ children, title }: MembersLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <MembersSidebar />
-        <div className="flex flex-col flex-1">
-          <MembersHeader title={title} />
-          <main className="flex-1 p-6 overflow-auto">
+      <div className="min-h-screen flex flex-col w-full bg-background">
+        <MembersHeader title={title} />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <MembersSidebar />
+          <main className="flex-1 p-6 overflow-auto min-w-0">
             {children}
           </main>
         </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CheckSquare, ChevronDown, ChevronRight, Clock, Wifi, WifiOff, Cloud } from "lucide-react";
@@ -210,11 +210,16 @@ export function EmbeddedChecklist() {
   }, [isSyncing, queryClient]);
 
   // Sync pending completions when coming online
+  const hasTriedSyncRef = useRef(false);
   useEffect(() => {
-    if (isOnline) {
+    if (isOnline && !hasTriedSyncRef.current) {
+      hasTriedSyncRef.current = true;
       syncPendingCompletions();
     }
-  }, [isOnline, syncPendingCompletions]);
+    if (!isOnline) {
+      hasTriedSyncRef.current = false;
+    }
+  }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get current user
   const { data: userData } = useQuery({

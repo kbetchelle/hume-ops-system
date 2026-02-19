@@ -108,9 +108,9 @@ export function MobileChecklistItem({
       )}
       style={{ padding: '10px' }}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         {/* Task component (checkbox, photo button, etc.) */}
-        <div className="flex-shrink-0 pt-1">
+        <div className="flex-shrink-0">
           {renderTaskComponent()}
         </div>
 

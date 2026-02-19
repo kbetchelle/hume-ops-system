@@ -412,7 +412,7 @@ export function QuickLinksManagement() {
         <div className="space-y-3">
           {(groups ?? []).map((group) => (
             <Card key={group.id} className="rounded-none">
-              <CardContent className="px-0 py-2">
+              <CardContent className="p-[10px]">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

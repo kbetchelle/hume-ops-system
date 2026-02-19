@@ -47,9 +47,15 @@ export function RichTextEditor({
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false);
   const isInitializedRef = useRef(false);
   const lastExternalValueRef = useRef(value);
+  const isInternalChangeRef = useRef(false);
 
   // Set initial value on mount, and re-sync when value changes externally
   useEffect(() => {
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
+      lastExternalValueRef.current = value;
+      return;
+    }
     if (editorRef.current && (!isInitializedRef.current || value !== lastExternalValueRef.current)) {
       editorRef.current.innerHTML = sanitizeHtml(value);
       isInitializedRef.current = true;
@@ -61,6 +67,7 @@ export function RichTextEditor({
   const execCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
     if (editorRef.current) {
+      isInternalChangeRef.current = true;
       onChange(editorRef.current.innerHTML);
       editorRef.current.focus();
     }
@@ -110,6 +117,7 @@ export function RichTextEditor({
   // Handle content change
   const handleInput = () => {
     if (editorRef.current) {
+      isInternalChangeRef.current = true;
       onChange(editorRef.current.innerHTML);
     }
   };

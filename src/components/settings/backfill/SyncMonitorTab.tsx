@@ -150,7 +150,7 @@ export default function SyncMonitorTab() {
             <Activity className="h-4 w-4 text-primary" />
             Active Syncs
             {(activeJobs?.length ?? 0) > 0 && (
-              <Badge className="bg-primary">{activeJobs?.length} running</Badge>
+              <Badge className="bg-transparent">{activeJobs?.length} running</Badge>
             )}
           </CardTitle>
         </CardHeader>

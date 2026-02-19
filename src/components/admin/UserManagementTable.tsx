@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AdminUser, useUpdateUserRoles, useToggleUserDeactivation, useResetUserPassword } from "@/hooks/useAdminUsers";
+import { AdminUser, useUpdateUserRoles, useUpdatePrimaryRole, useToggleUserDeactivation, useResetUserPassword } from "@/hooks/useAdminUsers";
+import { getPrimaryRoleFromAppRoles } from "@/hooks/useUserRoles";
 import { AppRole, ROLES } from "@/types/roles";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
   const [resettingPasswordUser, setResettingPasswordUser] = useState<AdminUser | null>(null);
   
   const updateRoles = useUpdateUserRoles();
+  const updatePrimaryRole = useUpdatePrimaryRole();
   const toggleDeactivation = useToggleUserDeactivation();
   const resetPassword = useResetUserPassword();
 
@@ -99,6 +101,23 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
     }
   };
 
+  const getEffectivePrimaryRole = (user: AdminUser): AppRole | null => {
+    if (user.roles.length === 0) return null;
+    const stored = user.primary_role;
+    return stored != null && user.roles.includes(stored)
+      ? stored
+      : getPrimaryRoleFromAppRoles(user.roles);
+  };
+
+  const handlePrimaryRoleChange = async (userId: string, role: AppRole) => {
+    try {
+      await updatePrimaryRole.mutateAsync({ userId, primaryRole: role });
+      toast.success("Primary role updated");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to update primary role");
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -150,6 +169,9 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                 Roles
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
+                Primary role
+              </TableHead>
+              <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
                 Status
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
@@ -194,6 +216,32 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                       <span className="text-[10px] text-muted-foreground">No roles</span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {user.roles.length === 0 ? (
+                    <span className="text-[10px] text-muted-foreground">—</span>
+                  ) : (
+                    <Select
+                      value={getEffectivePrimaryRole(user) ?? ""}
+                      onValueChange={(value) => handlePrimaryRoleChange(user.user_id, value as AppRole)}
+                      disabled={updatePrimaryRole.isPending && updatePrimaryRole.variables?.userId === user.user_id}
+                    >
+                      <SelectTrigger className="w-[10rem] rounded-none border-foreground h-8 text-[10px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-none border-foreground">
+                        {user.roles.map((role) => (
+                          <SelectItem
+                            key={role}
+                            value={role}
+                            className="text-[10px] uppercase tracking-widest"
+                          >
+                            {getRoleLabel(role)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </TableCell>
                 <TableCell>
                   {user.deactivated ? (

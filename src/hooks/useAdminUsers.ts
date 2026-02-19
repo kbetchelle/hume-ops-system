@@ -10,6 +10,7 @@ export interface AdminUser {
   deactivated: boolean;
   created_at: string;
   roles: AppRole[];
+  primary_role?: AppRole | null;
 }
 
 export function useAdminUsers() {
@@ -39,6 +40,32 @@ export function useUpdateUserRoles() {
     },
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["userRoles", userId] });
+    },
+  });
+}
+
+export function useUpdatePrimaryRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      primaryRole,
+    }: {
+      userId: string;
+      primaryRole: AppRole | null;
+    }) => {
+      const { error } = await supabase.rpc("admin_set_primary_role", {
+        _target_user_id: userId,
+        _primary_role: primaryRole,
+      });
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
       queryClient.invalidateQueries({ queryKey: ["userRoles", userId] });
     },
   });

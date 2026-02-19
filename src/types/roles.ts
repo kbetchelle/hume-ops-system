@@ -83,6 +83,7 @@ export interface UserProfile {
   approved_by?: string | null;
   approved_at?: string | null;
   approval_notes?: string | null;
+  primary_role?: AppRole | null;
   created_at: string;
   updated_at: string;
 }

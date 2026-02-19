@@ -31,14 +31,17 @@ export default function Dashboard() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Redirect to role-appropriate dashboard
+  // Redirect to role-appropriate dashboard (stored primary_role if valid, else highest-privilege role)
   if (roles && roles.length > 0) {
-    const primaryRole = getPrimaryRole(roles);
+    const effectivePrimary =
+      profile?.primary_role && roles.some((r) => r.role === profile.primary_role)
+        ? profile.primary_role
+        : getPrimaryRole(roles);
     // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:26',message:'Redirecting to role dashboard',data:{primaryRole,dashboardPath:primaryRole?getRoleDashboardPath(primaryRole):'none',allRoles:roles.map(r=>r.role)},timestamp:Date.now(),hypothesisId:'H5,H11'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:26',message:'Redirecting to role dashboard',data:{primaryRole:effectivePrimary,dashboardPath:effectivePrimary?getRoleDashboardPath(effectivePrimary):'none',allRoles:roles.map(r=>r.role)},timestamp:Date.now(),hypothesisId:'H5,H11'})}).catch(()=>{});
     // #endregion
-    if (primaryRole) {
-      return <Navigate to={getRoleDashboardPath(primaryRole)} replace />;
+    if (effectivePrimary) {
+      return <Navigate to={getRoleDashboardPath(effectivePrimary)} replace />;
     }
   }
 

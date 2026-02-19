@@ -105,28 +105,34 @@ export function useUpdateProfile() {
   });
 }
 
+// Privilege hierarchy (highest to lowest) for auto-picking primary role when none is stored.
+// Order preserved from original behavior; users with multiple roles get the first match here.
+const PRIMARY_ROLE_PRIORITY: AppRole[] = [
+  'admin',
+  'manager',
+  'concierge',
+  'trainer',
+  'female_spa_attendant',
+  'male_spa_attendant',
+  'floater',
+  'cafe',
+];
+
 export function getPrimaryRole(roles: UserRole[]): AppRole | null {
   if (roles.length === 0) return null;
-  
-  // Priority order for dashboard routing
-  const priority: AppRole[] = [
-    'admin',
-    'manager',
-    'concierge',
-    'trainer',
-    'female_spa_attendant',
-    'male_spa_attendant',
-    'floater',
-    'cafe',
-  ];
-  
-  for (const role of priority) {
-    if (roles.some(r => r.role === role)) {
-      return role;
-    }
+  for (const role of PRIMARY_ROLE_PRIORITY) {
+    if (roles.some(r => r.role === role)) return role;
   }
-  
   return roles[0].role;
+}
+
+/** Effective primary when given an array of role strings (e.g. from AdminUser.roles). */
+export function getPrimaryRoleFromAppRoles(roles: AppRole[]): AppRole | null {
+  if (roles.length === 0) return null;
+  for (const role of PRIMARY_ROLE_PRIORITY) {
+    if (roles.includes(role)) return role;
+  }
+  return roles[0];
 }
 
 export function getRoleDashboardPath(role: AppRole): string {

@@ -402,7 +402,7 @@ function TemplateList({
           {template.is_outdated && template.marked_outdated_by_name && template.marked_outdated_at && (
             <div className="mt-2 p-2 bg-warning/10 border border-warning/30 text-xs text-warning-foreground">
               <AlertTriangle className="h-3 w-3 inline mr-1" />
-              Marked out of date by {template.marked_outdated_by_name} on {format(new Date(template.marked_outdated_at), "MMM d, yyyy")}
+              Marked as potentially out of date on {format(new Date(template.marked_outdated_at), "MMM d, yyyy")}
             </div>
           )}
           

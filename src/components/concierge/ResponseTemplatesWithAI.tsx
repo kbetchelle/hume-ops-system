@@ -335,6 +335,7 @@ function TemplateList({
           
           <div 
             className="text-sm text-muted-foreground mt-2 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+            style={{ fontFamily: "'Aptos', 'Calibri', 'Helvetica Neue', sans-serif" }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(template.content) }}
           />
         </div>
@@ -1121,7 +1122,7 @@ export function ResponseTemplatesWithAI() {
                 </Select>
               </div>
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
                 {Object.keys(groupedTemplates).length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">
                     {canEdit && editMode ? "No templates yet. Click Add to create one." : "No templates found"}

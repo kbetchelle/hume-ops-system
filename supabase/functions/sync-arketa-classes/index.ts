@@ -2,6 +2,9 @@
  * sync-arketa-classes: Populate arketa_classes for a date range via staging.
  * Fetches from API → inserts into arketa_classes_staging → upserts to arketa_classes on (external_id, class_date) → deletes from staging.
  * See docs/ARKETA_ARCHITECTURE.md — arketa_classes is the master catalog of class_ids for reservation sync.
+ *
+ * Supports `start_after_id` parameter for cursor-based backfill: skips the 3-tier strategy
+ * and paginates forward from the given ID, returning `nextStartAfterId` and `hasMore` for chaining.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -14,6 +17,8 @@ interface SyncClassesRequest {
   startDate?: string;
   endDate?: string;
   limit?: number;
+  /** Cursor-based backfill: start pagination from this external class ID */
+  start_after_id?: string;
 }
 
 const MAX_PAGES = 30;
@@ -87,7 +92,6 @@ Deno.serve(async (req) => {
         return d && d >= startDate && d <= endDate;
       });
 
-    // Returns true if every class on the page is outside the target range (early exit signal)
     const allPastEndDate = (list: any[]): boolean => {
       if (list.length === 0) return false;
       return list.every(c => {
@@ -104,19 +108,45 @@ Deno.serve(async (req) => {
       });
     };
 
+    // --- Fetch location map → room_name lookup ---
+    // HUME is the parent location; Arketa "locations" are actually rooms within HUME
+    const roomNameMap = new Map<string, string>();
+    try {
+      const locUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/locations`;
+      console.log('[classes-sync] Fetching locations for room name lookup...');
+      const { response: locResp } = await fetchWithRetry(locUrl, { method: 'GET', headers });
+      if (locResp.ok) {
+        const locData = await locResp.json();
+        const locItems = (locData as any)?.items ?? [];
+        for (const loc of locItems) {
+          if (loc.id && loc.name) roomNameMap.set(String(loc.id), loc.name);
+        }
+        console.log(`[classes-sync] Loaded ${roomNameMap.size} room names from locations`);
+      } else {
+        console.log(`[classes-sync] Locations fetch returned ${locResp.status}, proceeding without room names`);
+      }
+    } catch (err) {
+      console.log(`[classes-sync] Locations fetch failed: ${err}, proceeding without room names`);
+    }
+
+    const classesBaseUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`;
+
     /**
      * Paginate using start_after ID and hasMore flag from Arketa API.
-     * Returns the classes collected across all subsequent pages plus total page count.
+     * Returns the classes collected, total page count, and the last pagination cursor.
      */
     const paginateWithStartAfter = async (
       initialStartAfterId: string | undefined,
       initialPageCount: number,
       baseUrl: string,
       extraParams?: Record<string, string>,
-    ): Promise<{ classes: any[]; pageCount: number }> => {
+      skipDateFilter = false,
+    ): Promise<{ classes: any[]; pageCount: number; lastCursorId?: string; apiHasMore?: boolean }> => {
       const collected: any[] = [];
       let startAfterId = initialStartAfterId;
       let pageCount = initialPageCount;
+      let lastCursorId: string | undefined;
+      let apiHasMore: boolean | undefined;
 
       while (startAfterId && pageCount < MAX_PAGES) {
         try {
@@ -137,23 +167,27 @@ Deno.serve(async (req) => {
 
           const data = await response.json();
           const pageClasses = parseClassList(data);
-          const matched = filterToRange(pageClasses);
+          const matched = skipDateFilter ? pageClasses : filterToRange(pageClasses);
           const pagination = extractPagination(data);
 
           console.log(`[classes-sync] Page ${pageCount + 1}: ${pageClasses.length} classes, ${matched.length} in range, hasMore=${pagination.hasMore}`);
           collected.push(...matched);
 
-          // Early exit: if all classes on this page are outside the target range, stop
-          if (allPastEndDate(pageClasses)) {
-            console.log(`[classes-sync] All classes on page ${pageCount + 1} are past ${endDate}, stopping`);
-            break;
-          }
-          if (allBeforeStartDate(pageClasses)) {
-            console.log(`[classes-sync] All classes on page ${pageCount + 1} are before ${startDate}, stopping`);
-            break;
+          // Track last cursor for returning to caller
+          lastCursorId = pagination.nextStartAfterId;
+          apiHasMore = pagination.hasMore;
+
+          if (!skipDateFilter) {
+            if (allPastEndDate(pageClasses)) {
+              console.log(`[classes-sync] All classes on page ${pageCount + 1} are past ${endDate}, stopping`);
+              break;
+            }
+            if (allBeforeStartDate(pageClasses)) {
+              console.log(`[classes-sync] All classes on page ${pageCount + 1} are before ${startDate}, stopping`);
+              break;
+            }
           }
 
-          // Use hasMore + nextStartAfterId to continue
           if (pagination.hasMore === false || !pagination.nextStartAfterId) {
             break;
           }
@@ -165,110 +199,174 @@ Deno.serve(async (req) => {
         }
       }
 
-      return { classes: collected, pageCount };
+      return { classes: collected, pageCount, lastCursorId, apiHasMore };
     };
 
-    // --- Fetch location map for name lookups ---
-    const locationMap = new Map<string, string>();
-    try {
-      const locUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/locations`;
-      console.log('[classes-sync] Fetching locations for name lookup...');
-      const { response: locResp } = await fetchWithRetry(locUrl, { method: 'GET', headers });
-      if (locResp.ok) {
-        const locData = await locResp.json();
-        const locItems = (locData as any)?.items ?? [];
-        for (const loc of locItems) {
-          if (loc.id && loc.name) locationMap.set(String(loc.id), loc.name);
-        }
-        console.log(`[classes-sync] Loaded ${locationMap.size} locations`);
-      } else {
-        console.log(`[classes-sync] Locations fetch returned ${locResp.status}, proceeding without names`);
-      }
-    } catch (err) {
-      console.log(`[classes-sync] Locations fetch failed: ${err}, proceeding without names`);
-    }
-
-    // --- 3-tier fetch strategy ---
+    // --- Fetch classes ---
     const allClasses: any[] = [];
     let strategy = 'none';
     let totalPages = 0;
-    const classesBaseUrl = `${ARKETA_URLS.prod}/${ARKETA_PARTNER_ID}/classes`;
+    let nextStartAfterId: string | undefined;
+    let hasMore = false;
 
-    // Strategy A: Try reverse sort params to get newest classes first
-    const sortParams = [
-      { sort: 'created_at', order: 'desc' },
-      { sort: 'start_time', order: 'desc' },
-      { sort_by: 'date', sort_order: 'desc' },
-      { order_by: 'start_date', direction: 'desc' },
-    ];
+    // ── Cursor-based backfill mode ──
+    // If start_after_id is provided, skip the 3-tier strategy and paginate directly
+    if (body.start_after_id) {
+      console.log(`[classes-sync] Cursor backfill mode: start_after_id=${body.start_after_id}`);
+      strategy = 'cursor_backfill';
 
-    for (const params of sortParams) {
-      if (allClasses.length > 0) break;
-      try {
-        const url = new URL(classesBaseUrl);
-        url.searchParams.set('limit', String(limit));
-        for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+      // First page
+      const url = new URL(classesBaseUrl);
+      url.searchParams.set('limit', String(limit));
+      url.searchParams.set('start_after', body.start_after_id);
 
-        console.log(`[classes-sync] Strategy A: Trying reverse sort with ${JSON.stringify(params)}...`);
-        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+      const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+      if (response.ok) {
+        const data = await response.json();
+        const pageClasses = parseClassList(data);
+        const matched = filterToRange(pageClasses);
+        const pagination = extractPagination(data);
 
-        if (response.ok) {
-          const data = await response.json();
-          const all = parseClassList(data);
-          const matched = filterToRange(all);
-          const pagination = extractPagination(data);
+        console.log(`[classes-sync] Cursor backfill page 1: ${pageClasses.length} classes, ${matched.length} in range, hasMore=${pagination.hasMore}`);
+        allClasses.push(...matched);
+        totalPages = 1;
+        nextStartAfterId = pagination.nextStartAfterId;
+        hasMore = pagination.hasMore ?? false;
 
-          const firstDate = extractClassDate(all[0]);
-          const lastDate = extractClassDate(all[all.length - 1]);
-          const isReversed = firstDate && lastDate && firstDate > lastDate;
-
-          console.log(`[classes-sync] Strategy A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
-
-          // Even if page 1 has 0 matches, if reversed and hasMore, the next pages
-          // go backwards in time and may contain our target range
-          const shouldPaginate = pagination.hasMore && pagination.nextStartAfterId && isReversed;
-
-          if (matched.length > 0 || shouldPaginate) {
-            allClasses.push(...matched);
-            strategy = `reverse_sort:${Object.values(params).join(',')}`;
-            totalPages = 1;
-
-            if (pagination.hasMore && pagination.nextStartAfterId) {
-              const { classes: more, pageCount } = await paginateWithStartAfter(
-                pagination.nextStartAfterId, 1, classesBaseUrl, params as Record<string, string>
-              );
-              allClasses.push(...more);
-              totalPages = pageCount;
-              console.log(`[classes-sync] Strategy A pagination: ${more.length} additional classes across ${pageCount - 1} extra pages`);
-            }
-            break;
-          }
-          if (!isReversed) continue;
-        } else {
-          console.log(`[classes-sync] Strategy A: sort ${JSON.stringify(params)} returned ${response.status}, trying next...`);
+        // Continue paginating
+        if (pagination.hasMore && pagination.nextStartAfterId) {
+          const { classes: more, pageCount, lastCursorId, apiHasMore } = await paginateWithStartAfter(
+            pagination.nextStartAfterId, 1, classesBaseUrl
+          );
+          allClasses.push(...more);
+          totalPages = pageCount;
+          nextStartAfterId = lastCursorId;
+          hasMore = apiHasMore ?? false;
         }
-      } catch {
-        continue;
+      } else {
+        console.log(`[classes-sync] Cursor backfill first page returned ${response.status}`);
       }
-    }
+    } else {
+      // ── Standard 3-tier fetch strategy ──
 
-    // Strategy B: Cursor skip-ahead using a known recent class ID from the DB
-    if (allClasses.length === 0) {
-      const { data: cursorRow } = await supabase
-        .from('arketa_classes')
-        .select('external_id, class_date')
-        .lt('class_date', startDate)
-        .order('class_date', { ascending: false })
-        .limit(1);
+      // Strategy A: Try reverse sort params to get newest classes first
+      const sortParams = [
+        { sort: 'created_at', order: 'desc' },
+        { sort: 'start_time', order: 'desc' },
+        { sort_by: 'date', sort_order: 'desc' },
+        { order_by: 'start_date', direction: 'desc' },
+      ];
 
-      const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
-
-      if (skipCursor) {
-        console.log(`[classes-sync] Strategy B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
+      for (const params of sortParams) {
+        if (allClasses.length > 0) break;
         try {
           const url = new URL(classesBaseUrl);
           url.searchParams.set('limit', String(limit));
-          url.searchParams.set('start_after', skipCursor.external_id);
+          for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+          console.log(`[classes-sync] Strategy A: Trying reverse sort with ${JSON.stringify(params)}...`);
+          const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+
+          if (response.ok) {
+            const data = await response.json();
+            const all = parseClassList(data);
+            const matched = filterToRange(all);
+            const pagination = extractPagination(data);
+
+            const firstDate = extractClassDate(all[0]);
+            const lastDate = extractClassDate(all[all.length - 1]);
+            const isReversed = firstDate && lastDate && firstDate > lastDate;
+
+            console.log(`[classes-sync] Strategy A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
+
+            const shouldPaginate = pagination.hasMore && pagination.nextStartAfterId && isReversed;
+
+            if (matched.length > 0 || shouldPaginate) {
+              allClasses.push(...matched);
+              strategy = `reverse_sort:${Object.values(params).join(',')}`;
+              totalPages = 1;
+
+              if (pagination.hasMore && pagination.nextStartAfterId) {
+                const { classes: more, pageCount, lastCursorId, apiHasMore } = await paginateWithStartAfter(
+                  pagination.nextStartAfterId, 1, classesBaseUrl, params as Record<string, string>
+                );
+                allClasses.push(...more);
+                totalPages = pageCount;
+                nextStartAfterId = lastCursorId;
+                hasMore = apiHasMore ?? false;
+              }
+              break;
+            }
+            if (!isReversed) continue;
+          } else {
+            console.log(`[classes-sync] Strategy A: sort ${JSON.stringify(params)} returned ${response.status}, trying next...`);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      // Strategy B: Cursor skip-ahead using a known recent class ID from the DB
+      if (allClasses.length === 0) {
+        const { data: cursorRow } = await supabase
+          .from('arketa_classes')
+          .select('external_id, class_date')
+          .lt('class_date', startDate)
+          .order('class_date', { ascending: false })
+          .limit(1);
+
+        const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
+
+        if (skipCursor) {
+          console.log(`[classes-sync] Strategy B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
+          try {
+            const url = new URL(classesBaseUrl);
+            url.searchParams.set('limit', String(limit));
+            url.searchParams.set('start_after', skipCursor.external_id);
+
+            const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+
+            if (response.ok) {
+              const data = await response.json();
+              const all = parseClassList(data);
+              const matched = filterToRange(all);
+              const pagination = extractPagination(data);
+              const firstDate = extractClassDate(all[0]);
+              const lastDate = extractClassDate(all[all.length - 1]);
+
+              console.log(`[classes-sync] Strategy B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
+              if (matched.length > 0 || all.length > 0) {
+                allClasses.push(...matched);
+                strategy = 'cursor_skip_ahead';
+                totalPages = 1;
+
+                if (pagination.hasMore && pagination.nextStartAfterId) {
+                  const { classes: more, pageCount, lastCursorId, apiHasMore } = await paginateWithStartAfter(
+                    pagination.nextStartAfterId, 1, classesBaseUrl
+                  );
+                  allClasses.push(...more);
+                  totalPages = pageCount;
+                  nextStartAfterId = lastCursorId;
+                  hasMore = apiHasMore ?? false;
+                }
+              }
+            } else {
+              console.log(`[classes-sync] Strategy B: Cursor skip returned ${response.status}`);
+            }
+          } catch (err) {
+            console.log(`[classes-sync] Strategy B: Cursor skip failed: ${err}`);
+          }
+        } else {
+          console.log('[classes-sync] Strategy B: No earlier class found in DB for cursor skip-ahead');
+        }
+      }
+
+      // Strategy C: Plain first page (original fallback behavior)
+      if (allClasses.length === 0) {
+        console.log('[classes-sync] Strategy C: Falling back to plain first page fetch...');
+        try {
+          const url = new URL(classesBaseUrl);
+          url.searchParams.set('limit', String(limit));
 
           const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 
@@ -277,68 +375,25 @@ Deno.serve(async (req) => {
             const all = parseClassList(data);
             const matched = filterToRange(all);
             const pagination = extractPagination(data);
-            const firstDate = extractClassDate(all[0]);
-            const lastDate = extractClassDate(all[all.length - 1]);
 
-            console.log(`[classes-sync] Strategy B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
-            if (matched.length > 0 || all.length > 0) {
-              allClasses.push(...matched);
-              strategy = 'cursor_skip_ahead';
-              totalPages = 1;
+            console.log(`[classes-sync] Strategy C: Plain fetch returned ${all.length} classes, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
+            allClasses.push(...matched);
+            strategy = 'plain_first_page';
+            totalPages = 1;
 
-              // Paginate for more
-              if (pagination.hasMore && pagination.nextStartAfterId) {
-                const { classes: more, pageCount } = await paginateWithStartAfter(
-                  pagination.nextStartAfterId, 1, classesBaseUrl
-                );
-                allClasses.push(...more);
-                totalPages = pageCount;
-                console.log(`[classes-sync] Strategy B pagination: ${more.length} additional classes across ${pageCount - 1} extra pages`);
-              }
+            if (pagination.hasMore && pagination.nextStartAfterId) {
+              const { classes: more, pageCount, lastCursorId, apiHasMore } = await paginateWithStartAfter(
+                pagination.nextStartAfterId, 1, classesBaseUrl
+              );
+              allClasses.push(...more);
+              totalPages = pageCount;
+              nextStartAfterId = lastCursorId;
+              hasMore = apiHasMore ?? false;
             }
-          } else {
-            console.log(`[classes-sync] Strategy B: Cursor skip returned ${response.status}`);
           }
         } catch (err) {
-          console.log(`[classes-sync] Strategy B: Cursor skip failed: ${err}`);
+          console.log(`[classes-sync] Strategy C: Plain fetch failed: ${err}`);
         }
-      } else {
-        console.log('[classes-sync] Strategy B: No earlier class found in DB for cursor skip-ahead');
-      }
-    }
-
-    // Strategy C: Plain first page (original fallback behavior)
-    if (allClasses.length === 0) {
-      console.log('[classes-sync] Strategy C: Falling back to plain first page fetch...');
-      try {
-        const url = new URL(classesBaseUrl);
-        url.searchParams.set('limit', String(limit));
-
-        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-
-        if (response.ok) {
-          const data = await response.json();
-          const all = parseClassList(data);
-          const matched = filterToRange(all);
-          const pagination = extractPagination(data);
-
-          console.log(`[classes-sync] Strategy C: Plain fetch returned ${all.length} classes, ${matched.length} in target window, hasMore=${pagination.hasMore}, nextStartAfterId=${pagination.nextStartAfterId ?? 'none'}`);
-          allClasses.push(...matched);
-          strategy = 'plain_first_page';
-          totalPages = 1;
-
-          // Paginate for more
-          if (pagination.hasMore && pagination.nextStartAfterId) {
-            const { classes: more, pageCount } = await paginateWithStartAfter(
-              pagination.nextStartAfterId, 1, classesBaseUrl
-            );
-            allClasses.push(...more);
-            totalPages = pageCount;
-            console.log(`[classes-sync] Strategy C pagination: ${more.length} additional classes across ${pageCount - 1} extra pages`);
-          }
-        }
-      } catch (err) {
-        console.log(`[classes-sync] Strategy C: Plain fetch failed: ${err}`);
       }
     }
 
@@ -364,6 +419,10 @@ Deno.serve(async (req) => {
         year: 'numeric', month: '2-digit', day: '2-digit',
       }).format(new Date(startTime));
 
+      // location_name = 'HUME' always; room_name from locations API lookup
+      const locationId = cls.location_id ?? null;
+      const roomName = locationId ? (roomNameMap.get(String(locationId)) ?? null) : null;
+
       stagingRows.push({
         external_id: String(cls.id),
         class_date: classDate,
@@ -378,9 +437,9 @@ Deno.serve(async (req) => {
         booked_count: cls.total_booked ?? cls.booked_count ?? 0,
         waitlist_count: cls.waitlist_count ?? 0,
         status: cls.status ?? 'scheduled',
-        room_name: cls.room?.name ?? null,
-        location_id: cls.location_id ?? null,
-        location_name: cls.location_id ? (locationMap.get(String(cls.location_id)) ?? null) : null,
+        room_name: roomName,
+        location_id: locationId,
+        location_name: 'HUME',
         updated_at_api: cls.updated_at ?? cls.updatedAt ?? null,
         raw_data: cls,
         synced_at: syncedAt,
@@ -424,6 +483,9 @@ Deno.serve(async (req) => {
         startDate,
         endDate,
         strategy,
+        // Cursor info for backfill chaining
+        nextStartAfterId: nextStartAfterId ?? null,
+        hasMore,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -355,7 +355,7 @@ export function EmbeddedChecklist() {
     const groups = new Map<string, ChecklistItemData[]>();
 
     items.forEach((item) => {
-      const timeHint = item.time_hint || "No Time Specified";
+      const timeHint = item.time_hint || "Closing Checklist";
       if (!groups.has(timeHint)) {
         groups.set(timeHint, []);
       }

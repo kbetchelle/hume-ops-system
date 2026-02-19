@@ -69,7 +69,7 @@ export function MembersSidebar() {
                       className="flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors duration-200 hover:bg-muted/50 text-muted-foreground"
                       activeClassName="bg-muted text-foreground font-medium"
                     >
-                      <span className="text-[10px] text-muted-foreground w-4 shrink-0">{item.number}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{item.number}</span>
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>

@@ -76,6 +76,7 @@ export function RoleSwitcher({ collapsed = false, variant = "sidebar" }: RoleSwi
             isSidebar && collapsed && "h-8 w-8 p-0",
             isHeader && "h-8"
           )}
+          data-walkthrough="role-switcher"
         >
           {isSidebar && !collapsed && (
             <span className="pl-2 whitespace-normal text-left leading-tight">

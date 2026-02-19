@@ -1,7 +1,7 @@
-import { ReactNode, useState, useRef, useCallback, useEffect } from "react";
+import { ReactNode, useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
-import { useUserProfile } from "@/hooks/useUserRoles";
+import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { NotificationBell } from "@/components/concierge/NotificationBell";
 import { useActiveRole } from "@/hooks/useActiveRole";
@@ -19,6 +19,9 @@ import { NavLink } from "@/components/NavLink";
 import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox, Download } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 import { useInAppNotifications } from "@/hooks/useInAppNotifications";
+import { useNeedsWalkthrough, useMarkWalkthroughCompleted } from "@/hooks/useWalkthroughState";
+import { getWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
+import { WalkthroughOverlay } from "@/components/walkthrough";
 
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
@@ -272,6 +275,7 @@ function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boole
             )}
             activeClassName="bg-muted text-foreground font-medium"
             onClick={handleClick}
+            data-walkthrough="resources"
           >
             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
             {!collapsed && (
@@ -397,6 +401,12 @@ function SidebarNav() {
   // Check if dev tools items are active
   const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing");
 
+  const walkthroughIdByUrl: Record<string, string> = {
+    "/dashboard/package-tracking": "package-tracking",
+    "/dashboard/notification-center": "notification-center",
+    "/dashboard/lost-and-found": "lost-and-found",
+  };
+
   // Helper to render a nav item (handles Resources sub-menu)
   const renderNavItem = (item: NavItem) => {
     if (item.url === "/dashboard/resources") {
@@ -405,7 +415,7 @@ function SidebarNav() {
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild>
-          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+          <NavLink to={item.url} end={item.url === "/dashboard" || item.url === bohChecklistUrl} className={cn("flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium" data-walkthrough={walkthroughIdByUrl[item.url]}>
             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
             {!collapsed && <span>{item.title}</span>}
           </NavLink>
@@ -475,10 +485,11 @@ function SidebarNav() {
                 if (item.url === "/dashboard/resources") {
                   return <ResourcesNavItem key={item.url} item={item} collapsed={collapsed} />;
                 }
+                const walkthroughId = { "/dashboard/package-tracking": "package-tracking", "/dashboard/lost-and-found": "lost-and-found" }[item.url];
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} end={item.url === "/dashboard"} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium" data-walkthrough={walkthroughId}>
                         <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -505,7 +516,7 @@ function SidebarNav() {
               <SidebarMenu>
                 {managerToolsItems.map(item => <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">
+                      <NavLink to={item.url} className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium" data-walkthrough={item.url === "/dashboard/notification-center" ? "notification-center" : item.url === "/dashboard/package-tracking" ? "package-tracking" : undefined}>
                         <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                         <span>{item.title}</span>
                       </NavLink>
@@ -620,7 +631,7 @@ function UserInfoDropdown({
   return <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")}>
+          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")} data-walkthrough="user-menu">
             {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
                 Hi, {getFirstName(profile?.full_name)}
               </span>}
@@ -688,7 +699,33 @@ export function DashboardLayout({
   title
 }: DashboardLayoutProps) {
   useInAppNotifications();
-  return <SidebarProvider>
+  const { user } = useAuthContext();
+  const { data: profile } = useUserProfile(user?.id);
+  const { data: roles } = useUserRoles(user?.id);
+  const { activeRole, availableRoles } = useActiveRole();
+  const needsWalkthrough = useNeedsWalkthrough();
+  const markWalkthroughCompleted = useMarkWalkthroughCompleted();
+  const isBoh = activeRole !== null && isBohWalkthroughRole(activeRole);
+  const hasAutoCompletedBohRef = useRef(false);
+
+  useEffect(() => {
+    if (needsWalkthrough && isBoh && !hasAutoCompletedBohRef.current) {
+      hasAutoCompletedBohRef.current = true;
+      markWalkthroughCompleted.mutate(undefined);
+    }
+  }, [needsWalkthrough, isBoh, markWalkthroughCompleted]);
+
+  const walkthroughSteps = useMemo(() => {
+    if (!needsWalkthrough || isBoh || activeRole === null) return [];
+    const firstName = profile?.full_name?.split(" ")[0] ?? "User";
+    const hasMultipleRoles = (roles?.length ?? availableRoles?.length ?? 0) > 1;
+    return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles });
+  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length]);
+
+  const showOverlay = needsWalkthrough && !isBoh && activeRole !== null && walkthroughSteps.length > 0;
+
+  return (
+    <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
@@ -698,5 +735,12 @@ export function DashboardLayout({
           </main>
         </div>
       </div>
-    </SidebarProvider>;
+      {showOverlay && (
+        <WalkthroughOverlay
+          steps={walkthroughSteps}
+          onClose={() => {}}
+        />
+      )}
+    </SidebarProvider>
+  );
 }

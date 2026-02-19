@@ -331,7 +331,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal"
+            className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal whitespace-pre-line"
             style={
               arrowPoints
                 ? {

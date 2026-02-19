@@ -8,6 +8,69 @@ import type {
   TIMESTAMP_COLLAPSE_MINUTES,
 } from '@/types/messaging';
 
+/** Staff list item shape for building participant names */
+export interface StaffItemForConversation {
+  user_id: string;
+  full_name?: string | null;
+  email?: string | null;
+}
+
+/**
+ * Build a synthetic conversation for "new" chats (no messages yet).
+ * Used when user selects a recipient or group from NewConversationDialog.
+ */
+export function buildNewConversation(
+  key: string,
+  recipientIds: string[],
+  currentUserId: string,
+  staffList: StaffItemForConversation[],
+  options: { groupId?: string | null; groupName?: string | null } = {}
+): Conversation {
+  const participants: ConversationParticipant[] = recipientIds
+    .filter((id) => id !== currentUserId)
+    .map((userId) => {
+      const staff = staffList.find((s) => s.user_id === userId);
+      return {
+        userId,
+        name: staff?.full_name || staff?.email || 'Unknown',
+        isGroup: false,
+      };
+    });
+
+  const placeholderMessage: StaffMessage = {
+    id: `new-${key}`,
+    sender_id: null,
+    sender_name: null,
+    recipient_ids: recipientIds,
+    recipient_departments: null,
+    subject: null,
+    content: '',
+    is_sent: false,
+    is_urgent: false,
+    group_id: options.groupId || null,
+    group_name: options.groupName || null,
+    thread_id: null,
+    reply_to_id: null,
+    scheduled_at: null,
+    edited_at: null,
+    created_at: new Date(0).toISOString(),
+  };
+
+  return {
+    key,
+    participants,
+    messages: [],
+    lastMessage: placeholderMessage,
+    unreadCount: 0,
+    hasUnread: false,
+    isArchived: false,
+    isGroup: !!options.groupId,
+    groupId: options.groupId || null,
+    groupName: options.groupName || null,
+    threadId: null,
+  };
+}
+
 /**
  * Generate a unique conversation key for grouping messages
  */

@@ -42,6 +42,36 @@ export function useStaffMessages(filter?: {
 }
 
 /**
+ * Fetch scheduled messages (is_sent = false, scheduled_at in the future) for the current user as sender.
+ * Filters out past-scheduled messages to avoid confusion from failed or stale sends.
+ */
+export function useScheduledMessages() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['staff-messages-scheduled', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const nowIso = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from('staff_messages')
+        .select('*')
+        .eq('sender_id', user.id)
+        .eq('is_sent', false)
+        .not('scheduled_at', 'is', null)
+        .gt('scheduled_at', nowIso)
+        .order('scheduled_at', { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as StaffMessage[];
+    },
+    enabled: !!user?.id,
+  });
+}
+
+/**
  * Fetch message read status
  */
 export function useMessageReads() {

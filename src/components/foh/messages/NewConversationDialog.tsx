@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,62 +18,98 @@ import { useMessageGroups, useRoleGroupMembers } from '@/hooks/useMessageGroups'
 import { ROLE_GROUPS } from '@/types/messaging';
 import type { StaffMessageGroup } from '@/types/messaging';
 
+export interface NewConversationSelection {
+  type: 'private' | 'group';
+  recipientIds: string[];
+  groupId?: string;
+  groupName?: string;
+}
+
 interface NewConversationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartConversation: (recipientIds: string[], groupId?: string) => void;
+  onSelect: (selection: NewConversationSelection) => void;
+  /** 'single': click one staff/group = onSelect + close. 'multi': checkboxes + button to confirm. */
+  mode?: 'single' | 'multi';
 }
 
 export function NewConversationDialog({
   isOpen,
   onClose,
-  onStartConversation,
+  onSelect,
+  mode = 'single',
 }: NewConversationDialogProps) {
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
 
   const { data: staffList = [] } = useStaffList();
   const { data: customGroups = [] } = useMessageGroups();
 
   const handleClose = () => {
+    setSearchQuery('');
     setSelectedStaffIds([]);
     setSelectedGroupId(null);
-    setSearchQuery('');
+    setSelectedGroupName(null);
     onClose();
   };
 
-  const handleStart = () => {
-    if (selectedStaffIds.length > 0) {
-      onStartConversation(selectedStaffIds, selectedGroupId || undefined);
+  /** Individual tab: single-select — clicking a staff opens conversation with them */
+  const handleSelectStaff = (staffId: string) => {
+    if (mode === 'single') {
+      onSelect({ type: 'private', recipientIds: [staffId] });
       handleClose();
+    } else {
+      setSelectedStaffIds((prev) =>
+        prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId]
+      );
+      setSelectedGroupId(null);
+      setSelectedGroupName(null);
     }
   };
 
-  const toggleStaffSelection = (staffId: string) => {
-    setSelectedStaffIds((prev) =>
-      prev.includes(staffId)
-        ? prev.filter((id) => id !== staffId)
-        : [...prev, staffId]
-    );
+  /** Groups tab: clicking a custom group starts group conversation (or selects in multi) */
+  const handleSelectCustomGroup = (group: StaffMessageGroup) => {
+    if (mode === 'single') {
+      onSelect({
+        type: 'group',
+        recipientIds: group.member_ids,
+        groupId: group.id,
+        groupName: group.name,
+      });
+      handleClose();
+    } else {
+      setSelectedStaffIds(group.member_ids);
+      setSelectedGroupId(group.id);
+      setSelectedGroupName(group.name);
+    }
   };
 
-  const selectGroup = (group: StaffMessageGroup) => {
-    setSelectedGroupId(group.id);
-    setSelectedStaffIds(group.member_ids);
+  /** Groups tab: clicking a role group starts group conversation (or selects in multi) */
+  const handleSelectRoleGroup = (memberIds: string[], groupName: string) => {
+    if (mode === 'single') {
+      onSelect({ type: 'group', recipientIds: memberIds, groupName });
+      handleClose();
+    } else {
+      setSelectedStaffIds(memberIds);
+      setSelectedGroupId(null);
+      setSelectedGroupName(groupName);
+    }
   };
 
-  const selectRoleGroup = (roleGroupId: string, memberIds: string[]) => {
-    setSelectedGroupId(null); // Role groups don't have custom IDs
-    setSelectedStaffIds(memberIds);
+  const handleConfirmMulti = () => {
+    if (selectedStaffIds.length === 0) return;
+    onSelect({
+      type: selectedGroupId ? 'group' : 'private',
+      recipientIds: selectedStaffIds,
+      groupId: selectedGroupId || undefined,
+      groupName: selectedGroupName || undefined,
+    });
+    handleClose();
   };
 
-  const clearSelection = () => {
-    setSelectedStaffIds([]);
-    setSelectedGroupId(null);
-  };
-
-  // Filter staff by search query
+  // Filter staff by search (active only — exclude deactivated if we have that field)
   const filteredStaff = staffList.filter((staff) =>
     (staff.full_name || staff.email)
       ?.toLowerCase()
@@ -90,69 +126,61 @@ export function NewConversationDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="staff" className="w-full">
+        <Tabs defaultValue="individual" className="w-full">
           <TabsList className="grid w-full grid-cols-2 rounded-none">
-            <TabsTrigger value="staff" className="rounded-none text-xs uppercase tracking-wider">
-              Staff
+            <TabsTrigger value="individual" className="rounded-none text-xs uppercase tracking-widest">
+              Individual
             </TabsTrigger>
-            <TabsTrigger value="groups" className="rounded-none text-xs uppercase tracking-wider">
+            <TabsTrigger value="groups" className="rounded-none text-xs uppercase tracking-widest">
               Groups
             </TabsTrigger>
           </TabsList>
 
-          {/* Staff Tab */}
-          <TabsContent value="staff" className="space-y-4">
-            {/* Search */}
+          {/* Individual tab: searchable list; single-select = click to open, multi = checkboxes + confirm */}
+          <TabsContent value="individual" className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider">
+              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Search Staff
               </Label>
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name..."
-                className="rounded-none"
+                className="rounded-none text-xs"
               />
             </div>
-
-            {/* Selected Count */}
-            {selectedStaffIds.length > 0 && (
+            {mode === 'multi' && selectedStaffIds.length > 0 && (
               <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="rounded-none">
+                <Badge variant="secondary" className="rounded-none text-xs">
                   {selectedStaffIds.length} selected
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSelection}
-                  className="rounded-none text-xs"
-                >
-                  Clear
-                </Button>
               </div>
             )}
-
-            {/* Staff List */}
             <ScrollArea className="h-[400px] border rounded-none p-2">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {filteredStaff.map((staff) => {
                   const isSelected = selectedStaffIds.includes(staff.user_id);
                   return (
                     <div
                       key={staff.user_id}
-                      className="flex items-center space-x-3 p-2 hover:bg-accent rounded-none cursor-pointer"
-                      onClick={() => toggleStaffSelection(staff.user_id)}
+                      className="flex items-center gap-3 p-2 hover:bg-accent rounded-none cursor-pointer"
+                      onClick={() => handleSelectStaff(staff.user_id)}
                     >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleStaffSelection(staff.user_id)}
-                        className="rounded-none"
-                      />
-                      <div className="flex-1">
+                      {mode === 'multi' ? (
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleSelectStaff(staff.user_id)}
+                          className="rounded-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium">
-                          {staff.full_name || staff.email}
+                          {staff.full_name || staff.email || 'Unknown'}
                         </div>
-                        {staff.full_name && (
+                        {staff.email && (
                           <div className="text-xs text-muted-foreground">
                             {staff.email}
                           </div>
@@ -163,15 +191,25 @@ export function NewConversationDialog({
                 })}
               </div>
             </ScrollArea>
+            {mode === 'multi' && (
+              <div className="flex justify-end pt-2 border-t">
+                <Button
+                  onClick={handleConfirmMulti}
+                  disabled={selectedStaffIds.length === 0}
+                  className="rounded-none text-xs"
+                >
+                  Select {selectedStaffIds.length > 0 ? selectedStaffIds.length : ''} recipient{selectedStaffIds.length !== 1 ? 's' : ''}
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
-          {/* Groups Tab */}
+          {/* Groups tab: role groups + custom groups — click to start conversation */}
           <TabsContent value="groups" className="space-y-4">
             <ScrollArea className="h-[400px] border rounded-none p-2">
               <div className="space-y-4">
-                {/* Role Groups */}
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 px-2">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-2">
                     Role Groups
                   </div>
                   <div className="space-y-1">
@@ -179,16 +217,16 @@ export function NewConversationDialog({
                       <RoleGroupItem
                         key={roleGroup.id}
                         roleGroup={roleGroup}
-                        onSelect={selectRoleGroup}
+                        onSelect={(memberIds) =>
+                          handleSelectRoleGroup(memberIds, roleGroup.name)
+                        }
                       />
                     ))}
                   </div>
                 </div>
-
-                {/* Custom Groups */}
                 {customGroups.length > 0 && (
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 px-2">
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-2">
                       Custom Groups
                     </div>
                     <div className="space-y-1">
@@ -196,7 +234,7 @@ export function NewConversationDialog({
                         <div
                           key={group.id}
                           className="flex items-center justify-between p-2 hover:bg-accent rounded-none cursor-pointer"
-                          onClick={() => selectGroup(group)}
+                          onClick={() => handleSelectCustomGroup(group)}
                         >
                           <div>
                             <div className="text-sm font-medium">{group.name}</div>
@@ -204,11 +242,6 @@ export function NewConversationDialog({
                               {group.member_ids.length} members
                             </div>
                           </div>
-                          {selectedGroupId === group.id && (
-                            <Badge variant="default" className="rounded-none text-[10px]">
-                              Selected
-                            </Badge>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -216,32 +249,18 @@ export function NewConversationDialog({
                 )}
               </div>
             </ScrollArea>
-
-            {selectedStaffIds.length > 0 && (
-              <Badge variant="secondary" className="rounded-none">
-                {selectedStaffIds.length} members selected
-              </Badge>
+            {mode === 'multi' && selectedStaffIds.length > 0 && (
+              <div className="flex justify-end pt-2 border-t">
+                <Button
+                  onClick={handleConfirmMulti}
+                  className="rounded-none text-xs"
+                >
+                  Select {selectedStaffIds.length} recipient{selectedStaffIds.length !== 1 ? 's' : ''}
+                </Button>
+              </div>
             )}
           </TabsContent>
         </Tabs>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="rounded-none"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleStart}
-            disabled={selectedStaffIds.length === 0}
-            className="rounded-none"
-          >
-            Start Conversation
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
@@ -252,15 +271,15 @@ function RoleGroupItem({
   roleGroup,
   onSelect,
 }: {
-  roleGroup: typeof ROLE_GROUPS[number];
-  onSelect: (roleGroupId: string, memberIds: string[]) => void;
+  roleGroup: (typeof ROLE_GROUPS)[number];
+  onSelect: (memberIds: string[]) => void;
 }) {
   const { data: memberIds = [] } = useRoleGroupMembers(roleGroup);
 
   return (
     <div
       className="flex items-center justify-between p-2 hover:bg-accent rounded-none cursor-pointer"
-      onClick={() => onSelect(roleGroup.id, memberIds)}
+      onClick={() => onSelect(memberIds)}
     >
       <div>
         <div className="text-sm font-medium">{roleGroup.name}</div>
@@ -268,9 +287,7 @@ function RoleGroupItem({
           {roleGroup.description}
         </div>
       </div>
-      <Badge variant="outline" className="rounded-none text-[10px]">
-        {memberIds.length}
-      </Badge>
+      <span className="text-[10px] text-muted-foreground">{memberIds.length}</span>
     </div>
   );
 }

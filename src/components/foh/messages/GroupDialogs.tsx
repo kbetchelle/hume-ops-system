@@ -84,7 +84,7 @@ function CreateEditGroupDialog({
   }, [group]);
 
   const handleSubmit = () => {
-    if (!name.trim() || selectedMemberIds.length === 0) return;
+    if (!name.trim() || selectedMemberIds.length < 2) return;
 
     if (mode === 'edit' && group) {
       updateGroup(
@@ -138,7 +138,7 @@ function CreateEditGroupDialog({
       .includes(searchQuery.toLowerCase())
   );
 
-  const isValid = name.trim().length > 0 && selectedMemberIds.length > 0;
+  const isValid = name.trim().length > 0 && selectedMemberIds.length >= 2;
 
   return (
     <Dialog open={true} onOpenChange={handleClose}>
@@ -287,8 +287,7 @@ function DeleteGroupDialog({
             Delete Group
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the group "{group.name}"? This action
-            cannot be undone.
+            Delete group &quot;{group.name}&quot;? Messages will not be deleted.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -5,11 +5,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import type { StaffMessage, StaffMessageRead } from '@/types/messaging';
 
 interface ReadReceiptProps {
-  message: StaffMessage;
+  message: StaffMessage & { _isTemp?: boolean };
   reads: StaffMessageRead[];
   staffNames: Record<string, string>;
   currentUserId: string;
@@ -24,28 +23,33 @@ export function ReadReceipt({
   // Only show for sent messages
   if (message.sender_id !== currentUserId) return null;
 
+  const isTemp = !!(message as { _isTemp?: boolean })._isTemp;
   const recipientIds = message.recipient_ids || [];
   const messageReads = reads.filter((r) => r.message_id === message.id);
 
-  // Status determination
-  const allRead = recipientIds.every((id) =>
+  // Status: sending (temp or pending), sent, delivered, read
+  const allRead = recipientIds.length > 0 && recipientIds.every((id) =>
     messageReads.some((r) => r.staff_id === id)
   );
   const someRead = messageReads.length > 0;
 
-  let status: 'sending' | 'delivered' | 'read';
-  if (allRead) {
+  let status: 'sending' | 'sent' | 'delivered' | 'read';
+  if (isTemp) {
+    status = 'sending';
+  } else if (allRead) {
     status = 'read';
   } else if (someRead || recipientIds.length > 0) {
     status = 'delivered';
   } else {
-    status = 'sending';
+    status = 'sent';
   }
 
   const StatusIcon = () => {
     switch (status) {
       case 'sending':
-        return <Clock className="h-3 w-3 text-muted-foreground" />;
+        return <Clock className="h-3 w-3 text-muted-foreground animate-pulse" />;
+      case 'sent':
+        return <Check className="h-3 w-3 text-muted-foreground" />;
       case 'delivered':
         return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
       case 'read':

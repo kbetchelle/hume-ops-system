@@ -51,6 +51,7 @@ export function useSendMessage() {
       subject,
       content,
       isUrgent = false,
+      notify = false,
       groupId,
       groupName,
       threadId,
@@ -62,6 +63,7 @@ export function useSendMessage() {
       subject?: string;
       content: string;
       isUrgent?: boolean;
+      notify?: boolean;
       groupId?: string;
       groupName?: string;
       threadId?: string;
@@ -97,19 +99,38 @@ export function useSendMessage() {
 
       // Only send notifications immediately if not scheduled
       if (!scheduledAt && recipientIds && recipientIds.length > 0) {
+        // In-app notifications (staff_notifications) — always fire for recipients
         await Promise.all(
           recipientIds.map((recipientId) =>
             sendNotification({
               userId: recipientId,
               type: 'message',
-              title: `New message from ${senderName}`,
+              title: isUrgent ? 'Urgent Message' : `New message from ${senderName}`,
               body: truncateForNotification(content),
-              data: { messageId: data.id },
+              data: { messageId: data.id, isUrgent },
             }).catch((err) => {
-              console.error('Failed to send notification:', err);
+              console.error('Failed to send in-app notification:', err);
             })
           )
         );
+
+        // Push notifications — only when notify is true
+        if (notify) {
+          supabase.functions
+            .invoke('push-notifications', {
+              body: {
+                action: 'send-notification',
+                staffIds: recipientIds,
+                title: isUrgent ? '⚠️ Urgent Message' : `New message from ${senderName}`,
+                body: truncateForNotification(content),
+                data: { messageId: data.id, type: 'message', isUrgent },
+                type: 'message',
+              },
+            })
+            .catch((err) => {
+              console.error('Push notification failed:', err);
+            });
+        }
       }
 
       return data as StaffMessage;
@@ -200,6 +221,7 @@ export function useDeleteMessage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-messages-scheduled'] });
       toast({ title: 'Message deleted' });
     },
     onError: (error) => {

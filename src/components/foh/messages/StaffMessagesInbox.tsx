@@ -9,17 +9,27 @@ import {
   useStaffMessages,
   useMessageReads,
   useMessagingRealtime,
+  useStaffList,
+  useSendMessage,
+  useDeleteMessage,
+  useScheduledMessages,
+  useArchiveConversation,
 } from '@/hooks/useMessaging';
 import { useDrafts, useDeleteDraft } from '@/hooks/useMessageDrafts';
 import { useMessageGroups } from '@/hooks/useMessageGroups';
-import { groupMessagesIntoConversations, buildConversationKey } from './utils/conversationBuilder';
+import {
+  groupMessagesIntoConversations,
+  buildConversationKey,
+  buildNewConversation,
+} from './utils/conversationBuilder';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './ConversationView';
 import { MessageComposer } from './MessageComposer';
 import { MessagesOptionsMenu } from './MessagesOptionsMenu';
 import { GroupDialogs } from './GroupDialogs';
+import { NewConversationDialog, type NewConversationSelection } from './NewConversationDialog';
 import { format } from 'date-fns';
-import type { MessagingView, StaffMessagesInboxProps, StaffMessageGroup } from '@/types/messaging';
+import type { MessagingView, StaffMessagesInboxProps, StaffMessageGroup, Conversation, StaffMessageDraft } from '@/types/messaging';
 
 export function StaffMessagesInbox({
   initialMessageId,
@@ -35,13 +45,20 @@ export function StaffMessagesInbox({
   const [draftToEdit, setDraftToEdit] = useState<string | undefined>(undefined);
   const [groupDialogMode, setGroupDialogMode] = useState<'create' | 'edit' | 'delete' | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<StaffMessageGroup | undefined>(undefined);
+  const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
+  const [newConversation, setNewConversation] = useState<Conversation | null>(null);
 
   // Data queries
   const { data: messages = [], isLoading: messagesLoading } = useStaffMessages();
   const { data: reads = [], isLoading: readsLoading } = useMessageReads();
+  const { data: scheduledMessages = [] } = useScheduledMessages();
   const { data: drafts = [] } = useDrafts();
   const { data: customGroups = [] } = useMessageGroups();
+  const { data: staffList = [] } = useStaffList();
   const { mutate: deleteDraft } = useDeleteDraft();
+  const { mutate: sendMessage } = useSendMessage();
+  const { mutate: deleteMessage } = useDeleteMessage();
+  const { mutate: archiveConversation } = useArchiveConversation();
 
   // Realtime subscriptions
   useMessagingRealtime();
@@ -56,14 +73,37 @@ export function StaffMessagesInbox({
   // Filter based on view
   const activeConversations = conversations.filter((c) => !c.isArchived);
   const archivedConversations = conversations.filter((c) => c.isArchived);
-  const scheduledMessages = messages.filter(
-    (msg) => msg.scheduled_at && new Date(msg.scheduled_at) > new Date()
-  );
 
-  // Find selected conversation
-  const selectedConversation = selectedConversationKey
-    ? conversations.find((c) => c.key === selectedConversationKey)
-    : null;
+  // Find selected conversation (real from messages or synthetic new conversation)
+  const selectedConversation =
+    selectedConversationKey
+      ? conversations.find((c) => c.key === selectedConversationKey) ??
+        newConversation
+      : null;
+
+  const handleNewConversationSelect = (selection: NewConversationSelection) => {
+    const currentUserId = user?.id || '';
+    const key =
+      selection.type === 'group' && selection.groupId
+        ? `group:${selection.groupId}`
+        : `direct:${[currentUserId, ...selection.recipientIds].filter(Boolean).sort().join(',')}`;
+    const conv = buildNewConversation(
+      key,
+      selection.recipientIds,
+      currentUserId,
+      staffList,
+      { groupId: selection.groupId ?? null, groupName: selection.groupName ?? null }
+    );
+    setNewConversation(conv);
+    setSelectedConversationKey(key);
+    setView('conversation');
+  };
+
+  const handleBack = () => {
+    setSelectedConversationKey(null);
+    setNewConversation(null);
+    setView('conversations');
+  };
 
   // Handle deep-linking to a specific message
   useEffect(() => {
@@ -85,12 +125,8 @@ export function StaffMessagesInbox({
 
   const handleSelectConversation = (key: string) => {
     setSelectedConversationKey(key);
+    setNewConversation(null); // clear synthetic when selecting real conversation
     setView('conversation');
-  };
-
-  const handleBack = () => {
-    setSelectedConversationKey(null);
-    setView('conversations');
   };
 
   const handleViewChange = (newView: 'drafts' | 'scheduled' | 'archived' | 'groups') => {
@@ -112,6 +148,28 @@ export function StaffMessagesInbox({
     deleteDraft(draftId);
   };
 
+  const handleSendDraftNow = (draft: StaffMessageDraft) => {
+    if (!draft.recipient_staff_ids?.length || !draft.content?.trim()) return;
+    const group = draft.group_id
+      ? customGroups.find((g) => g.id === draft.group_id)
+      : undefined;
+    sendMessage(
+      {
+        recipientIds: draft.recipient_staff_ids,
+        subject: draft.subject || undefined,
+        content: draft.content.trim(),
+        isUrgent: draft.is_urgent,
+        groupId: draft.group_id || undefined,
+        groupName: group?.name,
+      },
+      {
+        onSuccess: () => {
+          deleteDraft(draft.id);
+        },
+      }
+    );
+  };
+
   const handleCreateGroup = () => {
     setGroupDialogMode('create');
     setSelectedGroup(undefined);
@@ -125,6 +183,13 @@ export function StaffMessagesInbox({
   const handleDeleteGroup = (group: StaffMessageGroup) => {
     setGroupDialogMode('delete');
     setSelectedGroup(group);
+  };
+
+  const handleUnarchive = (conversation: Conversation) => {
+    const messageIds = conversation.messages.map((m) => m.id);
+    if (messageIds.length > 0) {
+      archiveConversation({ messageIds, isArchived: false });
+    }
   };
 
   const isLoading = messagesLoading || readsLoading;
@@ -185,10 +250,12 @@ export function StaffMessagesInbox({
                   {drafts.map((draft) => (
                     <div
                       key={draft.id}
-                      className="p-4 hover:bg-accent cursor-pointer"
-                      onClick={() => handleEditDraft(draft.id)}
+                      className="p-4 hover:bg-accent"
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div
+                        className="flex items-start justify-between gap-2 cursor-pointer"
+                        onClick={() => handleEditDraft(draft.id)}
+                      >
                         <div className="flex-1 min-w-0">
                           {draft.subject && (
                             <div className="text-sm font-medium truncate">
@@ -202,6 +269,11 @@ export function StaffMessagesInbox({
                             <span className="text-[10px] text-muted-foreground">
                               {format(new Date(draft.updated_at), 'MMM d, h:mm a')}
                             </span>
+                            {draft.recipient_staff_ids && draft.recipient_staff_ids.length > 0 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                To: {draft.recipient_staff_ids.length} recipient{draft.recipient_staff_ids.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
                             {draft.is_urgent && (
                               <Badge variant="destructive" className="rounded-none text-[10px]">
                                 Urgent
@@ -209,17 +281,25 @@ export function StaffMessagesInbox({
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDraft(draft.id);
-                          }}
-                          className="rounded-none h-8 w-8"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendDraftNow(draft)}
+                            disabled={!draft.recipient_staff_ids?.length || !draft.content?.trim()}
+                            className="rounded-none text-xs"
+                          >
+                            Send Now
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteDraft(draft.id)}
+                            className="rounded-none h-8 w-8"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -271,23 +351,33 @@ export function StaffMessagesInbox({
             ) : (
               <div className="divide-y">
                 {scheduledMessages.map((msg) => (
-                  <div key={msg.id} className="p-4">
-                    <div className="text-sm font-medium">
-                      {msg.subject || 'No subject'}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                      {msg.content}
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="secondary" className="rounded-none text-[10px]">
-                        Sends {format(new Date(msg.scheduled_at!), 'MMM d, h:mm a')}
-                      </Badge>
-                      {msg.is_urgent && (
-                        <Badge variant="destructive" className="rounded-none text-[10px]">
-                          Urgent
+                  <div key={msg.id} className="p-4 flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">
+                        {msg.subject || 'No subject'}
+                      </div>
+                      <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {msg.content}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="rounded-none text-[10px]">
+                          Sends {format(new Date(msg.scheduled_at!), 'MMM d, h:mm a')}
                         </Badge>
-                      )}
+                        {msg.is_urgent && (
+                          <Badge variant="destructive" className="rounded-none text-[10px]">
+                            Urgent
+                          </Badge>
+                        )}
+                      </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteMessage(msg.id)}
+                      className="rounded-none text-xs text-destructive"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -325,6 +415,7 @@ export function StaffMessagesInbox({
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             isLoading={isLoading}
+            onUnarchive={handleUnarchive}
           />
         </CardContent>
       </Card>
@@ -433,13 +524,17 @@ export function StaffMessagesInbox({
               <Button
                 variant="default"
                 size="sm"
-                onClick={handleNewMessage}
+                onClick={() => setNewConversationDialogOpen(true)}
                 className="rounded-none"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 New
               </Button>
-              <MessagesOptionsMenu onViewChange={handleViewChange} />
+              <MessagesOptionsMenu
+                onViewChange={handleViewChange}
+                archivedCount={archivedConversations.length}
+                scheduledCount={scheduledMessages.length}
+              />
             </div>
           </div>
         </CardHeader>
@@ -461,6 +556,11 @@ export function StaffMessagesInbox({
           setDraftToEdit(undefined);
         }}
         draftId={draftToEdit}
+      />
+      <NewConversationDialog
+        isOpen={newConversationDialogOpen}
+        onClose={() => setNewConversationDialogOpen(false)}
+        onSelect={handleNewConversationSelect}
       />
     </>
   );

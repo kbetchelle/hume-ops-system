@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/select';
 
 interface SchedulePopoverProps {
-  onSchedule: (scheduledAt: Date) => void;
+  /** ISO 8601 datetime string for when to send the message */
+  onSchedule: (scheduledAt: string) => void;
   children?: React.ReactNode;
 }
 
@@ -46,7 +47,7 @@ export function SchedulePopover({ onSchedule, children }: SchedulePopoverProps) 
     scheduledDateTime.setSeconds(0);
     scheduledDateTime.setMilliseconds(0);
 
-    onSchedule(scheduledDateTime);
+    onSchedule(scheduledDateTime.toISOString());
     handleClose();
   };
 

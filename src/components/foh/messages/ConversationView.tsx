@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { ArrowLeft, Send, Reply, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +18,7 @@ import { getConversationTitle, collapseTimestamps, isWithinEditWindow } from './
 import { ReactionPills } from './ReactionPills';
 import { ReactionPicker } from './ReactionPicker';
 import { ReadReceipt } from './ReadReceipt';
-import type { ConversationViewProps } from '@/types/messaging';
+import type { ConversationViewProps, TempMessage, StaffMessage } from '@/types/messaging';
 
 export function ConversationView({
   conversation,
@@ -28,6 +28,7 @@ export function ConversationView({
   const [messageInput, setMessageInput] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [tempMessages, setTempMessages] = useState<TempMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: staffList = [] } = useStaffList();
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
@@ -38,7 +39,6 @@ export function ConversationView({
   const { data: allReads = [] } = useMessageReads();
 
   const title = getConversationTitle(conversation, '');
-  const timestampVisibility = collapseTimestamps(conversation.messages);
 
   // Get staff name by ID
   const getStaffName = (userId: string) => {
@@ -68,9 +68,37 @@ export function ConversationView({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Merge temp messages with real messages, sorted by created_at
+  const displayMessages = useMemo(() => {
+    const merged = [...conversation.messages, ...tempMessages];
+    return merged.sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  }, [conversation.messages, tempMessages]);
+
+  // Remove temp message when Realtime delivers the real one (same sender + content)
+  useEffect(() => {
+    setTempMessages((prev) =>
+      prev.filter(
+        (temp) =>
+          !conversation.messages.some(
+            (m) =>
+              m.sender_id === temp.sender_id &&
+              m.content === temp.content &&
+              !('_isTemp' in m)
+          )
+      )
+    );
+  }, [conversation.messages]);
+
+  const timestampVisibility = useMemo(
+    () => collapseTimestamps(displayMessages),
+    [displayMessages]
+  );
+
   useEffect(() => {
     scrollToBottom();
-  }, [conversation.messages]);
+  }, [displayMessages]);
 
   // Mark unread messages as read
   useEffect(() => {
@@ -90,13 +118,36 @@ export function ConversationView({
   const handleSend = () => {
     if (!messageInput.trim() || isSending) return;
 
+    const content = messageInput.trim();
     const recipientIds = conversation.participants.map((p) => p.userId);
+
+    const tempId = `temp-${Date.now()}`;
+    const temp: TempMessage = {
+      id: tempId,
+      sender_id: currentUserId,
+      sender_name: null,
+      recipient_ids: recipientIds,
+      recipient_departments: null,
+      subject: conversation.lastMessage?.subject || null,
+      content,
+      is_sent: true,
+      is_urgent: false,
+      group_id: conversation.groupId || null,
+      group_name: conversation.groupName || null,
+      thread_id: conversation.threadId || null,
+      reply_to_id: null,
+      scheduled_at: null,
+      edited_at: null,
+      created_at: new Date().toISOString(),
+      _isTemp: true,
+    };
+    setTempMessages((prev) => [...prev, temp]);
 
     sendMessage(
       {
         recipientIds,
-        content: messageInput.trim(),
-        subject: conversation.lastMessage.subject || undefined,
+        content,
+        subject: conversation.lastMessage?.subject || undefined,
         groupId: conversation.groupId || undefined,
         groupName: conversation.groupName || undefined,
         threadId: conversation.threadId || undefined,
@@ -117,12 +168,11 @@ export function ConversationView({
     }
   };
 
-  // Group messages by date
-  const messagesByDate: { date: string; messages: typeof conversation.messages }[] =
-    [];
+  // Group display messages by date
+  const messagesByDate: { date: string; messages: StaffMessage[] }[] = [];
   let currentDate = '';
 
-  conversation.messages.forEach((msg) => {
+  displayMessages.forEach((msg) => {
     const msgDate = format(parseISO(msg.created_at), 'yyyy-MM-dd');
     if (msgDate !== currentDate) {
       currentDate = msgDate;
@@ -174,10 +224,11 @@ export function ConversationView({
             {/* Messages for this date */}
             {dateGroup.messages.map((message) => {
               const isSelf = message.sender_id === currentUserId;
+              const isTemp = !!(message as StaffMessage & { _isTemp?: boolean })._isTemp;
               const senderName = getStaffName(message.sender_id || '');
               const showTimestamp = timestampVisibility.has(message.id);
-              const canEdit = isSelf && isWithinEditWindow(message.created_at);
-              const canDelete = isSelf && isWithinEditWindow(message.created_at);
+              const canEdit = isSelf && !isTemp && isWithinEditWindow(message.created_at);
+              const canDelete = isSelf && !isTemp && isWithinEditWindow(message.created_at);
               const isEditing = editingMessageId === message.id;
 
               return (
@@ -185,6 +236,7 @@ export function ConversationView({
                   key={message.id}
                   message={message}
                   isSelf={isSelf}
+                  isTemp={isTemp}
                   senderName={senderName}
                   getInitials={getInitials}
                   showTimestamp={showTimestamp}
@@ -255,6 +307,7 @@ export function ConversationView({
 function MessageBubble({
   message,
   isSelf,
+  isTemp,
   senderName,
   getInitials,
   showTimestamp,
@@ -393,7 +446,7 @@ function MessageBubble({
           </div>
 
           {/* Reactions */}
-          {!isEditing && (
+          {!isEditing && !isTemp && (
             <div className="flex items-center gap-2">
               <ReactionPills
                 reactions={groupedReactions}

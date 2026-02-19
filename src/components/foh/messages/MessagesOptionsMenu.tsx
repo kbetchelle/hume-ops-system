@@ -10,32 +10,23 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDraftCount } from '@/hooks/useMessageDrafts';
-import { useStaffMessages } from '@/hooks/useMessaging';
 import { useMessageGroups } from '@/hooks/useMessageGroups';
-import { useAuth } from '@/hooks/useAuth';
 
 interface MessagesOptionsMenuProps {
   onViewChange: (view: 'drafts' | 'scheduled' | 'archived' | 'groups') => void;
+  archivedCount?: number;
+  scheduledCount?: number;
 }
 
-export function MessagesOptionsMenu({ onViewChange }: MessagesOptionsMenuProps) {
-  const { user } = useAuth();
+export function MessagesOptionsMenu({
+  onViewChange,
+  archivedCount = 0,
+  scheduledCount = 0,
+}: MessagesOptionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Get counts
   const draftCount = useDraftCount();
   const { data: customGroups = [] } = useMessageGroups();
-  const { data: messages = [] } = useStaffMessages();
-
-  // Calculate scheduled count
-  const scheduledCount = messages.filter(
-    (msg) => msg.scheduled_at && new Date(msg.scheduled_at) > new Date()
-  ).length;
-
-  // Calculate archived count (messages with archived reads for current user)
-  // Note: This is a simplified count. For accurate count, we'd need to query reads
-  // For now, we'll just show a badge if there are any archived conversations
-  const archivedCount = 0; // Placeholder - would need reads query
 
   const handleSelect = (view: 'drafts' | 'scheduled' | 'archived' | 'groups') => {
     onViewChange(view);

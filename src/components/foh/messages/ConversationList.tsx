@@ -1,4 +1,4 @@
-import { MessageSquare, Plus, Search } from 'lucide-react';
+import { MessageSquare, Plus, Search, ArchiveRestore } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ export function ConversationList({
   searchQuery,
   onSearchChange,
   isLoading,
+  onUnarchive,
 }: ConversationListProps) {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const { data: staffList = [] } = useStaffList();
@@ -158,21 +159,38 @@ export function ConversationList({
                   </div>
 
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-[10px] text-muted-foreground">
-                      {format(
-                        parseISO(conversation.lastMessage.created_at),
-                        'MMM d'
-                      )}
-                    </span>
-                    {conversation.unreadCount > 0 && (
-                      <Badge
-                        variant="default"
-                        className="rounded-none text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center animate-pulse"
+                    {onUnarchive ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-none text-xs h-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnarchive(conversation);
+                        }}
                       >
-                        {conversation.unreadCount > 99
-                          ? '99+'
-                          : conversation.unreadCount}
-                      </Badge>
+                        <ArchiveRestore className="h-3 w-3 mr-1" />
+                        Unarchive
+                      </Button>
+                    ) : (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(
+                            parseISO(conversation.lastMessage.created_at),
+                            'MMM d'
+                          )}
+                        </span>
+                        {conversation.unreadCount > 0 && (
+                          <Badge
+                            variant="default"
+                            className="rounded-none text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center animate-pulse"
+                          >
+                            {conversation.unreadCount > 99
+                              ? '99+'
+                              : conversation.unreadCount}
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </button>

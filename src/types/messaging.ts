@@ -95,6 +95,11 @@ export interface DisplayMessage extends StaffMessage {
   hasReplies: boolean; // Has thread replies
 }
 
+/** Temp message shown optimistically before real message arrives via Realtime */
+export interface TempMessage extends StaffMessage {
+  _isTemp: true;
+}
+
 export interface MessageDeliveryStatus {
   status: 'sending' | 'delivered' | 'read';
   readBy: Array<{ userId: string; name: string; readAt: string }>;
@@ -129,6 +134,8 @@ export interface ConversationListProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   isLoading?: boolean;
+  /** When set, show an Unarchive button for each conversation (e.g. in archived view) */
+  onUnarchive?: (conversation: Conversation) => void;
 }
 
 export interface ConversationViewProps {

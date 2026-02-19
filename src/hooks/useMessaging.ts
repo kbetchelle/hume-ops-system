@@ -7,6 +7,6 @@
  *   - ./messaging/useMessagingRealtime.ts (realtime subscriptions)
  */
 
-export { useStaffMessages, useMessageReads, useStaffList } from './messaging/useStaffMessages';
+export { useStaffMessages, useMessageReads, useStaffList, useScheduledMessages } from './messaging/useStaffMessages';
 export { useMarkMessageRead, useSendMessage, useEditMessage, useDeleteMessage, useArchiveConversation } from './messaging/useMessageMutations';
 export { useMessagingRealtime } from './messaging/useMessagingRealtime';

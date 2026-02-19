@@ -643,15 +643,6 @@ export function EmbeddedChecklist() {
                     Auto-submitting shift after end time...
                   </div>
                 )}
-                <Button
-                  onClick={() => submitShiftMutation.mutate()}
-                  disabled={submitShiftMutation.isPending || !isOnline}
-                  className="w-full"
-                >
-                  {submitShiftMutation.isPending
-                    ? "Submitting..."
-                    : "Submit Shift"}
-                </Button>
               </div>
             )}
           </div>

@@ -35,6 +35,7 @@ interface CreateAccountItem {
   slingUserId: string;
   username: string;
   primaryRole?: string;
+  roles?: string[];
 }
 
 interface Result {
@@ -207,7 +208,19 @@ Deno.serve(async (req: Request) => {
 
       const primaryRole: AppRole | null =
         item.primaryRole && isAppRole(item.primaryRole) ? (item.primaryRole as AppRole) : "concierge";
-      const roles: AppRole[] = primaryRole ? [primaryRole] : ["concierge"];
+      
+      // Build roles array: use provided roles if valid, otherwise fall back to primaryRole only
+      let roles: AppRole[];
+      if (Array.isArray(item.roles) && item.roles.length > 0) {
+        roles = item.roles.filter(isAppRole) as AppRole[];
+        // Ensure primary role is included
+        if (primaryRole && !roles.includes(primaryRole)) {
+          roles.unshift(primaryRole);
+        }
+        if (roles.length === 0) roles = primaryRole ? [primaryRole] : ["concierge"];
+      } else {
+        roles = primaryRole ? [primaryRole] : ["concierge"];
+      }
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,

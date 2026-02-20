@@ -196,6 +196,20 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
+  // Programmatically open dropdown when step targets user-menu
+  useEffect(() => {
+    if (!currentStep) return;
+    const target = typeof currentStep.target === "string" ? currentStep.target : null;
+    if (target === "[data-walkthrough=user-menu]") {
+      const el = document.querySelector(target) as HTMLElement | null;
+      if (el) {
+        // Small delay to let the overlay render first
+        const t = setTimeout(() => el.click(), 300);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [currentStep]);
+
   // Auto-advance 6s except on last step
   useEffect(() => {
     if (filteredSteps.length === 0 || isLastStep) return;
@@ -333,11 +347,16 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           <div
             className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal whitespace-pre-line bg-background/90 backdrop-blur-sm px-3 py-2 rounded border border-border shadow-sm"
             style={
-              arrowPoints
-                ? {
-                    left: Math.max(16, Math.min(arrowPoints.start.x - 8, viewportWidth - 280)),
-                    top: Math.max(16, arrowPoints.start.y - 56),
-                  }
+              arrowPoints && targetRect
+                ? currentStep.arrowDirection === "left"
+                  ? {
+                      left: Math.max(16, targetRect.right + 16),
+                      top: Math.max(16, targetRect.top),
+                    }
+                  : {
+                      left: Math.max(16, Math.min(arrowPoints.start.x - 8, viewportWidth - 280)),
+                      top: Math.max(16, arrowPoints.start.y - 56),
+                    }
                 : {
                     left: "50%",
                     top: "50%",

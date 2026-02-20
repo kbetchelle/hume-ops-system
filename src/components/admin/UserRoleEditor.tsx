@@ -86,7 +86,7 @@ export function UserRoleEditor({
 
           <div className="space-y-2">
             <Label className="text-[10px] uppercase tracking-widest">Roles</Label>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
           {ROLES.map((role) => (
             <label
               key={role.value}

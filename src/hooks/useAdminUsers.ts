@@ -121,7 +121,7 @@ export function useUpdateUserUsername() {
       userId: string;
       username: string | null;
     }) => {
-      const { error } = await (supabase.rpc as (name: string, args: object) => Promise<{ error: unknown }>)(
+      const { error } = await (supabase.rpc as any)(
         "admin_update_user_username",
         { _target_user_id: userId, _username: username }
       );

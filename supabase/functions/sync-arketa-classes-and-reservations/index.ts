@@ -16,6 +16,8 @@ interface WrapperRequest {
   startDate?: string;
   endDate?: string;
   triggeredBy?: string;
+  /** Cursor for backfill pagination; forward to sync-arketa-classes */
+  start_after_id?: string;
 }
 
 function parseJson<T>(text: string): T | null {
@@ -85,7 +87,8 @@ Deno.serve(async (req) => {
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
-    const payload = { startDate, endDate, triggeredBy };
+    const payload: Record<string, unknown> = { startDate, endDate, triggeredBy };
+    if (body.start_after_id) payload.start_after_id = body.start_after_id;
     const authHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${supabaseKey}`,
@@ -210,6 +213,8 @@ Deno.serve(async (req) => {
       totalFetched: classesTotalFetched + reservationsTotalFetched,
       dateRange: { startDate, endDate },
       durationMs,
+      nextStartAfterId: classesData.nextStartAfterId ?? null,
+      hasMore: classesData.hasMore ?? false,
       classes: {
         success: classesOk,
         syncedCount: classesSyncedCount,

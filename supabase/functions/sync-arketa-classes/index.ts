@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json().catch(() => ({}))) as SyncClassesRequest;
-    const limit = body.limit ?? 500;
+    const limit = Math.min(body.limit ?? 100, 100);
     const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
 
     // Compute date range for local filtering (default -7 to +30 days)
@@ -152,6 +152,8 @@ Deno.serve(async (req) => {
         try {
           const url = new URL(baseUrl);
           url.searchParams.set('limit', String(limit));
+          url.searchParams.set('start_date', startDate);
+          url.searchParams.set('end_date', endDate);
           url.searchParams.set('start_after', startAfterId);
           if (extraParams) {
             for (const [k, v] of Object.entries(extraParams)) url.searchParams.set(k, v);
@@ -218,6 +220,8 @@ Deno.serve(async (req) => {
       // First page
       const url = new URL(classesBaseUrl);
       url.searchParams.set('limit', String(limit));
+      url.searchParams.set('start_date', startDate);
+      url.searchParams.set('end_date', endDate);
       url.searchParams.set('start_after', body.start_after_id);
 
       const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
@@ -262,6 +266,8 @@ Deno.serve(async (req) => {
         try {
           const url = new URL(classesBaseUrl);
           url.searchParams.set('limit', String(limit));
+          url.searchParams.set('start_date', startDate);
+          url.searchParams.set('end_date', endDate);
           for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
           console.log(`[classes-sync] Strategy A: Trying reverse sort with ${JSON.stringify(params)}...`);
@@ -318,11 +324,15 @@ Deno.serve(async (req) => {
         const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
 
         if (skipCursor) {
-          console.log(`[classes-sync] Strategy B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
+          // Partner API expects full cursor value (e.g. classes%2FP8k22mPi6hc05KP25sCM); reconstruct from DB external_id
+          const startAfterCursor = `classes%2F${skipCursor.external_id}`;
+          console.log(`[classes-sync] Strategy B: Skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date}), start_after=${startAfterCursor}`);
           try {
             const url = new URL(classesBaseUrl);
             url.searchParams.set('limit', String(limit));
-            url.searchParams.set('start_after', skipCursor.external_id);
+            url.searchParams.set('start_date', startDate);
+            url.searchParams.set('end_date', endDate);
+            url.searchParams.set('start_after', startAfterCursor);
 
             const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 
@@ -367,6 +377,8 @@ Deno.serve(async (req) => {
         try {
           const url = new URL(classesBaseUrl);
           url.searchParams.set('limit', String(limit));
+          url.searchParams.set('start_date', startDate);
+          url.searchParams.set('end_date', endDate);
 
           const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 

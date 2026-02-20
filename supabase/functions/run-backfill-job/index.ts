@@ -87,8 +87,8 @@ function getSyncConfig(jobType: JobType) {
 
 /**
  * Cursor-based backfill for arketa_classes (and classes+reservations).
- * Instead of date-range chunks, finds the last synced class and paginates forward
- * using start_after_id + hasMore from the API, with 20s breaks between batches.
+ * Paginates using the API's nextStartAfterId (stored in batch_cursor); first page
+ * has no cursor. 20s break between batches.
  */
 async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
   const startDate = job.start_date;
@@ -104,26 +104,11 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  // Find the cursor: use the last synced class's external_id ordered by class_date
-  // If job has a stored batch_cursor from a previous run, use that
-  let startAfterId: string | undefined = job.batch_cursor || undefined;
-
+  // Cursor for pagination: use only the API's opaque cursor from a previous batch.
+  // Do not derive from DB (class external_id); Partner API requires the full nextStartAfterId value.
+  const startAfterId: string | undefined = job.batch_cursor ?? undefined;
   if (!startAfterId) {
-    // Find the last class in the DB that's within or before the backfill range
-    const { data: lastSynced } = await supabase
-      .from("arketa_classes")
-      .select("external_id, class_date")
-      .lte("class_date", endDate)
-      .order("class_date", { ascending: false })
-      .limit(1);
-
-    const lastClass = (lastSynced as { external_id: string; class_date: string }[] | null)?.[0];
-    if (lastClass) {
-      startAfterId = lastClass.external_id;
-      console.log(`[backfill] Starting cursor from last synced class ${startAfterId} (date ${lastClass.class_date})`);
-    } else {
-      console.log(`[backfill] No existing classes found, starting from beginning`);
-    }
+    console.log(`[backfill] No batch_cursor; first page of date range`);
   }
 
   // Count existing records before sync

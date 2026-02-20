@@ -348,30 +348,41 @@ async function syncArketaPayments(supabase: any, date: string, syncBatchId?: str
   if (!allPayments.length) return 0;
 
   if (syncBatchId) {
-    const stagingRows = allPayments.map((p) => ({
-      source_endpoint: 'purchases',
-      payment_id: String(p.id ?? p.payment_id),
-      arketa_payment_id: String(p.id ?? p.payment_id),
-      client_id: p.client_id ?? p.clientId ?? p.client?.id ? String(p.client_id ?? p.clientId ?? p.client?.id) : null,
-      amount: p.amount ?? p.price ?? p.total ?? 0,
-      status: p.status ?? 'ACTIVE',
-      description: p.description ?? p.name ?? null,
-      payment_type: p.payment_type ?? p.type ?? null,
-      category: p.category ?? null,
-      offering_id: p.offering_id ?? p.offeringId ?? null,
-      start_date: p.start_date ?? p.startDate ?? null,
-      end_date: p.end_date ?? p.endDate ?? null,
-      remaining_uses: p.remaining_uses ?? p.remainingUses ?? null,
-      currency: p.currency ?? null,
-      total_refunded: p.total_refunded ?? p.refunded ?? null,
-      net_sales: p.net_sales ?? p.net_amount ?? null,
-      transaction_fees: p.transaction_fees ?? p.fees ?? null,
-      stripe_fees: p.stripe_fees ?? null,
-      tax: p.tax ?? p.tax_amount ?? null,
-      updated_at: p.updated_at ?? p.updatedAt ?? null,
-      synced_at: new Date().toISOString(),
-      sync_batch_id: syncBatchId,
-    }));
+    // Align with sync-arketa-payments purchaseToStagingRow + sync-from-staging expectations:
+    // client_id: explicit null/undefined check so ID 0 is preserved; created_at_api: ISO-normalized; amount_refunded for transfer.
+    const stagingRows = allPayments.map((p: any) => {
+      const client = p.client;
+      const createdAt = p.created_at ?? p.updated_at ?? p.updatedAt ?? p.start_date ?? p.startDate ?? null;
+      const created_at_api = typeof createdAt === 'string' ? createdAt : (createdAt != null ? new Date(createdAt).toISOString() : null);
+      return {
+        payment_id: String(p.id ?? p.payment_id),
+        amount: p.amount ?? p.price ?? p.total ?? null,
+        status: p.status ?? null,
+        created_at_api,
+        currency: p.currency ?? null,
+        amount_refunded: p.amount_refunded ?? p.total_refunded ?? p.refunded ?? null,
+        description: p.description ?? p.name ?? null,
+        invoice_id: p.invoice_id ?? null,
+        normalized_category: p.normalized_category ?? null,
+        net_sales: p.net_sales ?? p.net_amount ?? null,
+        transaction_fees: p.transaction_fees ?? p.fees ?? null,
+        tax: p.tax ?? p.tax_amount ?? null,
+        location_name: p.location_name ?? null,
+        source: p.source ?? 'purchases',
+        payment_type: p.payment_type ?? p.type ?? null,
+        promo_code: p.promo_code ?? null,
+        offering_name: p.offering_name ?? null,
+        seller_name: p.seller_name ?? null,
+        client_id: p.client_id ?? p.clientId ?? (client?.id != null ? String(client.id) : null),
+        client_first_name: client?.first_name ?? client?.firstName ?? null,
+        client_last_name: client?.last_name ?? client?.lastName ?? null,
+        client_email: client?.email ?? null,
+        client_phone: client?.phone ?? null,
+        raw_data: p,
+        synced_at: new Date().toISOString(),
+        sync_batch_id: syncBatchId,
+      };
+    });
     const { error } = await supabase.from('arketa_payments_staging').insert(stagingRows);
     if (error) throw new Error(`Payments staging insert failed: ${error.message}`);
     return stagingRows.length;
@@ -383,7 +394,7 @@ async function syncArketaPayments(supabase: any, date: string, syncBatchId?: str
       .from('arketa_payments')
       .upsert({
         external_id: String(payment.id),
-        client_id: payment.client_id ? String(payment.client_id) : null,
+        client_id: (payment.client_id ?? payment.clientId ?? payment.client?.id) != null ? String(payment.client_id ?? payment.clientId ?? payment.client?.id) : null,
         amount: payment.amount ?? payment.total ?? 0,
         payment_type: payment.type || payment.payment_type || 'unknown',
         status: payment.status || 'completed',

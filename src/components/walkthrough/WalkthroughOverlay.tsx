@@ -131,6 +131,7 @@ function getArrowPathD(
 function getStepTextPosition(
   direction: WalkthroughArrowDirection,
   targetRect: DOMRect,
+  arrowStart: { x: number; y: number },
   viewportWidth: number,
   viewportHeight: number
 ): { left: number; top: number } {
@@ -149,16 +150,22 @@ function getStepTextPosition(
         left: Math.max(minLeft, targetRect.left - STEP_TEXT_MAX_WIDTH - STEP_TEXT_GAP),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
-    case "top":
+    case "top": {
+      // Place text to the right of the arrow to avoid x-axis overlap
+      const textLeft = Math.max(minLeft, arrowStart.x + STEP_TEXT_GAP);
       return {
-        left: Math.max(minLeft, Math.min(targetRect.left + targetRect.width / 2 - STEP_TEXT_MAX_WIDTH / 2, maxLeft)),
+        left: Math.min(textLeft, maxLeft),
         top: Math.min(targetRect.bottom + STEP_TEXT_GAP, maxTop),
       };
-    case "bottom":
+    }
+    case "bottom": {
+      // Place text to the right of the arrow to avoid x-axis overlap
+      const textLeft = Math.max(minLeft, arrowStart.x + STEP_TEXT_GAP);
       return {
-        left: Math.max(minLeft, Math.min(targetRect.left + targetRect.width / 2 - STEP_TEXT_MAX_WIDTH / 2, maxLeft)),
+        left: Math.min(textLeft, maxLeft),
         top: Math.max(16, targetRect.top - STEP_TEXT_EST_HEIGHT - STEP_TEXT_GAP),
       };
+    }
     default:
       return {
         left: Math.max(minLeft, targetRect.right + STEP_TEXT_GAP),
@@ -404,6 +411,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                     const pos = getStepTextPosition(
                       currentStep.arrowDirection,
                       targetRect,
+                      arrowPoints!.start,
                       viewportWidth,
                       viewportHeight
                     );
@@ -416,11 +424,6 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                   }
             }
           >
-            <div>
-              <div className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">
-                {t("A Quick Walkthrough", "Un Recorrido Rápido")}
-              </div>
-            </div>
             <div>
               <p className="text-sm font-medium uppercase tracking-widest">
                 {currentStep.text}

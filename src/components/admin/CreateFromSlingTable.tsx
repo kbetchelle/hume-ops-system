@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -29,7 +29,7 @@ import { toast } from "sonner";
 
 const BULK_LIMIT = 25;
 
-type AccountFilter = "all" | "no_account" | "has_account";
+
 
 export function CreateFromSlingTable() {
   const queryClient = useQueryClient();
@@ -49,7 +49,6 @@ export function CreateFromSlingTable() {
   });
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<AccountFilter>("no_account");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [usernameOverrides, setUsernameOverrides] = useState<Record<string, string>>({});
   const [defaultRole, setDefaultRole] = useState<AppRole>("concierge");
@@ -75,10 +74,8 @@ export function CreateFromSlingTable() {
   }, [slingUsers, emailsWithAccount]);
 
   const filtered = useMemo(() => {
-    let list = slingWithHasAccount;
-    if (filter === "has_account") list = list.filter((s) => s.hasAccount);
-    else if (filter === "no_account") list = list.filter((s) => !s.hasAccount && s.hasEmail);
-    else list = list.filter((s) => s.hasEmail);
+    // Only show sling users without existing accounts and with email
+    let list = slingWithHasAccount.filter((s) => !s.hasAccount && s.hasEmail);
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -92,7 +89,7 @@ export function CreateFromSlingTable() {
     }
 
     return list;
-  }, [slingWithHasAccount, filter, search]);
+  }, [slingWithHasAccount, search]);
 
   const takenUsernames = useMemo(() => {
     const set = new Set(existingUsernames);
@@ -224,34 +221,7 @@ export function CreateFromSlingTable() {
         )}
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Filter
-          </span>
-          <Select
-            value={filter}
-            onValueChange={(v) => {
-              setFilter(v as AccountFilter);
-              setSelectedIds(new Set());
-            }}
-          >
-            <SelectTrigger className="w-36 rounded-none border-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-none border-foreground">
-              <SelectItem value="all" className="text-[10px] uppercase tracking-widest">
-                All (with email)
-              </SelectItem>
-              <SelectItem value="no_account" className="text-[10px] uppercase tracking-widest">
-                No account
-              </SelectItem>
-              <SelectItem value="has_account" className="text-[10px] uppercase tracking-widest">
-                Has account
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex items-center gap-3">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Default role
@@ -313,15 +283,12 @@ export function CreateFromSlingTable() {
               <TableHead className="text-[10px] uppercase tracking-widest font-normal">
                 Position
               </TableHead>
-              <TableHead className="text-[10px] uppercase tracking-widest font-normal">
-                Status
-              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                     No Sling users match the filter.
                   </p>
@@ -337,7 +304,7 @@ export function CreateFromSlingTable() {
                     <Checkbox
                       checked={selectedIds.has(s.id)}
                       onCheckedChange={() => toggleSelect(s.id)}
-                      disabled={!s.hasEmail || s.hasAccount || (atLimit && !selectedIds.has(s.id))}
+                      disabled={atLimit && !selectedIds.has(s.id)}
                     />
                   </TableCell>
                   <TableCell className="text-xs tracking-wide">
@@ -347,34 +314,15 @@ export function CreateFromSlingTable() {
                     {s.email || "—"}
                   </TableCell>
                   <TableCell>
-                    {s.hasAccount ? (
-                      <span className="text-[10px] text-muted-foreground">—</span>
-                    ) : (
-                      <Input
-                        className="h-8 w-48 rounded-none text-xs"
-                        value={usernameOverrides[s.id] ?? suggestedUsernames[s.id] ?? ""}
-                        onChange={(e) => setUsernameOverride(s.id, e.target.value)}
-                        placeholder={suggestedUsernames[s.id]}
-                      />
-                    )}
+                    <Input
+                      className="h-8 w-48 rounded-none text-xs"
+                      value={usernameOverrides[s.id] ?? suggestedUsernames[s.id] ?? ""}
+                      onChange={(e) => setUsernameOverride(s.id, e.target.value)}
+                      placeholder={suggestedUsernames[s.id]}
+                    />
                   </TableCell>
                   <TableCell className="text-[10px] text-muted-foreground">
                     {s.position_name ?? s.positions?.join(", ") ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    {s.hasAccount ? (
-                      <Badge variant="secondary" className="text-[10px]">
-                        Has account
-                      </Badge>
-                    ) : !s.hasEmail ? (
-                      <Badge variant="outline" className="text-[10px]">
-                        No email
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px]">
-                        No account
-                      </Badge>
-                    )}
                   </TableCell>
                 </TableRow>
               ))

@@ -2315,6 +2315,30 @@ export type Database = {
         }
         Relationships: []
       }
+      class_type_mappings: {
+        Row: {
+          class_category: string
+          class_name_pattern: string
+          created_at: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          class_category: string
+          class_name_pattern: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          class_category?: string
+          class_name_pattern?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       client_sync_log: {
         Row: {
           completed_at: string | null
@@ -2365,8 +2389,7 @@ export type Database = {
           is_active: boolean | null
           last_updated_by: string | null
           migrated_to_page_id: string | null
-          sort_order: number | null
-          title: string
+          tags: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -2379,8 +2402,7 @@ export type Database = {
           is_active?: boolean | null
           last_updated_by?: string | null
           migrated_to_page_id?: string | null
-          sort_order?: number | null
-          title: string
+          tags?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -2393,8 +2415,7 @@ export type Database = {
           is_active?: boolean | null
           last_updated_by?: string | null
           migrated_to_page_id?: string | null
-          sort_order?: number | null
-          title?: string
+          tags?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3575,6 +3596,45 @@ export type Database = {
           },
         ]
       }
+      notification_history: {
+        Row: {
+          body: string | null
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          staff_id: string | null
+          success: boolean | null
+          title: string
+          trigger_source: string | null
+          type: string | null
+          user_marked_failed: boolean | null
+        }
+        Insert: {
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id?: string | null
+          success?: boolean | null
+          title: string
+          trigger_source?: string | null
+          type?: string | null
+          user_marked_failed?: boolean | null
+        }
+        Update: {
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id?: string | null
+          success?: boolean | null
+          title?: string
+          trigger_source?: string | null
+          type?: string | null
+          user_marked_failed?: boolean | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -3584,6 +3644,7 @@ export type Database = {
           dnd_manual_start: string | null
           dnd_sling_linked: boolean | null
           id: string
+          push_enabled: boolean | null
           type_enabled: Json | null
           updated_at: string
           user_id: string
@@ -3596,6 +3657,7 @@ export type Database = {
           dnd_manual_start?: string | null
           dnd_sling_linked?: boolean | null
           id?: string
+          push_enabled?: boolean | null
           type_enabled?: Json | null
           updated_at?: string
           user_id: string
@@ -3608,6 +3670,7 @@ export type Database = {
           dnd_manual_start?: string | null
           dnd_sling_linked?: boolean | null
           id?: string
+          push_enabled?: boolean | null
           type_enabled?: Json | null
           updated_at?: string
           user_id?: string
@@ -3788,7 +3851,6 @@ export type Database = {
           is_active: boolean | null
           migrated_to_folder_id: string | null
           name: string
-          sort_order: number | null
           updated_at: string | null
         }
         Insert: {
@@ -3800,7 +3862,6 @@ export type Database = {
           is_active?: boolean | null
           migrated_to_folder_id?: string | null
           name: string
-          sort_order?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -3812,7 +3873,6 @@ export type Database = {
           is_active?: boolean | null
           migrated_to_folder_id?: string | null
           name?: string
-          sort_order?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3836,8 +3896,10 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          must_change_password: boolean
           onboarding_completed: boolean | null
           preferred_language: string | null
+          primary_role: Database["public"]["Enums"]["app_role"] | null
           sling_id: string | null
           updated_at: string
           user_id: string
@@ -3852,8 +3914,10 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
+          primary_role?: Database["public"]["Enums"]["app_role"] | null
           sling_id?: string | null
           updated_at?: string
           user_id: string
@@ -3868,8 +3932,10 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           onboarding_completed?: boolean | null
           preferred_language?: string | null
+          primary_role?: Database["public"]["Enums"]["app_role"] | null
           sling_id?: string | null
           updated_at?: string
           user_id?: string
@@ -5145,6 +5211,39 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string | null
+          device_info: string | null
+          endpoint: string
+          id: string
+          p256dh_key: string
+          staff_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string | null
+          device_info?: string | null
+          endpoint: string
+          id?: string
+          p256dh_key: string
+          staff_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string | null
+          device_info?: string | null
+          endpoint?: string
+          id?: string
+          p256dh_key?: string
+          staff_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       staff_qa: {
         Row: {
           answer: string | null
@@ -5839,6 +5938,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_walkthrough_state: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          skipped_at: string | null
+          updated_at: string
+          user_id: string
+          viewed_page_hints: string[]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          skipped_at?: string | null
+          updated_at?: string
+          user_id: string
+          viewed_page_hints?: string[]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          skipped_at?: string | null
+          updated_at?: string
+          user_id?: string
+          viewed_page_hints?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       archived_policies_reference: {
@@ -5909,6 +6038,7 @@ export type Database = {
           email: string
           full_name: string
           onboarding_completed: boolean
+          primary_role: Database["public"]["Enums"]["app_role"]
           roles: Database["public"]["Enums"]["app_role"][]
           user_id: string
         }[]
@@ -5927,6 +6057,13 @@ export type Database = {
       }
       admin_link_user_to_sling: {
         Args: { _sling_id: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_primary_role: {
+        Args: {
+          _primary_role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
         Returns: undefined
       }
       admin_toggle_user_deactivation: {
@@ -6090,6 +6227,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      walkthrough_mark_hint_viewed: {
+        Args: { _hint_id: string }
+        Returns: undefined
       }
     }
     Enums: {

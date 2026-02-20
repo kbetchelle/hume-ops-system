@@ -86,12 +86,12 @@ export function AnswerQuestionDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("club_policies")
-        .select("id, title, content, category")
+        .select("id, content, category")
         .eq("is_active", true)
-        .order("title", { ascending: true });
+        .order("category", { ascending: true });
 
       if (error) throw error;
-      return (data || []) as Policy[];
+      return (data || []).map((d: any) => ({ ...d, title: '' })) as Policy[];
     },
     enabled: open,
   });

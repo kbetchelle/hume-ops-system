@@ -396,7 +396,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground text-sm uppercase tracking-widest max-w-[280px] md:max-w-[320px] font-medium whitespace-pre-line bg-background/90 backdrop-blur-sm px-4 py-3 rounded border border-border shadow-sm"
+            className="absolute text-foreground max-w-[280px] md:max-w-[320px] whitespace-pre-line bg-background/90 backdrop-blur-sm px-4 py-3 rounded border border-border shadow-sm"
             style={
               arrowPoints && targetRect
                 ? (() => {
@@ -415,7 +415,12 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                   }
             }
           >
-            {currentStep.text}
+            <h3 className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-2">
+              {t("A Quick Walkthrough", "Un Recorrido Rápido")}
+            </h3>
+            <p className="text-sm font-medium uppercase tracking-widest">
+              {currentStep.text}
+            </p>
           </div>
         </>
       )}

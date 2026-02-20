@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminUser, useUpdateUserRoles, useUpdatePrimaryRole, useToggleUserDeactivation, useResetUserPassword, useUpdateUserUsername } from "@/hooks/useAdminUsers";
 import { getPrimaryRoleFromAppRoles } from "@/hooks/useUserRoles";
 import { AppRole, ROLES } from "@/types/roles";
@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserRoleEditor } from "./UserRoleEditor";
 import { toast } from "sonner";
-import { Pencil, UserX, UserCheck, KeyRound, Loader2 } from "lucide-react";
+import { Pencil, UserX, UserCheck, KeyRound, Loader2, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface UserManagementTableProps {
@@ -40,6 +41,7 @@ interface UserManagementTableProps {
 }
 
 export function UserManagementTable({ users, currentUserId }: UserManagementTableProps) {
+  const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deactivatingUser, setDeactivatingUser] = useState<AdminUser | null>(null);
@@ -51,9 +53,23 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
   const resetPassword = useResetUserPassword();
   const updateUsername = useUpdateUserUsername();
 
-  const filteredUsers = roleFilter === "all"
-    ? users
-    : users.filter((user) => user.roles.includes(roleFilter as AppRole));
+  const filteredUsers = useMemo(() => {
+    let list = roleFilter === "all"
+      ? users
+      : users.filter((user) => user.roles.includes(roleFilter as AppRole));
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (u) =>
+          (u.full_name && u.full_name.toLowerCase().includes(q)) ||
+          (u.email && u.email.toLowerCase().includes(q)) ||
+          (u.username && u.username.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [users, roleFilter, search]);
 
   const getRoleLabel = (role: AppRole) => {
     return ROLES.find((r) => r.value === role)?.label || role;
@@ -136,6 +152,26 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
 
   return (
     <div className="space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, or username..."
+          className="pl-10 pr-10"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Filter */}
       <div className="flex items-center gap-4">
         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">

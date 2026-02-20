@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 const BULK_LIMIT = 25;
@@ -48,6 +48,7 @@ export function CreateFromSlingTable() {
     },
   });
 
+  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AccountFilter>("no_account");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [usernameOverrides, setUsernameOverrides] = useState<Record<string, string>>({});
@@ -74,10 +75,24 @@ export function CreateFromSlingTable() {
   }, [slingUsers, emailsWithAccount]);
 
   const filtered = useMemo(() => {
-    if (filter === "has_account") return slingWithHasAccount.filter((s) => s.hasAccount);
-    if (filter === "no_account") return slingWithHasAccount.filter((s) => !s.hasAccount && s.hasEmail);
-    return slingWithHasAccount.filter((s) => s.hasEmail);
-  }, [slingWithHasAccount, filter]);
+    let list = slingWithHasAccount;
+    if (filter === "has_account") list = list.filter((s) => s.hasAccount);
+    else if (filter === "no_account") list = list.filter((s) => !s.hasAccount && s.hasEmail);
+    else list = list.filter((s) => s.hasEmail);
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (s) =>
+          (s.first_name && s.first_name.toLowerCase().includes(q)) ||
+          (s.last_name && s.last_name.toLowerCase().includes(q)) ||
+          (s.email && s.email.toLowerCase().includes(q)) ||
+          (s.position_name && s.position_name.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [slingWithHasAccount, filter, search]);
 
   const takenUsernames = useMemo(() => {
     const set = new Set(existingUsernames);
@@ -189,6 +204,26 @@ export function CreateFromSlingTable() {
 
   return (
     <div className="space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, or position..."
+          className="pl-10 pr-10"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">

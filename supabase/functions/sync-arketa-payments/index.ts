@@ -424,6 +424,20 @@ Deno.serve(async (req) => {
     }, { onConflict: 'id' });
 
     const durationMs = Date.now() - startTime;
+
+    // Log to api_logs so Recent Sync History and Sync Log History update
+    await logApiCall(supabase, {
+      apiName: 'arketa_payments',
+      endpoint: '/payments',
+      syncSuccess: failedCount === 0,
+      durationMs,
+      recordsProcessed: deduped.length,
+      recordsInserted: insertedCount,
+      responseStatus: 200,
+      errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
+      triggeredBy: body.triggeredBy ?? 'manual',
+    });
+
     await logSyncMetrics(supabase, {
       syncType: 'arketa_payments',
       startedAt: new Date(startTime).toISOString(),
@@ -434,14 +448,6 @@ Deno.serve(async (req) => {
       recordsFailed: failedCount,
       retryCount: Math.max(0, totalAttempts - pageCount),
     });
-
-    await supabase.from('api_sync_status').upsert({
-      api_name: 'arketa_payments',
-      last_sync_at: new Date().toISOString(),
-      last_sync_success: failedCount === 0,
-      last_records_processed: deduped.length,
-      last_records_inserted: insertedCount,
-    }, { onConflict: 'api_name' });
 
     return new Response(
       JSON.stringify({

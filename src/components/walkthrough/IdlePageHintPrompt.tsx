@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export interface IdlePageHintPromptProps {
@@ -27,18 +28,19 @@ export function IdlePageHintPrompt({
   onSeeFullWalkthrough,
   className,
 }: IdlePageHintPromptProps) {
+  const { t } = useLanguage();
   if (!visible) return null;
 
   return (
     <div
       className={cn("fixed bottom-6 right-6 z-50 max-w-[320px]", className)}
       role="dialog"
-      aria-label="Page help"
+      aria-label={t("Page help", "Ayuda de la página")}
     >
       <Card className="rounded-none border border-border shadow-lg">
         <CardHeader className="flex flex-row items-start justify-between gap-2 p-4 pb-2">
           <h3 className="text-xs font-medium uppercase tracking-widest text-foreground">
-            Need help?
+            {t("Need help?", "¿Necesitas ayuda?")}
           </h3>
           <Button
             type="button"
@@ -46,7 +48,7 @@ export function IdlePageHintPrompt({
             size="icon"
             className="h-7 w-7 shrink-0 rounded-none"
             onClick={onDismiss}
-            aria-label="Dismiss"
+            aria-label={t("Dismiss", "Cerrar")}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -61,14 +63,14 @@ export function IdlePageHintPrompt({
               className="rounded-none text-xs uppercase tracking-widest"
               onClick={onDismiss}
             >
-              Got it
+              {t("Got it", "Entendido")}
             </Button>
             <button
               type="button"
               className="text-xs font-medium uppercase tracking-widest text-primary underline-offset-4 hover:underline"
               onClick={onSeeFullWalkthrough}
             >
-              See full walkthrough
+              {t("See full walkthrough", "Ver guía completa")}
             </button>
           </div>
         </CardContent>

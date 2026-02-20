@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMarkWalkthroughCompleted, useMarkWalkthroughSkipped } from "@/hooks/useWalkthroughState";
 import { useOptionalSidebar } from "@/components/ui/sidebar";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -140,6 +141,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [pathLength, setPathLength] = useState(0);
 
+  const { t } = useLanguage();
   const markCompleted = useMarkWalkthroughCompleted();
   const markSkipped = useMarkWalkthroughSkipped();
   const optionalSidebar = useOptionalSidebar();
@@ -248,7 +250,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
       className="fixed inset-0 z-[100] flex flex-col bg-transparent"
       role="dialog"
       aria-modal="true"
-      aria-label="App walkthrough"
+      aria-label={t("App walkthrough", "Guía de la app")}
     >
       {/* Frosted glass layer with spotlight cutout */}
       <svg
@@ -362,7 +364,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                 "h-2 w-2 rounded-full transition-colors",
                 i === stepIndex ? "bg-primary scale-125" : "bg-muted-foreground/40 hover:bg-muted-foreground/60"
               )}
-              aria-label={`Step ${i + 1} of ${filteredSteps.length}`}
+              aria-label={t(`Step ${i + 1} of ${filteredSteps.length}`, `Paso ${i + 1} de ${filteredSteps.length}`)}
               aria-current={i === stepIndex ? "step" : undefined}
             />
           ))}
@@ -375,7 +377,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             onClick={handleBack}
             disabled={!canGoBack}
             className="rounded-none h-9 w-9 border border-foreground"
-            aria-label="Previous step"
+            aria-label={t("Previous step", "Paso anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -384,9 +386,9 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             variant="default"
             className="rounded-none uppercase text-[10px] tracking-widest border border-foreground"
             onClick={handleNext}
-            aria-label={isLastStep ? "Finish walkthrough" : "Next step"}
+            aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >
-            {isLastStep ? "Done" : "Next"}
+            {isLastStep ? t("Done", "Listo") : t("Next", "Siguiente")}
           </Button>
           <Button
             ref={skipButtonRef}
@@ -394,9 +396,9 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             variant="ghost"
             className="rounded-none uppercase text-[10px] tracking-widest text-muted-foreground"
             onClick={handleSkip}
-            aria-label="Skip walkthrough"
+            aria-label={t("Skip walkthrough", "Omitir guía")}
           >
-            Skip
+            {t("Skip", "Omitir")}
           </Button>
         </div>
       </div>

@@ -700,6 +700,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   useInAppNotifications();
   const { user } = useAuthContext();
+  const { t } = useLanguage();
   const { data: profile } = useUserProfile(user?.id);
   const { data: roles } = useUserRoles(user?.id);
   const { activeRole, availableRoles, isLoading: activeRoleLoading } = useActiveRole();
@@ -719,8 +720,8 @@ export function DashboardLayout({
     if (!needsWalkthrough || isBoh || activeRole === null) return [];
     const firstName = profile?.full_name?.split(" ")[0] ?? "User";
     const hasMultipleRoles = (roles?.length ?? availableRoles?.length ?? 0) > 1;
-    return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles });
-  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length]);
+    return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles }, t);
+  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length, t]);
 
   const showOverlay =
     needsWalkthrough &&

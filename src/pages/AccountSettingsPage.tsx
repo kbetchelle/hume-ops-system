@@ -11,10 +11,11 @@ import { useUserProfile, useUpdateProfile, useUserRoles } from "@/hooks/useUserR
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/useUserPreferences";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PREFERRED_LANGUAGE_PENDING_KEY } from "@/components/shared/SyncProfileLanguage";
-import { User, Globe, Bell, Lock, Save, Loader2, Eye, EyeOff } from "lucide-react";
+import { User, Globe, Bell, Lock, Save, Loader2, Eye, EyeOff, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { NotificationPreferencesPanel } from "@/components/notifications/NotificationPreferencesPanel";
+import { useResetWalkthroughForReplay } from "@/hooks/useWalkthroughState";
 
 export default function AccountSettingsPage() {
   const { user, updatePassword } = useAuthContext();
@@ -23,6 +24,7 @@ export default function AccountSettingsPage() {
   const { data: preferences, isLoading: prefsLoading } = useUserPreferences();
   const updateProfile = useUpdateProfile();
   const updatePreferences = useUpdateUserPreferences();
+  const resetForReplay = useResetWalkthroughForReplay();
   const { language, setLanguage, t } = useLanguage();
 
   // Local state for profile form
@@ -364,6 +366,39 @@ export default function AccountSettingsPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Show App Guide */}
+            <Card className="rounded-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xs uppercase tracking-widest font-normal flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  {t("App Guide", "Guía de la app")}
+                </CardTitle>
+                <CardDescription className="text-[10px] tracking-wide">
+                  {t("Replay the in-app walkthrough to see key features again.", "Reproduce la guía de la app para ver de nuevo las funciones principales.")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-none text-[10px] uppercase tracking-widest"
+                  onClick={() => resetForReplay.mutate()}
+                  disabled={resetForReplay.isPending}
+                  aria-label={t("Show app guide walkthrough", "Mostrar guía de la app")}
+                >
+                  {resetForReplay.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <>
+                      <BookOpen className="h-3 w-3 mr-1" />
+                      {t("Show App Guide", "Mostrar guía de la app")}
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
           </>

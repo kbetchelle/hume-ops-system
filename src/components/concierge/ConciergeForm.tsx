@@ -1085,14 +1085,8 @@ export function ConciergeForm() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Label className="text-sm">Any issues with Arketa, Jolt, Database, or questions for management</Label>
-              <Checkbox
-                checked={formData.systemIssuesNA}
-                onCheckedChange={(checked) => updateFormField('systemIssuesNA', !!checked)}
-                disabled={isSubmitted} />
-
-              <span className="text-sm text-muted-foreground">N/A</span>
             </div>
-            {!formData.systemIssuesNA && formData.systemIssues.map((issue, i) =>
+            {formData.systemIssues.map((issue, i) =>
             <div key={issue.id ?? i} className="flex flex-wrap gap-2 items-start">
                 <Select
                 value={issue.issueType}

@@ -46,13 +46,6 @@ export default function UserManagementPage() {
   return (
     <DashboardLayout title="User Management">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="space-y-2">
-          <h2 className="text-sm uppercase tracking-[0.15em] font-normal">User Management</h2>
-          <p className="text-xs text-muted-foreground tracking-wide">
-            Manage users, roles, Sling linking, and create app accounts from Sling.
-          </p>
-        </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">

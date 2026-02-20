@@ -42,7 +42,7 @@ const WELCOME_ES = "¡Bienvenido a Hume, {name}!\nTe mostraremos {n} funciones p
 const UNIVERSAL_USER_MENU: WalkthroughStepConfig = {
   id: "user-menu",
   targetSelector: "[data-walkthrough=user-menu]",
-  arrowDirection: "left",
+  arrowDirection: "right",
   text: "Your profile, settings, and sign out live here.",
   textEs: "Tu perfil, ajustes y cerrar sesión están aquí.",
 };

@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAuthContext } from "@/features/auth/AuthProvider";
@@ -10,10 +12,36 @@ import { Loader2 } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/useAccountApproval";
 import { Badge } from "@/components/ui/badge";
 
+const VALID_TABS = ["users", "approvals", "sling", "create-from-sling"] as const;
+
 export default function UserManagementPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = VALID_TABS.includes(tabFromUrl as (typeof VALID_TABS)[number])
+    ? (tabFromUrl as (typeof VALID_TABS)[number])
+    : "users";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && VALID_TABS.includes(t as (typeof VALID_TABS)[number])) {
+      setActiveTab(t as (typeof VALID_TABS)[number]);
+    }
+  }, [searchParams]);
+
   const { user } = useAuthContext();
   const { data: users, isLoading, error } = useAdminUsers();
   const pendingApprovalsCount = usePendingApprovalsCount();
+
+  const onTabChange = (value: string) => {
+    setActiveTab(value as (typeof VALID_TABS)[number]);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "users") next.delete("tab");
+      else next.set("tab", value);
+      return next;
+    });
+  };
 
   return (
     <DashboardLayout title="User Management">
@@ -22,22 +50,22 @@ export default function UserManagementPage() {
         <div className="space-y-2">
           <h2 className="text-sm uppercase tracking-[0.15em] font-normal">User Management</h2>
           <p className="text-xs text-muted-foreground tracking-wide">
-            Manage users, roles, and Sling account linking.
+            Manage users, roles, Sling linking, and create app accounts from Sling.
           </p>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
+        <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
+          <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0 flex-nowrap overflow-x-auto min-h-0">
             <TabsTrigger
               value="users"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
               Users & Roles
             </TabsTrigger>
             <TabsTrigger
               value="approvals"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
               <div className="flex items-center gap-2">
                 Pending Approvals
@@ -50,13 +78,13 @@ export default function UserManagementPage() {
             </TabsTrigger>
             <TabsTrigger
               value="sling"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
               Sling Linking
             </TabsTrigger>
             <TabsTrigger
               value="create-from-sling"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
               Create from Sling
             </TabsTrigger>

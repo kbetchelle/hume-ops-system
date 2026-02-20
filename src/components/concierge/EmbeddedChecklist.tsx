@@ -297,7 +297,7 @@ export function EmbeddedChecklist() {
   const { data: shiftSubmission, isLoading: submissionLoading } = useQuery({
     queryKey: ["shift-submission", "concierge", today, currentShift],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("checklist_shift_submissions") as any)
+      const { data, error } = await (supabase.from("checklist_shift_submissions" as any) as any)
         .select("*")
         .eq("department_table", "concierge")
         .eq("department", "Concierge")
@@ -316,8 +316,8 @@ export function EmbeddedChecklist() {
     mutationFn: async () => {
       if (!userData?.id) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("checklist_shift_submissions")
+      const { error } = await (supabase
+        .from("checklist_shift_submissions" as any) as any)
         .insert({
           department_table: "concierge",
           department: "Concierge",

@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 
 interface CalendlyTour {
   id: string;
-  invitee_name: string | null;
+  guest_name: string | null;
   start_time: string;
   end_time: string | null;
   status: string | null;
@@ -30,8 +30,8 @@ export function ScheduledToursDisplay({ reportDate, disabled }: ScheduledToursDi
       const dayStart = `${reportDate}T00:00:00.000Z`;
       const dayEnd = `${reportDate}T23:59:59.999Z`;
       const { data, error } = await supabase
-        .from('calendly_events_staging')
-        .select('id, invitee_name, start_time, end_time, status')
+        .from('scheduled_tours')
+        .select('id, guest_name, start_time, end_time, status')
         .gte('start_time', dayStart)
         .lte('start_time', dayEnd)
         .order('start_time', { ascending: true });
@@ -90,7 +90,7 @@ export function ScheduledToursDisplay({ reportDate, disabled }: ScheduledToursDi
               key={tour.id}
               className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"
             >
-              <span className="font-medium">{tour.invitee_name ?? 'Unknown'}</span>
+              <span className="font-medium">{tour.guest_name ?? 'Unknown'}</span>
               <span className="text-muted-foreground">{formatTime(tour.start_time)}</span>
               {tour.status && (
                 <Badge variant="secondary" className="text-[10px] uppercase">

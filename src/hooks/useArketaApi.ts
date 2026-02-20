@@ -119,7 +119,7 @@ export function useClassReservations(classId: string) {
         .order("checked_in_at", { ascending: false });
 
       if (error) throw error;
-      return data as ArketaReservation[];
+      return data as unknown as ArketaReservation[];
     },
     enabled: !!classId,
   });
@@ -162,7 +162,7 @@ export function useTodaysReservations(date?: string) {
       const noShows = reservations?.filter(r => r.status === 'no_show').length || 0;
       
       return {
-        reservations: reservations as ArketaReservation[],
+        reservations: reservations as unknown as ArketaReservation[],
         summary: { total, checkedIn, noShows },
       };
     },

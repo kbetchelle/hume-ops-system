@@ -21,6 +21,16 @@ The migration list starts at **20260130163917**. Everything *before* that (e.g. 
 - **If Lovable already has the app’s current schema:** run only the **missing** migrations (compare Lovable’s schema to the list and run the ones not yet applied).
 - **If Lovable is behind:** run the **94 migrations in strict chronological order** (see below). Ensure base schema exists in Lovable or from pre-20260130 migrations.
 
+## Base schema dependencies (for consolidated script)
+
+The consolidated script **lovable_consolidated_migrations.sql** currently starts at migration **20260206000000**. It assumes the following already exist (from migrations before that or from pre-20260130 base):
+
+- **Tables:** `staff_qa`, `profiles`, `user_roles`, `lost_and_found`, `staff_announcements`, `announcements`, `api_sync_status`, `api_logs`, `backfill_jobs`, `arketa_classes`, `arketa_reservations`, `arketa_reservations_staging`, `arketa_reservations_history`, `arketa_payments_staging`, `daily_schedules` (or `daily_schedule` after rename), and any other tables created or altered in apply-order migrations 1–35.
+- **Functions:** `public.is_manager_or_admin(uuid)`, `public.update_updated_at_column()`.
+- **Schema:** `auth.users` (Supabase).
+
+If you run only the consolidated file (e.g. in Lovable's SQL editor), ensure Lovable's database already has these objects; otherwise run the earlier migrations from **lovable_apply_order.txt** first or apply the full 94-migration set in order.
+
 ## Apply order (94 migrations)
 
 Use the ordered list in **supabase/lovable_apply_order.txt**. Each line is one migration filename (no comments in the runnable list). Apply in that exact order.
@@ -55,6 +65,48 @@ The consolidated file is idempotent where possible (e.g. `DROP POLICY IF EXISTS`
 
 - **20260130165252_seed_historical_weekly_updates.sql** and **20260218120002_import_weekly_updates_csv.sql** are idempotent (they use `ON CONFLICT (id) DO UPDATE`). Safe to re-run.
 - **20260204000003** and **20260204000006** (checklist imports): keep order (000003 then 000006). 000006 TRUNCATEs then inserts; no change needed for one-time run.
+
+## Step-by-step: Fix local migrations and apply in Lovable
+
+### Part A: Fix local Supabase migration history (so `supabase db pull` works)
+
+1. **Remove macOS metadata files** (they break Supabase’s migration pattern):
+   ```bash
+   cd /path/to/hume-ops-system
+   find supabase/migrations -maxdepth 1 -name '._*' -type f -delete
+   ```
+   Or delete by hand any file in `supabase/migrations` whose name starts with `._`.
+
+2. **If the CLI still says “migration history does not match”**, repair the migration table so it matches what’s actually applied on the remote:
+   ```bash
+   supabase migration repair --status applied 20260219222856
+   supabase migration repair --status applied 20260219223026
+   supabase migration repair --status applied 20260219223050
+   ```
+   Use the exact timestamps the CLI suggests. Then run `supabase db pull` again.
+
+3. **Optional:** To avoid new `._` files, exclude them from git and avoid copying migrations via Finder to external drives:
+   - Add to `.gitignore`: `supabase/migrations/._*`
+   - Prefer `cp` or `rsync` when copying the repo.
+
+### Part B: Apply migrations in Lovable Cloud (SQL editor)
+
+1. **Ensure base schema exists in Lovable.**  
+   The consolidated script assumes tables like `staff_qa`, `profiles`, `user_roles`, `lost_and_found`, `sync_schedule`, `storage_deletion_queue`, and functions `public.is_manager_or_admin(uuid)`, `public.update_updated_at_column()` already exist. If your Lovable DB is brand new or missing these, run the **first 35 migrations** from `supabase/lovable_apply_order.txt` in order (as individual files from `supabase/migrations/`) before running the consolidated script.
+
+2. **Open Lovable’s SQL editor** (Supabase SQL editor for the Lovable project).
+
+3. **Run the consolidated script:**
+   - Copy the full contents of **supabase/lovable_consolidated_migrations.sql**.
+   - Paste into the SQL editor and run.
+   - If you hit size or timeout limits, run in chunks by **phase** (search for `########## PHASE` in the file) or by **migration** (search for `-- ========== Migration:`).
+
+4. **If you see errors:**
+   - **“relation … does not exist”** → Base schema is missing; apply earlier migrations from `lovable_apply_order.txt` until that object exists.
+   - **“function … does not exist”** → Ensure `public.is_manager_or_admin` and `public.update_updated_at_column` exist (from base or earlier migrations).
+   - **“permission denied”** → Run as a user that can create tables/functions (e.g. Supabase project owner / postgres).
+
+5. **Do not run** the three excluded `remote_schema` migrations (see Excluded files above).
 
 ## Summary
 

@@ -87,7 +87,7 @@ export function QuickLinksTab({
           hasPendingFlag={groupFlagsMap?.has(group.id) ?? false}
         >
           <Card data-resource-id={group.id} className="rounded-none">
-            <CardContent className="px-2.5 py-0.5">
+            <CardContent className="p-[10px]">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-medium">{group.title}</h3>
                 {groupFlagsMap?.has(group.id) && <UnderReviewBadge />}

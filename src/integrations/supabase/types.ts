@@ -6044,6 +6044,7 @@ export type Database = {
           primary_role: Database["public"]["Enums"]["app_role"]
           roles: Database["public"]["Enums"]["app_role"][]
           user_id: string
+          username: string
         }[]
       }
       admin_get_users_with_sling_info: {
@@ -6078,6 +6079,10 @@ export type Database = {
           _roles: Database["public"]["Enums"]["app_role"][]
           _target_user_id: string
         }
+        Returns: undefined
+      }
+      admin_update_user_username: {
+        Args: { _target_user_id: string; _username: string }
         Returns: undefined
       }
       cleanup_archived_lost_and_found: { Args: never; Returns: undefined }

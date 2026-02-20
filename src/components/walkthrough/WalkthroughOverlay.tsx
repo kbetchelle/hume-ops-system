@@ -331,12 +331,12 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal whitespace-pre-line"
+            className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal whitespace-pre-line bg-background/90 backdrop-blur-sm px-3 py-2 rounded border border-border shadow-sm"
             style={
               arrowPoints
                 ? {
                     left: Math.max(16, Math.min(arrowPoints.start.x - 8, viewportWidth - 280)),
-                    top: Math.max(16, arrowPoints.start.y - 32),
+                    top: Math.max(16, arrowPoints.start.y - 56),
                   }
                 : {
                     left: "50%",

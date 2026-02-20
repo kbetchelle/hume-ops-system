@@ -34,10 +34,14 @@ export const WALKTHROUGH_ARROW_COLORS = [
   "#62bb47", // add.olive
 ] as const;
 
-const AUTO_ADVANCE_MS = 6000;
+const AUTO_ADVANCE_MS = 90_000; // 90 seconds per step
 const SPOTLIGHT_PADDING = 8;
 const ARROW_MARGIN = 80;
 const ARROW_DRAW_DURATION_MS = 800;
+const STEP_TEXT_GAP = 20;
+const BOTTOM_SAFE_HEIGHT = 160; // reserve space for progress dots + buttons
+const STEP_TEXT_MAX_WIDTH = 260;
+const STEP_TEXT_EST_HEIGHT = 88;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -122,6 +126,46 @@ function getArrowPathD(
   return `M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`;
 }
 
+/** Step text position: outside target rect, never overlapping controls or target */
+function getStepTextPosition(
+  direction: WalkthroughArrowDirection,
+  targetRect: DOMRect,
+  viewportWidth: number,
+  viewportHeight: number
+): { left: number; top: number } {
+  const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
+  const minLeft = 16;
+  const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
+
+  switch (direction) {
+    case "left":
+      return {
+        left: Math.min(targetRect.right + STEP_TEXT_GAP, maxLeft),
+        top: Math.max(16, Math.min(targetRect.top, maxTop)),
+      };
+    case "right":
+      return {
+        left: Math.max(minLeft, targetRect.left - STEP_TEXT_MAX_WIDTH - STEP_TEXT_GAP),
+        top: Math.max(16, Math.min(targetRect.top, maxTop)),
+      };
+    case "top":
+      return {
+        left: Math.max(minLeft, Math.min(targetRect.left + targetRect.width / 2 - STEP_TEXT_MAX_WIDTH / 2, maxLeft)),
+        top: Math.min(targetRect.bottom + STEP_TEXT_GAP, maxTop),
+      };
+    case "bottom":
+      return {
+        left: Math.max(minLeft, Math.min(targetRect.left + targetRect.width / 2 - STEP_TEXT_MAX_WIDTH / 2, maxLeft)),
+        top: Math.max(16, targetRect.top - STEP_TEXT_EST_HEIGHT - STEP_TEXT_GAP),
+      };
+    default:
+      return {
+        left: Math.max(minLeft, targetRect.right + STEP_TEXT_GAP),
+        top: Math.max(16, Math.min(targetRect.top, maxTop)),
+      };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -198,21 +242,26 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
-  // Programmatically open dropdown when step targets user-menu
+  // Programmatically open dropdown when step targets a dropdown trigger (user menu, role switcher)
+  const DROPDOWN_TARGET_SELECTORS = ["[data-walkthrough=user-menu]", "[data-walkthrough=role-switcher]"];
   useEffect(() => {
     if (!currentStep) return;
     const target = typeof currentStep.target === "string" ? currentStep.target : null;
-    if (target === "[data-walkthrough=user-menu]") {
+    if (target && DROPDOWN_TARGET_SELECTORS.includes(target)) {
       const el = document.querySelector(target) as HTMLElement | null;
       if (el) {
-        // Small delay to let the overlay render first
-        const t = setTimeout(() => el.click(), 300);
-        return () => clearTimeout(t);
+        const timeoutId = setTimeout(() => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          requestAnimationFrame(() => {
+            el.click();
+          });
+        }, 300);
+        return () => clearTimeout(timeoutId);
       }
     }
   }, [currentStep]);
 
-  // Auto-advance 6s except on last step
+  // Auto-advance after 90s except on last step
   useEffect(() => {
     if (filteredSteps.length === 0 || isLastStep) return;
     const t = setTimeout(() => setStepIndex((i) => Math.min(i + 1, filteredSteps.length - 1)), AUTO_ADVANCE_MS);
@@ -350,15 +399,15 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             className="absolute text-foreground text-xs uppercase tracking-widest max-w-[200px] md:max-w-[260px] font-normal whitespace-pre-line bg-background/90 backdrop-blur-sm px-3 py-2 rounded border border-border shadow-sm"
             style={
               arrowPoints && targetRect
-                ? currentStep.arrowDirection === "left"
-                  ? {
-                      left: Math.max(16, targetRect.right + 16),
-                      top: Math.max(16, targetRect.top),
-                    }
-                  : {
-                      left: Math.max(16, Math.min(arrowPoints.start.x - 8, viewportWidth - 280)),
-                      top: Math.max(16, arrowPoints.start.y - 56),
-                    }
+                ? (() => {
+                    const pos = getStepTextPosition(
+                      currentStep.arrowDirection,
+                      targetRect,
+                      viewportWidth,
+                      viewportHeight
+                    );
+                    return { left: pos.left, top: pos.top };
+                  })()
                 : {
                     left: "50%",
                     top: "50%",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminUser, useUpdateUserRoles, useUpdatePrimaryRole, useToggleUserDeactivation, useResetUserPassword } from "@/hooks/useAdminUsers";
+import { AdminUser, useUpdateUserRoles, useUpdatePrimaryRole, useToggleUserDeactivation, useResetUserPassword, useUpdateUserUsername } from "@/hooks/useAdminUsers";
 import { getPrimaryRoleFromAppRoles } from "@/hooks/useUserRoles";
 import { AppRole, ROLES } from "@/types/roles";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
   const updatePrimaryRole = useUpdatePrimaryRole();
   const toggleDeactivation = useToggleUserDeactivation();
   const resetPassword = useResetUserPassword();
+  const updateUsername = useUpdateUserUsername();
 
   const filteredUsers = roleFilter === "all"
     ? users
@@ -58,15 +59,22 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
     return ROLES.find((r) => r.value === role)?.label || role;
   };
 
-  const handleSaveRoles = async (roles: AppRole[]) => {
+  const handleSaveRoles = async (roles: AppRole[], username: string | null) => {
     if (!editingUser) return;
-    
+
     try {
       await updateRoles.mutateAsync({ userId: editingUser.user_id, roles });
-      toast.success("Roles updated successfully");
+      const usernameToSave = username?.trim() || null;
+      if (usernameToSave !== (editingUser.username ?? null)) {
+        await updateUsername.mutateAsync({
+          userId: editingUser.user_id,
+          username: usernameToSave || null,
+        });
+      }
+      toast.success("Roles and username updated successfully");
       setEditingUser(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update roles");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to update");
     }
   };
 
@@ -166,6 +174,9 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                 User
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
+                Username
+              </TableHead>
+              <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
                 Roles
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
@@ -203,6 +214,9 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                       {user.email}
                     </p>
                   </div>
+                </TableCell>
+                <TableCell className="text-[10px] tracking-wide">
+                  {user.username ?? "—"}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -309,9 +323,10 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
           onOpenChange={(open) => !open && setEditingUser(null)}
           userName={editingUser.full_name}
           userEmail={editingUser.email}
+          currentUsername={editingUser.username ?? ""}
           currentRoles={editingUser.roles}
           onSave={handleSaveRoles}
-          isSaving={updateRoles.isPending}
+          isSaving={updateRoles.isPending || updateUsername.isPending}
         />
       )}
 

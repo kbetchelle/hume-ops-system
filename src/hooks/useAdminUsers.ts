@@ -6,6 +6,7 @@ export interface AdminUser {
   user_id: string;
   email: string;
   full_name: string | null;
+  username: string | null;
   onboarding_completed: boolean | null;
   deactivated: boolean;
   created_at: string;
@@ -105,6 +106,31 @@ export function useResetUserPassword() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
+export function useUpdateUserUsername() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      username,
+    }: {
+      userId: string;
+      username: string | null;
+    }) => {
+      const { error } = await (supabase.rpc as (name: string, args: object) => Promise<{ error: unknown }>)(
+        "admin_update_user_username",
+        { _target_user_id: userId, _username: username }
+      );
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
     },
   });
 }

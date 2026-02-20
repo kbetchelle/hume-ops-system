@@ -2,6 +2,8 @@ import { useState } from "react";
 import { AppRole, ROLES } from "@/types/roles";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +19,9 @@ interface UserRoleEditorProps {
   onOpenChange: (open: boolean) => void;
   userName: string | null;
   userEmail: string;
+  currentUsername: string;
   currentRoles: AppRole[];
-  onSave: (roles: AppRole[]) => Promise<void>;
+  onSave: (roles: AppRole[], username: string | null) => Promise<void>;
   isSaving: boolean;
 }
 
@@ -27,11 +30,13 @@ export function UserRoleEditor({
   onOpenChange,
   userName,
   userEmail,
+  currentUsername,
   currentRoles,
   onSave,
   isSaving,
 }: UserRoleEditorProps) {
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>(currentRoles);
+  const [username, setUsername] = useState(currentUsername);
 
   const toggleRole = (role: AppRole) => {
     setSelectedRoles((prev) =>
@@ -40,13 +45,15 @@ export function UserRoleEditor({
   };
 
   const handleSave = async () => {
-    await onSave(selectedRoles);
+    const normalizedUsername = username?.trim() || null;
+    await onSave(selectedRoles, normalizedUsername);
   };
 
-  // Reset selected roles when dialog opens with new user
+  // Reset state when dialog opens with new user
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       setSelectedRoles(currentRoles);
+      setUsername(currentUsername);
     }
     onOpenChange(newOpen);
   };
@@ -56,14 +63,30 @@ export function UserRoleEditor({
       <DialogContent className="rounded-none border-foreground bg-background max-w-md">
         <DialogHeader>
           <DialogTitle className="text-sm uppercase tracking-[0.15em] font-normal">
-            Edit Roles
+            Edit user
           </DialogTitle>
           <DialogDescription className="text-xs tracking-wide">
             {userName || userEmail}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-4">
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-widest">Username (for login)</Label>
+            <Input
+              className="rounded-none border-foreground text-xs"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. jane.doe"
+            />
+            <p className="text-[10px] text-muted-foreground tracking-wide">
+              Letters, numbers, underscores only. Leave empty to clear.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-widest">Roles</Label>
+            <div className="space-y-2">
           {ROLES.map((role) => (
             <div
               key={role.value}
@@ -84,6 +107,8 @@ export function UserRoleEditor({
               </div>
             </div>
           ))}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="gap-2">
@@ -101,7 +126,7 @@ export function UserRoleEditor({
                 Saving
               </>
             ) : (
-              "Save Roles"
+              "Save"
             )}
           </Button>
         </DialogFooter>

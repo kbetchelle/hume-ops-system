@@ -1,1 +1,4 @@
 project_id = "rywcqacxnwwpynriffer"
+
+[functions.admin-create-accounts-from-sling]
+verify_jwt = false

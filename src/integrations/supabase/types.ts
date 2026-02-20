@@ -6129,10 +6129,7 @@ export type Database = {
           record_count: number
         }[]
       }
-      get_email_by_username: {
-        Args: { _username: string }
-        Returns: string
-      }
+      get_email_by_username: { Args: { _username: string }; Returns: string }
       get_pdf_page_flags: {
         Args: { page_id: string; page_num?: number }
         Returns: {

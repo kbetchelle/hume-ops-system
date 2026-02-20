@@ -29,6 +29,18 @@ interface TransferResult {
   error?: string;
 }
 
+/** Normalize unknown timestamp (ISO string, Unix sec/ms, or other) to ISO string or null. */
+function toIsoTimestamp(val: unknown): string | null {
+  if (val == null) return null;
+  let date: Date;
+  if (typeof val === "number") {
+    date = new Date(val < 1e12 ? val * 1000 : val);
+  } else {
+    date = new Date(val as string);
+  }
+  return isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -247,9 +259,9 @@ async function transferPayments(
       payment_id: r.payment_id ?? r.id,
       amount: r.amount ?? null,
       status: r.status ?? null,
-      created_at_api: r.created_at_api ?? null,
+      created_at_api: toIsoTimestamp(r.created_at_api) ?? toIsoTimestamp(r.updated_at) ?? (r.start_date ? `${String(r.start_date)}T00:00:00Z` : null),
       currency: r.currency ?? null,
-      amount_refunded: r.amount_refunded ?? null,
+      amount_refunded: r.amount_refunded ?? r.total_refunded ?? null,
       description: r.description ?? null,
       invoice_id: r.invoice_id ?? null,
       normalized_category: r.normalized_category ?? null,

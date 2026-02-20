@@ -55,6 +55,47 @@ interface SyncRequest {
   resume?: boolean;
   reset_cursor?: boolean;
   triggeredBy?: string;
+  /** Date-mode (backfill): use GET /purchases with date range; write only to staging */
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  sync_batch_id?: string;
+}
+
+/** Purchase API shape (GET /purchases) - may use camelCase or snake_case */
+interface PurchaseLike {
+  id?: string;
+  payment_id?: string;
+  client_id?: string;
+  clientId?: string;
+  client?: { id?: string; first_name?: string; firstName?: string; last_name?: string; lastName?: string; email?: string; phone?: string } | null;
+  amount?: number;
+  price?: number;
+  total?: number;
+  status?: string;
+  description?: string | null;
+  name?: string | null;
+  payment_type?: string | null;
+  type?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+  start_date?: string | null;
+  startDate?: string | null;
+  end_date?: string | null;
+  endDate?: string | null;
+  currency?: string | null;
+  amount_refunded?: number | null;
+  total_refunded?: number | null;
+  refunded?: number | null;
+  net_sales?: number | null;
+  net_amount?: number | null;
+  transaction_fees?: number | null;
+  fees?: number | null;
+  tax?: number | null;
+  tax_amount?: number | null;
+  [key: string]: unknown;
 }
 
 async function fetchWithRetry(url: string, options: RequestInit): Promise<{ response: Response; attempts: number }> {
@@ -106,6 +147,41 @@ function toDbRow(p: PaymentDTO) {
   };
 }
 
+/** Map a purchase (GET /purchases) to staging row shape for sync-from-staging */
+function purchaseToStagingRow(p: PurchaseLike, syncBatchId: string): Record<string, unknown> {
+  const id = String(p.id ?? p.payment_id ?? '');
+  const client = p.client;
+  const createdAt = p.created_at ?? p.updated_at ?? p.updatedAt ?? p.start_date ?? p.startDate ?? null;
+  return {
+    payment_id: id,
+    amount: p.amount ?? p.price ?? p.total ?? null,
+    status: p.status ?? null,
+    created_at_api: typeof createdAt === 'string' ? createdAt : (createdAt ? new Date(createdAt as number).toISOString() : null),
+    currency: p.currency ?? null,
+    amount_refunded: p.amount_refunded ?? p.total_refunded ?? p.refunded ?? null,
+    description: p.description ?? p.name ?? null,
+    invoice_id: (p as PaymentDTO).invoice_id ?? null,
+    normalized_category: (p as PaymentDTO).normalized_category ?? null,
+    net_sales: p.net_sales ?? p.net_amount ?? null,
+    transaction_fees: p.transaction_fees ?? p.fees ?? null,
+    tax: p.tax ?? p.tax_amount ?? null,
+    location_name: (p as PaymentDTO).location_name ?? null,
+    source: (p as PaymentDTO).source ?? 'purchases',
+    payment_type: p.payment_type ?? p.type ?? null,
+    promo_code: (p as PaymentDTO).promo_code ?? null,
+    offering_name: (p as PaymentDTO).offering_name ?? null,
+    seller_name: (p as PaymentDTO).seller_name ?? null,
+    client_id: p.client_id ?? p.clientId ?? (client?.id != null ? String(client.id) : null),
+    client_first_name: client?.first_name ?? (client as { firstName?: string })?.firstName ?? null,
+    client_last_name: client?.last_name ?? (client as { lastName?: string })?.lastName ?? null,
+    client_email: client?.email ?? null,
+    client_phone: client?.phone ?? null,
+    raw_data: p,
+    synced_at: new Date().toISOString(),
+    sync_batch_id: syncBatchId,
+  };
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -129,6 +205,77 @@ Deno.serve(async (req) => {
     const logger = createSyncLogger('arketa_payments');
     const startTime = Date.now();
     const body = await req.json().catch(() => ({})) as SyncRequest;
+    const startDate = body.start_date ?? body.startDate;
+    const endDate = body.end_date ?? body.endDate;
+    const isDateMode = !!startDate && !!endDate;
+
+    // ── Date-mode (backfill): use documented GET /purchases with date range; write only to staging ──
+    if (isDateMode) {
+      let headers: Record<string, string>;
+      try {
+        const token = await getArketaToken(supabaseUrl, supabaseKey);
+        headers = getArketaHeaders(token);
+      } catch {
+        headers = getArketaApiKeyHeaders(ARKETA_API_KEY!);
+      }
+      const prodBase = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0/${ARKETA_PARTNER_ID}/purchases`;
+      const allPurchases: PurchaseLike[] = [];
+      let nextCursor: string | undefined;
+      const limit = 400;
+      do {
+        let url = `${prodBase}?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
+        if (nextCursor) url += `&cursor=${encodeURIComponent(nextCursor)}`;
+        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers });
+        if (!response.ok) {
+          const errText = await response.text();
+          logger.error(`Purchases fetch failed: HTTP ${response.status}`, { body: errText.substring(0, 300) });
+          return new Response(
+            JSON.stringify({ success: false, error: `Purchases API error: ${response.status}`, syncedCount: 0, totalFetched: 0, payments_staged: 0 }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (data.purchases ?? data.items ?? data.data ?? []);
+        allPurchases.push(...(items as PurchaseLike[]));
+        nextCursor = data?.pagination?.nextCursor ?? data?.pagination?.nextStartAfterId ?? undefined;
+        if (items.length > 0) logger.info(`Purchases page: ${items.length} (total: ${allPurchases.length})`);
+      } while (nextCursor);
+
+      const syncBatchId = body.sync_batch_id ?? crypto.randomUUID();
+      const seen = new Set<string>();
+      const stagingRows: Record<string, unknown>[] = [];
+      for (const p of allPurchases) {
+        const key = String(p.id ?? p.payment_id ?? '');
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        stagingRows.push(purchaseToStagingRow(p, syncBatchId));
+      }
+      let staged = 0;
+      for (let i = 0; i < stagingRows.length; i += UPSERT_BATCH) {
+        const batch = stagingRows.slice(i, i + UPSERT_BATCH);
+        const { error } = await supabase.from('arketa_payments_staging').insert(batch);
+        if (error) {
+          logger.error('Staging insert failed', error);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message, syncedCount: staged, totalFetched: allPurchases.length, payments_staged: staged }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        staged += batch.length;
+      }
+      const durationMs = Date.now() - startTime;
+      await logApiCall(supabase, { apiName: 'arketa_payments', endpoint: '/purchases', syncSuccess: true, durationMs, recordsProcessed: staged, recordsInserted: staged, responseStatus: 200, triggeredBy: body.triggeredBy ?? 'backfill-job' });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          syncedCount: staged,
+          totalFetched: allPurchases.length,
+          payments_staged: staged,
+          data: { payments_staged: staged },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Load or reset cursor from sync state
     let savedCursor: string | null = null;

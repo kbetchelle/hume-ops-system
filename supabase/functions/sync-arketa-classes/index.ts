@@ -324,8 +324,8 @@ Deno.serve(async (req) => {
         const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
 
         if (skipCursor) {
-          // Partner API expects full cursor value (e.g. classes%2FP8k22mPi6hc05KP25sCM); reconstruct from DB external_id
-          const startAfterCursor = `classes%2F${skipCursor.external_id}`;
+          // Partner API expects full cursor value (e.g. classes/P8k22mPi6hc05KP25sCM); use unencoded form so searchParams.set() encodes to %2F once
+          const startAfterCursor = `classes/${skipCursor.external_id}`;
           console.log(`[classes-sync] Strategy B: Skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date}), start_after=${startAfterCursor}`);
           try {
             const url = new URL(classesBaseUrl);

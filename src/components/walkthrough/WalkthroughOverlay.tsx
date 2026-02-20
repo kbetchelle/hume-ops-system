@@ -415,9 +415,9 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                   }
             }
           >
-            <h3 className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-2">
+            <div className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-2">
               {t("A Quick Walkthrough", "Un Recorrido Rápido")}
-            </h3>
+            </div>
             <p className="text-sm font-medium uppercase tracking-widest">
               {currentStep.text}
             </p>

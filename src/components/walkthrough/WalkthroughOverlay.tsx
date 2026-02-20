@@ -7,6 +7,14 @@ import { useOptionalSidebar } from "@/components/ui/sidebar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
+/** Hex to rgba with alpha (0–1) for step text background */
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -43,6 +51,8 @@ const STEP_TEXT_GAP = 20;
 const BOTTOM_SAFE_HEIGHT = 160; // reserve space for progress dots + buttons
 const STEP_TEXT_MAX_WIDTH = 260;
 const STEP_TEXT_EST_HEIGHT = 88;
+const BREAKPOINT_TABLET = 768;
+const BREAKPOINT_DESKTOP = 1024;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,13 +74,15 @@ function getTargetRect(element: HTMLElement | null): DOMRect | null {
   return element.getBoundingClientRect();
 }
 
-/** Start and end points for arrow (start = where arrow begins, end = where it points) */
+/** Start and end points for arrow (start = where arrow begins, end = where it points). Responsive margins. */
 function getArrowPoints(
   direction: WalkthroughArrowDirection,
   targetRect: DOMRect,
   viewportWidth: number,
   viewportHeight: number
 ): { start: { x: number; y: number }; end: { x: number; y: number } } {
+  const margin = viewportWidth < BREAKPOINT_TABLET ? 100 : ARROW_MARGIN;
+  const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 60;
   const cx = targetRect.left + targetRect.width / 2;
   const cy = targetRect.top + targetRect.height / 2;
   let startX: number;
@@ -79,37 +91,35 @@ function getArrowPoints(
   let endY: number;
   switch (direction) {
     case "left":
-      startX = Math.max(SIDEBAR_WIDTH + ARROW_MARGIN, targetRect.left - ARROW_MARGIN);
+      startX = Math.max(sidebarMin, targetRect.left - margin);
       startY = cy;
       endX = targetRect.left;
       endY = cy;
       break;
     case "right":
-      startX = Math.min(viewportWidth - ARROW_MARGIN, targetRect.right + ARROW_MARGIN);
+      startX = Math.min(viewportWidth - margin, targetRect.right + margin);
       startY = cy;
       endX = targetRect.right;
       endY = cy;
       break;
     case "top":
       startX = cx;
-      startY = Math.max(ARROW_MARGIN, targetRect.top - ARROW_MARGIN);
+      startY = Math.max(margin, targetRect.top - margin);
       endX = cx;
       endY = targetRect.top;
       break;
     case "bottom":
       startX = cx;
-      startY = Math.min(viewportHeight - ARROW_MARGIN, targetRect.bottom + ARROW_MARGIN);
+      startY = Math.min(viewportHeight - margin, targetRect.bottom + margin);
       endX = cx;
       endY = targetRect.bottom;
       break;
     default:
-      startX = targetRect.left - ARROW_MARGIN;
+      startX = Math.max(sidebarMin, targetRect.left - margin);
       startY = cy;
       endX = targetRect.left;
       endY = cy;
   }
-  // Ensure arrow never overlaps the sidebar
-  startX = Math.max(SIDEBAR_WIDTH + 60, startX);
   return { start: { x: startX, y: startY }, end: { x: endX, y: endY } };
 }
 
@@ -129,7 +139,7 @@ function getArrowPathD(
   return `M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`;
 }
 
-/** Step text position: outside target rect, never overlapping controls or target */
+/** Step text position: responsive, outside target rect, never overlapping controls or target */
 function getStepTextPosition(
   direction: WalkthroughArrowDirection,
   targetRect: DOMRect,
@@ -137,40 +147,50 @@ function getStepTextPosition(
   viewportWidth: number,
   viewportHeight: number
 ): { left: number; top: number } {
+  const isTabletOrSmaller = viewportWidth < BREAKPOINT_TABLET;
+  const isDesktop = viewportWidth >= BREAKPOINT_DESKTOP;
   const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
-  const minLeft = SIDEBAR_WIDTH + 60;
+  const minLeft = isTabletOrSmaller ? 16 : SIDEBAR_WIDTH + 60;
   const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
+  const gap = isTabletOrSmaller ? STEP_TEXT_GAP + 8 : STEP_TEXT_GAP;
+
+  // Tablet/small: prefer text below target to avoid overlap and keep readable
+  if (isTabletOrSmaller) {
+    const centerX = targetRect.left + targetRect.width / 2 - STEP_TEXT_MAX_WIDTH / 2;
+    return {
+      left: Math.max(16, Math.min(centerX, maxLeft)),
+      top: Math.min(targetRect.bottom + gap, maxTop),
+    };
+  }
 
   switch (direction) {
     case "left":
       return {
-        left: Math.min(targetRect.right + STEP_TEXT_GAP, maxLeft),
+        left: Math.min(targetRect.right + gap, maxLeft),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
     case "right":
       return {
-        left: Math.max(minLeft, targetRect.left - STEP_TEXT_MAX_WIDTH - STEP_TEXT_GAP),
+        left: Math.max(minLeft, targetRect.left - STEP_TEXT_MAX_WIDTH - gap),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
     case "top": {
-      // Place text to the right of the arrow to avoid x-axis overlap
-      const textLeft = Math.max(minLeft, arrowStart.x + STEP_TEXT_GAP);
+      const textLeft = Math.max(minLeft, arrowStart.x + gap);
       return {
         left: Math.min(textLeft, maxLeft),
-        top: Math.min(targetRect.bottom + STEP_TEXT_GAP, maxTop),
+        top: Math.min(targetRect.bottom + gap, maxTop),
       };
     }
     case "bottom": {
-      // Place text to the right of the arrow to avoid x-axis overlap
-      const textLeft = Math.max(minLeft, arrowStart.x + STEP_TEXT_GAP);
+      const textLeft = Math.max(minLeft, arrowStart.x + gap);
       return {
         left: Math.min(textLeft, maxLeft),
-        top: Math.max(16, targetRect.top - STEP_TEXT_EST_HEIGHT - STEP_TEXT_GAP),
+        top: Math.max(16, targetRect.top - STEP_TEXT_EST_HEIGHT - gap),
       };
     }
     default:
       return {
-        left: Math.max(minLeft, targetRect.right + STEP_TEXT_GAP),
+        left: Math.max(minLeft, targetRect.right + gap),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
   }
@@ -325,47 +345,13 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
       aria-modal="true"
       aria-label={t("App walkthrough", "Guía de la app")}
     >
-      {/* Frosted glass layer with spotlight cutout */}
-      <svg
-        className="absolute inset-0 h-full w-full pointer-events-none"
-        aria-hidden
-      >
-        <defs>
-          <mask id="walkthrough-spotlight-mask">
-            <rect width="100%" height="100%" fill="white" />
-            {targetRect && (
-              <rect
-                x={targetRect.left - SPOTLIGHT_PADDING}
-                y={targetRect.top - SPOTLIGHT_PADDING}
-                width={targetRect.width + SPOTLIGHT_PADDING * 2}
-                height={targetRect.height + SPOTLIGHT_PADDING * 2}
-                fill="black"
-                rx="4"
-              />
-            )}
-          </mask>
-        </defs>
-        <rect
-          width="100%"
-          height="100%"
-          fill="rgba(0,0,0,0.25)"
-          mask="url(#walkthrough-spotlight-mask)"
+      {/* Welcome step only: very light blur behind overlay. Other steps: fully clear (no dim, no blur). */}
+      {stepIndex === 0 && (
+        <div
+          className="absolute inset-0 pointer-events-none backdrop-blur-[2px] bg-black/[0.04]"
+          aria-hidden
         />
-      </svg>
-      <div
-        className="absolute inset-0 backdrop-blur-md bg-background/70"
-        style={
-          targetRect
-            ? {
-                mask: "url(#walkthrough-spotlight-mask)",
-                WebkitMask: "url(#walkthrough-spotlight-mask)",
-                maskSize: "100% 100%",
-                WebkitMaskSize: "100% 100%",
-              }
-            : undefined
-        }
-        aria-hidden
-      />
+      )}
 
       {/* Arrow and text */}
       {currentStep && (
@@ -406,23 +392,30 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground max-w-[280px] md:max-w-[320px] whitespace-pre-line bg-background/90 backdrop-blur-sm px-4 py-3 rounded border border-border shadow-sm flex flex-col gap-[15px]"
+            className="absolute text-foreground max-w-[280px] md:max-w-[320px] whitespace-pre-line px-4 py-3 rounded border shadow-sm flex flex-col gap-[15px]"
             style={
               arrowPoints && targetRect
                 ? (() => {
                     const pos = getStepTextPosition(
                       currentStep.arrowDirection,
                       targetRect,
-                      arrowPoints!.start,
+                      arrowPoints.start,
                       viewportWidth,
                       viewportHeight
                     );
-                    return { left: pos.left, top: pos.top };
+                    return {
+                      left: pos.left,
+                      top: pos.top,
+                      backgroundColor: hexToRgba(arrowColor, 0.1),
+                      borderColor: arrowColor,
+                    };
                   })()
                 : {
                     left: "50%",
                     top: "50%",
                     transform: "translate(-50%, -50%)",
+                    backgroundColor: hexToRgba(arrowColor, 0.1),
+                    borderColor: arrowColor,
                   }
             }
           >
@@ -459,7 +452,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             size="icon"
             onClick={handleBack}
             disabled={!canGoBack}
-            className="rounded-none h-9 w-9 border border-foreground"
+            className="rounded-none h-9 w-9 border-2 border-add-burntOrange bg-add-burntOrange/10 text-add-burntOrange hover:bg-add-burntOrange/20 hover:text-add-burntOrange disabled:opacity-50"
             aria-label={t("Previous step", "Paso anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -467,7 +460,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           <Button
             type="button"
             variant="default"
-            className="rounded-none uppercase text-[10px] tracking-widest border border-foreground"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-burntOrange bg-add-burntOrange/10 text-add-burntOrange hover:bg-add-burntOrange/20"
             onClick={handleNext}
             aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >
@@ -477,7 +470,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             ref={skipButtonRef}
             type="button"
             variant="ghost"
-            className="rounded-none uppercase text-[10px] tracking-widest text-muted-foreground"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-burntOrange bg-add-burntOrange/10 text-add-burntOrange hover:bg-add-burntOrange/20"
             onClick={handleSkip}
             aria-label={t("Skip walkthrough", "Omitir guía")}
           >

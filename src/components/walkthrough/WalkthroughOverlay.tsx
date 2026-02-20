@@ -136,7 +136,7 @@ function getStepTextPosition(
   viewportHeight: number
 ): { left: number; top: number } {
   const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
-  const minLeft = SIDEBAR_WIDTH + 40;
+  const minLeft = SIDEBAR_WIDTH + 60;
   const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
 
   switch (direction) {

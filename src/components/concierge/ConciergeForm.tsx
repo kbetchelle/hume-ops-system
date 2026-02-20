@@ -1171,19 +1171,6 @@ export function ConciergeForm() {
 
           </div>
 
-          {/* Café Notes */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Café Notes</h3>
-            <Label className="text-sm sr-only">Café activity, toss, or other café updates</Label>
-            <Textarea
-              value={formData.cafeNotes}
-              onChange={(e) => updateFormField('cafeNotes', e.target.value)}
-              disabled={isSubmitted}
-              placeholder="Café activity, toss, busy/slow, etc."
-              rows={2}
-              className="resize-y" />
-          </div>
-          
           <Separator />
           
           {/* Notes for Future Shift */}

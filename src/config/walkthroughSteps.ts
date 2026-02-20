@@ -33,7 +33,7 @@ const WELCOME_TARGET = "[data-walkthrough=welcome]";
 const UNIVERSAL_USER_MENU: WalkthroughStepConfig = {
   id: "user-menu",
   targetSelector: "[data-walkthrough=user-menu]",
-  arrowDirection: "left",
+  arrowDirection: "right",
   text: "Your profile, settings, and sign out live here.",
 };
 

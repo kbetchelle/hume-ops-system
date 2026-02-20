@@ -35,7 +35,7 @@ export type WalkthroughTranslator = (en: string, es?: string | null) => string;
 const WELCOME_TARGET = "[data-walkthrough=welcome]";
 
 // Welcome message templates (interpolate firstName and totalCount)
-const WELCOME_EN = "Welcome to Hume, {name}!\n\nWe'll show you around {n} key features to get you started.";
+const WELCOME_EN = "Welcome to Hume, {name}!\n\nWe'll walk you through a few quick things to get started.";
 const WELCOME_ES = "¡Bienvenido a Hume, {name}!\n\nTe mostraremos {n} funciones principales para que empieces.";
 
 // Universal steps (same for all roles that get a walkthrough)

@@ -108,6 +108,8 @@ function getArrowPoints(
       endX = targetRect.left;
       endY = cy;
   }
+  // Ensure arrow never overlaps the sidebar
+  startX = Math.max(SIDEBAR_WIDTH + 60, startX);
   return { start: { x: startX, y: startY }, end: { x: endX, y: endY } };
 }
 

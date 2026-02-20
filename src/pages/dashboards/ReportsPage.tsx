@@ -111,7 +111,11 @@ export default function ReportsPage() {
           </TabsList>
 
           <TabsContent value="export" className="space-y-6 mt-4">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="relative">
+              <div className="absolute top-2 right-2 z-10">
+                <SyncStatusIndicator />
+              </div>
+              <div className="grid gap-6 grid-cols-2">
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <h3 className="font-medium">Single-Day Export</h3>
@@ -232,8 +236,7 @@ export default function ReportsPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              <SyncStatusIndicator />
+              </div>
             </div>
 
             <ReportPreviewDialog

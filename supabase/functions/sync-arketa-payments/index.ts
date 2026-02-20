@@ -177,7 +177,6 @@ function purchaseToStagingRow(p: PurchaseLike, syncBatchId: string): Record<stri
     client_email: client?.email ?? null,
     client_phone: client?.phone ?? null,
     raw_data: p,
-    synced_at: new Date().toISOString(),
     sync_batch_id: syncBatchId,
   };
 }

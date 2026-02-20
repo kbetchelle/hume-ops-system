@@ -58,22 +58,28 @@ CREATE INDEX IF NOT EXISTS idx_notification_history_trigger_sent
 ALTER TABLE public.staff_push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can select own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can select own push subscriptions"
   ON public.staff_push_subscriptions FOR SELECT TO authenticated
   USING (staff_id = auth.uid());
+DROP POLICY IF EXISTS "Users can insert own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can insert own push subscriptions"
   ON public.staff_push_subscriptions FOR INSERT TO authenticated
   WITH CHECK (staff_id = auth.uid());
+DROP POLICY IF EXISTS "Users can update own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can update own push subscriptions"
   ON public.staff_push_subscriptions FOR UPDATE TO authenticated
   USING (staff_id = auth.uid());
+DROP POLICY IF EXISTS "Users can delete own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can delete own push subscriptions"
   ON public.staff_push_subscriptions FOR DELETE TO authenticated
   USING (staff_id = auth.uid());
 
+DROP POLICY IF EXISTS "Management can select all notification history" ON public.notification_history;
 CREATE POLICY "Management can select all notification history"
   ON public.notification_history FOR SELECT TO authenticated
   USING (public.is_manager_or_admin(auth.uid()));
+DROP POLICY IF EXISTS "Staff can select own notification history" ON public.notification_history;
 CREATE POLICY "Staff can select own notification history"
   ON public.notification_history FOR SELECT TO authenticated
   USING (staff_id = auth.uid());
@@ -296,12 +302,15 @@ CREATE INDEX IF NOT EXISTS idx_user_walkthrough_state_user_id
 
 ALTER TABLE public.user_walkthrough_state ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can view own walkthrough state"
   ON public.user_walkthrough_state FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can insert own walkthrough state"
   ON public.user_walkthrough_state FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can update own walkthrough state"
   ON public.user_walkthrough_state FOR UPDATE TO authenticated
   USING (auth.uid() = user_id);

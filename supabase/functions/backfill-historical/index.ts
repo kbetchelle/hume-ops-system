@@ -379,7 +379,6 @@ async function syncArketaPayments(supabase: any, date: string, syncBatchId?: str
         client_email: client?.email ?? null,
         client_phone: client?.phone ?? null,
         raw_data: p,
-        synced_at: new Date().toISOString(),
         sync_batch_id: syncBatchId,
       };
     });

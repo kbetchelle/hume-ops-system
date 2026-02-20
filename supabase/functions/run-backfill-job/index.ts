@@ -32,6 +32,13 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+/** Next calendar day in UTC (YYYY-MM-DD). For date-range counts on timestamptz. */
+function nextDayUtc(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00.000Z");
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
 function getSyncConfig(jobType: JobType) {
   switch (jobType) {
     case "arketa_classes":
@@ -374,7 +381,16 @@ Deno.serve(async (req) => {
       }
 
       await supabase.from("backfill_jobs").update({ processing_date: dateStr }).eq("id", jobId);
-      const { count: existingBefore } = await supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
+      // arketa_payments uses created_at_api (timestamptz): count by date range; others use date eq
+      const countQuery =
+        jobType === "arketa_payments"
+          ? supabase
+              .from(config.historyTable)
+              .select("*", { count: "exact", head: true })
+              .gte(config.dateColumn, `${dateStr}T00:00:00.000Z`)
+              .lt(config.dateColumn, `${nextDayUtc(dateStr)}T00:00:00.000Z`)
+          : supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
+      const { count: existingBefore } = await countQuery;
       const existingCount = existingBefore || 0;
 
       try {
@@ -391,7 +407,15 @@ Deno.serve(async (req) => {
         } else {
           const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
           await new Promise(resolve => setTimeout(resolve, 500));
-          const { count: afterCount } = await supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
+          const afterCountQuery =
+            jobType === "arketa_payments"
+              ? supabase
+                  .from(config.historyTable)
+                  .select("*", { count: "exact", head: true })
+                  .gte(config.dateColumn, `${dateStr}T00:00:00.000Z`)
+                  .lt(config.dateColumn, `${nextDayUtc(dateStr)}T00:00:00.000Z`)
+              : supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
+          const { count: afterCount } = await afterCountQuery;
           const newRecords = Math.max(0, (afterCount || 0) - existingCount);
           totalRecords += recordCount;
           totalNewRecords += newRecords;

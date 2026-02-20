@@ -3903,6 +3903,7 @@ export type Database = {
           sling_id: string | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           approval_notes?: string | null
@@ -3921,6 +3922,7 @@ export type Database = {
           sling_id?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           approval_notes?: string | null
@@ -3939,6 +3941,7 @@ export type Database = {
           sling_id?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: [
           {
@@ -6125,6 +6128,10 @@ export type Database = {
           d: string
           record_count: number
         }[]
+      }
+      get_email_by_username: {
+        Args: { _username: string }
+        Returns: string
       }
       get_pdf_page_flags: {
         Args: { page_id: string; page_num?: number }

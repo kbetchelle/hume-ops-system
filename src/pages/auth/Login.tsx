@@ -17,7 +17,7 @@ import humeLogo from "@/assets/hume-logo.png";
 const STAY_SIGNED_IN_KEY = "hume_stay_signed_in";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  emailOrUsername: z.string().min(1, "Enter your email or username"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   staySignedIn: z.boolean().default(true),
 });
@@ -34,7 +34,7 @@ export default function Login() {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      emailOrUsername: "",
       password: "",
       staySignedIn: localStorage.getItem(STAY_SIGNED_IN_KEY) !== "false",
     },
@@ -45,7 +45,7 @@ export default function Login() {
     try {
       // Store the preference
       localStorage.setItem(STAY_SIGNED_IN_KEY, String(data.staySignedIn));
-      
+
       // If not staying signed in, set a session marker
       if (!data.staySignedIn) {
         sessionStorage.setItem("hume_session_only", "true");
@@ -53,7 +53,22 @@ export default function Login() {
         sessionStorage.removeItem("hume_session_only");
       }
 
-      const { error } = await signIn(data.email, data.password);
+      const identifier = (data.emailOrUsername ?? "").trim();
+      let email: string;
+      if (identifier.includes("@")) {
+        email = identifier;
+      } else {
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc("get_email_by_username", {
+          _username: identifier,
+        });
+        if (rpcError || resolvedEmail == null || resolvedEmail === "") {
+          toast.error("No account found for that username.");
+          return;
+        }
+        email = resolvedEmail;
+      }
+
+      const { error } = await signIn(email, data.password);
       if (error) {
         toast.error(error.message);
       } else {
@@ -97,12 +112,18 @@ export default function Login() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="email"
+              name="emailOrUsername"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email or username</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="your@email.com" className="bg-transparent" {...field} />
+                    <Input
+                      type="text"
+                      placeholder="your@email.com or username"
+                      className="bg-transparent"
+                      autoComplete="username"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage className="text-[10px] tracking-wide" />
                 </FormItem>

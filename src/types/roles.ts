@@ -74,6 +74,7 @@ export interface UserProfile {
   user_id: string;
   email: string;
   full_name: string | null;
+  username?: string | null;
   onboarding_completed: boolean;
   preferred_language?: string | null;
   sling_id?: string | null;

@@ -4,6 +4,7 @@ import { useAuthContext } from "@/features/auth/AuthProvider";
 import { UserManagementTable } from "@/components/admin/UserManagementTable";
 import { SlingUserLinkingTable } from "@/components/admin/SlingUserLinkingTable";
 import { AccountApprovalsSection } from "@/components/admin/AccountApprovalsSection";
+import { CreateFromSlingTable } from "@/components/admin/CreateFromSlingTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/useAccountApproval";
@@ -53,6 +54,12 @@ export default function UserManagementPage() {
             >
               Sling Linking
             </TabsTrigger>
+            <TabsTrigger
+              value="create-from-sling"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
+            >
+              Create from Sling
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="approvals" className="mt-6">
@@ -86,6 +93,10 @@ export default function UserManagementPage() {
 
           <TabsContent value="sling" className="mt-6">
             <SlingUserLinkingTable />
+          </TabsContent>
+
+          <TabsContent value="create-from-sling" className="mt-6">
+            <CreateFromSlingTable />
           </TabsContent>
         </Tabs>
       </div>

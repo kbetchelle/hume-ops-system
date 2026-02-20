@@ -36,6 +36,7 @@ export const WALKTHROUGH_ARROW_COLORS = [
 
 const AUTO_ADVANCE_MS = 90_000; // 90 seconds per step
 const SPOTLIGHT_PADDING = 8;
+const SIDEBAR_WIDTH = 250;
 const ARROW_MARGIN = 80;
 const ARROW_DRAW_DURATION_MS = 800;
 const STEP_TEXT_GAP = 20;
@@ -78,7 +79,7 @@ function getArrowPoints(
   let endY: number;
   switch (direction) {
     case "left":
-      startX = Math.max(ARROW_MARGIN, targetRect.left - ARROW_MARGIN);
+      startX = Math.max(SIDEBAR_WIDTH + ARROW_MARGIN, targetRect.left - ARROW_MARGIN);
       startY = cy;
       endX = targetRect.left;
       endY = cy;
@@ -134,7 +135,7 @@ function getStepTextPosition(
   viewportHeight: number
 ): { left: number; top: number } {
   const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
-  const minLeft = 16;
+  const minLeft = SIDEBAR_WIDTH + 16;
   const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
 
   switch (direction) {

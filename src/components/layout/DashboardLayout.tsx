@@ -702,7 +702,7 @@ export function DashboardLayout({
   const { user } = useAuthContext();
   const { data: profile } = useUserProfile(user?.id);
   const { data: roles } = useUserRoles(user?.id);
-  const { activeRole, availableRoles } = useActiveRole();
+  const { activeRole, availableRoles, isLoading: activeRoleLoading } = useActiveRole();
   const needsWalkthrough = useNeedsWalkthrough();
   const markWalkthroughCompleted = useMarkWalkthroughCompleted();
   const isBoh = activeRole !== null && isBohWalkthroughRole(activeRole);
@@ -722,7 +722,12 @@ export function DashboardLayout({
     return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles });
   }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length]);
 
-  const showOverlay = needsWalkthrough && !isBoh && activeRole !== null && walkthroughSteps.length > 0;
+  const showOverlay =
+    needsWalkthrough &&
+    !isBoh &&
+    !activeRoleLoading &&
+    activeRole !== null &&
+    walkthroughSteps.length > 0;
 
   return (
     <SidebarProvider>

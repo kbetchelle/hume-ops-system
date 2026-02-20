@@ -9,7 +9,7 @@
 -- resource_outdated_flags: staff-reported flags for outdated resources.
 -- Uses a polymorphic pattern (resource_type + resource_id) with no FK
 -- constraint because the referenced row can live in one of 4 tables.
-CREATE TABLE public.resource_outdated_flags (
+CREATE TABLE IF NOT EXISTS public.resource_outdated_flags (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Polymorphic resource reference (4 possible target tables)
@@ -38,7 +38,7 @@ CREATE TABLE public.resource_outdated_flags (
 -- inbox_reads: generalised read-tracking for the management inbox.
 -- Replaces the per-feature staff_qa_reads pattern with a single table that
 -- supports multiple item types (qa, flag, shift_note).
-CREATE TABLE public.inbox_reads (
+CREATE TABLE IF NOT EXISTS public.inbox_reads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item_type text NOT NULL CHECK (item_type IN ('qa', 'flag', 'shift_note')),
@@ -59,6 +59,7 @@ ALTER TABLE public.inbox_reads              ENABLE ROW LEVEL SECURITY;
 -- --------------------------------------------------------------------------
 
 -- All authenticated users can read flags (needed for "Under Review" badges)
+DROP POLICY IF EXISTS "Authenticated can read flags" ON public.resource_outdated_flags;
 CREATE POLICY "Authenticated can read flags"
   ON public.resource_outdated_flags
   FOR SELECT
@@ -66,6 +67,7 @@ CREATE POLICY "Authenticated can read flags"
   USING (true);
 
 -- Any authenticated user can create a flag on their own behalf
+DROP POLICY IF EXISTS "Authenticated can create flags" ON public.resource_outdated_flags;
 CREATE POLICY "Authenticated can create flags"
   ON public.resource_outdated_flags
   FOR INSERT
@@ -73,6 +75,7 @@ CREATE POLICY "Authenticated can create flags"
   WITH CHECK (flagged_by_id = auth.uid());
 
 -- Managers/admins can update flags (resolve or dismiss)
+DROP POLICY IF EXISTS "Managers can update flags" ON public.resource_outdated_flags;
 CREATE POLICY "Managers can update flags"
   ON public.resource_outdated_flags
   FOR UPDATE
@@ -80,6 +83,7 @@ CREATE POLICY "Managers can update flags"
   USING (public.is_manager_or_admin(auth.uid()));
 
 -- Managers/admins can delete flags
+DROP POLICY IF EXISTS "Managers can delete flags" ON public.resource_outdated_flags;
 CREATE POLICY "Managers can delete flags"
   ON public.resource_outdated_flags
   FOR DELETE
@@ -91,6 +95,7 @@ CREATE POLICY "Managers can delete flags"
 -- --------------------------------------------------------------------------
 
 -- Users manage their own inbox read markers
+DROP POLICY IF EXISTS "Users manage own inbox reads" ON public.inbox_reads;
 CREATE POLICY "Users manage own inbox reads"
   ON public.inbox_reads
   FOR ALL
@@ -103,22 +108,23 @@ CREATE POLICY "Users manage own inbox reads"
 -- --------------------------------------------------------------------------
 
 -- Fast lookup for "Under Review" badge rendering on resource pages
-CREATE INDEX idx_resource_flags_resource
+CREATE INDEX IF NOT EXISTS idx_resource_flags_resource
   ON public.resource_outdated_flags (resource_type, resource_id)
   WHERE status = 'pending';
 
 -- Management inbox query — pending flags sorted newest-first
-CREATE INDEX idx_resource_flags_status_created
+CREATE INDEX IF NOT EXISTS idx_resource_flags_status_created
   ON public.resource_outdated_flags (status, created_at DESC);
 
 -- Inbox reads lookup by user
-CREATE INDEX idx_inbox_reads_user
+CREATE INDEX IF NOT EXISTS idx_inbox_reads_user
   ON public.inbox_reads (user_id, item_type);
 
 -- --------------------------------------------------------------------------
 -- 6. Triggers
 -- --------------------------------------------------------------------------
 
+DROP TRIGGER IF EXISTS update_resource_outdated_flags_updated_at ON public.resource_outdated_flags;
 CREATE TRIGGER update_resource_outdated_flags_updated_at
   BEFORE UPDATE ON public.resource_outdated_flags
   FOR EACH ROW

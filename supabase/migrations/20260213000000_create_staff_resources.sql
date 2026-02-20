@@ -7,7 +7,7 @@
 -- --------------------------------------------------------------------------
 
 -- Quick Link Groups: card containers assigned to roles
-CREATE TABLE public.quick_link_groups (
+CREATE TABLE IF NOT EXISTS public.quick_link_groups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   description text,
@@ -19,7 +19,7 @@ CREATE TABLE public.quick_link_groups (
 );
 
 -- Quick Link Items: individual links inside a group
-CREATE TABLE public.quick_link_items (
+CREATE TABLE IF NOT EXISTS public.quick_link_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id uuid NOT NULL REFERENCES public.quick_link_groups(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE public.quick_link_items (
 );
 
 -- Resource Pages: rich text content pages
-CREATE TABLE public.resource_pages (
+CREATE TABLE IF NOT EXISTS public.resource_pages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   content text,
@@ -54,24 +54,29 @@ ALTER TABLE public.resource_pages    ENABLE ROW LEVEL SECURITY;
 -- --------------------------------------------------------------------------
 
 -- Managers/admins: full CRUD
+DROP POLICY IF EXISTS "quick_link_groups_manager_select" ON public.quick_link_groups;
 CREATE POLICY "quick_link_groups_manager_select"
   ON public.quick_link_groups FOR SELECT
   USING (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_groups_manager_insert" ON public.quick_link_groups;
 CREATE POLICY "quick_link_groups_manager_insert"
   ON public.quick_link_groups FOR INSERT
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_groups_manager_update" ON public.quick_link_groups;
 CREATE POLICY "quick_link_groups_manager_update"
   ON public.quick_link_groups FOR UPDATE
   USING (public.is_manager_or_admin(auth.uid()))
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_groups_manager_delete" ON public.quick_link_groups;
 CREATE POLICY "quick_link_groups_manager_delete"
   ON public.quick_link_groups FOR DELETE
   USING (public.is_manager_or_admin(auth.uid()));
 
 -- Staff: read groups assigned to their role
+DROP POLICY IF EXISTS "quick_link_groups_staff_select" ON public.quick_link_groups;
 CREATE POLICY "quick_link_groups_staff_select"
   ON public.quick_link_groups FOR SELECT
   USING (public.user_has_any_role(auth.uid(), assigned_roles));
@@ -81,24 +86,29 @@ CREATE POLICY "quick_link_groups_staff_select"
 -- --------------------------------------------------------------------------
 
 -- Managers/admins: full CRUD
+DROP POLICY IF EXISTS "quick_link_items_manager_select" ON public.quick_link_items;
 CREATE POLICY "quick_link_items_manager_select"
   ON public.quick_link_items FOR SELECT
   USING (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_items_manager_insert" ON public.quick_link_items;
 CREATE POLICY "quick_link_items_manager_insert"
   ON public.quick_link_items FOR INSERT
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_items_manager_update" ON public.quick_link_items;
 CREATE POLICY "quick_link_items_manager_update"
   ON public.quick_link_items FOR UPDATE
   USING (public.is_manager_or_admin(auth.uid()))
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "quick_link_items_manager_delete" ON public.quick_link_items;
 CREATE POLICY "quick_link_items_manager_delete"
   ON public.quick_link_items FOR DELETE
   USING (public.is_manager_or_admin(auth.uid()));
 
 -- Staff: read items whose parent group is assigned to their role
+DROP POLICY IF EXISTS "quick_link_items_staff_select" ON public.quick_link_items;
 CREATE POLICY "quick_link_items_staff_select"
   ON public.quick_link_items FOR SELECT
   USING (
@@ -114,24 +124,29 @@ CREATE POLICY "quick_link_items_staff_select"
 -- --------------------------------------------------------------------------
 
 -- Managers/admins: full CRUD
+DROP POLICY IF EXISTS "resource_pages_manager_select" ON public.resource_pages;
 CREATE POLICY "resource_pages_manager_select"
   ON public.resource_pages FOR SELECT
   USING (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "resource_pages_manager_insert" ON public.resource_pages;
 CREATE POLICY "resource_pages_manager_insert"
   ON public.resource_pages FOR INSERT
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "resource_pages_manager_update" ON public.resource_pages;
 CREATE POLICY "resource_pages_manager_update"
   ON public.resource_pages FOR UPDATE
   USING (public.is_manager_or_admin(auth.uid()))
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "resource_pages_manager_delete" ON public.resource_pages;
 CREATE POLICY "resource_pages_manager_delete"
   ON public.resource_pages FOR DELETE
   USING (public.is_manager_or_admin(auth.uid()));
 
 -- Staff: read published pages assigned to their role
+DROP POLICY IF EXISTS "resource_pages_staff_select" ON public.resource_pages;
 CREATE POLICY "resource_pages_staff_select"
   ON public.resource_pages FOR SELECT
   USING (
@@ -144,39 +159,42 @@ CREATE POLICY "resource_pages_staff_select"
 -- --------------------------------------------------------------------------
 
 -- GIN indexes on role arrays for fast containment checks
-CREATE INDEX idx_quick_link_groups_assigned_roles
+CREATE INDEX IF NOT EXISTS idx_quick_link_groups_assigned_roles
   ON public.quick_link_groups USING gin (assigned_roles);
 
-CREATE INDEX idx_resource_pages_assigned_roles
+CREATE INDEX IF NOT EXISTS idx_resource_pages_assigned_roles
   ON public.resource_pages USING gin (assigned_roles);
 
 -- btree indexes for ordering and lookups
-CREATE INDEX idx_quick_link_groups_display_order
+CREATE INDEX IF NOT EXISTS idx_quick_link_groups_display_order
   ON public.quick_link_groups (display_order);
 
-CREATE INDEX idx_quick_link_items_group_id
+CREATE INDEX IF NOT EXISTS idx_quick_link_items_group_id
   ON public.quick_link_items (group_id);
 
-CREATE INDEX idx_quick_link_items_display_order
+CREATE INDEX IF NOT EXISTS idx_quick_link_items_display_order
   ON public.quick_link_items (display_order);
 
-CREATE INDEX idx_resource_pages_is_published
+CREATE INDEX IF NOT EXISTS idx_resource_pages_is_published
   ON public.resource_pages (is_published);
 
 -- --------------------------------------------------------------------------
 -- 7. Triggers — auto-update updated_at
 -- --------------------------------------------------------------------------
 
+DROP TRIGGER IF EXISTS update_quick_link_groups_updated_at ON public.quick_link_groups;
 CREATE TRIGGER update_quick_link_groups_updated_at
   BEFORE UPDATE ON public.quick_link_groups
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_quick_link_items_updated_at ON public.quick_link_items;
 CREATE TRIGGER update_quick_link_items_updated_at
   BEFORE UPDATE ON public.quick_link_items
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_resource_pages_updated_at ON public.resource_pages;
 CREATE TRIGGER update_resource_pages_updated_at
   BEFORE UPDATE ON public.resource_pages
   FOR EACH ROW

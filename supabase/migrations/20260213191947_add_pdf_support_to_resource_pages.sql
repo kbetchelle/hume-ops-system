@@ -11,19 +11,19 @@
 -- --------------------------------------------------------------------------
 
 ALTER TABLE public.resource_pages
-  ADD COLUMN page_type text NOT NULL DEFAULT 'builder'
+  ADD COLUMN IF NOT EXISTS page_type text NOT NULL DEFAULT 'builder'
     CHECK (page_type IN ('builder', 'pdf')),
-  ADD COLUMN pdf_file_url text,
-  ADD COLUMN pdf_file_path text,
-  ADD COLUMN pdf_file_size integer,
-  ADD COLUMN pdf_original_filename text,
-  ADD COLUMN pdf_page_count integer;
+  ADD COLUMN IF NOT EXISTS pdf_file_url text,
+  ADD COLUMN IF NOT EXISTS pdf_file_path text,
+  ADD COLUMN IF NOT EXISTS pdf_file_size integer,
+  ADD COLUMN IF NOT EXISTS pdf_original_filename text,
+  ADD COLUMN IF NOT EXISTS pdf_page_count integer;
 
 -- --------------------------------------------------------------------------
 -- 2. Create index for filtering by type
 -- --------------------------------------------------------------------------
 
-CREATE INDEX idx_resource_pages_type ON public.resource_pages(page_type);
+CREATE INDEX IF NOT EXISTS idx_resource_pages_type ON public.resource_pages(page_type);
 
 -- --------------------------------------------------------------------------
 -- 3. Add column comments explaining the design

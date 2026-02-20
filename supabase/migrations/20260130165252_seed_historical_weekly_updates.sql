@@ -1,5 +1,6 @@
 -- Seed historical weekly updates from arketa-gym-flow
--- These are imported from the weekly_updates table export
+-- These are imported from the weekly_updates table export.
+-- Idempotent: safe to re-run (ON CONFLICT DO UPDATE).
 
 INSERT INTO public.staff_announcements (
   id,

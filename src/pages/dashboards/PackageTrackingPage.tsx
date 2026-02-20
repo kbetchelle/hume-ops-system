@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { IdlePageHintPrompt } from "@/components/walkthrough";
+import { useIdlePageHint } from "@/hooks/useIdlePageHint";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +31,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
+const PACKAGE_TRACKING_HINT =
+  "Scan in packages here, add a photo of where they're kept, and edit a package if you move it.";
+
 export default function PackageTrackingPage() {
+  const { showHint, dismiss, triggerFullWalkthrough } = useIdlePageHint({
+    hintId: "package-tracking",
+    content: PACKAGE_TRACKING_HINT,
+  });
+
   const [activeTab, setActiveTab] = useState<"pending_pickup" | "picked_up">("pending_pickup");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -296,6 +306,14 @@ export default function PackageTrackingPage() {
         selectedPackageIds={selectedPackages}
         onClearSelection={() => setSelectedPackages([])}
         onBulkMove={handleBulkMove}
+      />
+
+      {/* Idle page hint */}
+      <IdlePageHintPrompt
+        visible={showHint}
+        content={PACKAGE_TRACKING_HINT}
+        onDismiss={dismiss}
+        onSeeFullWalkthrough={triggerFullWalkthrough}
       />
       </div>
     </DashboardLayout>

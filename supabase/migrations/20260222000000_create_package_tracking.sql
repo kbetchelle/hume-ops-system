@@ -40,11 +40,11 @@ CREATE TABLE IF NOT EXISTS public.package_location_history (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_packages_recipient ON public.packages(recipient_user_id);
-CREATE INDEX idx_packages_status ON public.packages(status);
-CREATE INDEX idx_packages_arrived_at ON public.packages(arrived_at DESC);
-CREATE INDEX idx_packages_tracking ON public.packages(tracking_code);
-CREATE INDEX idx_package_history_package ON public.package_location_history(package_id);
+CREATE INDEX IF NOT EXISTS idx_packages_recipient ON public.packages(recipient_user_id);
+CREATE INDEX IF NOT EXISTS idx_packages_status ON public.packages(status);
+CREATE INDEX IF NOT EXISTS idx_packages_arrived_at ON public.packages(arrived_at DESC);
+CREATE INDEX IF NOT EXISTS idx_packages_tracking ON public.packages(tracking_code);
+CREATE INDEX IF NOT EXISTS idx_package_history_package ON public.package_location_history(package_id);
 
 -- Create storage bucket for package photos
 INSERT INTO storage.buckets (id, name, public)

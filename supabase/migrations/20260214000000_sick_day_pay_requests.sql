@@ -1,5 +1,5 @@
 -- Create sick day pay requests table
-CREATE TABLE public.sick_day_requests (
+CREATE TABLE IF NOT EXISTS public.sick_day_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   user_name TEXT NOT NULL,
@@ -15,29 +15,33 @@ CREATE TABLE public.sick_day_requests (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_sick_requests_user ON public.sick_day_requests(user_id);
-CREATE INDEX idx_sick_requests_status ON public.sick_day_requests(status);
-CREATE INDEX idx_sick_requests_dates ON public.sick_day_requests USING gin(requested_dates);
+CREATE INDEX IF NOT EXISTS idx_sick_requests_user ON public.sick_day_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_sick_requests_status ON public.sick_day_requests(status);
+CREATE INDEX IF NOT EXISTS idx_sick_requests_dates ON public.sick_day_requests USING gin(requested_dates);
 
 -- RLS Policies
 ALTER TABLE public.sick_day_requests ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own requests
+DROP POLICY IF EXISTS "Users can view own sick day requests" ON public.sick_day_requests;
 CREATE POLICY "Users can view own sick day requests"
 ON public.sick_day_requests FOR SELECT
 USING (auth.uid() = user_id);
 
 -- Users can create their own requests
+DROP POLICY IF EXISTS "Users can create own sick day requests" ON public.sick_day_requests;
 CREATE POLICY "Users can create own sick day requests"
 ON public.sick_day_requests FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
 -- Managers/admins can view all requests
+DROP POLICY IF EXISTS "Managers can view all sick day requests" ON public.sick_day_requests;
 CREATE POLICY "Managers can view all sick day requests"
 ON public.sick_day_requests FOR SELECT
 USING (public.is_manager_or_admin(auth.uid()));
 
 -- Managers/admins can update requests
+DROP POLICY IF EXISTS "Managers can update sick day requests" ON public.sick_day_requests;
 CREATE POLICY "Managers can update sick day requests"
 ON public.sick_day_requests FOR UPDATE
 USING (public.is_manager_or_admin(auth.uid()));

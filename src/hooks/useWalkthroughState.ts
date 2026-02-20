@@ -159,6 +159,34 @@ export function useMarkPageHintViewed() {
 // Reset (for "Show App Guide" replay)
 // ---------------------------------------------------------------------------
 
+/**
+ * Resets only completion state so the full walkthrough overlay can show again.
+ * Does NOT clear viewed_page_hints, so idle page hints stay "already seen."
+ */
+export function useResetWalkthroughForReplay() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("user_walkthrough_state" as any)
+        .update({
+          completed_at: null,
+          skipped_at: null,
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [WALKTHROUGH_STATE_QUERY_KEY] });
+    },
+  });
+}
+
 export function useResetWalkthroughState() {
   const { user } = useAuth();
   const queryClient = useQueryClient();

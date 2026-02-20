@@ -27,7 +27,7 @@ CREATE TRIGGER update_arketa_classes_updated_at
 -- 4) Drop existing arketa_classes_staging and recreate with new schema
 DROP TABLE IF EXISTS public.arketa_classes_staging;
 
-CREATE TABLE public.arketa_classes_staging (
+CREATE TABLE IF NOT EXISTS public.arketa_classes_staging (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   external_id text NOT NULL,
   class_date date NOT NULL,
@@ -48,11 +48,12 @@ CREATE TABLE public.arketa_classes_staging (
   staged_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_arketa_classes_staging_sync_batch_id ON public.arketa_classes_staging(sync_batch_id);
-CREATE INDEX idx_arketa_classes_staging_class_date ON public.arketa_classes_staging(class_date);
+CREATE INDEX IF NOT EXISTS idx_arketa_classes_staging_sync_batch_id ON public.arketa_classes_staging(sync_batch_id);
+CREATE INDEX IF NOT EXISTS idx_arketa_classes_staging_class_date ON public.arketa_classes_staging(class_date);
 
 ALTER TABLE public.arketa_classes_staging ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Managers can manage arketa_classes_staging" ON public.arketa_classes_staging;
 CREATE POLICY "Managers can manage arketa_classes_staging"
   ON public.arketa_classes_staging FOR ALL
   USING (is_manager_or_admin(auth.uid()));

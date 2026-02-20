@@ -10,7 +10,10 @@ Run all commands from the **project root** (where `supabase/` lives).
 supabase link --project-ref YOUR_PROJECT_REF
 ```
 
-Get `YOUR_PROJECT_REF` from the Supabase Dashboard URL: `https://supabase.com/dashboard/project/<project-ref>`.
+Get `YOUR_PROJECT_REF` from the Supabase Dashboard URL: `https://supabase.com/dashboard/project/rywcqacxnwwpynriffer`.
+
+**If you see "Your account does not have the necessary privileges":**  
+The project may be on **Lovable Cloud** (owned by Lovable, not your Supabase account). In that case `supabase link` will not work. You can: (1) apply migrations manually via the Supabase SQL Editor (if Lovable gives you access), or (2) migrate to your own Supabase project using [Lovable’s Self-Hosting Guide](https://docs.lovable.dev/tips-tricks/self-hosting), then link this repo to the new project ref.
 
 ### 2. Pull remote schema into a new migration (optional)
 

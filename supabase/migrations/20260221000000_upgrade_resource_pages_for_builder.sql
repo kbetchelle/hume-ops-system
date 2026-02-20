@@ -10,7 +10,7 @@
 -- 1. Create resource_page_folders table (must exist before FK from resource_pages)
 -- --------------------------------------------------------------------------
 
-CREATE TABLE public.resource_page_folders (
+CREATE TABLE IF NOT EXISTS public.resource_page_folders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   description text,
@@ -22,6 +22,7 @@ CREATE TABLE public.resource_page_folders (
 );
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_resource_page_folders_updated_at ON public.resource_page_folders;
 CREATE TRIGGER update_resource_page_folders_updated_at
   BEFORE UPDATE ON public.resource_page_folders
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -80,16 +81,16 @@ search_text = regexp_replace(COALESCE(content, ''), '<[^>]*>', '', 'g');
 -- 5. Create indexes on resource_pages new columns
 -- --------------------------------------------------------------------------
 
-CREATE INDEX idx_resource_pages_folder ON public.resource_pages(folder_id);
-CREATE INDEX idx_resource_pages_tags ON public.resource_pages USING GIN(tags);
-CREATE INDEX idx_resource_pages_search ON public.resource_pages USING GIN(to_tsvector('english', COALESCE(search_text, '')));
-CREATE INDEX idx_resource_pages_display_order ON public.resource_pages(folder_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_resource_pages_folder ON public.resource_pages(folder_id);
+CREATE INDEX IF NOT EXISTS idx_resource_pages_tags ON public.resource_pages USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_resource_pages_search ON public.resource_pages USING GIN(to_tsvector('english', COALESCE(search_text, '')));
+CREATE INDEX IF NOT EXISTS idx_resource_pages_display_order ON public.resource_pages(folder_id, display_order);
 
 -- --------------------------------------------------------------------------
 -- 6. Create resource_page_editors table (delegated editing)
 -- --------------------------------------------------------------------------
 
-CREATE TABLE public.resource_page_editors (
+CREATE TABLE IF NOT EXISTS public.resource_page_editors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   page_id uuid NOT NULL REFERENCES public.resource_pages(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -127,7 +128,7 @@ CREATE POLICY resource_pages_editor_update ON public.resource_pages
 -- 8. Create resource_page_reads table (read receipts)
 -- --------------------------------------------------------------------------
 
-CREATE TABLE public.resource_page_reads (
+CREATE TABLE IF NOT EXISTS public.resource_page_reads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   page_id uuid NOT NULL REFERENCES public.resource_pages(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -152,8 +153,8 @@ DROP POLICY IF EXISTS reads_manager_select ON public.resource_page_reads;
 CREATE POLICY reads_manager_select ON public.resource_page_reads
   FOR SELECT USING (public.is_manager_or_admin(auth.uid()));
 
-CREATE INDEX idx_page_reads_page ON public.resource_page_reads(page_id);
-CREATE INDEX idx_page_reads_user ON public.resource_page_reads(user_id);
+CREATE INDEX IF NOT EXISTS idx_page_reads_page ON public.resource_page_reads(page_id);
+CREATE INDEX IF NOT EXISTS idx_page_reads_user ON public.resource_page_reads(user_id);
 
 -- --------------------------------------------------------------------------
 -- 9. Create storage bucket for page assets (images, etc.)

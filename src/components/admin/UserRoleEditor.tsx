@@ -88,12 +88,13 @@ export function UserRoleEditor({
             <Label className="text-[10px] uppercase tracking-widest">Roles</Label>
             <div className="space-y-2">
           {ROLES.map((role) => (
-            <div
+            <label
               key={role.value}
-              onClick={() => toggleRole(role.value)}
+              htmlFor={`role-${role.value}`}
               className="flex items-center gap-3 p-3 border border-border cursor-pointer hover:border-foreground transition-colors"
             >
               <Checkbox
+                id={`role-${role.value}`}
                 checked={selectedRoles.includes(role.value)}
                 onCheckedChange={() => toggleRole(role.value)}
               />
@@ -105,7 +106,7 @@ export function UserRoleEditor({
                   {role.description}
                 </p>
               </div>
-            </div>
+            </label>
           ))}
             </div>
           </div>

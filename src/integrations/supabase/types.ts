@@ -778,10 +778,86 @@ export type Database = {
         }
         Relationships: []
       }
+      arketa_payments_history: {
+        Row: {
+          amount: number | null
+          category: string | null
+          client_id: string | null
+          currency: string | null
+          description: string | null
+          end_date: string | null
+          net_sales: number | null
+          offering_id: string | null
+          payment_id: string
+          payment_type: string | null
+          record_id: string
+          remaining_uses: number | null
+          source_endpoint: string
+          start_date: string | null
+          status: string | null
+          stripe_fees: number | null
+          sync_batch_id: string | null
+          synced_at: string | null
+          tax: number | null
+          total_refunded: number | null
+          transaction_fees: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          client_id?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id: string
+          payment_type?: string | null
+          record_id?: string
+          remaining_uses?: number | null
+          source_endpoint: string
+          start_date?: string | null
+          status?: string | null
+          stripe_fees?: number | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          client_id?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          net_sales?: number | null
+          offering_id?: string | null
+          payment_id?: string
+          payment_type?: string | null
+          record_id?: string
+          remaining_uses?: number | null
+          source_endpoint?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_fees?: number | null
+          sync_batch_id?: string | null
+          synced_at?: string | null
+          tax?: number | null
+          total_refunded?: number | null
+          transaction_fees?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       arketa_payments_staging: {
         Row: {
           amount: number | null
           amount_refunded: number | null
+          category: string | null
           client_email: string | null
           client_first_name: string | null
           client_id: string | null
@@ -791,27 +867,38 @@ export type Database = {
           currency: string | null
           cursor_position: string | null
           description: string | null
+          end_date: string | null
           id: string
           invoice_id: string | null
           location_name: string | null
           net_sales: number | null
           normalized_category: string[] | null
+          offering_id: string | null
           offering_name: string[] | null
           payment_id: string
           payment_type: string | null
           promo_code: string | null
           raw_data: Json | null
+          record_id: string | null
+          remaining_uses: number | null
           seller_name: string | null
           source: string | null
+          source_endpoint: string | null
           staged_at: string | null
+          start_date: string | null
           status: string | null
+          stripe_fees: number | null
           sync_batch_id: string
+          synced_at: string | null
           tax: number | null
+          total_refunded: number | null
           transaction_fees: number | null
+          updated_at: string | null
         }
         Insert: {
           amount?: number | null
           amount_refunded?: number | null
+          category?: string | null
           client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
@@ -821,27 +908,38 @@ export type Database = {
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           invoice_id?: string | null
           location_name?: string | null
           net_sales?: number | null
           normalized_category?: string[] | null
+          offering_id?: string | null
           offering_name?: string[] | null
           payment_id: string
           payment_type?: string | null
           promo_code?: string | null
           raw_data?: Json | null
+          record_id?: string | null
+          remaining_uses?: number | null
           seller_name?: string | null
           source?: string | null
+          source_endpoint?: string | null
           staged_at?: string | null
+          start_date?: string | null
           status?: string | null
+          stripe_fees?: number | null
           sync_batch_id: string
+          synced_at?: string | null
           tax?: number | null
+          total_refunded?: number | null
           transaction_fees?: number | null
+          updated_at?: string | null
         }
         Update: {
           amount?: number | null
           amount_refunded?: number | null
+          category?: string | null
           client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
@@ -851,23 +949,33 @@ export type Database = {
           currency?: string | null
           cursor_position?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           invoice_id?: string | null
           location_name?: string | null
           net_sales?: number | null
           normalized_category?: string[] | null
+          offering_id?: string | null
           offering_name?: string[] | null
           payment_id?: string
           payment_type?: string | null
           promo_code?: string | null
           raw_data?: Json | null
+          record_id?: string | null
+          remaining_uses?: number | null
           seller_name?: string | null
           source?: string | null
+          source_endpoint?: string | null
           staged_at?: string | null
+          start_date?: string | null
           status?: string | null
+          stripe_fees?: number | null
           sync_batch_id?: string
+          synced_at?: string | null
           tax?: number | null
+          total_refunded?: number | null
           transaction_fees?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -900,159 +1008,81 @@ export type Database = {
       }
       arketa_reservations: {
         Row: {
-          booking_id: string | null
-          canceled_at: string | null
-          canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
           class_id: string | null
           class_name: string | null
-          class_time: string | null
-          client_email: string | null
           client_first_name: string | null
           client_id: string | null
           client_last_name: string | null
           client_phone: string | null
-          coupon_code: string | null
           created_at_api: string | null
-          date_purchased: string | null
-          email_marketing_opt_in: boolean | null
-          estimated_gross_revenue: number | null
-          estimated_net_revenue: number | null
           experience_type: string | null
-          first_name: string | null
           gross_amount_paid: number | null
           id: string
-          instructor_name: string | null
-          last_name: string | null
           late_cancel: boolean | null
-          location_address: string | null
-          location_name: string | null
-          milestone: number | null
           net_amount_paid: number | null
-          offering_id: string | null
-          package_name: string | null
-          package_period_end: string | null
-          package_period_start: string | null
-          payment_id: string | null
-          payment_method: string | null
           purchase_id: string | null
-          purchase_type: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
-          service_id: string | null
           spot_id: string | null
           spot_name: string | null
           status: string | null
           sync_batch_id: string | null
-          tags: Json | null
-          updated_at: string | null
           updated_at_api: string | null
         }
         Insert: {
-          booking_id?: string | null
-          canceled_at?: string | null
-          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          class_time?: string | null
-          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
-          coupon_code?: string | null
           created_at_api?: string | null
-          date_purchased?: string | null
-          email_marketing_opt_in?: boolean | null
-          estimated_gross_revenue?: number | null
-          estimated_net_revenue?: number | null
           experience_type?: string | null
-          first_name?: string | null
           gross_amount_paid?: number | null
           id?: string
-          instructor_name?: string | null
-          last_name?: string | null
           late_cancel?: boolean | null
-          location_address?: string | null
-          location_name?: string | null
-          milestone?: number | null
           net_amount_paid?: number | null
-          offering_id?: string | null
-          package_name?: string | null
-          package_period_end?: string | null
-          package_period_start?: string | null
-          payment_id?: string | null
-          payment_method?: string | null
           purchase_id?: string | null
-          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          tags?: Json | null
-          updated_at?: string | null
           updated_at_api?: string | null
         }
         Update: {
-          booking_id?: string | null
-          canceled_at?: string | null
-          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          class_time?: string | null
-          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
-          coupon_code?: string | null
           created_at_api?: string | null
-          date_purchased?: string | null
-          email_marketing_opt_in?: boolean | null
-          estimated_gross_revenue?: number | null
-          estimated_net_revenue?: number | null
           experience_type?: string | null
-          first_name?: string | null
           gross_amount_paid?: number | null
           id?: string
-          instructor_name?: string | null
-          last_name?: string | null
           late_cancel?: boolean | null
-          location_address?: string | null
-          location_name?: string | null
-          milestone?: number | null
           net_amount_paid?: number | null
-          offering_id?: string | null
-          package_name?: string | null
-          package_period_end?: string | null
-          package_period_start?: string | null
-          payment_id?: string | null
-          payment_method?: string | null
           purchase_id?: string | null
-          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
-          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
-          tags?: Json | null
-          updated_at?: string | null
           updated_at_api?: string | null
         }
         Relationships: []
@@ -1142,16 +1172,17 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
-          client_email: string | null
           client_first_name: string | null
           client_id: string | null
           client_last_name: string | null
           client_phone: string | null
           created_at_api: string | null
+          experience_type: string | null
           gross_amount_paid: number | null
           id: string
           late_cancel: boolean | null
           net_amount_paid: number | null
+          purchase_id: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
@@ -1167,16 +1198,17 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
           created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
@@ -1192,16 +1224,17 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
-          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
           created_at_api?: string | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
           late_cancel?: boolean | null
           net_amount_paid?: number | null
+          purchase_id?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
@@ -2034,6 +2067,51 @@ export type Database = {
           id?: string
           migration_name?: string
           notes?: string | null
+        }
+        Relationships: []
+      }
+      checklist_shift_submissions: {
+        Row: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          department_table: string | null
+          id: string
+          notes: string | null
+          position: string | null
+          shift_time: string
+          submitted_at: string
+          submitted_by: string
+          submitted_by_id: string | null
+          total_tasks: number
+        }
+        Insert: {
+          completed_tasks: number
+          completion_date: string
+          department: string
+          department_table?: string | null
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time: string
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_id?: string | null
+          total_tasks: number
+        }
+        Update: {
+          completed_tasks?: number
+          completion_date?: string
+          department?: string
+          department_table?: string | null
+          id?: string
+          notes?: string | null
+          position?: string | null
+          shift_time?: string
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_id?: string | null
+          total_tasks?: number
         }
         Relationships: []
       }

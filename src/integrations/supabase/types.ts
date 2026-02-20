@@ -900,78 +900,159 @@ export type Database = {
       }
       arketa_reservations: {
         Row: {
+          booking_id: string | null
+          canceled_at: string | null
+          canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
           class_id: string | null
           class_name: string | null
+          class_time: string | null
           client_email: string | null
           client_first_name: string | null
           client_id: string | null
           client_last_name: string | null
           client_phone: string | null
+          coupon_code: string | null
           created_at_api: string | null
+          date_purchased: string | null
+          email_marketing_opt_in: boolean | null
+          estimated_gross_revenue: number | null
+          estimated_net_revenue: number | null
+          experience_type: string | null
+          first_name: string | null
           gross_amount_paid: number | null
           id: string
+          instructor_name: string | null
+          last_name: string | null
           late_cancel: boolean | null
+          location_address: string | null
+          location_name: string | null
+          milestone: number | null
           net_amount_paid: number | null
+          offering_id: string | null
+          package_name: string | null
+          package_period_end: string | null
+          package_period_start: string | null
+          payment_id: string | null
+          payment_method: string | null
+          purchase_id: string | null
+          purchase_type: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
+          service_id: string | null
           spot_id: string | null
           spot_name: string | null
           status: string | null
           sync_batch_id: string | null
+          tags: Json | null
+          updated_at: string | null
           updated_at_api: string | null
         }
         Insert: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          class_time?: string | null
           client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
+          first_name?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
+          last_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          tags?: Json | null
+          updated_at?: string | null
           updated_at_api?: string | null
         }
         Update: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          class_time?: string | null
           client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
+          first_name?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
+          last_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          tags?: Json | null
+          updated_at?: string | null
           updated_at_api?: string | null
         }
         Relationships: []
@@ -1302,6 +1383,7 @@ export type Database = {
           errors: Json | null
           id: string
           job_type: string | null
+          last_batch_first_id: string | null
           last_batch_synced_at: string | null
           last_cursor: string | null
           no_more_records: boolean | null
@@ -1340,6 +1422,7 @@ export type Database = {
           errors?: Json | null
           id?: string
           job_type?: string | null
+          last_batch_first_id?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1378,6 +1461,7 @@ export type Database = {
           errors?: Json | null
           id?: string
           job_type?: string | null
+          last_batch_first_id?: string | null
           last_batch_synced_at?: string | null
           last_cursor?: string | null
           no_more_records?: boolean | null
@@ -1932,47 +2016,145 @@ export type Database = {
         }
         Relationships: []
       }
-      checklist_shift_submissions: {
+      checklist_migrations_log: {
         Row: {
-          completed_tasks: number
-          completion_date: string
-          department: string
+          executed_at: string | null
           id: string
+          migration_name: string
           notes: string | null
-          position: string | null
-          shift_time: string
-          submitted_at: string
-          submitted_by: string
-          submitted_by_id: string | null
-          total_tasks: number
         }
         Insert: {
-          completed_tasks: number
-          completion_date: string
-          department: string
+          executed_at?: string | null
           id?: string
+          migration_name: string
           notes?: string | null
-          position?: string | null
-          shift_time: string
-          submitted_at?: string
-          submitted_by: string
-          submitted_by_id?: string | null
-          total_tasks: number
         }
         Update: {
-          completed_tasks?: number
-          completion_date?: string
-          department?: string
+          executed_at?: string | null
           id?: string
+          migration_name?: string
           notes?: string | null
-          position?: string | null
-          shift_time?: string
-          submitted_at?: string
-          submitted_by?: string
-          submitted_by_id?: string | null
-          total_tasks?: number
         }
         Relationships: []
+      }
+      checklist_template_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_id: string | null
+          completion_date: string
+          completion_value: string | null
+          deleted_at: string | null
+          id: string
+          item_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date: string
+          completion_value?: string | null
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_id?: string | null
+          completion_date?: string
+          completion_value?: string | null
+          deleted_at?: string | null
+          id?: string
+          item_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_template_completions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_template_items: {
+        Row: {
+          category: string | null
+          class_trigger_minutes_after: number | null
+          color: string | null
+          created_at: string | null
+          due_time: string | null
+          id: string
+          is_class_triggered: boolean | null
+          is_high_priority: boolean | null
+          is_required: boolean | null
+          item_text: string
+          label_spanish: string | null
+          required: boolean | null
+          sort_order: number | null
+          task_description: string | null
+          task_type: string | null
+          template_id: string | null
+          time_hint: string | null
+        }
+        Insert: {
+          category?: string | null
+          class_trigger_minutes_after?: number | null
+          color?: string | null
+          created_at?: string | null
+          due_time?: string | null
+          id?: string
+          is_class_triggered?: boolean | null
+          is_high_priority?: boolean | null
+          is_required?: boolean | null
+          item_text: string
+          label_spanish?: string | null
+          required?: boolean | null
+          sort_order?: number | null
+          task_description?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          time_hint?: string | null
+        }
+        Update: {
+          category?: string | null
+          class_trigger_minutes_after?: number | null
+          color?: string | null
+          created_at?: string | null
+          due_time?: string | null
+          id?: string
+          is_class_triggered?: boolean | null
+          is_high_priority?: boolean | null
+          is_required?: boolean | null
+          item_text?: string
+          label_spanish?: string | null
+          required?: boolean | null
+          sort_order?: number | null
+          task_description?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          time_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       checklist_templates: {
         Row: {
@@ -5758,6 +5940,15 @@ export type Database = {
         Args: { _sling_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_table_columns: {
+        Args: { table_name_param: string }
+        Returns: {
+          column_default: string
+          column_name: string
+          data_type: string
+          is_nullable: string
+        }[]
+      }
       get_trainer_member_ids: {
         Args: { _trainer_id: string }
         Returns: string[]
@@ -5793,6 +5984,7 @@ export type Database = {
         Args: { p_schedule_date: string }
         Returns: number
       }
+      reload_postgrest_cache: { Args: never; Returns: string }
       search_sling_users: {
         Args: { _search: string }
         Returns: {

@@ -5017,37 +5017,10 @@ export type Database = {
             foreignKeyName: "staff_message_drafts_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
-            referencedRelation: "staff_message_groups"
+            referencedRelation: "target_groups"
             referencedColumns: ["id"]
           },
         ]
-      }
-      staff_message_groups: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          member_ids: string[]
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          member_ids: string[]
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          member_ids?: string[]
-          name?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       staff_message_reactions: {
         Row: {
@@ -5573,6 +5546,39 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string | null
+        }
+        Relationships: []
+      }
+      target_groups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          member_ids: string[]
+          name: string
+          updated_at: string | null
+          usage_context: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          member_ids: string[]
+          name: string
+          updated_at?: string | null
+          usage_context?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          member_ids?: string[]
+          name?: string
+          updated_at?: string | null
+          usage_context?: string[] | null
         }
         Relationships: []
       }

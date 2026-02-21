@@ -16,7 +16,7 @@ import {
   useArchiveConversation,
 } from '@/hooks/useMessaging';
 import { useDrafts, useDeleteDraft } from '@/hooks/useMessageDrafts';
-import { useMessageGroups } from '@/hooks/useMessageGroups';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 import {
   groupMessagesIntoConversations,
   buildConversationKey,
@@ -29,7 +29,7 @@ import { MessagesOptionsMenu } from './MessagesOptionsMenu';
 import { GroupDialogs } from './GroupDialogs';
 import { NewConversationDialog, type NewConversationSelection } from './NewConversationDialog';
 import { format } from 'date-fns';
-import type { MessagingView, StaffMessagesInboxProps, StaffMessageGroup, Conversation, StaffMessageDraft } from '@/types/messaging';
+import type { MessagingView, StaffMessagesInboxProps, TargetGroup, Conversation, StaffMessageDraft } from '@/types/messaging';
 
 export function StaffMessagesInbox({
   initialMessageId,
@@ -44,7 +44,7 @@ export function StaffMessagesInbox({
   const [showComposer, setShowComposer] = useState(false);
   const [draftToEdit, setDraftToEdit] = useState<string | undefined>(undefined);
   const [groupDialogMode, setGroupDialogMode] = useState<'create' | 'edit' | 'delete' | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<StaffMessageGroup | undefined>(undefined);
+  const [selectedGroup, setSelectedGroup] = useState<TargetGroup | undefined>(undefined);
   const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
   const [newConversation, setNewConversation] = useState<Conversation | null>(null);
   const [highlightMessageId, setHighlightMessageId] = useState<string | undefined>(undefined);
@@ -54,7 +54,7 @@ export function StaffMessagesInbox({
   const { data: reads = [], isLoading: readsLoading } = useMessageReads();
   const { data: scheduledMessages = [] } = useScheduledMessages();
   const { data: drafts = [] } = useDrafts();
-  const { data: customGroups = [] } = useMessageGroups();
+  const { data: customGroups = [] } = useTargetGroups();
   const { data: staffList = [] } = useStaffList();
   const { mutate: deleteDraft } = useDeleteDraft();
   const { mutate: sendMessage } = useSendMessage();
@@ -178,12 +178,12 @@ export function StaffMessagesInbox({
     setSelectedGroup(undefined);
   };
 
-  const handleEditGroup = (group: StaffMessageGroup) => {
+  const handleEditGroup = (group: TargetGroup) => {
     setGroupDialogMode('edit');
     setSelectedGroup(group);
   };
 
-  const handleDeleteGroup = (group: StaffMessageGroup) => {
+  const handleDeleteGroup = (group: TargetGroup) => {
     setGroupDialogMode('delete');
     setSelectedGroup(group);
   };

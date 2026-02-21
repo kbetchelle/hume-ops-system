@@ -86,10 +86,15 @@ export function QuickLinksTab({
           resourceLabel={group.title}
           hasPendingFlag={groupFlagsMap?.has(group.id) ?? false}
         >
-          <Card data-resource-id={group.id} className="rounded-none">
+          <Card data-resource-id={group.id} className="rounded-none group/card cursor-pointer">
             <CardContent className="p-[10px]">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-medium">{group.title}</h3>
+                {group.items.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
+                    {group.items.length} {group.items.length === 1 ? 'link' : 'links'}
+                  </span>
+                )}
                 {groupFlagsMap?.has(group.id) && <UnderReviewBadge />}
               </div>
               {group.description && (
@@ -101,44 +106,46 @@ export function QuickLinksTab({
                 />
               )}
               {group.items.length > 0 && (
-                <div className="flex flex-col">
-                  {group.items.map((link) => (
-                    <ResourceFlagContextMenu
-                      key={link.id}
-                      resourceType="quick_link_item"
-                      resourceId={link.id}
-                      resourceLabel={link.name}
-                      hasPendingFlag={itemFlagsMap?.has(link.id) ?? false}
-                    >
-                      <a
-                        data-resource-id={link.id}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-2 px-1 py-1.5 hover:bg-muted/50 transition-colors"
+                <div className="flex flex-col max-h-0 group-hover/card:max-h-[500px] overflow-hidden transition-all duration-300 ease-in-out opacity-0 group-hover/card:opacity-100">
+                  <div className="border-t border-border mt-2 pt-2">
+                    {group.items.map((link) => (
+                      <ResourceFlagContextMenu
+                        key={link.id}
+                        resourceType="quick_link_item"
+                        resourceId={link.id}
+                        resourceLabel={link.name}
+                        hasPendingFlag={itemFlagsMap?.has(link.id) ?? false}
                       >
-                        <span className="text-muted-foreground text-base shrink-0 leading-none">
-                          &bull;
-                        </span>
-                        <span className="text-sm text-primary hover:underline truncate">
-                          {link.name}
-                        </span>
-                        {itemFlagsMap?.has(link.id) && <UnderReviewBadge />}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleCopy(link.url);
-                          }}
-                          className="ml-[10px] opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
-                          title="Copy URL"
+                        <a
+                          data-resource-id={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group/link flex items-center gap-2 px-1 py-1.5 hover:bg-muted/50 transition-colors"
                         >
-                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                        </button>
-                      </a>
-                    </ResourceFlagContextMenu>
-                  ))}
+                          <span className="text-muted-foreground text-base shrink-0 leading-none">
+                            &bull;
+                          </span>
+                          <span className="text-sm text-primary hover:underline truncate">
+                            {link.name}
+                          </span>
+                          {itemFlagsMap?.has(link.id) && <UnderReviewBadge />}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCopy(link.url);
+                            }}
+                            className="ml-[10px] opacity-0 group-hover/link:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
+                            title="Copy URL"
+                          >
+                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </a>
+                      </ResourceFlagContextMenu>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>

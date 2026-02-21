@@ -1172,6 +1172,7 @@ export type Database = {
           class_date: string | null
           class_id: string | null
           class_name: string | null
+          client_email: string | null
           client_first_name: string | null
           client_id: string | null
           client_last_name: string | null
@@ -1198,6 +1199,7 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
           class_date?: string | null
           class_id?: string | null
           class_name?: string | null
+          client_email?: string | null
           client_first_name?: string | null
           client_id?: string | null
           client_last_name?: string | null

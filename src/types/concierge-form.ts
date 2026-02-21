@@ -152,7 +152,8 @@ export function generateSessionId(): string {
 }
 
 // Helper to check if form has meaningful content
-export function hasMeaningfulContent(formData: FormDataType): boolean {
+export function hasMeaningfulContent(formData: FormDataType | null | undefined): boolean {
+  if (!formData) return false;
   return (
     formData.memberFeedback.length > 0 ||
     formData.membershipCancelRequests.length > 0 ||

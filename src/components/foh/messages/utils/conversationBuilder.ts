@@ -4,6 +4,7 @@ import type {
   StaffMessageRead,
   Conversation,
   ConversationParticipant,
+  TargetGroup,
   EDIT_WINDOW_HOURS,
   TIMESTAMP_COLLAPSE_MINUTES,
 } from '@/types/messaging';
@@ -213,11 +214,27 @@ export function groupMessagesIntoConversations(
  */
 export function getConversationTitle(
   conversation: Conversation,
-  currentUserName: string
+  currentUserName: string,
+  targetGroups?: TargetGroup[]
 ): string {
   if (conversation.isGroup && conversation.groupName) {
     return conversation.groupName;
   }
+
+  // Check if participants match a target group
+  if (conversation.participants.length >= 2 && targetGroups && targetGroups.length > 0) {
+    const participantIds = new Set(conversation.participants.map((p) => p.userId));
+    for (const group of targetGroups) {
+      const groupMemberIds = new Set(group.member_ids);
+      if (
+        participantIds.size === groupMemberIds.size &&
+        [...participantIds].every((id) => groupMemberIds.has(id))
+      ) {
+        return group.name;
+      }
+    }
+  }
+
   if (conversation.isGroup && conversation.participants.length > 0) {
     return `Group (${conversation.participants.length} members)`;
   }

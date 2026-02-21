@@ -49,7 +49,6 @@ export default function ConciergeDashboard() {
     report: "Shift Report",
     messages: "Messages",
     announcements: "Announcements",
-    "whos-working": "Who's Working",
     templates: "Response Templates",
     resources: "Resources",
     "resources-quick-links": "Quick Links",
@@ -72,16 +71,8 @@ export default function ConciergeDashboard() {
             </div>
           </div>);
 
-      case "whos-working":
-        return (
-          <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-6">
-              Who's Working Today
-            </h2>
-            <div className="max-w-2xl">
-              <WhosWorkingView />
-            </div>
-          </div>);
+
+
 
       case "report":
         return (

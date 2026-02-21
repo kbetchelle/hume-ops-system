@@ -221,15 +221,18 @@ export function getConversationTitle(
     return conversation.groupName;
   }
 
-  // Check if participants match a target group
+  // Check if participants match a target group (participants excludes current user, group members may include them)
   if (conversation.participants.length >= 2 && targetGroups && targetGroups.length > 0) {
     const participantIds = new Set(conversation.participants.map((p) => p.userId));
     for (const group of targetGroups) {
+      // Remove current user from group members for comparison since participants already excludes them
       const groupMemberIds = new Set(group.member_ids);
-      if (
-        participantIds.size === groupMemberIds.size &&
-        [...participantIds].every((id) => groupMemberIds.has(id))
-      ) {
+      // Check: every participant is in the group, and every group member (that isn't the current user) is a participant
+      const groupWithoutCurrent = group.member_ids.filter((id) => !participantIds.has(id));
+      const allParticipantsInGroup = [...participantIds].every((id) => groupMemberIds.has(id));
+      const unmatchedGroupMembers = groupWithoutCurrent.length;
+      // Allow at most 1 unmatched (the current user)
+      if (allParticipantsInGroup && unmatchedGroupMembers <= 1) {
         return group.name;
       }
     }

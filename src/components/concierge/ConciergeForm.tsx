@@ -865,17 +865,9 @@ export function ConciergeForm() {
           
           {/* MEMBERS — Celebratory Events */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Did any members share any celebratory events?</Label>
-              <Checkbox
-                checked={formData.celebratoryEventsNA}
-                onCheckedChange={(checked) => updateFormField('celebratoryEventsNA', !!checked)}
-                disabled={isSubmitted} />
-
-              <span className="text-sm text-muted-foreground">N/A</span>
-            </div>
+            <Label className="text-sm">Did any members share any celebratory events?</Label>
             <p className="text-xs text-muted-foreground">Add any special/giftable events to tracker.</p>
-            {!formData.celebratoryEventsNA && formData.celebratoryEvents.map((event, i) =>
+            {formData.celebratoryEvents.map((event, i) =>
             <div key={event.id ?? i} className="flex flex-wrap gap-2">
                 <Input
                 value={event.memberName}
@@ -939,7 +931,7 @@ export function ConciergeForm() {
                 disabled={isSubmitted}
                 className="w-36" />
 
-                {!isSubmitted && i === 0 && !formData.celebratoryEventsNA &&
+                {!isSubmitted && i === 0 &&
               <Button variant="ghost" size="icon" onClick={addCelebratoryEvent}>
                 <Plus className="h-4 w-4" />
               </Button>

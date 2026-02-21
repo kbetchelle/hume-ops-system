@@ -8,7 +8,7 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout title="Messages">
-      <div className="h-[calc(100vh-4rem)] p-4 md:p-8">
+      <div className="h-[calc(100vh-4rem)]">
         <StaffMessagesInbox
           initialMessageId={messageId || undefined}
         />

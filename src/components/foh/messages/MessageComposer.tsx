@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, AlertCircle, Clock, Save, Bell, X } from 'lucide-react';
+import { Send, AlertCircle, Clock, Save, Bell, X, Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStaffList, useSendMessage } from '@/hooks/useMessaging';
 import { useSaveDraft, useDrafts, useDeleteDraft } from '@/hooks/useMessageDrafts';
 import { useCreateGroup } from '@/hooks/useTargetGroups';
-import { NewConversationDialog } from './NewConversationDialog';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 import { SchedulePopover } from './SchedulePopover';
 import { toast } from 'sonner';
 import type { MessageComposerProps } from '@/types/messaging';
@@ -35,7 +37,7 @@ export function MessageComposer({
   const [content, setContent] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
-  const [showRecipientPicker, setShowRecipientPicker] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftId);
   const [notify, setNotify] = useState(false);
   const [showSaveAsGroupPrompt, setShowSaveAsGroupPrompt] = useState(false);
@@ -43,6 +45,7 @@ export function MessageComposer({
 
   const { data: staffList = [] } = useStaffList();
   const { data: drafts = [] } = useDrafts();
+  const { data: customGroups = [] } = useTargetGroups();
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutate: saveDraft, isPending: isSavingDraft } = useSaveDraft();
   const { mutate: deleteDraft } = useDeleteDraft();
@@ -154,18 +157,32 @@ export function MessageComposer({
     }
   };
 
-  const handleSelectRecipients = (selection: { recipientIds: string[]; groupId?: string; groupName?: string }) => {
-    setRecipientIds(selection.recipientIds);
-    setShowRecipientPicker(false);
+  const handleToggleRecipient = (staffId: string) => {
+    setRecipientIds((prev) =>
+      prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId]
+    );
   };
+
+  const handleSelectGroup = (memberIds: string[]) => {
+    setRecipientIds(memberIds);
+  };
+
+  const filteredStaff = staffList.filter((staff) =>
+    (staff.full_name || staff.email)
+      ?.toLowerCase()
+      .includes(recipientSearch.toLowerCase())
+  );
+
+  const filteredGroups = customGroups.filter((group) =>
+    group.name.toLowerCase().includes(recipientSearch.toLowerCase())
+  );
 
   const isPending = isSending || isSavingDraft;
   const canSend = recipientIds.length > 0 && content.trim().length > 0;
   const canSaveDraft = (content.trim().length > 0 || subject.trim().length > 0);
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="rounded-none w-[75vw] max-w-4xl h-[75vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-2 border-b">
             <DialogTitle className="text-sm uppercase tracking-wider">
@@ -179,26 +196,13 @@ export function MessageComposer({
               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
                 To
               </Label>
-              {recipientIds.length === 0 ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRecipientPicker(true)}
-                  className="rounded-none w-full justify-start text-muted-foreground text-xs"
-                  disabled={isPending}
-                >
-                  Select recipients...
-                </Button>
-              ) : (
-                <div className="flex flex-wrap gap-2">
+              {recipientIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
                   {recipientIds.map((id) => {
                     const name = staffList.find((s) => s.user_id === id)?.full_name || staffList.find((s) => s.user_id === id)?.email || 'Unknown';
                     return (
-                      <Badge
-                        key={id}
-                        variant="secondary"
-                        className="rounded-none pr-1 gap-1"
-                      >
-                        <span className="max-w-[120px] truncate">{name}</span>
+                      <Badge key={id} variant="secondary" className="rounded-none pr-1 gap-1 text-[10px]">
+                        <span className="max-w-[100px] truncate">{name}</span>
                         <button
                           type="button"
                           onClick={() => setRecipientIds((prev) => prev.filter((r) => r !== id))}
@@ -206,22 +210,63 @@ export function MessageComposer({
                           disabled={isPending}
                           aria-label="Remove"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-2.5 w-2.5" />
                         </button>
                       </Badge>
                     );
                   })}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowRecipientPicker(true)}
-                    className="rounded-none h-6 text-xs"
-                    disabled={isPending}
-                  >
-                    Add
-                  </Button>
                 </div>
               )}
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  value={recipientSearch}
+                  onChange={(e) => setRecipientSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="rounded-none text-xs pl-7 h-7"
+                  disabled={isPending}
+                />
+              </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-0.5">
+                  {/* Target Groups */}
+                  {filteredGroups.length > 0 && (
+                    <>
+                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground px-1 pt-1 pb-0.5">Groups</div>
+                      {filteredGroups.map((group) => (
+                        <div
+                          key={group.id}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded-none cursor-pointer text-xs"
+                          onClick={() => handleSelectGroup(group.member_ids)}
+                        >
+                          <span className="font-medium flex-1 truncate">{group.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{group.member_ids.length}</span>
+                        </div>
+                      ))}
+                      <div className="border-b my-1" />
+                    </>
+                  )}
+                  {/* Individual Staff */}
+                  {filteredStaff.map((staff) => {
+                    const isSelected = recipientIds.includes(staff.user_id);
+                    return (
+                      <div
+                        key={staff.user_id}
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded-none cursor-pointer text-xs"
+                        onClick={() => handleToggleRecipient(staff.user_id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleRecipient(staff.user_id)}
+                          className="rounded-none h-3.5 w-3.5"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="truncate">{staff.full_name || staff.email || 'Unknown'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
 
             {/* Right: Subject + message */}
@@ -380,15 +425,6 @@ export function MessageComposer({
             </div>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-
-      {/* Recipient Picker Dialog */}
-      <NewConversationDialog
-        isOpen={showRecipientPicker}
-        onClose={() => setShowRecipientPicker(false)}
-        onSelect={(selection) => handleSelectRecipients(selection)}
-        mode="multi"
-      />
-    </>
+    </Dialog>
   );
 }

@@ -277,23 +277,37 @@ ORDER BY submitted_at DESC
 LIMIT 10;
 ```
 
-### Import historical reports from CSV
+### Import historical reports from CSV (GitHub + Lovable Cloud only)
 
-To backfill `daily_report_history` from a semicolon-delimited concierge reports export (e.g. `concierge_reports-export-*.csv`), use the Edge Function `import-concierge-reports-csv`. It maps CSV columns to the table and upserts on `(report_date, shift_type)`. Screenshot/`arketa_screenshot_url` is not imported.
+To backfill `daily_report_history` from a semicolon-delimited concierge reports export (e.g. `concierge_reports-export-*.csv`) **without Supabase**—using only GitHub and Lovable Cloud—run a script from the repo to generate SQL, then run that SQL in Lovable's SQL editor. Screenshot/`arketa_screenshot_url` is not imported.
 
-**Invoke the function** (e.g. from a script or curl):
+**Step 1: Run the migration in Lovable's SQL editor**
 
-```bash
-# Replace SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY with your project values
-curl -X POST "$SUPABASE_URL/functions/v1/import-concierge-reports-csv" \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"csvContent": "<paste full CSV string here>"}'
+In Lovable, open the SQL editor for your project's database and run:
+
+```sql
+-- Add tour_followup_completed to daily_report_history for CSV import.
+ALTER TABLE public.daily_report_history
+  ADD COLUMN IF NOT EXISTS tour_followup_completed boolean DEFAULT false;
+COMMENT ON COLUMN public.daily_report_history.tour_followup_completed IS 'Whether tour follow-up was completed for this shift; from Concierge CSV or form';
 ```
 
-Optional body field: `overwriteExisting` (default `true`) — when true, existing rows with the same `report_date` and `shift_type` are updated.
+(Same as [`supabase/migrations/20260225120001_daily_report_history_tour_followup.sql`](supabase/migrations/20260225120001_daily_report_history_tour_followup.sql).)
 
-**Function:** [`supabase/functions/import-concierge-reports-csv/index.ts`](supabase/functions/import-concierge-reports-csv/index.ts)
+
+**Step 2: Generate import SQL from your CSV (on your machine, from the repo)**
+
+From the project root, run (replace with the path to your CSV file):
+
+```bash
+npx tsx scripts/concierge-csv-to-sql.ts /path/to/concierge_reports-export-2026-02-21_14-44-15.csv > concierge-import.sql
+```
+
+**Step 3: Run the generated SQL in Lovable's SQL editor**
+
+Open `concierge-import.sql`, copy its contents, paste into Lovable's SQL editor, and run it. The script outputs `INSERT ... ON CONFLICT (report_date, shift_type) DO UPDATE SET ...` so existing rows are updated and new rows are inserted.
+
+**Script:** [`scripts/concierge-csv-to-sql.ts`](scripts/concierge-csv-to-sql.ts)
 
 ### View Open Issues
 

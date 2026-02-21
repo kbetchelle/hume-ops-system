@@ -71,8 +71,10 @@ hume-ops-system/
 │   │   ├── 20260131174714_expand_daily_report_history.sql
 │   │   └── README_CONCIERGE.md        # Migration guide
 │   └── functions/
-│       └── submit-concierge-report/
-│           └── index.ts                # Submission handler
+│       ├── submit-concierge-report/
+│       │   └── index.ts                # Submission handler
+│       └── import-concierge-reports-csv/
+│           └── index.ts                # One-time CSV → daily_report_history import
 └── docs/
     ├── CONCIERGE_QUICK_START.md        # 5-minute setup guide
     ├── CONCIERGE_IMPLEMENTATION_SUMMARY.md
@@ -274,6 +276,24 @@ WHERE status = 'submitted'
 ORDER BY submitted_at DESC 
 LIMIT 10;
 ```
+
+### Import historical reports from CSV
+
+To backfill `daily_report_history` from a semicolon-delimited concierge reports export (e.g. `concierge_reports-export-*.csv`), use the Edge Function `import-concierge-reports-csv`. It maps CSV columns to the table and upserts on `(report_date, shift_type)`. Screenshot/`arketa_screenshot_url` is not imported.
+
+**Invoke the function** (e.g. from a script or curl):
+
+```bash
+# Replace SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY with your project values
+curl -X POST "$SUPABASE_URL/functions/v1/import-concierge-reports-csv" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"csvContent": "<paste full CSV string here>"}'
+```
+
+Optional body field: `overwriteExisting` (default `true`) — when true, existing rows with the same `report_date` and `shift_type` are updated.
+
+**Function:** [`supabase/functions/import-concierge-reports-csv/index.ts`](supabase/functions/import-concierge-reports-csv/index.ts)
 
 ### View Open Issues
 

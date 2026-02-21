@@ -42,6 +42,7 @@ export function MessageComposer({
   const [notify, setNotify] = useState(false);
   const [showSaveAsGroupPrompt, setShowSaveAsGroupPrompt] = useState(false);
   const [saveAsGroupName, setSaveAsGroupName] = useState('');
+  const [selectedFromGroup, setSelectedFromGroup] = useState(false);
 
   const { data: staffList = [] } = useStaffList();
   const { data: drafts = [] } = useDrafts();
@@ -91,7 +92,7 @@ export function MessageComposer({
   const handleSend = () => {
     if (recipientIds.length === 0 || !content.trim()) return;
 
-    if (recipientIds.length >= 2 && !showSaveAsGroupPrompt) {
+    if (recipientIds.length >= 2 && !showSaveAsGroupPrompt && !selectedFromGroup) {
       setShowSaveAsGroupPrompt(true);
       toast.info('Save recipients as a group?', { description: 'Optionally name the group below, or send without saving.' });
       return;
@@ -161,10 +162,12 @@ export function MessageComposer({
     setRecipientIds((prev) =>
       prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId]
     );
+    setSelectedFromGroup(false);
   };
 
   const handleSelectGroup = (memberIds: string[]) => {
     setRecipientIds(memberIds);
+    setSelectedFromGroup(true);
   };
 
   const filteredStaff = staffList.filter((staff) =>

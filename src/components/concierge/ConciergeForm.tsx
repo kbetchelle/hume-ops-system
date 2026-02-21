@@ -716,7 +716,7 @@ export function ConciergeForm() {
                 placeholder="Enter feedback or issue"
                 className="flex-1" />
 
-                {!isSubmitted &&
+                {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
                 size="icon"
@@ -817,7 +817,7 @@ export function ConciergeForm() {
                   placeholder="End date"
                   className="w-36" />
 
-                  {!isSubmitted &&
+                  {!isSubmitted && i > 0 &&
                 <Button
                   variant="ghost"
                   size="icon"
@@ -942,7 +942,7 @@ export function ConciergeForm() {
                 disabled={isSubmitted}
                 className="w-36" />
 
-                {!isSubmitted &&
+                {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
                 size="icon"
@@ -994,7 +994,7 @@ export function ConciergeForm() {
 
                     <span className="text-sm text-muted-foreground whitespace-nowrap">Notes filled out & follow up email sent</span>
                   </div>
-                  {!isSubmitted &&
+                  {!isSubmitted && i > 0 &&
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1046,6 +1046,7 @@ export function ConciergeForm() {
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
+                    {i > 0 &&
                     <Button
                   variant="ghost"
                   size="icon"
@@ -1053,6 +1054,7 @@ export function ConciergeForm() {
 
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    }
                   </>
               }
               </div>
@@ -1130,6 +1132,7 @@ export function ConciergeForm() {
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
+                    {i > 0 &&
                     <Button
                   variant="ghost"
                   size="icon"
@@ -1137,6 +1140,7 @@ export function ConciergeForm() {
 
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    }
                   </>
               }
               </div>
@@ -1221,7 +1225,7 @@ export function ConciergeForm() {
                 placeholder="Enter notes for future shift"
                 className="flex-1 min-w-[200px]" />
 
-                {!isSubmitted &&
+                {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
                 size="icon"

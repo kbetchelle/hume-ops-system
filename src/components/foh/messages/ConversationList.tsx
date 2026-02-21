@@ -1,5 +1,6 @@
 import { MessageSquare, Plus, Search, ArchiveRestore, Users } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -250,10 +251,14 @@ export function ConversationList({
                     ) : (
                       <>
                         <span className="text-[10px] text-muted-foreground">
-                          {format(
-                            parseISO(conversation.lastMessage.created_at),
-                            'MMM d'
-                          )}
+                          {(() => {
+                            const utcDate = parseISO(conversation.lastMessage.created_at);
+                            const pstDate = toZonedTime(utcDate, 'America/Los_Angeles');
+                            if (isToday(pstDate)) {
+                              return `Today ${format(pstDate, 'h:mm a')}`;
+                            }
+                            return format(pstDate, 'MMM d');
+                          })()}
                         </span>
                         {conversation.unreadCount > 0 && (
                           <Badge

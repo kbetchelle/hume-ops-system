@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
 
     const body = await req.json().catch(() => ({})) as SyncRequest;
-    const limit = body.limit || 400;
+    const limit = Math.min(body.limit || 100, 100); // Calendly API max is 100
 
     // Default to events from 7 days ago to 90 days in the future
     const minStartTime = body.min_start_time || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          logger.error(`API request failed: ${response.status}`, { error: errorText });
+          logger.error(`API request failed: ${response.status} ${errorText}`);
           break;
         }
 

@@ -56,36 +56,42 @@ ALTER TABLE public.staff_push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_history ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- 4. RLS POLICIES
+-- 4. RLS POLICIES (idempotent: DROP IF EXISTS then CREATE)
 -- =============================================
 
 -- staff_push_subscriptions: users manage their own rows only (service_role bypasses RLS)
+DROP POLICY IF EXISTS "Users can select own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can select own push subscriptions"
   ON public.staff_push_subscriptions FOR SELECT
   TO authenticated
   USING (staff_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can insert own push subscriptions"
   ON public.staff_push_subscriptions FOR INSERT
   TO authenticated
   WITH CHECK (staff_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can update own push subscriptions"
   ON public.staff_push_subscriptions FOR UPDATE
   TO authenticated
   USING (staff_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own push subscriptions" ON public.staff_push_subscriptions;
 CREATE POLICY "Users can delete own push subscriptions"
   ON public.staff_push_subscriptions FOR DELETE
   TO authenticated
   USING (staff_id = auth.uid());
 
 -- notification_history: management can select all; staff can select own
+DROP POLICY IF EXISTS "Management can select all notification history" ON public.notification_history;
 CREATE POLICY "Management can select all notification history"
   ON public.notification_history FOR SELECT
   TO authenticated
   USING (public.is_manager_or_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Staff can select own notification history" ON public.notification_history;
 CREATE POLICY "Staff can select own notification history"
   ON public.notification_history FOR SELECT
   TO authenticated

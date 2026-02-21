@@ -51,23 +51,27 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('package-photos', 'package-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage RLS policies for package-photos bucket
+-- Storage RLS policies for package-photos bucket (idempotent: DROP IF EXISTS then CREATE)
+DROP POLICY IF EXISTS "Authenticated users can upload package photos" ON storage.objects;
 CREATE POLICY "Authenticated users can upload package photos"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'package-photos');
 
+DROP POLICY IF EXISTS "Anyone can view package photos" ON storage.objects;
 CREATE POLICY "Anyone can view package photos"
   ON storage.objects FOR SELECT
   TO authenticated
   USING (bucket_id = 'package-photos');
 
+DROP POLICY IF EXISTS "Authenticated users can update their uploaded photos" ON storage.objects;
 CREATE POLICY "Authenticated users can update their uploaded photos"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'package-photos')
   WITH CHECK (bucket_id = 'package-photos');
 
+DROP POLICY IF EXISTS "Admins can delete package photos" ON storage.objects;
 CREATE POLICY "Admins can delete package photos"
   ON storage.objects FOR DELETE
   TO authenticated
@@ -88,7 +92,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to auto-update updated_at
+-- Trigger to auto-update updated_at (idempotent)
+DROP TRIGGER IF EXISTS update_packages_updated_at ON public.packages;
 CREATE TRIGGER update_packages_updated_at
   BEFORE UPDATE ON public.packages
   FOR EACH ROW
@@ -125,30 +130,35 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS queue_package_photos_on_delete ON public.packages;
 CREATE TRIGGER queue_package_photos_on_delete
   BEFORE DELETE ON public.packages
   FOR EACH ROW
   EXECUTE FUNCTION queue_package_photo_deletion();
 
--- RLS Policies for packages table
+-- RLS Policies for packages table (idempotent: DROP IF EXISTS then CREATE)
 ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view all packages" ON public.packages;
 CREATE POLICY "Authenticated users can view all packages"
   ON public.packages FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can insert packages" ON public.packages;
 CREATE POLICY "Authenticated users can insert packages"
   ON public.packages FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Authenticated users can update packages" ON public.packages;
 CREATE POLICY "Authenticated users can update packages"
   ON public.packages FOR UPDATE
   TO authenticated
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Only admins can delete packages" ON public.packages;
 CREATE POLICY "Only admins can delete packages"
   ON public.packages FOR DELETE
   TO authenticated
@@ -159,19 +169,22 @@ CREATE POLICY "Only admins can delete packages"
     )
   );
 
--- RLS Policies for package_location_history table
+-- RLS Policies for package_location_history table (idempotent: DROP IF EXISTS then CREATE)
 ALTER TABLE public.package_location_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view package history" ON public.package_location_history;
 CREATE POLICY "Authenticated users can view package history"
   ON public.package_location_history FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can insert package history" ON public.package_location_history;
 CREATE POLICY "Authenticated users can insert package history"
   ON public.package_location_history FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Only admins can delete package history" ON public.package_location_history;
 CREATE POLICY "Only admins can delete package history"
   ON public.package_location_history FOR DELETE
   TO authenticated

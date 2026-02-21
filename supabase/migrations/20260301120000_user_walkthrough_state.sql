@@ -21,17 +21,20 @@ CREATE INDEX IF NOT EXISTS idx_user_walkthrough_state_user_id
 COMMENT ON TABLE public.user_walkthrough_state IS 'Tracks whether the user completed or skipped the app walkthrough and which page hints they have viewed.';
 COMMENT ON COLUMN public.user_walkthrough_state.viewed_page_hints IS 'Array of page hint identifiers (e.g. route or slug) that the user has already seen.';
 
--- RLS: users can only read/insert/update their own row
+-- RLS: users can only read/insert/update their own row (idempotent: DROP IF EXISTS then CREATE)
 ALTER TABLE public.user_walkthrough_state ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can view own walkthrough state"
   ON public.user_walkthrough_state FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can insert own walkthrough state"
   ON public.user_walkthrough_state FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own walkthrough state" ON public.user_walkthrough_state;
 CREATE POLICY "Users can update own walkthrough state"
   ON public.user_walkthrough_state FOR UPDATE TO authenticated
   USING (auth.uid() = user_id);

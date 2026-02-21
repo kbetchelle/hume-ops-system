@@ -1139,12 +1139,12 @@ export function ConciergeForm() {
           {/* Management Notes */}
           <div className="space-y-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider">Management Notes</h3>
-            <Label className="text-sm sr-only">Notes for management eyes only</Label>
+            <Label className="text-sm sr-only">Notes for management</Label>
             <Textarea
               value={formData.managementNotes}
               onChange={(e) => updateFormField('managementNotes', e.target.value)}
               disabled={isSubmitted}
-              placeholder="Notes for management eyes only..."
+              placeholder="Notes for management..."
               rows={4}
               className="resize-y" />
 

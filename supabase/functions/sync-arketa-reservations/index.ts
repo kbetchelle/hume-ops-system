@@ -276,12 +276,12 @@ async function fetchAllReservations(
 
     // Persist discovered classes as stubs
     if (discovered.length > 0) {
-      classes = discovered;
+      classes = discovered as any;
       const stubRows = discovered.map(c => ({
         external_id: c.external_id,
         name: c.name,
         start_time: c.start_time || new Date().toISOString(),
-        class_date: c.class_date,
+        class_date: c.class_date ?? undefined,
         status: 'discovered_via_reservation_sync',
         synced_at: new Date().toISOString(),
       }));

@@ -28,7 +28,7 @@ function matchCategory(className: string, mappings: { class_name_pattern: string
 
 /** Resolve target_department to list of auth user IDs (for push) */
 async function resolveStaffIds(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   targetDepartment: string
 ): Promise<string[]> {
   const roleMap: Record<string, string[]> = {

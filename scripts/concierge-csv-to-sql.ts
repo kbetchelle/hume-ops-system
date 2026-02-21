@@ -98,8 +98,12 @@ function parseBoolean(raw: string): boolean | null {
   return null;
 }
 
+/** Escape for SQL string literals: ASCII and Unicode apostrophes -> doubled single quote. */
 function sqlEscape(s: string): string {
-  return s.replace(/'/g, "''");
+  return s
+    .replace(/'/g, "''")       // ASCII single quote
+    .replace(/\u2019/g, "''")  // Unicode right single quotation mark (')
+    .replace(/\u2018/g, "''"); // Unicode left single quotation mark (')
 }
 
 function sqlValue(v: unknown): string {

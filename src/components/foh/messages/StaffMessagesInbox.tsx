@@ -521,7 +521,7 @@ export function StaffMessagesInbox({
   return (
     <>
       <Card className="rounded-none border h-full">
-        <CardHeader className="border-b">
+        <CardHeader className="border-b-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm uppercase tracking-wider">
               Messages

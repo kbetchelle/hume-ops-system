@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useStaffList, useSendMessage, useMarkMessageRead, useEditMessage, useDeleteMessage, useMessageReads } from '@/hooks/useMessaging';
 import { useReactions, useToggleReaction, useReactionsRealtime, groupReactions } from '@/hooks/useMessageReactions';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 import { getConversationTitle, collapseTimestamps, isWithinEditWindow } from './utils/conversationBuilder';
 import { ReactionPills } from './ReactionPills';
 import { ReactionPicker } from './ReactionPicker';
@@ -39,8 +40,9 @@ export function ConversationView({
   const { mutate: deleteMessage } = useDeleteMessage();
   const { mutate: toggleReaction } = useToggleReaction();
   const { data: allReads = [] } = useMessageReads();
+  const { data: targetGroups = [] } = useTargetGroups();
 
-  const title = getConversationTitle(conversation, '');
+  const title = getConversationTitle(conversation, '', targetGroups);
 
   // Get staff name by ID
   const getStaffName = (userId: string) => {

@@ -2662,6 +2662,7 @@ export type Database = {
           total_class_attendance: number | null
           total_revenue: number | null
           total_visits: number | null
+          tour_followup_completed: boolean | null
           tour_notes: Json | null
           updated_at: string
         }
@@ -2695,6 +2696,7 @@ export type Database = {
           total_class_attendance?: number | null
           total_revenue?: number | null
           total_visits?: number | null
+          tour_followup_completed?: boolean | null
           tour_notes?: Json | null
           updated_at?: string
         }
@@ -2728,6 +2730,7 @@ export type Database = {
           total_class_attendance?: number | null
           total_revenue?: number | null
           total_visits?: number | null
+          tour_followup_completed?: boolean | null
           tour_notes?: Json | null
           updated_at?: string
         }

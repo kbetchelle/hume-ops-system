@@ -6206,6 +6206,7 @@ export type Database = {
         Args: { _reason: string; _user_id: string }
         Returns: undefined
       }
+      notify_unlinked_scheduled_sling_users: { Args: never; Returns: undefined }
       process_scheduled_messages: { Args: never; Returns: undefined }
       refresh_daily_schedule: {
         Args: { p_schedule_date: string }

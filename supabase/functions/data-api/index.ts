@@ -58,7 +58,7 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'notification_triggers': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'class_type_mappings': { management: ['select', 'insert', 'update', 'delete'] },
   'staff_message_reactions': { management: ['select', 'insert', 'delete'], concierge: ['select', 'insert', 'delete'], staff: ['select', 'insert', 'delete'] },
-  'staff_message_groups': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
+  'target_groups': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'], staff: ['select'] },
   'staff_message_drafts': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'insert'], staff: ['select', 'insert'] },
   // Backfill tables
   'backfill_jobs': { management: ['select', 'insert', 'update', 'delete'] },

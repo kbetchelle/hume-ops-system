@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,74 +10,45 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useStaffList } from '@/hooks/useMessaging';
-import {
-  useCreateGroup,
-  useUpdateGroup,
-  useDeleteGroup,
-} from '@/hooks/useTargetGroups';
+import { useAdminUsers } from '@/hooks/useAdminUsers';
+import { useCreateGroup, useUpdateGroup } from '@/hooks/useTargetGroups';
 import type { TargetGroup } from '@/types/messaging';
 
-interface GroupDialogsProps {
-  mode: 'create' | 'edit' | 'delete' | null;
-  group?: TargetGroup;
-  onClose: () => void;
-}
-
-export function GroupDialogs({ mode, group, onClose }: GroupDialogsProps) {
-  if (mode === 'delete' && group) {
-    return <DeleteGroupDialog group={group} onClose={onClose} />;
-  }
-
-  if (mode === 'create' || (mode === 'edit' && group)) {
-    return <CreateEditGroupDialog mode={mode} group={group} onClose={onClose} />;
-  }
-
-  return null;
-}
-
-// Create/Edit Dialog
-function CreateEditGroupDialog({
-  mode,
-  group,
-  onClose,
-}: {
+interface TargetGroupDialogProps {
   mode: 'create' | 'edit';
   group?: TargetGroup;
   onClose: () => void;
-}) {
+}
+
+export function TargetGroupDialog({ mode, group, onClose }: TargetGroupDialogProps) {
   const [name, setName] = useState(group?.name || '');
+  const [description, setDescription] = useState(group?.description || '');
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(
     group?.member_ids || []
   );
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: staffList = [] } = useStaffList();
+  const { data: users = [] } = useAdminUsers();
   const { mutate: createGroup, isPending: isCreating } = useCreateGroup();
   const { mutate: updateGroup, isPending: isUpdating } = useUpdateGroup();
 
   const isPending = isCreating || isUpdating;
 
-  // Reset form when dialog opens
+  // Filter out deactivated users
+  const activeUsers = users.filter((u) => !u.deactivated);
+
   useEffect(() => {
     if (group) {
       setName(group.name);
+      setDescription(group.description || '');
       setSelectedMemberIds(group.member_ids);
     } else {
       setName('');
+      setDescription('');
       setSelectedMemberIds([]);
     }
     setSearchQuery('');
@@ -92,48 +63,36 @@ function CreateEditGroupDialog({
           groupId: group.id,
           name: name.trim(),
           memberIds: selectedMemberIds,
+          description: description.trim() || undefined,
         },
-        {
-          onSuccess: onClose,
-        }
+        { onSuccess: onClose }
       );
     } else {
       createGroup(
         {
           name: name.trim(),
           memberIds: selectedMemberIds,
+          description: description.trim() || undefined,
         },
-        {
-          onSuccess: onClose,
-        }
+        { onSuccess: onClose }
       );
     }
   };
 
   const handleClose = () => {
-    if (!isPending) {
-      setName('');
-      setSelectedMemberIds([]);
-      setSearchQuery('');
-      onClose();
-    }
+    if (!isPending) onClose();
   };
 
-  const toggleMemberSelection = (staffId: string) => {
+  const toggleMember = (userId: string) => {
     setSelectedMemberIds((prev) =>
-      prev.includes(staffId)
-        ? prev.filter((id) => id !== staffId)
-        : [...prev, staffId]
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
     );
   };
 
-  const clearSelection = () => {
-    setSelectedMemberIds([]);
-  };
-
-  // Filter staff by search query
-  const filteredStaff = staffList.filter((staff) =>
-    (staff.full_name || staff.email)
+  const filteredUsers = activeUsers.filter((u) =>
+    (u.full_name || u.email)
       ?.toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
@@ -148,12 +107,12 @@ function CreateEditGroupDialog({
             {mode === 'edit' ? (
               <>
                 <Edit2 className="h-4 w-4" />
-                Edit Group
+                Edit Target Group
               </>
             ) : (
               <>
                 <Plus className="h-4 w-4" />
-                Create Group
+                Create Target Group
               </>
             )}
           </DialogTitle>
@@ -174,68 +133,98 @@ function CreateEditGroupDialog({
             />
           </div>
 
+          {/* Description */}
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-wider">
+              Description <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of this group's purpose..."
+              className="rounded-none resize-none"
+              rows={2}
+              disabled={isPending}
+            />
+          </div>
+
           {/* Search Members */}
           <div className="space-y-2">
             <Label className="text-[10px] uppercase tracking-wider">
-              Search Members
+              Members
             </Label>
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name..."
+              placeholder="Search staff by name or email..."
               className="rounded-none"
               disabled={isPending}
             />
           </div>
 
           {/* Selected Count */}
-          {selectedMemberIds.length > 0 && (
-            <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="rounded-none">
-                {selectedMemberIds.length} members
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={selectedMemberIds.length >= 2 ? 'secondary' : 'destructive'}
+                className="rounded-none text-[10px]"
+              >
+                {selectedMemberIds.length} selected
               </Badge>
+              {selectedMemberIds.length < 2 && (
+                <span className="text-[10px] text-muted-foreground">
+                  Minimum 2 members required
+                </span>
+              )}
+            </div>
+            {selectedMemberIds.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearSelection}
+                onClick={() => setSelectedMemberIds([])}
                 className="rounded-none text-xs"
                 disabled={isPending}
               >
-                Clear
+                Clear All
               </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Members List */}
           <ScrollArea className="h-[300px] border rounded-none p-2">
-            <div className="space-y-2">
-              {filteredStaff.map((staff) => {
-                const isSelected = selectedMemberIds.includes(staff.user_id);
+            <div className="space-y-1">
+              {filteredUsers.map((user) => {
+                const isSelected = selectedMemberIds.includes(user.user_id);
                 return (
                   <div
-                    key={staff.user_id}
+                    key={user.user_id}
                     className="flex items-center space-x-3 p-2 hover:bg-accent rounded-none cursor-pointer"
-                    onClick={() => !isPending && toggleMemberSelection(staff.user_id)}
+                    onClick={() => !isPending && toggleMember(user.user_id)}
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => toggleMemberSelection(staff.user_id)}
+                      onCheckedChange={() => toggleMember(user.user_id)}
                       className="rounded-none"
                       disabled={isPending}
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">
-                        {staff.full_name || staff.email}
+                        {user.full_name || user.email}
                       </div>
-                      {staff.full_name && (
+                      {user.full_name && (
                         <div className="text-xs text-muted-foreground">
-                          {staff.email}
+                          {user.email}
                         </div>
                       )}
                     </div>
                   </div>
                 );
               })}
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-xs text-muted-foreground">
+                  No staff members found
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -259,50 +248,5 @@ function CreateEditGroupDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Delete Confirmation Dialog
-function DeleteGroupDialog({
-  group,
-  onClose,
-}: {
-  group: TargetGroup;
-  onClose: () => void;
-}) {
-  const { mutate: deleteGroup, isPending } = useDeleteGroup();
-
-  const handleDelete = () => {
-    deleteGroup(group.id, {
-      onSuccess: onClose,
-    });
-  };
-
-  return (
-    <AlertDialog open={true} onOpenChange={onClose}>
-      <AlertDialogContent className="rounded-none">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-sm uppercase tracking-wider flex items-center gap-2">
-            <Trash2 className="h-4 w-4" />
-            Delete Group
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Delete group &quot;{group.name}&quot;? Messages will not be deleted.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-none" disabled={isPending}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            disabled={isPending}
-            className="rounded-none bg-destructive hover:bg-destructive/90"
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

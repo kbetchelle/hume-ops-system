@@ -40,14 +40,19 @@ export interface StaffMessageReaction {
   created_at: string;
 }
 
-export interface StaffMessageGroup {
+export interface TargetGroup {
   id: string;
   name: string;
   member_ids: string[];
   created_by: string | null;
+  description: string | null;
+  usage_context: string[];
   created_at: string;
   updated_at: string;
 }
+
+/** @deprecated Use TargetGroup instead */
+export type StaffMessageGroup = TargetGroup;
 
 export interface StaffMessageDraft {
   id: string;

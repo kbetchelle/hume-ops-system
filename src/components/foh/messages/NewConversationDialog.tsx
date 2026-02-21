@@ -14,9 +14,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStaffList } from '@/hooks/useMessaging';
-import { useMessageGroups, useRoleGroupMembers } from '@/hooks/useMessageGroups';
+import { useTargetGroups, useRoleGroupMembers } from '@/hooks/useTargetGroups';
 import { ROLE_GROUPS } from '@/types/messaging';
-import type { StaffMessageGroup } from '@/types/messaging';
+import type { TargetGroup } from '@/types/messaging';
 
 export interface NewConversationSelection {
   type: 'private' | 'group';
@@ -45,7 +45,7 @@ export function NewConversationDialog({
   const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
 
   const { data: staffList = [] } = useStaffList();
-  const { data: customGroups = [] } = useMessageGroups();
+  const { data: customGroups = [] } = useTargetGroups();
 
   const handleClose = () => {
     setSearchQuery('');
@@ -70,7 +70,7 @@ export function NewConversationDialog({
   };
 
   /** Groups tab: clicking a custom group starts group conversation (or selects in multi) */
-  const handleSelectCustomGroup = (group: StaffMessageGroup) => {
+  const handleSelectCustomGroup = (group: TargetGroup) => {
     if (mode === 'single') {
       onSelect({
         type: 'group',

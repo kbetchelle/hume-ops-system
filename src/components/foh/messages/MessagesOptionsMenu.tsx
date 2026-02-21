@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDraftCount } from '@/hooks/useMessageDrafts';
-import { useMessageGroups } from '@/hooks/useMessageGroups';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 
 interface MessagesOptionsMenuProps {
   onViewChange: (view: 'drafts' | 'scheduled' | 'archived' | 'groups') => void;
@@ -26,7 +26,7 @@ export function MessagesOptionsMenu({
   const [isOpen, setIsOpen] = useState(false);
 
   const draftCount = useDraftCount();
-  const { data: customGroups = [] } = useMessageGroups();
+  const { data: customGroups = [] } = useTargetGroups();
 
   const handleSelect = (view: 'drafts' | 'scheduled' | 'archived' | 'groups') => {
     onViewChange(view);

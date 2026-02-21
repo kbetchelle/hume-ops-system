@@ -7,12 +7,13 @@ import { UserManagementTable } from "@/components/admin/UserManagementTable";
 import { SlingUserLinkingTable } from "@/components/admin/SlingUserLinkingTable";
 import { AccountApprovalsSection } from "@/components/admin/AccountApprovalsSection";
 import { CreateFromSlingTable } from "@/components/admin/CreateFromSlingTable";
+import { TargetGroupsTable } from "@/components/admin/TargetGroupsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/useAccountApproval";
 import { Badge } from "@/components/ui/badge";
 
-const VALID_TABS = ["users", "approvals", "sling", "create-from-sling"] as const;
+const VALID_TABS = ["users", "create-from-sling", "approvals", "sling", "target-groups"] as const;
 
 export default function UserManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +58,12 @@ export default function UserManagementPage() {
               Users & Roles
             </TabsTrigger>
             <TabsTrigger
+              value="create-from-sling"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
+            >
+              Create from Sling
+            </TabsTrigger>
+            <TabsTrigger
               value="approvals"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
@@ -76,10 +83,10 @@ export default function UserManagementPage() {
               Sling Linking
             </TabsTrigger>
             <TabsTrigger
-              value="create-from-sling"
+              value="target-groups"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
             >
-              Create from Sling
+              Target Groups
             </TabsTrigger>
           </TabsList>
 
@@ -118,6 +125,10 @@ export default function UserManagementPage() {
 
           <TabsContent value="create-from-sling" className="mt-6">
             <CreateFromSlingTable />
+          </TabsContent>
+
+          <TabsContent value="target-groups" className="mt-6">
+            <TargetGroupsTable />
           </TabsContent>
         </Tabs>
       </div>

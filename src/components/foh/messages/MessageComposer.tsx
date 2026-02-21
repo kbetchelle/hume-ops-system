@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useStaffList, useSendMessage } from '@/hooks/useMessaging';
 import { useSaveDraft, useDrafts, useDeleteDraft } from '@/hooks/useMessageDrafts';
-import { useCreateGroup } from '@/hooks/useMessageGroups';
+import { useCreateGroup } from '@/hooks/useTargetGroups';
 import { NewConversationDialog } from './NewConversationDialog';
 import { SchedulePopover } from './SchedulePopover';
 import { toast } from 'sonner';

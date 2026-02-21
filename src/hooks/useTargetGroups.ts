@@ -2,29 +2,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import type { StaffMessageGroup, RoleGroup } from '@/types/messaging';
+import type { TargetGroup, RoleGroup } from '@/types/messaging';
 import { ROLE_GROUPS } from '@/types/messaging';
 import type { AppRole } from '@/types/roles';
 
 /**
- * Fetch custom message groups for the current user
+ * Fetch all target groups (visible to all authenticated users)
  */
-export function useMessageGroups() {
+export function useTargetGroups() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['message-groups', user?.id],
+    queryKey: ['target-groups', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
       const { data, error } = await supabase
-        .from('staff_message_groups')
+        .from('target_groups')
         .select('*')
-        .or(`created_by.eq.${user.id},member_ids.cs.{${user.id}}`)
         .order('name', { ascending: true });
 
       if (error) throw error;
-      return (data || []) as StaffMessageGroup[];
+      return (data || []) as TargetGroup[];
     },
     enabled: !!user?.id,
   });
@@ -52,7 +51,6 @@ export function useRoleGroupMembers(roleGroup: RoleGroup) {
 
       if (error) throw error;
 
-      // Get unique user IDs
       const uniqueUserIds = Array.from(
         new Set(data?.map((r) => r.user_id) || [])
       );
@@ -63,7 +61,7 @@ export function useRoleGroupMembers(roleGroup: RoleGroup) {
 }
 
 /**
- * Create a new message group
+ * Create a new target group
  */
 export function useCreateGroup() {
   const { user } = useAuth();
@@ -74,27 +72,30 @@ export function useCreateGroup() {
     mutationFn: async ({
       name,
       memberIds,
+      description,
     }: {
       name: string;
       memberIds: string[];
+      description?: string;
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('staff_message_groups')
+        .from('target_groups')
         .insert({
           name,
           member_ids: memberIds,
           created_by: user.id,
+          description: description || null,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data as StaffMessageGroup;
+      return data as TargetGroup;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['message-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['target-groups'] });
       toast({ title: 'Group created' });
     },
     onError: (error) => {
@@ -108,7 +109,7 @@ export function useCreateGroup() {
 }
 
 /**
- * Update an existing message group
+ * Update an existing target group
  */
 export function useUpdateGroup() {
   const { user } = useAuth();
@@ -120,29 +121,31 @@ export function useUpdateGroup() {
       groupId,
       name,
       memberIds,
+      description,
     }: {
       groupId: string;
       name: string;
       memberIds: string[];
+      description?: string;
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('staff_message_groups')
+        .from('target_groups')
         .update({
           name,
           member_ids: memberIds,
+          description: description || null,
         })
         .eq('id', groupId)
-        .eq('created_by', user.id) // Only creator can update
         .select()
         .single();
 
       if (error) throw error;
-      return data as StaffMessageGroup;
+      return data as TargetGroup;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['message-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['target-groups'] });
       toast({ title: 'Group updated' });
     },
     onError: (error) => {
@@ -156,7 +159,7 @@ export function useUpdateGroup() {
 }
 
 /**
- * Delete a message group
+ * Delete a target group
  */
 export function useDeleteGroup() {
   const { user } = useAuth();
@@ -168,15 +171,14 @@ export function useDeleteGroup() {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { error } = await supabase
-        .from('staff_message_groups')
+        .from('target_groups')
         .delete()
-        .eq('id', groupId)
-        .eq('created_by', user.id); // Only creator can delete
+        .eq('id', groupId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['message-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['target-groups'] });
       toast({ title: 'Group deleted' });
     },
     onError: (error) => {

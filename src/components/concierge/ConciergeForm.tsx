@@ -89,9 +89,9 @@ export function ConciergeForm() {
   // Custom hooks
   const { activeEditors, typingFields, broadcastTyping, sessionId } = useEditorPresence(reportDate, shiftType);
   const handleRemoteUpdate = useCallback((_data: Partial<FormDataType>) => {
+
     // Handle broadcast updates from other clients (currently no-op)
-  }, []);
-  const { broadcastUpdate, broadcastSaved } = useBroadcastSync({
+  }, []);const { broadcastUpdate, broadcastSaved } = useBroadcastSync({
     reportDate,
     shiftType,
     sessionId,
@@ -119,10 +119,10 @@ export function ConciergeForm() {
       const shiftEnd = new Date(shiftDate);
       shiftEnd.setHours(endHour, 0, 0, 0);
       const { data: classes, error: classError } = await supabase.
-        from('arketa_classes').
-        select('external_id, start_time').
-        gte('start_time', shiftStart.toISOString()).
-        lte('start_time', shiftEnd.toISOString());
+      from('arketa_classes').
+      select('external_id, start_time').
+      gte('start_time', shiftStart.toISOString()).
+      lte('start_time', shiftEnd.toISOString());
       if (classError) throw classError;
       const classIds = (classes || []).map((c) => c.external_id);
       if (classIds.length === 0) {
@@ -130,11 +130,11 @@ export function ConciergeForm() {
         return;
       }
       const { data: reservations, error } = await supabase.
-        from('arketa_reservations').
-        select('*').
-        eq('checked_in', true).
-        eq('class_date', reportDate).
-        in('class_id', classIds);
+      from('arketa_reservations').
+      select('*').
+      eq('checked_in', true).
+      eq('class_date', reportDate).
+      in('class_id', classIds);
       if (error) throw error;
       const classStartByExternalId = new Map((classes || []).map((c) => [c.external_id, c.start_time]));
       const sorted = (reservations || []).sort((a, b) => {
@@ -151,27 +151,27 @@ export function ConciergeForm() {
   const loadDraft = useCallback(async () => {
     try {
       const { data: report } = await supabase.
-        from('daily_report_history').
-        select('*').
-        eq('report_date', reportDate).
-        eq('shift_type', shiftType).
-        maybeSingle();
+      from('daily_report_history').
+      select('*').
+      eq('report_date', reportDate).
+      eq('shift_type', shiftType).
+      maybeSingle();
       if (report && report.status === 'submitted') {
         setIsSubmitted(true);
         return;
       }
       const { data: draft } = await supabase.
-        from('concierge_drafts').
-        select('*').
-        eq('report_date', reportDate).
-        eq('shift_time', shiftType).
-        maybeSingle();
+      from('concierge_drafts').
+      select('*').
+      eq('report_date', reportDate).
+      eq('shift_time', shiftType).
+      maybeSingle();
       if (draft) {
         const loadedFormData = draft.form_data as unknown as FormDataType;
         const shift = loadedFormData.shiftTime;
         setFormData({
           ...loadedFormData,
-          cafeNotes: (loadedFormData as { cafeNotes?: string }).cafeNotes ?? '',
+          cafeNotes: (loadedFormData as {cafeNotes?: string;}).cafeNotes ?? '',
           shiftTime: normalizeShiftType(shift),
           _sessionId: sessionId
         });
@@ -203,12 +203,12 @@ export function ConciergeForm() {
       };
       if (isOnline) {
         const { data, error } = await supabase.
-          from('concierge_drafts').
-          upsert(draftData as Database["public"]["Tables"]["concierge_drafts"]["Insert"], {
-            onConflict: 'report_date,shift_time'
-          }).
-          select().
-          single();
+        from('concierge_drafts').
+        upsert(draftData as Database["public"]["Tables"]["concierge_drafts"]["Insert"], {
+          onConflict: 'report_date,shift_time'
+        }).
+        select().
+        single();
         if (error) throw error;
         setLocalVersion(data.version);
         setLastSaved(new Date());
@@ -233,7 +233,7 @@ export function ConciergeForm() {
   localVersionRef.current = localVersion;
   isDirtyRef.current = isDirty;
 
-  const handleDatabaseChange = useCallback((payload: { new: ConciergeDraft | null }) => {
+  const handleDatabaseChange = useCallback((payload: {new: ConciergeDraft | null;}) => {
     const change = payload.new;
     if (change?.last_updated_by_session === sessionId) return;
     const currentVersion = localVersionRef.current;
@@ -272,12 +272,12 @@ export function ConciergeForm() {
         if (slingUser) {
           // 2. Find today's shift for this specific user
           const today = new Date().toISOString().split('T')[0];
-          const { data: shift } = await supabase
-            .from('staff_shifts')
-            .select('shift_start, position')
-            .eq('sling_user_id', slingUser.sling_user_id)
-            .eq('shift_date', today)
-            .maybeSingle();
+          const { data: shift } = await supabase.
+          from('staff_shifts').
+          select('shift_start, position').
+          eq('sling_user_id', slingUser.sling_user_id).
+          eq('shift_date', today).
+          maybeSingle();
 
           if (!cancelled && shift?.shift_start) {
             const startHour = new Date(shift.shift_start).getHours();
@@ -330,15 +330,15 @@ export function ConciergeForm() {
 
   // Supabase Realtime subscription for database changes
   useEffect(() => {
-    const channel = (supabase as any)
-    .channel(`draft-${reportDate}-${shiftType}`)
-    .on('postgres_changes', {
+    const channel = (supabase as any).
+    channel(`draft-${reportDate}-${shiftType}`).
+    on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'concierge_drafts',
       filter: `report_date=eq.${reportDate},shift_time=eq.${shiftType}`
-    }, handleDatabaseChange)
-    .subscribe();
+    }, handleDatabaseChange).
+    subscribe();
 
     return () => {
       channel.unsubscribe();
@@ -501,7 +501,7 @@ export function ConciergeForm() {
       
       <Card>
         {/* ── Shift Report Document Header ── */}
-        <div className="px-6 pt-6 pb-0 space-y-0">
+        <div className="px-6 pt-6 pb-0 space-y-0 py-[2px]">
           {/* Title */}
           
 
@@ -603,7 +603,7 @@ export function ConciergeForm() {
             </DialogHeader>
             <ScrollArea className="h-[60vh] pr-4">
               <div className="space-y-2">
-                {(reportHistory as { id?: string; report_date: string; shift_type: string; staff_name: string | null; status: string | null }[]).map((r) =>
+                {(reportHistory as {id?: string;report_date: string;shift_type: string;staff_name: string | null;status: string | null;}[]).map((r) =>
                 <button
                   key={r.id ?? r.report_date + r.shift_type}
                   type="button"
@@ -1032,18 +1032,18 @@ export function ConciergeForm() {
                       Photo
                     </Button>
                     {i === 0 &&
-                    <Button variant="ghost" size="icon" onClick={addFacilityIssue}>
+                <Button variant="ghost" size="icon" onClick={addFacilityIssue}>
                       <Plus className="h-4 w-4" />
                     </Button>
-                    }
+                }
                     {i > 0 &&
-                    <Button
+                <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => updateFormField('facilityIssues', formData.facilityIssues.filter((_, idx) => idx !== i))}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    }
+                }
                   </>
               }
               </div>
@@ -1116,18 +1116,18 @@ export function ConciergeForm() {
                       Photo
                     </Button>
                     {i === 0 && !formData.systemIssuesNA &&
-                    <Button variant="ghost" size="icon" onClick={addSystemIssue}>
+                <Button variant="ghost" size="icon" onClick={addSystemIssue}>
                       <Plus className="h-4 w-4" />
                     </Button>
-                    }
+                }
                     {i > 0 &&
-                    <Button
+                <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => updateFormField('systemIssues', formData.systemIssues.filter((_, idx) => idx !== i))}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    }
+                }
                   </>
               }
               </div>

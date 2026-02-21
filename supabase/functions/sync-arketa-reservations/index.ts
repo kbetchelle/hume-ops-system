@@ -472,13 +472,22 @@ Deno.serve(async (req) => {
     }
 
     // Only insert rows with a valid matching class_id into staging; skipped rows are logged but not persisted
-    const rowsToInsert = stagingRows.filter(
+    let rowsToInsert = stagingRows.filter(
       (r) => Boolean(r.class_id?.trim()) && knownClassIds.has(r.class_id)
     );
+    // Staging table has UNIQUE(reservation_id, sync_batch_id): one row per reservation per batch. Dedupe to avoid constraint violation.
+    const seenByReservation = new Map<string, typeof rowsToInsert[0]>();
+    for (const r of rowsToInsert) {
+      const key = `${r.reservation_id}:${r.sync_batch_id}`;
+      if (!seenByReservation.has(key)) seenByReservation.set(key, r);
+    }
+    rowsToInsert = [...seenByReservation.values()];
     let failedCount = 0;
+    let insertError: string | null = null;
     if (rowsToInsert.length > 0) {
       const { error } = await supabase.from('arketa_reservations_staging').insert(rowsToInsert);
       if (error) {
+        insertError = error.message;
         logger.error('Failed to insert to staging', error);
         failedCount = rowsToInsert.length;
       }
@@ -534,6 +543,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: failedCount === 0,
+        ...(insertError && { error: insertError }),
         data: {
           reservations_synced: syncedCount,
           records_processed: reservations.length,

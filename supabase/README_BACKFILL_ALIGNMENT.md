@@ -9,10 +9,33 @@ For Arketa API shape, 3-tier reservation fetch, table roles, and aggregation cha
 The Arketa reservations/payments **Select dates** backfill needs these edge functions deployed to the **same** Supabase project the app uses:
 
 ```bash
-supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions sync-arketa-classes aggregate-arketa-to-daily-reports
+supabase functions deploy refresh-arketa-token sync-from-staging run-backfill-job historical-backfill-cron sync-arketa-reservations sync-arketa-payments sync-arketa-subscriptions sync-arketa-classes sync-arketa-classes-and-reservations scheduled-sync-runner aggregate-arketa-to-daily-reports
 ```
 
-Or use the npm script: `npm run supabase:deploy-backfill`. **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.
+Or use the npm script: `npm run supabase:deploy-backfill`.
+
+### If deploy fails with Docker mount error (project on external volume)
+
+If the project lives on an external volume (e.g. `/Volumes/SSDdeKat/...`) you may see:
+
+```text
+failed to start docker container: error while creating mount source path '/host_mnt/Volumes/...': mkdir ... file exists
+```
+
+**Workaround:** Run deploy from a copy of the project under your home directory so Docker can mount the path:
+
+```bash
+# One-time: clone or copy the repo to a path under $HOME (e.g. ~/projects)
+cp -R /Volumes/SSDdeKat/HUME_project/hume-ops-system ~/projects/hume-ops-system
+cd ~/projects/hume-ops-system
+
+# Link and deploy (uses the same linked Supabase project)
+npx supabase link  # if not already linked
+npx supabase functions deploy sync-arketa-reservations sync-arketa-classes-and-reservations
+# or the full list above
+```
+
+Alternatively, use **Supabase Dashboard** → your project → Edge Functions → deploy from the UI if your plan supports it, or connect the repo via **GitHub** and enable deploy on push so bundling runs in Supabase’s environment. **refresh-arketa-token** is required for Arketa API auth; if it returns 404, the job card will show an error with the deploy hint.
 
 If either function is missing or deployed to a different project, you can get a **404** when starting the backfill. The UI will show the error; if the body includes `error_message` (e.g. "Job not found" or a PostgREST code), the function ran but could not find the job row (e.g. app and functions use different projects).
 

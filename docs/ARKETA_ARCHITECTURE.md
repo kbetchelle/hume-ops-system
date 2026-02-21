@@ -82,6 +82,26 @@ Reservations flow into **daily_reports** via aggregation:
 
 This is why **class_name** is denormalized into `arketa_reservations_history` — aggregation does not need to join back to arketa_classes.
 
+## Partner API classes endpoint (official notes)
+
+From the Arketa API engineering team:
+
+- **Pagination:** Use the **full** value from the response as `start_after` for the next page. Example: `"nextStartAfterId": "classes%2FP8k22mPi6hc05KP25sCM"` — send that entire string (including `classes%2F` and the encoded slash). Using only the class ID (e.g. `P8k22mPi6hc05KP25sCM`) will not work.
+- **Page size:** Maximum `limit` is 100. Sending `limit=500` still returns 100 per page; paginate with `start_after` to get more.
+- **Date range:** Use `start_date` and `end_date` query parameters (e.g. `start_date=2026-01-20`, `end_date=2026-04-17`).
+
+**How we implement it:**
+
+- **sync-arketa-classes** caps `limit` at 100, sends `start_date`/`end_date` on every request, and uses the API’s `nextStartAfterId` as-is for `start_after` on the next request (no stripping to class ID). The only constructed cursor is in Strategy B (skip-ahead), where we build `classes/<external_id>` so the slash is encoded by the URL layer.
+- **Backfill:** `run-backfill-job` stores the sync response’s `nextStartAfterId` in `backfill_jobs.batch_cursor` and passes it as `start_after_id` on the next batch. The full value is never replaced with a DB-derived class ID (see comment in `run-backfill-job`: “Partner API requires the full nextStartAfterId value”).
+
+**How to verify the cursor is the full value:**
+
+- **Supabase logs:** In Edge Function logs for `sync-arketa-classes` or `run-backfill-job`, look for `start_after_id=` or `start_after=`. If the value contains `classes` or `%2F`, it’s the full cursor.
+- **Database:** After a backfill batch that has more pages, run:  
+  `SELECT id, job_type, batch_cursor, total_batches_completed FROM backfill_jobs WHERE job_type IN ('arketa_classes','arketa_classes_and_reservations') ORDER BY created_at DESC LIMIT 5;`  
+  If `batch_cursor` looks like `classes%2FP8k22mPi6hc05KP25sCM` (or similar), the full value is being stored and passed.
+
 ## Summary: why each table matters
 
 | Table | Role | What breaks without it |

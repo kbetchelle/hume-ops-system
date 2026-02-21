@@ -49,6 +49,7 @@ export default function ConciergeDashboard() {
     report: "Shift Report",
     messages: "Messages",
     announcements: "Announcements",
+    "whos-working": "Who's Working",
     templates: "Response Templates",
     resources: "Resources",
     "resources-quick-links": "Quick Links",
@@ -71,7 +72,11 @@ export default function ConciergeDashboard() {
             </div>
           </div>);
 
-
+      case "whos-working":
+        return (
+          <div className="p-6 md:p-8">
+            <WhosWorkingView />
+          </div>);
 
 
       case "report":

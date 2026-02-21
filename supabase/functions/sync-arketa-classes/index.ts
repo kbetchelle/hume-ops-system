@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
 
               if (pagination.hasMore && pagination.nextStartAfterId) {
                 const { classes: more, pageCount, lastCursorId, apiHasMore } = await paginateWithStartAfter(
-                  pagination.nextStartAfterId, 1, classesBaseUrl, params as Record<string, string>
+                  pagination.nextStartAfterId, 1, classesBaseUrl, params as unknown as Record<string, string>
                 );
                 allClasses.push(...more);
                 totalPages = pageCount;

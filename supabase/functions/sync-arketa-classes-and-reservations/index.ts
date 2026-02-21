@@ -153,8 +153,8 @@ Deno.serve(async (req) => {
       stagingData = stagingRes.ok
         ? (await stagingRes.json().catch(() => ({})))
         : { success: false, error: await stagingRes.text() };
-      if (stagingRes.ok && stagingData.success === false && stagingData.results?.length > 0 && !stagingData.error) {
-        const firstError = (stagingData.results as Array<{ error?: string }>).find((r) => r.error);
+      if (stagingRes.ok && stagingData.success === false && Array.isArray((stagingData as any).results) && (stagingData as any).results.length > 0 && !stagingData.error) {
+        const firstError = ((stagingData as any).results as Array<{ error?: string }>).find((r: any) => r.error);
         if (firstError?.error) stagingData.error = firstError.error;
       }
       stagingOk = stagingRes.ok && stagingData.success !== false;

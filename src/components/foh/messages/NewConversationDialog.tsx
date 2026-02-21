@@ -14,8 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStaffList } from '@/hooks/useMessaging';
-import { useTargetGroups, useRoleGroupMembers } from '@/hooks/useTargetGroups';
-import { ROLE_GROUPS } from '@/types/messaging';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 import type { TargetGroup } from '@/types/messaging';
 
 export interface NewConversationSelection {
@@ -86,17 +85,6 @@ export function NewConversationDialog({
     }
   };
 
-  /** Groups tab: clicking a role group starts group conversation (or selects in multi) */
-  const handleSelectRoleGroup = (memberIds: string[], groupName: string) => {
-    if (mode === 'single') {
-      onSelect({ type: 'group', recipientIds: memberIds, groupName });
-      handleClose();
-    } else {
-      setSelectedStaffIds(memberIds);
-      setSelectedGroupId(null);
-      setSelectedGroupName(groupName);
-    }
-  };
 
   const handleConfirmMulti = () => {
     if (selectedStaffIds.length === 0) return;
@@ -207,44 +195,24 @@ export function NewConversationDialog({
           {/* Groups tab: role groups + custom groups — click to start conversation */}
           <TabsContent value="groups" className="space-y-4">
             <ScrollArea className="h-[400px] border rounded-none p-2">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-2">
-                    Role Groups
-                  </div>
-                  <div className="space-y-1">
-                    {ROLE_GROUPS.map((roleGroup) => (
-                      <RoleGroupItem
-                        key={roleGroup.id}
-                        roleGroup={roleGroup}
-                        onSelect={(memberIds) =>
-                          handleSelectRoleGroup(memberIds, roleGroup.name)
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-                {customGroups.length > 0 && (
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-2">
-                      Custom Groups
+              <div className="space-y-1">
+                {customGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="flex items-center justify-between p-2 hover:bg-accent rounded-none cursor-pointer"
+                    onClick={() => handleSelectCustomGroup(group)}
+                  >
+                    <div>
+                      <div className="text-sm font-medium">{group.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {group.member_ids.length} members
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      {customGroups.map((group) => (
-                        <div
-                          key={group.id}
-                          className="flex items-center justify-between p-2 hover:bg-accent rounded-none cursor-pointer"
-                          onClick={() => handleSelectCustomGroup(group)}
-                        >
-                          <div>
-                            <div className="text-sm font-medium">{group.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {group.member_ids.length} members
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  </div>
+                ))}
+                {customGroups.length === 0 && (
+                  <div className="text-xs text-muted-foreground text-center py-8">
+                    No groups created yet
                   </div>
                 )}
               </div>
@@ -266,28 +234,3 @@ export function NewConversationDialog({
   );
 }
 
-// Role Group Item with member count fetching
-function RoleGroupItem({
-  roleGroup,
-  onSelect,
-}: {
-  roleGroup: (typeof ROLE_GROUPS)[number];
-  onSelect: (memberIds: string[]) => void;
-}) {
-  const { data: memberIds = [] } = useRoleGroupMembers(roleGroup);
-
-  return (
-    <div
-      className="flex items-center justify-between p-2 hover:bg-accent rounded-none cursor-pointer"
-      onClick={() => onSelect(memberIds)}
-    >
-      <div>
-        <div className="text-sm font-medium">{roleGroup.name}</div>
-        <div className="text-xs text-muted-foreground">
-          {roleGroup.description}
-        </div>
-      </div>
-      <span className="text-[10px] text-muted-foreground">{memberIds.length}</span>
-    </div>
-  );
-}

@@ -64,7 +64,7 @@ export default function ConciergeDashboard() {
       case "home":
         return (
           <div className="flex flex-wrap gap-4 p-4">
-            <div className="flex-1 basis-[450px] min-w-[450px] mt-[20px]">
+            <div className="flex-1 basis-[450px] min-w-[450px] pt-[25px]">
               <EmbeddedChecklist />
             </div>
             <div className="flex-1 basis-[450px] min-w-[450px]">

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useStaffList } from '@/hooks/useMessaging';
 import { useSearchMessages } from '@/hooks/useMessageSearch';
+import { useTargetGroups } from '@/hooks/useTargetGroups';
 import { useDebounce } from 'use-debounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -36,6 +37,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const { data: staffList = [] } = useStaffList();
+  const { data: targetGroups = [] } = useTargetGroups();
   const isMobile = useIsMobile();
   const { mutate: archiveConversation } = useArchiveConversation();
   const [debouncedSearch] = useDebounce(searchQuery, 300);
@@ -164,7 +166,7 @@ export function ConversationList({
         ) : (
           <div className="space-y-1">
             {conversationsWithNames.map((conversation) => {
-              const title = getConversationTitle(conversation, '');
+              const title = getConversationTitle(conversation, '', targetGroups);
               const preview = getMessagePreview(
                 conversation.lastMessage.content
               );

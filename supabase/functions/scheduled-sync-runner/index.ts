@@ -13,6 +13,7 @@ interface SyncSchedule {
   interval_minutes: number;
   is_enabled: boolean;
   failure_count: number;
+  next_run_at: string | null;
 }
 
 interface SyncResult {
@@ -73,7 +74,21 @@ Deno.serve(async (req) => {
       query = query.lte('next_run_at', new Date().toISOString());
     }
 
-    const { data: dueSyncs, error: queryError } = await query;
+    const { data: dueSyncsRaw, error: queryError } = await query;
+    // Enforce sync order: arketa_classes (wrapper: classes then reservations) before arketa_reservations (standalone).
+    // When both are due, running classes first ensures reservations have class_ids in arketa_classes.
+    const dueSyncs = (dueSyncsRaw ?? []).slice().sort((a: SyncSchedule, b: SyncSchedule) => {
+      const orderOf = (t: string) => (t === 'arketa_classes' ? 0 : t === 'arketa_reservations' ? 1 : 2);
+      const cmp = orderOf(a.sync_type) - orderOf(b.sync_type);
+      if (cmp !== 0) return cmp;
+      // Secondary sort by next_run_at: earliest first. Treat null as lowest priority (sort last).
+      const aNull = !a.next_run_at;
+      const bNull = !b.next_run_at;
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      return new Date(a.next_run_at!).getTime() - new Date(b.next_run_at!).getTime();
+    });
 
     if (queryError) {
       throw new Error(`Failed to query sync schedule: ${queryError.message}`);

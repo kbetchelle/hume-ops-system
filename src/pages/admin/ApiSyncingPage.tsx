@@ -607,22 +607,23 @@ function SyncLogHistoryTable({
       {/* Table */}
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead className="font-medium">API</TableHead>
-              <TableHead className="font-medium">Synced At</TableHead>
-              <TableHead className="font-medium">Endpoint</TableHead>
-              <TableHead className="font-medium text-center">Records</TableHead>
-              <TableHead className="font-medium text-center">New</TableHead>
-              <TableHead className="font-medium">Duration</TableHead>
-              <TableHead className="font-medium">Triggered By</TableHead>
-              <TableHead className="font-medium">Status</TableHead>
-            </TableRow>
-          </TableHeader>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-medium">API</TableHead>
+                <TableHead className="font-medium">Synced At</TableHead>
+                <TableHead className="font-medium">Endpoint</TableHead>
+                <TableHead className="font-medium text-center">Records</TableHead>
+                <TableHead className="font-medium text-center">New</TableHead>
+                <TableHead className="font-medium">Duration</TableHead>
+                <TableHead className="font-medium">Triggered By</TableHead>
+                <TableHead className="font-medium">Status</TableHead>
+                <TableHead className="font-medium min-w-[200px]">Error</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {data?.logs?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No sync logs found
                 </TableCell>
               </TableRow>
@@ -669,14 +670,19 @@ function SyncLogHistoryTable({
                     {log.triggered_by || "manual"}
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1">
-                      <StatusBadge status={log.sync_success ? "success" : "failed"} />
-                      {log.error_message && (
-                        <p className="text-xs text-destructive max-w-[200px] truncate" title={log.error_message}>
-                          {log.error_message}
-                        </p>
-                      )}
-                    </div>
+                    <StatusBadge status={log.sync_success ? "success" : "failed"} />
+                  </TableCell>
+                  <TableCell className="max-w-[280px]">
+                    {log.error_message ? (
+                      <p
+                        className="text-xs text-destructive break-words whitespace-pre-wrap"
+                        title={log.error_message}
+                      >
+                        {log.error_message}
+                      </p>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

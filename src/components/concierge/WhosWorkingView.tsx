@@ -91,7 +91,7 @@ export function WhosWorkingView() {
       // First fetch shifts for today
       const { data: shiftsData, error: shiftsError } = await (supabase
         .from("staff_shifts") as any)
-        .select("id, staff_name, position, shift_start, shift_end, sling_user_id")
+        .select("id, user_name, position, shift_start, shift_end, sling_user_id")
         .eq("shift_date", todayLA)
         .order("shift_start", { ascending: true });
 
@@ -126,7 +126,7 @@ export function WhosWorkingView() {
         const slingUser = shift.sling_user_id ? slingUsersMap[String(shift.sling_user_id)] : null;
         const fullName = slingUser 
           ? [slingUser.first_name, slingUser.last_name].filter(Boolean).join(' ') 
-          : shift.staff_name || 'Unknown';
+          : shift.user_name || 'Unknown';
 
         return {
           id: shift.id,

@@ -53,7 +53,6 @@ export type ConciergeView =
   | "report"
   | "messages"
   | "announcements"
-  | "whos-working"
   | "templates"
   | "resources"
   | "resources-quick-links"
@@ -218,7 +217,6 @@ export function ConciergeSidebar({
       items: [
         { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
         { id: "lost-found", label: "Lost & Found", icon: Eye },
-        { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
     },

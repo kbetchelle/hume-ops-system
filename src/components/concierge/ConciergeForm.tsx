@@ -739,7 +739,7 @@ export function ConciergeForm() {
           <div className="space-y-3">
             <Label className="text-sm">Were there any requests to cancel or pause membership?</Label>
             {formData.membershipCancelRequests.map((request, i) =>
-            <div key={request.id ?? i} className="space-y-2 p-3 border rounded-lg">
+            <div key={request.id ?? i} className="space-y-2 p-3">
                 <div className="flex flex-wrap gap-2 items-center">
                   <Select
                   value={request.requestType}

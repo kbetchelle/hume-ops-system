@@ -4,6 +4,7 @@ import { EventTriggersTab } from "@/components/notifications/EventTriggersTab";
 import { NotificationHistoryTab } from "@/components/notifications/NotificationHistoryTab";
 import { StaffPushStatusTab } from "@/components/notifications/StaffPushStatusTab";
 import { ScheduleSyncTab } from "@/components/notifications/ScheduleSyncTab";
+import { AppEventsTab } from "@/components/notifications/AppEventsTab";
 
 export default function NotificationControlCenterPage() {
   return (
@@ -13,6 +14,9 @@ export default function NotificationControlCenterPage() {
           <TabsList className="rounded-none mb-4">
             <TabsTrigger value="triggers" className="rounded-none">
               Event Triggers
+            </TabsTrigger>
+            <TabsTrigger value="app-events" className="rounded-none">
+              App Events
             </TabsTrigger>
             <TabsTrigger value="history" className="rounded-none">
               Notification History
@@ -26,6 +30,9 @@ export default function NotificationControlCenterPage() {
           </TabsList>
           <TabsContent value="triggers" className="mt-4">
             <EventTriggersTab />
+          </TabsContent>
+          <TabsContent value="app-events" className="mt-4">
+            <AppEventsTab />
           </TabsContent>
           <TabsContent value="history" className="mt-4">
             <NotificationHistoryTab />

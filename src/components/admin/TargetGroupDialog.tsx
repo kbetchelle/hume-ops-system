@@ -214,25 +214,25 @@ export function TargetGroupDialog({ mode, group, onClose }: TargetGroupDialogPro
               )}
             </div>
           </ScrollArea>
-        </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="rounded-none"
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid || isPending}
-            className="rounded-none"
-          >
-            {mode === 'edit' ? 'Update' : 'Create'} Group
-          </Button>
-        </DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="rounded-none"
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!isValid || isPending}
+              className="rounded-none"
+            >
+              {mode === 'edit' ? 'Update' : 'Create'} Group
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

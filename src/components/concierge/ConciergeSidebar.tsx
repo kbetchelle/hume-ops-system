@@ -58,6 +58,7 @@ export type ConciergeView =
   | "resources-quick-links"
   | "resources-pages"
   | "lost-found"
+  | "whos-working"
   | "packages"
   | "qa";
 
@@ -217,6 +218,7 @@ export function ConciergeSidebar({
       items: [
         { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
         { id: "lost-found", label: "Lost & Found", icon: Eye },
+        { id: "whos-working", label: "Who's Working", icon: Users },
         { id: "qa", label: "Q&A", icon: HelpCircle },
       ],
     },

@@ -716,6 +716,11 @@ export function ConciergeForm() {
                 placeholder="Enter feedback or issue"
                 className="flex-1" />
 
+                {!isSubmitted && i === 0 &&
+              <Button variant="ghost" size="icon" onClick={addMemberFeedback}>
+                <Plus className="h-4 w-4" />
+              </Button>
+              }
                 {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
@@ -723,18 +728,11 @@ export function ConciergeForm() {
                 onClick={() => {
                   updateFormField('memberFeedback', formData.memberFeedback.filter((_, idx) => idx !== i));
                 }}>
-
                     <Trash2 className="h-4 w-4" />
                   </Button>
               }
               </div>
             )}
-            {!isSubmitted &&
-            <Button variant="ghost" size="sm" onClick={addMemberFeedback}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
 
           {/* MEMBERS — Cancel/Pause requests */}
@@ -817,6 +815,11 @@ export function ConciergeForm() {
                   placeholder="End date"
                   className="w-36" />
 
+                  {!isSubmitted && i === 0 &&
+                <Button variant="ghost" size="icon" onClick={addCancelRequest}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+                }
                   {!isSubmitted && i > 0 &&
                 <Button
                   variant="ghost"
@@ -856,12 +859,6 @@ export function ConciergeForm() {
               }
               </div>
             )}
-            {!isSubmitted &&
-            <Button variant="ghost" size="sm" onClick={addCancelRequest}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
           
           <Separator />
@@ -942,23 +939,21 @@ export function ConciergeForm() {
                 disabled={isSubmitted}
                 className="w-36" />
 
+                {!isSubmitted && i === 0 && !formData.celebratoryEventsNA &&
+              <Button variant="ghost" size="icon" onClick={addCelebratoryEvent}>
+                <Plus className="h-4 w-4" />
+              </Button>
+              }
                 {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => updateFormField('celebratoryEvents', formData.celebratoryEvents.filter((_, idx) => idx !== i))}>
-
                     <Trash2 className="h-4 w-4" />
                   </Button>
               }
               </div>
             )}
-            {!isSubmitted && !formData.celebratoryEventsNA &&
-            <Button variant="ghost" size="sm" onClick={addCelebratoryEvent}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
           
           <Separator />
@@ -994,23 +989,21 @@ export function ConciergeForm() {
 
                     <span className="text-sm text-muted-foreground whitespace-nowrap">Notes filled out & follow up email sent</span>
                   </div>
+                  {!isSubmitted && i === 0 &&
+                <Button variant="ghost" size="icon" onClick={addTour}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+                }
                   {!isSubmitted && i > 0 &&
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => updateFormField('tours', formData.tours.filter((_, idx) => idx !== i))}>
-
                       <Trash2 className="h-4 w-4" />
                     </Button>
                 }
                 </div>
               )}
-              {!isSubmitted &&
-              <Button variant="ghost" size="sm" onClick={addTour}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              }
             </div>
           </div>
           
@@ -1046,12 +1039,16 @@ export function ConciergeForm() {
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
+                    {i === 0 &&
+                    <Button variant="ghost" size="icon" onClick={addFacilityIssue}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    }
                     {i > 0 &&
                     <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => updateFormField('facilityIssues', formData.facilityIssues.filter((_, idx) => idx !== i))}>
-
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     }
@@ -1059,12 +1056,6 @@ export function ConciergeForm() {
               }
               </div>
             )}
-            {!isSubmitted &&
-            <Button variant="ghost" size="sm" onClick={addFacilityIssue}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
           
           <Separator />
@@ -1132,12 +1123,16 @@ export function ConciergeForm() {
                       <Upload className="h-4 w-4" />
                       Photo
                     </Button>
+                    {i === 0 && !formData.systemIssuesNA &&
+                    <Button variant="ghost" size="icon" onClick={addSystemIssue}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    }
                     {i > 0 &&
                     <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => updateFormField('systemIssues', formData.systemIssues.filter((_, idx) => idx !== i))}>
-
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     }
@@ -1145,12 +1140,6 @@ export function ConciergeForm() {
               }
               </div>
             )}
-            {!isSubmitted && !formData.systemIssuesNA &&
-            <Button variant="ghost" size="sm" onClick={addSystemIssue}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
           
           <Separator />
@@ -1225,23 +1214,21 @@ export function ConciergeForm() {
                 placeholder="Enter notes for future shift"
                 className="flex-1 min-w-[200px]" />
 
+                {!isSubmitted && i === 0 && !formData.futureShiftNotesNA &&
+              <Button variant="ghost" size="icon" onClick={addFutureNote}>
+                <Plus className="h-4 w-4" />
+              </Button>
+              }
                 {!isSubmitted && i > 0 &&
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => updateFormField('futureNotes', formData.futureNotes.filter((_, idx) => idx !== i))}>
-
                     <Trash2 className="h-4 w-4" />
                   </Button>
               }
               </div>
             )}
-            {!isSubmitted && !formData.futureShiftNotesNA &&
-            <Button variant="ghost" size="sm" onClick={addFutureNote}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            }
           </div>
 
         </CardContent>

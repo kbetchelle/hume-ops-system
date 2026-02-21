@@ -624,34 +624,6 @@ export function EmbeddedChecklist() {
           </div>
           </>
         )}
-
-        {/* Shift Submission Section */}
-        {checklist && items && items.length > 0 && (
-          <div className="border-t p-4 space-y-3">
-            {shiftSubmission ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Shift Submitted</span>
-                  <Badge variant="outline" className="text-xs">
-                    {format(new Date(shiftSubmission.submitted_at), "MMM d, h:mm a")}
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Submitted by {shiftSubmission.submitted_by} •{" "}
-                  {shiftSubmission.completed_tasks}/{shiftSubmission.total_tasks} tasks completed
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {willAutoSubmit && (
-                  <div className="text-xs text-muted-foreground text-center py-2">
-                    Auto-submitting shift after end time...
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

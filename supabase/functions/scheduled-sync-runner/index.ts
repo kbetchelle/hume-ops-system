@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     const { data: dueSyncsRaw, error: queryError } = await query;
     // Enforce sync order: arketa_classes (wrapper: classes then reservations) before arketa_reservations (standalone).
     // When both are due, running classes first ensures reservations have class_ids in arketa_classes.
-    const dueSyncs = (dueSyncsRaw ?? []).slice().sort((a: SyncSchedule, b: SyncSchedule) => {
+    const dueSyncsSorted = (dueSyncsRaw ?? []).slice().sort((a: SyncSchedule, b: SyncSchedule) => {
       const orderOf = (t: string) => (t === 'arketa_classes' ? 0 : t === 'arketa_reservations' ? 1 : 2);
       const cmp = orderOf(a.sync_type) - orderOf(b.sync_type);
       if (cmp !== 0) return cmp;
@@ -89,6 +89,13 @@ Deno.serve(async (req) => {
       if (bNull) return -1;
       return new Date(a.next_run_at!).getTime() - new Date(b.next_run_at!).getTime();
     });
+
+    // When arketa_classes (wrapper) is in this run, skip standalone arketa_reservations so only the
+    // wrapper runs (classes first, then reservations inside it). Prevents reservations running before classes.
+    const hasArketaClasses = dueSyncsSorted.some((s: SyncSchedule) => s.sync_type === 'arketa_classes');
+    const dueSyncs = hasArketaClasses
+      ? dueSyncsSorted.filter((s: SyncSchedule) => s.sync_type !== 'arketa_reservations')
+      : dueSyncsSorted;
 
     if (queryError) {
       throw new Error(`Failed to query sync schedule: ${queryError.message}`);

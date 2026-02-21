@@ -670,7 +670,14 @@ function SyncLogHistoryTable({
                     {log.triggered_by || "manual"}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={log.sync_success ? "success" : "failed"} />
+                    <div className="space-y-0.5">
+                      <StatusBadge status={log.sync_success ? "success" : "failed"} />
+                      {!log.sync_success && (log.records_processed ?? 0) > 0 && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Partial: data fetched; a later step failed. See Error.
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="max-w-[280px]">
                     {log.error_message ? (

@@ -1,4 +1,4 @@
-project_id = "rywcqacxnwwpynriffer"
+project_id = "aypdvbnyjuzdzxofdhnd"
 
 [functions.admin-create-accounts-from-sling]
 verify_jwt = false

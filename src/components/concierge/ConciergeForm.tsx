@@ -1164,16 +1164,7 @@ export function ConciergeForm() {
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider">Notes for Future Shift</h3>
             <p className="text-xs text-muted-foreground">Unfinished tasks, emails etc.</p>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Target shift notes</Label>
-              <Checkbox
-                checked={formData.futureShiftNotesNA}
-                onCheckedChange={(checked) => updateFormField('futureShiftNotesNA', !!checked)}
-                disabled={isSubmitted} />
-
-              <span className="text-sm text-muted-foreground">N/A</span>
-            </div>
-            {!formData.futureShiftNotesNA && formData.futureNotes.map((note, i) =>
+            {formData.futureNotes.map((note, i) =>
             <div key={note.id ?? i} className="flex flex-wrap gap-2 items-center">
                 <Input
                 type="date"
@@ -1214,7 +1205,7 @@ export function ConciergeForm() {
                 placeholder="Enter notes for future shift"
                 className="flex-1 min-w-[200px]" />
 
-                {!isSubmitted && i === 0 && !formData.futureShiftNotesNA &&
+                {!isSubmitted && i === 0 &&
               <Button variant="ghost" size="icon" onClick={addFutureNote}>
                 <Plus className="h-4 w-4" />
               </Button>

@@ -1,0 +1,1 @@
+ALTER TABLE public.arketa_reservations_staging ADD COLUMN client_email text;

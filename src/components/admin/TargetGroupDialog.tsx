@@ -133,20 +133,6 @@ export function TargetGroupDialog({ mode, group, onClose }: TargetGroupDialogPro
             />
           </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label className="text-[10px] uppercase tracking-wider">
-              Description <span className="text-muted-foreground">(optional)</span>
-            </Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this group's purpose..."
-              className="rounded-none resize-none"
-              rows={2}
-              disabled={isPending}
-            />
-          </div>
 
           {/* Search Members */}
           <div className="space-y-2">

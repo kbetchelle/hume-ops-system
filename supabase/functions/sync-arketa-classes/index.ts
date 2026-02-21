@@ -6,6 +6,7 @@
  * - Pagination: use full `nextStartAfterId` value (e.g. "classes%2FP8k22...") as `start_after` param
  * - Page size: max `limit=100`
  * - Date filtering: `start_date` and `end_date` query params
+ * - `include_canceled=true` to include cancelled classes
  *
  * Supports `start_after_id` body param for cursor-based backfill resumption.
  */
@@ -13,6 +14,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
 import { getArketaApiKeyHeaders, ARKETA_URLS } from '../_shared/arketaAuth.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 interface SyncClassesRequest {
   start_date?: string;
@@ -22,15 +24,19 @@ interface SyncClassesRequest {
   limit?: number;
   /** Cursor-based backfill: start pagination from this cursor value */
   start_after_id?: string;
+  triggeredBy?: string;
 }
 
 const MAX_PAGES = 30;
 const PAGE_LIMIT = 100; // API max
+const WALL_CLOCK_TIMEOUT_MS = 50_000; // 50s safety margin (gateway is 60s)
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
   const corsHeaders = getCorsHeaders(req);
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -41,14 +47,21 @@ Deno.serve(async (req) => {
     const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
 
     if (!ARKETA_API_KEY || !ARKETA_PARTNER_ID) {
+      const errMsg = 'Arketa API credentials not configured';
+      await logApiCall(supabase, {
+        apiName: 'arketa_classes', endpoint: '/classes',
+        syncSuccess: false, durationMs: Date.now() - startTime,
+        recordsProcessed: 0, errorMessage: errMsg,
+      });
       return new Response(
-        JSON.stringify({ error: 'Arketa API credentials not configured' }),
+        JSON.stringify({ error: errMsg }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const body = (await req.json().catch(() => ({}))) as SyncClassesRequest;
     const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
+    const triggeredBy = body.triggeredBy ?? 'manual';
 
     // Date range (default -7 to +30 days)
     const today = new Date();
@@ -102,6 +115,11 @@ Deno.serve(async (req) => {
       }
     };
 
+    /** Check if we're approaching the gateway timeout */
+    const isNearTimeout = (): boolean => {
+      return (Date.now() - startTime) >= WALL_CLOCK_TIMEOUT_MS;
+    };
+
     // --- Fetch location map → room_name lookup ---
     const roomNameMap = new Map<string, string>();
     try {
@@ -129,6 +147,7 @@ Deno.serve(async (req) => {
     let totalPages = 0;
     let nextStartAfterId: string | undefined;
     let apiHasMore = false;
+    let timedOut = false;
 
     // Build first page URL
     const initialCursor = body.start_after_id; // May be provided for backfill resumption
@@ -137,10 +156,20 @@ Deno.serve(async (req) => {
     let keepPaginating = true;
 
     while (keepPaginating && totalPages < MAX_PAGES) {
+      // Wall-clock timeout protection
+      if (isNearTimeout()) {
+        console.warn(`[classes-sync] Approaching gateway timeout after ${totalPages} pages, stopping gracefully`);
+        apiHasMore = true; // Signal there may be more
+        timedOut = true;
+        break;
+      }
+
       const url = new URL(classesBaseUrl);
       url.searchParams.set('limit', String(PAGE_LIMIT));
       url.searchParams.set('start_date', startDate);
       url.searchParams.set('end_date', endDate);
+      // FIX #1: Include cancelled classes so they're synced and tracked
+      url.searchParams.set('include_canceled', 'true');
 
       if (currentCursor) {
         // Decode cursor to avoid double-encoding by searchParams.set()
@@ -195,14 +224,33 @@ Deno.serve(async (req) => {
     const strategy = body.start_after_id ? 'cursor_backfill' : 'paginated_date_range';
     console.log(`[classes-sync] Final: ${allClasses.length} classes via '${strategy}' (${totalPages} pages) for range ${startDate}–${endDate}`);
 
+    // FIX #3: Local date validation — filter out records outside requested range
+    const filteredClasses = allClasses.filter(cls => {
+      const classDate = extractClassDate(cls);
+      if (!classDate) return true; // Keep if we can't determine date
+      return classDate >= startDate && classDate <= endDate;
+    });
+
+    if (filteredClasses.length !== allClasses.length) {
+      console.log(`[classes-sync] Filtered ${allClasses.length - filteredClasses.length} out-of-range classes (kept ${filteredClasses.length})`);
+    }
+
+    // FIX #9: Warn on empty response for expected data
+    if (filteredClasses.length === 0 && totalPages > 0) {
+      console.warn(`[classes-sync] WARNING: API returned 200 OK but 0 classes for range ${startDate}–${endDate}. This may indicate an upstream issue.`);
+    }
+
     // --- Stage and upsert ---
     const syncBatchId = crypto.randomUUID();
     const syncedAt = new Date().toISOString();
 
+    // FIX #5: Deduplicate by external_id + class_date before staging
+    const seenKeys = new Set<string>();
     const stagingRows: Record<string, unknown>[] = [];
-    for (const cls of allClasses) {
-      const startTime = cls.start_time ?? cls.startTime;
-      if (!startTime) continue;
+
+    for (const cls of filteredClasses) {
+      const startTimeVal = cls.start_time ?? cls.startTime;
+      if (!startTimeVal) continue;
 
       const name = cls.name ?? cls.class_name ?? 'Unknown Class';
       const instructorName = cls.instructor_name ??
@@ -210,15 +258,22 @@ Deno.serve(async (req) => {
       const classDate = extractClassDate(cls) ?? new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Los_Angeles',
         year: 'numeric', month: '2-digit', day: '2-digit',
-      }).format(new Date(startTime));
+      }).format(new Date(startTimeVal));
+
+      const externalId = String(cls.id);
+      const dedupeKey = `${externalId}::${classDate}`;
+      if (seenKeys.has(dedupeKey)) {
+        continue; // Skip duplicate
+      }
+      seenKeys.add(dedupeKey);
 
       const locationId = cls.location_id ?? null;
       const roomName = locationId ? (roomNameMap.get(String(locationId)) ?? null) : null;
 
       stagingRows.push({
-        external_id: String(cls.id),
+        external_id: externalId,
         class_date: classDate,
-        start_time: startTime,
+        start_time: startTimeVal,
         duration_minutes: cls.duration_minutes ?? cls.duration ?? null,
         name,
         capacity: cls.capacity ?? cls.max_capacity ?? null,
@@ -239,12 +294,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    const duplicatesSkipped = filteredClasses.length - stagingRows.length;
+    if (duplicatesSkipped > 0) {
+      console.log(`[classes-sync] Deduplicated: skipped ${duplicatesSkipped} duplicate external_id+class_date pairs`);
+    }
+
     if (stagingRows.length > 0) {
       const chunkSize = 200;
       for (let i = 0; i < stagingRows.length; i += chunkSize) {
         const chunk = stagingRows.slice(i, i + chunkSize);
         const { error } = await supabase.from('arketa_classes_staging').insert(chunk);
         if (error) {
+          const durationMs = Date.now() - startTime;
+          await logApiCall(supabase, {
+            apiName: 'arketa_classes', endpoint: '/classes',
+            syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
+            errorMessage: `Staging insert failed: ${error.message}`, triggeredBy,
+          });
           return new Response(
             JSON.stringify({ success: false, error: error.message, details: 'staging insert failed' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -258,6 +324,12 @@ Deno.serve(async (req) => {
     });
 
     if (rpcError) {
+      const durationMs = Date.now() - startTime;
+      await logApiCall(supabase, {
+        apiName: 'arketa_classes', endpoint: '/classes',
+        syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
+        errorMessage: `Upsert RPC failed: ${rpcError.message}`, triggeredBy,
+      });
       return new Response(
         JSON.stringify({ success: false, error: rpcError.message, details: 'upsert from staging failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -265,23 +337,60 @@ Deno.serve(async (req) => {
     }
 
     const syncedCount = typeof upsertedCount === 'number' ? upsertedCount : stagingRows.length;
+    const durationMs = Date.now() - startTime;
+
+    // FIX #2: Log to api_logs for UI visibility
+    await logApiCall(supabase, {
+      apiName: 'arketa_classes',
+      endpoint: '/classes',
+      syncSuccess: true,
+      durationMs,
+      recordsProcessed: filteredClasses.length,
+      recordsInserted: syncedCount,
+      responseStatus: 200,
+      triggeredBy,
+    });
+
+    const result = {
+      success: true,
+      syncedCount,
+      totalFetched: allClasses.length,
+      filteredCount: filteredClasses.length,
+      duplicatesSkipped,
+      pagesFetched: totalPages,
+      startDate,
+      endDate,
+      strategy,
+      durationMs,
+      timedOut,
+      nextStartAfterId: nextStartAfterId ?? null,
+      hasMore: apiHasMore,
+    };
+
+    console.log(`[classes-sync] Complete: ${syncedCount} upserted, ${filteredClasses.length} filtered, ${totalPages} pages, ${durationMs}ms`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        syncedCount,
-        totalFetched: allClasses.length,
-        pagesFetched: totalPages,
-        startDate,
-        endDate,
-        strategy,
-        nextStartAfterId: nextStartAfterId ?? null,
-        hasMore: apiHasMore,
-      }),
+      JSON.stringify(result),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const durationMs = Date.now() - startTime;
+
+    // Log failure
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await logApiCall(supabase, {
+        apiName: 'arketa_classes', endpoint: '/classes',
+        syncSuccess: false, durationMs, recordsProcessed: 0,
+        errorMessage: message,
+      });
+    } catch (logErr) {
+      console.error('[classes-sync] Failed to log error:', logErr);
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

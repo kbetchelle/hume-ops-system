@@ -195,13 +195,15 @@ export function TargetGroupDialog({ mode, group, onClose }: TargetGroupDialogPro
             <div className="space-y-1">
               {filteredUsers.map((user) => {
                 const isSelected = selectedMemberIds.includes(user.user_id);
+                const checkboxId = `member-${user.user_id}`;
                 return (
-                  <div
+                  <label
                     key={user.user_id}
+                    htmlFor={checkboxId}
                     className="flex items-center space-x-3 p-2 hover:bg-accent rounded-none cursor-pointer"
-                    onClick={() => !isPending && toggleMember(user.user_id)}
                   >
                     <Checkbox
+                      id={checkboxId}
                       checked={isSelected}
                       onCheckedChange={() => toggleMember(user.user_id)}
                       className="rounded-none"
@@ -217,7 +219,7 @@ export function TargetGroupDialog({ mode, group, onClose }: TargetGroupDialogPro
                         </div>
                       )}
                     </div>
-                  </div>
+                  </label>
                 );
               })}
               {filteredUsers.length === 0 && (

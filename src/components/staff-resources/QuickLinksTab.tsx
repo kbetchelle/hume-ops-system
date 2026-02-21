@@ -77,7 +77,7 @@ export function QuickLinksTab({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {filtered.map((group) => (
         <ResourceFlagContextMenu
           key={group.id}

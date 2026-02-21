@@ -345,7 +345,22 @@ async function runSync(
 
   if (!response.ok) {
     const errorText = await response.text();
-    return { success: false, error: `Function call failed: ${response.status} - ${errorText}` };
+    // Prefer parsed error message from wrapper (e.g. sync-arketa-classes-and-reservations returns JSON with .error)
+    let errorMessage: string;
+    try {
+      const errBody = errorText ? (JSON.parse(errorText) as Record<string, unknown>) : {};
+      const inner = errBody.error;
+      if (typeof inner === 'string' && inner.length > 0) {
+        errorMessage = inner;
+      } else if (errBody.errors && Array.isArray(errBody.errors) && errBody.errors.length > 0) {
+        errorMessage = (errBody.errors as string[]).join('; ');
+      } else {
+        errorMessage = errorText.length > 300 ? errorText.slice(0, 300) + '...' : errorText || `HTTP ${response.status}`;
+      }
+    } catch {
+      errorMessage = errorText.length > 300 ? errorText.slice(0, 300) + '...' : errorText || `HTTP ${response.status}`;
+    }
+    return { success: false, error: errorMessage };
   }
 
   const bodyText = await response.text();

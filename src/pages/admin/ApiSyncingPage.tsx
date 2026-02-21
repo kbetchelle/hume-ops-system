@@ -43,6 +43,7 @@ import {
   getIntervalOptions,
   type SyncSchedule,
 } from "@/hooks/useSyncSchedule";
+import { useSyncArketaClassesAndReservations } from "@/hooks/useArketaApi";
 import { useApiLogs, useApiNames } from "@/hooks/useApiLogs";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -336,6 +337,7 @@ function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
   const updateSchedule = useUpdateSyncSchedule();
   const runSync = useRunSync();
+  const syncArketaClassesAndReservations = useSyncArketaClassesAndReservations();
   const intervalOptions = getIntervalOptions();
   const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -352,6 +354,12 @@ function SyncOverviewTable() {
     // Auto-expand the row being synced
     setExpandedRow(syncType);
     try {
+      // Arketa Classes + Reservations: invoke wrapper directly for reliable manual sync and clearer errors
+      if (syncType === "arketa_classes") {
+        await syncArketaClassesAndReservations.mutateAsync(undefined);
+        refetch();
+        return;
+      }
       await runSync.mutateAsync(syncType);
     } finally {
       setRunningSyncType(null);

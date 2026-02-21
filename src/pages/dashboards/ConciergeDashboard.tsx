@@ -85,7 +85,7 @@ export default function ConciergeDashboard() {
 
       case "report":
         return (
-          <div className="p-6 md:p-8">
+          <div className="p-6 md:p-8 md:px-[30px]">
             <div className="max-w-3xl mx-auto">
               <Tabs value={reportView} onValueChange={(v) => setReportView(v as "current" | "past")}>
                 <TabsList className="mb-4 rounded-none w-full sm:w-auto">

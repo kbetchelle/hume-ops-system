@@ -287,7 +287,7 @@ async function fetchAllReservations(
       }));
       const { error: stubErr } = await supabase
         .from('arketa_classes')
-        .upsert(stubRows, { onConflict: 'external_id,class_date' });
+        .upsert(stubRows as any, { onConflict: 'external_id,class_date' });
       if (stubErr) {
         logger?.warn('Failed to insert stub classes', stubErr);
       } else {

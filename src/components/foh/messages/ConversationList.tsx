@@ -1,4 +1,4 @@
-import { MessageSquare, Plus, Search, ArchiveRestore, Users } from 'lucide-react';
+import { MessageSquare, Plus, Search, ArchiveRestore, Users, Mail, MailOpen } from 'lucide-react';
 import { format, parseISO, isToday } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -193,17 +193,16 @@ export function ConversationList({
                     isUrgent && 'ring-2 ring-amber-500 ring-inset'
                   )}
                 >
-                  {conversation.isGroup ? (
-                    <div className="h-8 w-8 rounded-none flex-shrink-0 flex items-center justify-center bg-muted">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <Avatar className="h-8 w-8 rounded-none flex-shrink-0">
-                      <AvatarFallback className="text-xs rounded-none">
-                        {getInitials(title)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
+                  <div className="relative h-8 w-8 flex-shrink-0 flex items-center justify-center">
+                    {conversation.hasUnread ? (
+                      <>
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-destructive rounded-full" />
+                      </>
+                    ) : (
+                      <MailOpen className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">

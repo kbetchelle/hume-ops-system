@@ -250,18 +250,19 @@ export function getConversationTitle(
   }
 
   if (conversation.participants.length === 1) {
-    return conversation.participants[0].name || 'Unknown';
+    const name = conversation.participants[0].name || 'Unknown';
+    return `You + ${name}`;
   }
 
-  // Multiple participants: show "Name, Name, and N others"
+  // Multiple participants: show "You + Name, Name, and N others"
   const names = conversation.participants.slice(0, 2).map((p) => p.name);
   const remaining = conversation.participants.length - 2;
 
   if (remaining > 0) {
-    return `${names.join(', ')}, and ${remaining} other${remaining > 1 ? 's' : ''}`;
+    return `You + ${names.join(', ')}, and ${remaining} other${remaining > 1 ? 's' : ''}`;
   }
 
-  return names.join(', ');
+  return `You + ${names.join(', ')}`;
 }
 
 /**

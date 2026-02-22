@@ -328,7 +328,9 @@ export function ConciergeSidebar({
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                         {item.hasUnreadDot && (
-                          <span className="ml-auto h-2 w-2 bg-primary rounded-full animate-pulse shrink-0" />
+                          <SidebarMenuBadge className="ml-auto text-[10px] px-1.5 py-0.5 rounded-none bg-destructive text-destructive-foreground animate-pulse">
+                            !
+                          </SidebarMenuBadge>
                         )}
                         {item.badge !== undefined && !item.hasUnreadDot && (
                           <SidebarMenuBadge className={cn(

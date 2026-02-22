@@ -11,11 +11,13 @@ export const ROUTES = {
 } as const;
 
 export const add_color = {
-  olive: "#62bb47",
-  skyBlue: "#009ddc",
-  amber: "#fcb827",
-  burntOrange: "#f6821f",
-  crimson: "#e03a3c",
+  green: "#62bb47",
+  yellow: "#fcb827",
+  purple: "#7c3aed",
+  blue: "#009ddc",
+  pink: "#ec4899",
+  red: "#e03a3c",
+  orange: "#f6821f",
 } as const;
 
 export const QUERY_KEYS = {

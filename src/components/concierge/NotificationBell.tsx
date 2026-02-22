@@ -108,7 +108,7 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative rounded-none">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-destructive rounded-full animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-add-red rounded-full animate-pulse" />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -142,7 +142,7 @@ export function NotificationBell() {
                   key={notification.id}
                   className={cn(
                     'flex items-start gap-3 p-3 cursor-pointer',
-                    !notification.is_read && 'bg-primary/5'
+                    !notification.is_read && 'bg-add-yellow/10'
                   )}
                   onClick={() => {
                     if (!notification.is_read) {
@@ -154,7 +154,7 @@ export function NotificationBell() {
                 >
                   <div className={cn(
                     'p-1.5',
-                    notification.is_read ? 'bg-muted' : 'bg-primary/10'
+                    notification.is_read ? 'bg-muted' : 'bg-add-blue/15'
                   )}>
                     <Icon className="h-4 w-4" />
                   </div>
@@ -175,7 +175,7 @@ export function NotificationBell() {
                     </p>
                   </div>
                   {!notification.is_read && (
-                    <div className="h-2 w-2 bg-primary shrink-0 mt-1" />
+                    <div className="h-2 w-2 bg-add-red shrink-0 mt-1" />
                   )}
                 </DropdownMenuItem>
               );

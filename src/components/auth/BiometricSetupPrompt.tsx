@@ -3,6 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Fingerprint } from "lucide-react";
 import { useWebAuthn } from "@/hooks/useWebAuthn";
 import { toast } from "sonner";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 
 interface BiometricSetupPromptProps {
   onSkip: () => void;
@@ -11,6 +19,7 @@ interface BiometricSetupPromptProps {
 export function BiometricSetupPrompt({ onSkip }: BiometricSetupPromptProps) {
   const { register, isSupported } = useWebAuthn();
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(true);
 
   if (!isSupported) return null;
 
@@ -20,6 +29,7 @@ export function BiometricSetupPrompt({ onSkip }: BiometricSetupPromptProps) {
       const ok = await register();
       if (ok) {
         toast.success("Biometric login enabled");
+        setOpen(false);
         onSkip();
       } else {
         toast.error("Could not enable. Use password to sign in.");
@@ -31,23 +41,34 @@ export function BiometricSetupPrompt({ onSkip }: BiometricSetupPromptProps) {
     }
   };
 
+  const handleSkip = () => {
+    setOpen(false);
+    onSkip();
+  };
+
   return (
-    <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Fingerprint className="h-5 w-5 text-muted-foreground" />
-        <span className="font-medium text-sm">Enable Face ID / fingerprint login?</span>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Sign in faster next time with your device biometrics.
-      </p>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={handleEnable} disabled={loading}>
-          {loading ? "…" : "Enable"}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onSkip}>
-          Skip
-        </Button>
-      </div>
-    </div>
+    <Drawer open={open} onOpenChange={(o) => { if (!o) handleSkip(); }}>
+      <DrawerContent>
+        <DrawerHeader className="text-center">
+          <div className="flex justify-center mb-2">
+            <Fingerprint className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <DrawerTitle className="text-sm uppercase tracking-widest font-normal">
+            Enable Face ID / Fingerprint
+          </DrawerTitle>
+          <DrawerDescription>
+            Sign in faster next time with your device biometrics.
+          </DrawerDescription>
+        </DrawerHeader>
+        <DrawerFooter className="flex-row justify-center gap-3 pb-8">
+          <Button onClick={handleEnable} disabled={loading} className="min-w-[120px]">
+            {loading ? "…" : "Enable"}
+          </Button>
+          <Button variant="ghost" onClick={handleSkip} className="min-w-[120px]">
+            Skip
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

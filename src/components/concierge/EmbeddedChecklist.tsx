@@ -508,7 +508,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
   const compactCard = variant === "compact" && !compactExpanded;
   if (compactCard) {
     return (
-      <Card className="w-full border border-border shadow-sm bg-card rounded-xl">
+      <Card className="w-full border border-border shadow-sm bg-card rounded-none">
         <CardHeader className="pb-2 pt-4 px-4">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 font-semibold text-sm">
@@ -534,7 +534,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
   }
 
   return (
-    <Card className={cn("w-full border-2 border-border shadow-md bg-card", variant === "compact" && "rounded-xl")}>
+    <Card className={cn("w-full border-2 border-border shadow-md bg-card", variant === "compact" && "rounded-none")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

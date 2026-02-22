@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { ArrowLeft, Send, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Pencil, Trash2, User, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -215,11 +215,11 @@ export function ConversationView({
             <ArrowLeft className="h-4 w-4" />
           </Button>
 
-          <Avatar className="h-8 w-8 rounded-none">
-            <AvatarFallback className="text-xs rounded-none">
-              {conversation.isGroup ? '👥' : getInitials(title)}
-            </AvatarFallback>
-          </Avatar>
+          {conversationWithNames.isGroup || conversationWithNames.participants.length > 1 ? (
+            <Users className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          )}
 
           <CardTitle className="text-xs font-medium uppercase tracking-wider flex-1">
             {title}

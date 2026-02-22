@@ -312,7 +312,7 @@ export default function PackageTrackingPage() {
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search by tracking code or recipient..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-sm"
@@ -335,6 +335,10 @@ export default function PackageTrackingPage() {
                   Clear All
                 </Button>
               )}
+              <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Package
+              </Button>
             </div>
           </div>
 

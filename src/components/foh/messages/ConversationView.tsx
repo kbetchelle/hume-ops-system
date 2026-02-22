@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { differenceInMinutes } from 'date-fns';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { ArrowLeft, Send, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Pencil, Trash2, User, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,14 +43,22 @@ export function ConversationView({
   const { mutate: toggleReaction } = useToggleReaction();
   const { data: allReads = [] } = useMessageReads();
   const { data: targetGroups = [] } = useTargetGroups();
-
-  const title = getConversationTitle(conversation, '', targetGroups);
-
   // Get staff name by ID
   const getStaffName = (userId: string) => {
     const staff = staffList.find((s) => s.user_id === userId);
     return staff?.full_name || staff?.email || 'Unknown';
   };
+
+  // Populate participant names from staff list
+  const conversationWithNames = {
+    ...conversation,
+    participants: conversation.participants.map((p) => ({
+      ...p,
+      name: getStaffName(p.userId),
+    })),
+  };
+
+  const title = getConversationTitle(conversationWithNames, '', targetGroups);
 
   const getInitials = (name: string) => {
     return name
@@ -225,7 +234,7 @@ export function ConversationView({
       {/* Messages */}
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
         {messagesByDate.map((dateGroup) => (
-          <div key={dateGroup.date} className="space-y-4">
+          <div key={dateGroup.date} className="space-y-1">
             {/* Date Divider */}
             <div className="flex items-center justify-center">
               <div className="bg-muted px-3 py-1 rounded-full">
@@ -236,7 +245,7 @@ export function ConversationView({
             </div>
 
             {/* Messages for this date */}
-            {dateGroup.messages.map((message) => {
+            {dateGroup.messages.map((message, msgIndex) => {
               const isSelf = message.sender_id === currentUserId;
               const isTemp = !!(message as StaffMessage & { _isTemp?: boolean })._isTemp;
               const senderName = getStaffName(message.sender_id || '');
@@ -245,6 +254,14 @@ export function ConversationView({
               const canDelete = isSelf && !isTemp && isWithinEditWindow(message.created_at);
               const isEditing = editingMessageId === message.id;
               const isHighlighted = highlightMessageId === message.id;
+              const isLastMessage = message.id === displayMessages[displayMessages.length - 1]?.id;
+
+              // Check if this message should be grouped with the previous one
+              const prevMsg = msgIndex > 0 ? dateGroup.messages[msgIndex - 1] : null;
+              const isGroupedWithPrevious = prevMsg
+                ? prevMsg.sender_id === message.sender_id &&
+                  differenceInMinutes(new Date(message.created_at), new Date(prevMsg.created_at)) < 3
+                : false;
 
               return (
                 <div
@@ -266,6 +283,8 @@ export function ConversationView({
                   currentUserId={currentUserId}
                   allReads={allReads}
                   staffList={staffList}
+                  isLastMessage={isLastMessage}
+                  isGroupedWithPrevious={isGroupedWithPrevious}
                   onStartEdit={(content) => {
                     setEditingMessageId(message.id);
                     setEditingContent(content);
@@ -338,6 +357,8 @@ function MessageBubble({
   currentUserId,
   allReads,
   staffList,
+  isLastMessage,
+  isGroupedWithPrevious,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -357,9 +378,9 @@ function MessageBubble({
 
   return (
     <div
-      className={cn('flex gap-2 group', isSelf ? 'justify-end' : 'justify-start')}
+      className={cn('flex gap-2 group', isSelf ? 'justify-end' : 'justify-start', isGroupedWithPrevious ? 'mt-0.5' : 'mt-3 first:mt-0')}
     >
-      {!isSelf && (
+      {false && !isSelf && (
         <Avatar className="h-6 w-6 rounded-none flex-shrink-0">
           <AvatarFallback className="text-[10px] rounded-none">
             {getInitials(senderName)}
@@ -370,9 +391,9 @@ function MessageBubble({
       <div
         className={cn('flex flex-col gap-1 max-w-[70%]', isSelf && 'items-end')}
       >
-        {!isSelf && (
-          <span className="text-[10px] text-muted-foreground px-1">
-            {senderName}
+        {!isGroupedWithPrevious && (
+          <span className={cn("text-[10px] text-muted-foreground px-1", isSelf && "text-right")}>
+            {isSelf ? 'You' : senderName}
           </span>
         )}
 
@@ -384,9 +405,6 @@ function MessageBubble({
                 isSelf ? 'bg-primary text-primary-foreground' : 'bg-muted'
               )}
             >
-              {message.subject && (
-                <p className="text-xs font-medium mb-1">{message.subject}</p>
-              )}
               {isEditing ? (
                 <div className="space-y-2">
                   <Textarea
@@ -465,43 +483,44 @@ function MessageBubble({
             )}
           </div>
 
-          {/* Reactions */}
+          {/* Reactions + Timestamp row */}
           {!isEditing && !isTemp && (
-            <div className="flex items-center gap-2">
-              <ReactionPills
-                reactions={groupedReactions}
-                onToggle={(emoji) =>
-                  onToggleReaction({ messageId: message.id, emoji })
-                }
-                currentUserId={currentUserId}
-              />
-              <ReactionPicker
-                onSelect={(emoji) =>
-                  onToggleReaction({ messageId: message.id, emoji })
-                }
-              />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ReactionPills
+                  reactions={groupedReactions}
+                  onToggle={(emoji) =>
+                    onToggleReaction({ messageId: message.id, emoji })
+                  }
+                  currentUserId={currentUserId}
+                />
+                <ReactionPicker
+                  onSelect={(emoji) =>
+                    onToggleReaction({ messageId: message.id, emoji })
+                  }
+                />
+              </div>
+              {isLastMessage && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">
+                    {format(parseISO(message.created_at), 'h:mm a')}
+                  </span>
+                  {isSelf && isLastMessage && (
+                    <ReadReceipt
+                      message={message}
+                      reads={allReads}
+                      staffNames={staffNames}
+                      currentUserId={currentUserId}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {showTimestamp && (
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[10px] text-muted-foreground">
-              {format(parseISO(message.created_at), 'h:mm a')}
-            </span>
-            {isSelf && (
-              <ReadReceipt
-                message={message}
-                reads={allReads}
-                staffNames={staffNames}
-                currentUserId={currentUserId}
-              />
-            )}
-          </div>
-        )}
       </div>
 
-      {isSelf && (
+      {false && isSelf && (
         <Avatar className="h-6 w-6 rounded-none flex-shrink-0">
           <AvatarFallback className="text-[10px] rounded-none">
             {getInitials(senderName)}

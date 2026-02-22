@@ -132,7 +132,7 @@ export default function PackageTrackingPage() {
             placeholder="Search by tracking code or recipient..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-base min-h-[44px] rounded-xl"
+            className="pl-9 text-base min-h-[44px] rounded-none"
           />
         </div>
         <div className="flex gap-2">

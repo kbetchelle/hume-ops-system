@@ -41,6 +41,12 @@ export function ConversationView({
   const { mutate: toggleReaction } = useToggleReaction();
   const { data: allReads = [] } = useMessageReads();
   const { data: targetGroups = [] } = useTargetGroups();
+  // Get staff name by ID
+  const getStaffName = (userId: string) => {
+    const staff = staffList.find((s) => s.user_id === userId);
+    return staff?.full_name || staff?.email || 'Unknown';
+  };
+
   // Populate participant names from staff list
   const conversationWithNames = {
     ...conversation,
@@ -51,12 +57,6 @@ export function ConversationView({
   };
 
   const title = getConversationTitle(conversationWithNames, '', targetGroups);
-
-  // Get staff name by ID
-  const getStaffName = (userId: string) => {
-    const staff = staffList.find((s) => s.user_id === userId);
-    return staff?.full_name || staff?.email || 'Unknown';
-  };
 
   const getInitials = (name: string) => {
     return name

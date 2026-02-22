@@ -100,7 +100,7 @@ export function getConciergeMoreItems(): MoreMenuItem[] {
     { id: "templates", label: "Response Templates", icon: FileCode, view: "templates" },
     { id: "resources", label: "Resources", icon: FolderOpen, view: "resources" },
     { id: "packages", label: "Packages", icon: Package, path: "/dashboard/package-tracking" },
-    { id: "qa", label: "Q&A", icon: HelpCircle, view: "qa" },
+    
     { id: "class-schedule", label: "Class Schedule", icon: Calendar, path: "/dashboard/class-schedule" },
   ];
 }

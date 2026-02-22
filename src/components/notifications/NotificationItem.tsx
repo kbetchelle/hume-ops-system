@@ -40,7 +40,7 @@ const notificationColors: Record<string, { bg: string; text: string }> = {
   account_approved: { bg: 'bg-add-green/15',  text: 'text-add-green' },
   account_rejected: { bg: 'bg-add-red/15',    text: 'text-add-red' },
   class_turnover:   { bg: 'bg-add-blue/15',   text: 'text-add-blue' },
-  mat_cleaning:     { bg: 'bg-add-pink/15',   text: 'text-add-pink' },
+  mat_cleaning:     { bg: 'bg-add-green/15',  text: 'text-add-green' },
 };
 
 interface NotificationItemProps {

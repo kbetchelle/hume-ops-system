@@ -168,8 +168,8 @@ export function groupMessagesIntoConversations(
       conversation.lastMessage = message;
     }
 
-    // Count unread messages for current user
-    if (!readSet.has(message.id) && message.sender_id !== currentUserId) {
+    // Count unread messages for current user (exclude self-sent)
+    if (!readSet.has(message.id) && message.sender_id !== currentUserId && message.sender_id !== null) {
       conversation.unreadCount++;
       conversation.hasUnread = true;
     }

@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
 import {
   Bell,
+  Search,
   Calendar,
   Plus,
   Trash2,
@@ -628,6 +629,7 @@ export function StaffAnnouncementsManager() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | "announcement" | "weekly_update">("all");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: announcements, isLoading } = useStaffAnnouncements();
   const deleteMutation = useDeleteStaffAnnouncement();
@@ -636,8 +638,12 @@ export function StaffAnnouncementsManager() {
   const { data: commentCounts } = useAnnouncementCommentCounts(announcementIds);
 
   const filteredAnnouncements = (announcements || []).filter((a) => {
-    if (typeFilter === "all") return true;
-    return a.announcement_type === typeFilter;
+    const matchesType = typeFilter === "all" || a.announcement_type === typeFilter;
+    const matchesSearch =
+      !searchQuery ||
+      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesType && matchesSearch;
   });
 
   const weeklyUpdates = (announcements || [])
@@ -724,6 +730,17 @@ export function StaffAnnouncementsManager() {
           <Plus className="h-4 w-4 mr-2" />
           New Announcement
         </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search announcements..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* View tabs */}

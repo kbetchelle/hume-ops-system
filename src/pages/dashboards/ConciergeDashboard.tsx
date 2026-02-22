@@ -1,4 +1,6 @@
 import { useState, useCallback, lazy, Suspense } from "react";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -60,6 +62,7 @@ export default function ConciergeDashboard() {
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const [reportView, setReportView] = useState<"current" | "past">("current");
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
   const isMobile = useIsMobile();
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
   const { activeRole } = useActiveRole();
@@ -268,7 +271,7 @@ export default function ConciergeDashboard() {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
-          <MobileHeader title={viewTitles[activeView]} />
+          <MobileHeader title={viewTitles[activeView]} hideAvatar />
           <PWAInstallBanner />
           {pushNotifications.showPrompt && (
             <PushPromptBanner
@@ -291,11 +294,19 @@ export default function ConciergeDashboard() {
             open={moreSheetOpen}
             onOpenChange={setMoreSheetOpen}
             items={getConciergeMoreItems()}
-            onItemSelect={(item) => {
+            onItemSelect={async (item) => {
+              if (item.id === "sign-out") {
+                const { error } = await supabase.auth.signOut();
+                if (error) toast.error("Failed to sign out");
+                else { toast.success("Signed out"); navigate("/"); }
+                return;
+              }
+              if (item.id === "report-bug") { setShowBugReport(true); return; }
               if (item.path) navigate(item.path);
               if (item.view) setActiveView(item.view);
             }}
           />
+          <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
         </div>
       </SidebarProvider>
     );

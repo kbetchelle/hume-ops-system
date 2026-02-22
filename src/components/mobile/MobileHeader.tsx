@@ -24,6 +24,7 @@ import type { AppRole } from "@/types/roles";
 
 interface MobileHeaderProps {
   title: string;
+  hideAvatar?: boolean;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -36,7 +37,7 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-export function MobileHeader({ title }: MobileHeaderProps) {
+export function MobileHeader({ title, hideAvatar = false }: MobileHeaderProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { user, signOut, openUserSwitchScreen } = useAuthContext();
@@ -114,6 +115,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
           <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
             <NotificationBell />
           </div>
+          {!hideAvatar && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -174,6 +176,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       </div>
       <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />

@@ -49,9 +49,9 @@ export async function subscribeToPush(staffIdOrOptions: string | SubscribeToPush
   const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
   let subscription: PushSubscription;
   try {
-    subscription = await (sw as { pushManager: PushManager }).pushManager.subscribe({
+    subscription = await (sw as any).pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey,
+      applicationServerKey: applicationServerKey as BufferSource,
     });
   } catch {
     return false;

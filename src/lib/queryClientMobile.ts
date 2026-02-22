@@ -15,10 +15,10 @@ export function applyMobileQueryDefaults(queryClient: QueryClient): void {
       gcTime: THIRTY_MIN,
       refetchOnWindowFocus: false,
       retry: 1,
-      networkMode: "offline",
+      networkMode: "offline" as any,
     },
     mutations: {
-      networkMode: "offline",
+      networkMode: "offline" as any,
       retry: 1,
     },
   });

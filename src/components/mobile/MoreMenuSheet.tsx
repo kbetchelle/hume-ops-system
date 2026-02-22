@@ -31,7 +31,7 @@ export function MoreMenuSheet({ open, onOpenChange, items, onItemSelect }: MoreM
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-2xl pt-0 pb-[env(safe-area-inset-bottom)] max-h-[85vh] overflow-hidden flex flex-col"
+        className="rounded-none pt-0 pb-[env(safe-area-inset-bottom)] max-h-[85vh] overflow-hidden flex flex-col"
       >
         <DragHandle />
         <div className="flex-1 overflow-y-auto px-2 pb-4">

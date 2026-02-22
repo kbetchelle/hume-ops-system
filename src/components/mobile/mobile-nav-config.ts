@@ -101,18 +101,19 @@ export function getConciergeMobileTabs(
 /** Concierge "More" sheet items: mix of routes and view-state (view keeps user on Concierge dashboard). */
 export function getConciergeMoreItems(): MoreMenuItem[] {
   return [
-    { id: "announcements", label: "Announcements", icon: Bell, view: "announcements" },
+    // User menu items (reversed order) first
+    { id: "sign-out", label: "Sign Out", icon: LogOut },
+    { id: "report-bug", label: "Report a Bug", icon: Bug },
+    { id: "settings", label: "Account Settings", icon: Settings, path: "/dashboard/settings" },
+    { id: "profile", label: "Profile", icon: User, path: "/dashboard/profile" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
+    // Nav items below
+    { id: "announcements", label: "Announcements", icon: Bell, view: "announcements", separator: true },
     { id: "whos-working", label: "Who's Working", icon: Users, view: "whos-working" },
     { id: "templates", label: "Response Templates", icon: FileCode, view: "templates" },
     { id: "resources", label: "Resources", icon: FolderOpen, view: "resources" },
     { id: "packages", label: "Packages", icon: Package, path: "/dashboard/package-tracking" },
     { id: "class-schedule", label: "Class Schedule", icon: Calendar, path: "/dashboard/class-schedule" },
-    // User menu items
-    { id: "notifications", label: "Notifications", icon: Bell, path: "/dashboard/notifications", separator: true },
-    { id: "profile", label: "Profile", icon: User, path: "/dashboard/profile" },
-    { id: "settings", label: "Account Settings", icon: Settings, path: "/dashboard/settings" },
-    { id: "report-bug", label: "Report a Bug", icon: Bug },
-    { id: "sign-out", label: "Sign Out", icon: LogOut },
   ];
 }
 

@@ -147,7 +147,7 @@ const CATEGORY_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'd
 
 export function AppEventsTab() {
   return (
-    <Card className="rounded-none border-0 shadow-none">
+    <Card className="rounded-md border shadow-none">
       <CardHeader className="pb-3">
         <CardTitle className="text-xs uppercase tracking-widest font-normal">
           Application-Triggered Events

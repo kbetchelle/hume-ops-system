@@ -31,7 +31,7 @@ export default function NotificationControlCenterPage() {
           <TabsContent value="triggers" className="mt-4">
             <EventTriggersTab />
           </TabsContent>
-          <TabsContent value="app-events" className="mt-4">
+          <TabsContent value="app-events" className="mt-4 px-[36px]">
             <AppEventsTab />
           </TabsContent>
           <TabsContent value="history" className="mt-4">

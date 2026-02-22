@@ -12,19 +12,19 @@ export default function NotificationControlCenterPage() {
       <div>
         <Tabs defaultValue="triggers" className="w-full">
           <TabsList className="rounded-none mb-0 w-full">
-            <TabsTrigger value="triggers" className="rounded-none">
+            <TabsTrigger value="triggers" className="rounded-none flex-1">
               Event Triggers
             </TabsTrigger>
-            <TabsTrigger value="app-events" className="rounded-none">
+            <TabsTrigger value="app-events" className="rounded-none flex-1">
               App Events
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-none">
+            <TabsTrigger value="history" className="rounded-none flex-1">
               Notification History
             </TabsTrigger>
-            <TabsTrigger value="push-status" className="rounded-none">
+            <TabsTrigger value="push-status" className="rounded-none flex-1">
               Staff Push Status
             </TabsTrigger>
-            <TabsTrigger value="schedule-sync" className="rounded-none">
+            <TabsTrigger value="schedule-sync" className="rounded-none flex-1">
               Schedule Sync
             </TabsTrigger>
           </TabsList>

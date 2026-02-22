@@ -387,9 +387,6 @@ function MessageBubble({
                 isSelf ? 'bg-primary text-primary-foreground' : 'bg-muted'
               )}
             >
-              {message.subject && (
-                <p className="text-xs font-medium mb-1">{message.subject}</p>
-              )}
               {isEditing ? (
                 <div className="space-y-2">
                   <Textarea

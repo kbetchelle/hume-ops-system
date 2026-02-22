@@ -13,6 +13,11 @@ import {
   FolderOpen,
   Package,
   HelpCircle,
+  User,
+  Settings,
+  LogOut,
+  ArrowLeftRight,
+  Bug,
 } from "lucide-react";
 import type { AppRole } from "@/types/roles";
 import type { ConciergeView } from "@/components/concierge/ConciergeSidebar";
@@ -35,6 +40,7 @@ export interface MoreMenuItem {
   path?: string;
   view?: ConciergeView;
   badge?: number;
+  separator?: boolean;
 }
 
 const BOH_CHECKLIST_URL: Record<AppRole, string> = {
@@ -100,8 +106,13 @@ export function getConciergeMoreItems(): MoreMenuItem[] {
     { id: "templates", label: "Response Templates", icon: FileCode, view: "templates" },
     { id: "resources", label: "Resources", icon: FolderOpen, view: "resources" },
     { id: "packages", label: "Packages", icon: Package, path: "/dashboard/package-tracking" },
-    
     { id: "class-schedule", label: "Class Schedule", icon: Calendar, path: "/dashboard/class-schedule" },
+    // User menu items
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/dashboard/notifications", separator: true },
+    { id: "profile", label: "Profile", icon: User, path: "/dashboard/profile" },
+    { id: "settings", label: "Account Settings", icon: Settings, path: "/dashboard/settings" },
+    { id: "report-bug", label: "Report a Bug", icon: Bug },
+    { id: "sign-out", label: "Sign Out", icon: LogOut },
   ];
 }
 

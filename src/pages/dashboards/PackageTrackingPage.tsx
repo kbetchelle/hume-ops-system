@@ -123,16 +123,10 @@ export default function PackageTrackingPage() {
   return (
     <DashboardLayout title="Package Tracking">
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">
-              Manage incoming packages for residents and staff
-            </p>
-          </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Add Package
-          </Button>
+        <div>
+          <p className="text-muted-foreground">
+            Manage incoming packages for residents and staff
+          </p>
         </div>
 
       {/* Filters */}
@@ -165,6 +159,10 @@ export default function PackageTrackingPage() {
                   Clear All
                 </Button>
               )}
+              <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Package
+              </Button>
             </div>
           </div>
 

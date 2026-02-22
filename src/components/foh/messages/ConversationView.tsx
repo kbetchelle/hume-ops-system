@@ -41,8 +41,16 @@ export function ConversationView({
   const { mutate: toggleReaction } = useToggleReaction();
   const { data: allReads = [] } = useMessageReads();
   const { data: targetGroups = [] } = useTargetGroups();
+  // Populate participant names from staff list
+  const conversationWithNames = {
+    ...conversation,
+    participants: conversation.participants.map((p) => ({
+      ...p,
+      name: getStaffName(p.userId),
+    })),
+  };
 
-  const title = getConversationTitle(conversation, '', targetGroups);
+  const title = getConversationTitle(conversationWithNames, '', targetGroups);
 
   // Get staff name by ID
   const getStaffName = (userId: string) => {

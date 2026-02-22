@@ -11,7 +11,7 @@ export default function NotificationControlCenterPage() {
     <DashboardLayout title="Notification Control Center">
       <div>
         <Tabs defaultValue="triggers" className="w-full">
-          <TabsList className="rounded-none mb-4">
+          <TabsList className="rounded-none mb-4 w-full">
             <TabsTrigger value="triggers" className="rounded-none">
               Event Triggers
             </TabsTrigger>

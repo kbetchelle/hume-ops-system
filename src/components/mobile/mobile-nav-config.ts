@@ -167,3 +167,43 @@ export function getBohMoreItems(): MoreMenuItem[] {
     { id: "boh-notes", label: "BOH Notes", icon: HelpCircle, path: "/dashboard/boh-notes" },
   ];
 }
+
+/** Generic mobile tabs for non-BOH/non-concierge roles (Home, Messages, More). */
+export function getGenericMobileTabs(unreadMessageCount: number): MobileTabItem[] {
+  return [
+    {
+      id: "home",
+      label: "Home",
+      icon: Home,
+      path: "/dashboard",
+    },
+    {
+      id: "messages",
+      label: "Messages",
+      icon: MessageSquare,
+      path: "/dashboard/messages",
+      badge: unreadMessageCount > 0 ? unreadMessageCount : undefined,
+    },
+    {
+      id: "more",
+      label: "More",
+      icon: MoreHorizontal,
+    },
+  ];
+}
+
+/** Generic "More" sheet items for non-BOH/non-concierge roles. */
+export function getGenericMoreItems(): MoreMenuItem[] {
+  return [
+    // User menu items first
+    { id: "sign-out", label: "Sign Out", icon: LogOut },
+    { id: "report-bug", label: "Report a Bug", icon: Bug },
+    { id: "settings", label: "Account Settings", icon: Settings, path: "/dashboard/settings" },
+    { id: "profile", label: "Profile", icon: User, path: "/dashboard/profile" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
+    // Nav items
+    { id: "announcements", label: "Announcements", icon: Bell, path: "/dashboard/announcements", separator: true },
+    { id: "schedule", label: "Class Schedule", icon: Calendar, path: "/dashboard/class-schedule" },
+    { id: "resources", label: "Resources", icon: FolderOpen, path: "/dashboard/resources" },
+  ];
+}

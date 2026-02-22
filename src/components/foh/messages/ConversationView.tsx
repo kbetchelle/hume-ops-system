@@ -250,6 +250,7 @@ export function ConversationView({
               const canDelete = isSelf && !isTemp && isWithinEditWindow(message.created_at);
               const isEditing = editingMessageId === message.id;
               const isHighlighted = highlightMessageId === message.id;
+              const isLastMessage = message.id === displayMessages[displayMessages.length - 1]?.id;
 
               return (
                 <div
@@ -271,6 +272,7 @@ export function ConversationView({
                   currentUserId={currentUserId}
                   allReads={allReads}
                   staffList={staffList}
+                  isLastMessage={isLastMessage}
                   onStartEdit={(content) => {
                     setEditingMessageId(message.id);
                     setEditingContent(content);
@@ -343,6 +345,7 @@ function MessageBubble({
   currentUserId,
   allReads,
   staffList,
+  isLastMessage,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -487,7 +490,7 @@ function MessageBubble({
                   <span className="text-[10px] text-muted-foreground">
                     {format(parseISO(message.created_at), 'h:mm a')}
                   </span>
-                  {isSelf && (
+                  {isSelf && isLastMessage && (
                     <ReadReceipt
                       message={message}
                       reads={allReads}

@@ -151,7 +151,14 @@ export function getBohMobileTabs(activeRole: AppRole, unreadMessageCount: number
 /** BOH "More" sheet items (all routes). */
 export function getBohMoreItems(): MoreMenuItem[] {
   return [
-    { id: "announcements", label: "Announcements", icon: Bell, path: "/dashboard/announcements" },
+    // User menu items first
+    { id: "sign-out", label: "Sign Out", icon: LogOut },
+    { id: "report-bug", label: "Report a Bug", icon: Bug },
+    { id: "settings", label: "Account Settings", icon: Settings, path: "/dashboard/settings" },
+    { id: "profile", label: "Profile", icon: User, path: "/dashboard/profile" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
+    // Nav items
+    { id: "announcements", label: "Announcements", icon: Bell, path: "/dashboard/announcements", separator: true },
     { id: "whos-working", label: "Who's Working", icon: Users, path: "/dashboard/whos-working" },
     { id: "lost-and-found", label: "Lost & Found", icon: Package, path: "/dashboard/lost-and-found" },
     { id: "documents", label: "Documents", icon: FileText, path: "/dashboard/documents" },

@@ -162,17 +162,17 @@ async function bootstrapConcierge(
   }
 
   console.log("[OfflineBootstrap] Fetching shift draft");
-  const { data: draftAM } = await supabase
-    .from("concierge_drafts")
+  const { data: draftAM } = await (supabase
+    .from("concierge_drafts" as any)
     .select("*")
     .eq("report_date", today)
-    .eq("shift_type", "AM")
+    .eq("shift_type", "AM") as any)
     .maybeSingle();
-  const { data: draftPM } = await supabase
-    .from("concierge_drafts")
+  const { data: draftPM } = await (supabase
+    .from("concierge_drafts" as any)
     .select("*")
     .eq("report_date", today)
-    .eq("shift_type", "PM")
+    .eq("shift_type", "PM") as any)
     .maybeSingle();
   await setBootstrapEntry(`shift-draft-${today}`, { AM: draftAM ?? null, PM: draftPM ?? null });
 
@@ -188,7 +188,7 @@ async function bootstrapConcierge(
       .gte("scheduled_at", startOfDay)
       .lte("scheduled_at", endOfDay),
     supabase
-      .from("daily_schedule")
+      .from("daily_schedule" as any)
       .select("*")
       .eq("class_date", today),
   ]);

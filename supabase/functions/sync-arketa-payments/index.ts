@@ -144,6 +144,8 @@ function toDbRow(p: PaymentDTO) {
     client_phone: p.client?.phone ?? null,
     raw_data: p as unknown,
     synced_at: new Date().toISOString(),
+    // New columns (not available from /payments endpoint, but included for schema consistency)
+    source_endpoint: '/payments',
   };
 }
 
@@ -178,6 +180,14 @@ function purchaseToStagingRow(p: PurchaseLike, syncBatchId: string): Record<stri
     client_phone: client?.phone ?? null,
     raw_data: p,
     sync_batch_id: syncBatchId,
+    source_endpoint: '/purchases',
+    category: (p as Record<string, unknown>).category as string ?? null,
+    offering_id: (p as Record<string, unknown>).offering_id as string ?? (p as Record<string, unknown>).offeringId as string ?? null,
+    start_date: p.start_date ?? p.startDate ?? null,
+    end_date: p.end_date ?? p.endDate ?? null,
+    remaining_uses: (p as Record<string, unknown>).remaining_uses as number ?? null,
+    total_refunded: p.total_refunded ?? null,
+    stripe_fees: (p as Record<string, unknown>).stripe_fees as number ?? null,
   };
 }
 

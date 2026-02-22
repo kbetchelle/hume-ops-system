@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_report_history ALTER COLUMN staff_user_id DROP NOT NULL;

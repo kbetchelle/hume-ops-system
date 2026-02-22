@@ -76,14 +76,21 @@ function preview(text: string | null, maxLen: number): string {
   return t.length <= maxLen ? t : t.slice(0, maxLen) + "…";
 }
 
+function extractItemText(item: unknown): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item === "object") {
+    const obj = item as Record<string, unknown>;
+    for (const key of ["text", "content", "description", "note"]) {
+      if (key in obj && obj[key]) return String(obj[key]);
+    }
+  }
+  return "";
+}
+
 function summarizeJsonArray(arr: unknown): string {
   if (!Array.isArray(arr) || arr.length === 0) return "—";
-  const first = arr[0];
-  if (typeof first === "string") return first;
-  if (first && typeof first === "object" && "content" in first) return String((first as { content?: string }).content ?? "");
-  if (first && typeof first === "object" && "description" in first) return String((first as { description?: string }).description ?? "");
-  if (first && typeof first === "object" && "note" in first) return String((first as { note?: string }).note ?? "");
-  return JSON.stringify(first).slice(0, 80) + (JSON.stringify(first).length > 80 ? "…" : "");
+  const texts = arr.map(extractItemText).filter(Boolean);
+  return texts.length > 0 ? texts.join("\n") : "—";
 }
 
 const DEFAULT_DATE_FROM = format(subDays(new Date(), 30), "yyyy-MM-dd");
@@ -153,19 +160,19 @@ export function PastReportsView() {
       </div>
       <div>
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tour notes</span>
-        <p className="mt-0.5">{summarizeJsonArray(detailReport.tour_notes as unknown[])}</p>
+        <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.tour_notes as unknown[])}</p>
       </div>
       <div>
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Member feedback</span>
-        <p className="mt-0.5">{summarizeJsonArray(detailReport.member_feedback as unknown[])}</p>
+        <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.member_feedback as unknown[])}</p>
       </div>
       <div>
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Facility issues</span>
-        <p className="mt-0.5">{summarizeJsonArray(detailReport.facility_issues as unknown[])}</p>
+        <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.facility_issues as unknown[])}</p>
       </div>
       <div>
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Handoff notes</span>
-        <p className="mt-0.5">{summarizeJsonArray(detailReport.future_shift_notes as unknown[])}</p>
+        <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.future_shift_notes as unknown[])}</p>
       </div>
       {detailReport.cafe_notes && (
         <div>
@@ -416,19 +423,19 @@ export function PastReportsView() {
               </div>
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tour notes</span>
-                <p className="mt-0.5">{summarizeJsonArray(detailReport.tour_notes as unknown[])}</p>
+                <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.tour_notes as unknown[])}</p>
               </div>
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Member feedback</span>
-                <p className="mt-0.5">{summarizeJsonArray(detailReport.member_feedback as unknown[])}</p>
+                <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.member_feedback as unknown[])}</p>
               </div>
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Facility issues</span>
-                <p className="mt-0.5">{summarizeJsonArray(detailReport.facility_issues as unknown[])}</p>
+                <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.facility_issues as unknown[])}</p>
               </div>
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Handoff notes</span>
-                <p className="mt-0.5">{summarizeJsonArray(detailReport.future_shift_notes as unknown[])}</p>
+                <p className="mt-0.5 whitespace-pre-wrap">{summarizeJsonArray(detailReport.future_shift_notes as unknown[])}</p>
               </div>
               {detailReport.cafe_notes && (
                 <div>

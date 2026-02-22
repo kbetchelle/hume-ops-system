@@ -195,14 +195,31 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json().catch(() => ({}));
-    const { csvContent, overwriteExisting = true } = body as {
+    const { csvContent: rawCsvContent, storagePath, overwriteExisting = true } = body as {
       csvContent?: string;
+      storagePath?: string;
       overwriteExisting?: boolean;
     };
 
+    let csvContent = rawCsvContent;
+
+    // If storagePath provided, read CSV from Supabase Storage
+    if (!csvContent && storagePath) {
+      const { data, error } = await supabase.storage
+        .from(storagePath.split("/")[0])
+        .download(storagePath.split("/").slice(1).join("/"));
+      if (error || !data) {
+        return new Response(
+          JSON.stringify({ error: `Failed to read from storage: ${error?.message}` }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      csvContent = await data.text();
+    }
+
     if (!csvContent || typeof csvContent !== "string") {
       return new Response(
-        JSON.stringify({ error: "csvContent (string) is required" }),
+        JSON.stringify({ error: "csvContent (string) or storagePath is required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -231,7 +248,14 @@ serve(async (req) => {
       records.push(row);
     }
 
-    if (records.length === 0) {
+    // Deduplicate by (report_date, shift_type): last row wins
+    const deduped = new Map<string, Record<string, unknown>>();
+    for (const r of records) {
+      deduped.set(`${r.report_date}|${r.shift_type}`, r);
+    }
+    const uniqueRecords = [...deduped.values()];
+
+    if (uniqueRecords.length === 0) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -252,8 +276,8 @@ serve(async (req) => {
 
     const conflictKey = "report_date,shift_type";
 
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const batch = records.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < uniqueRecords.length; i += BATCH_SIZE) {
+      const batch = uniqueRecords.slice(i, i + BATCH_SIZE);
       const batchNum = Math.floor(i / BATCH_SIZE) + 1;
 
       if (!overwriteExisting) {
@@ -301,6 +325,7 @@ serve(async (req) => {
         success: errors.length === 0,
         totalRows: rows.length,
         parsed: records.length,
+        deduplicated: uniqueRecords.length,
         inserted,
         updated,
         errors: errors.length > 0 ? errors : undefined,

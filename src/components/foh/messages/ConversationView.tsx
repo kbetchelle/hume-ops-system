@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { differenceInMinutes } from 'date-fns';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { ArrowLeft, Send, MoreVertical, Pencil, Trash2, User, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -230,7 +231,7 @@ export function ConversationView({
       {/* Messages */}
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
         {messagesByDate.map((dateGroup) => (
-          <div key={dateGroup.date} className="space-y-4">
+          <div key={dateGroup.date} className="space-y-1">
             {/* Date Divider */}
             <div className="flex items-center justify-center">
               <div className="bg-muted px-3 py-1 rounded-full">
@@ -241,7 +242,7 @@ export function ConversationView({
             </div>
 
             {/* Messages for this date */}
-            {dateGroup.messages.map((message) => {
+            {dateGroup.messages.map((message, msgIndex) => {
               const isSelf = message.sender_id === currentUserId;
               const isTemp = !!(message as StaffMessage & { _isTemp?: boolean })._isTemp;
               const senderName = getStaffName(message.sender_id || '');
@@ -251,6 +252,13 @@ export function ConversationView({
               const isEditing = editingMessageId === message.id;
               const isHighlighted = highlightMessageId === message.id;
               const isLastMessage = message.id === displayMessages[displayMessages.length - 1]?.id;
+
+              // Check if this message should be grouped with the previous one
+              const prevMsg = msgIndex > 0 ? dateGroup.messages[msgIndex - 1] : null;
+              const isGroupedWithPrevious = prevMsg
+                ? prevMsg.sender_id === message.sender_id &&
+                  differenceInMinutes(new Date(message.created_at), new Date(prevMsg.created_at)) < 3
+                : false;
 
               return (
                 <div
@@ -273,6 +281,7 @@ export function ConversationView({
                   allReads={allReads}
                   staffList={staffList}
                   isLastMessage={isLastMessage}
+                  isGroupedWithPrevious={isGroupedWithPrevious}
                   onStartEdit={(content) => {
                     setEditingMessageId(message.id);
                     setEditingContent(content);
@@ -346,6 +355,7 @@ function MessageBubble({
   allReads,
   staffList,
   isLastMessage,
+  isGroupedWithPrevious,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -365,7 +375,7 @@ function MessageBubble({
 
   return (
     <div
-      className={cn('flex gap-2 group', isSelf ? 'justify-end' : 'justify-start')}
+      className={cn('flex gap-2 group', isSelf ? 'justify-end' : 'justify-start', isGroupedWithPrevious ? 'mt-0.5' : 'mt-3 first:mt-0')}
     >
       {false && !isSelf && (
         <Avatar className="h-6 w-6 rounded-none flex-shrink-0">
@@ -378,9 +388,11 @@ function MessageBubble({
       <div
         className={cn('flex flex-col gap-1 max-w-[70%]', isSelf && 'items-end')}
       >
-        <span className={cn("text-[10px] text-muted-foreground px-1", isSelf && "text-right")}>
-          {isSelf ? 'You' : senderName}
-        </span>
+        {!isGroupedWithPrevious && (
+          <span className={cn("text-[10px] text-muted-foreground px-1", isSelf && "text-right")}>
+            {isSelf ? 'You' : senderName}
+          </span>
+        )}
 
         <div className="space-y-1">
           <div className="relative">

@@ -9,7 +9,7 @@ import { AppEventsTab } from "@/components/notifications/AppEventsTab";
 export default function NotificationControlCenterPage() {
   return (
     <DashboardLayout title="Notification Control Center">
-      <div className="p-6 md:p-8">
+      <div>
         <Tabs defaultValue="triggers" className="w-full">
           <TabsList className="rounded-none mb-4">
             <TabsTrigger value="triggers" className="rounded-none">

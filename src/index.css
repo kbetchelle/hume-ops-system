@@ -204,3 +204,8 @@
     animation-duration: 0.15s !important;
   }
 }
+
+/* Concierge mobile: force all border radii to 0 */
+.concierge-mobile * {
+  border-radius: 0 !important;
+}

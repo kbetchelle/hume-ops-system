@@ -279,7 +279,7 @@ export default function ConciergeDashboard() {
   if (isMobile) {
     return (
       <SidebarProvider>
-        <div className="min-h-screen flex flex-col w-full bg-background">
+        <div className="concierge-mobile min-h-screen flex flex-col w-full bg-background">
           <MobileHeader title={viewTitles[activeView]} hideAvatar roleChipClassName="rounded-none" />
           <PWAInstallBanner />
           {pushNotifications.showPrompt && (

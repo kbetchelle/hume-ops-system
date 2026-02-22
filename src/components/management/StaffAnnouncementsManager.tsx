@@ -715,14 +715,8 @@ export function StaffAnnouncementsManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Staff Announcements</h2>
-          <p className="text-sm text-muted-foreground">
-            Create and manage announcements for staff members.
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New Announcement

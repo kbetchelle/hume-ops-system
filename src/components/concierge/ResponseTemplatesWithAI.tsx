@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,7 @@ import { sanitizeHtml, stripHtml } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import {
@@ -594,9 +596,11 @@ export function ResponseTemplatesWithAI() {
     content: "",
     tags: "",
   });
+  const [selectedTemplateForSheet, setSelectedTemplateForSheet] = useState<ResponseTemplate | null>(null);
 
   const { activeRole } = useActiveRole();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   
   // Any authenticated user can edit templates, reorder, and manage categories
@@ -1096,6 +1100,151 @@ export function ResponseTemplatesWithAI() {
           <Skeleton className="h-24 w-full" />
         </CardContent>
       </Card>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col min-h-0 flex-1">
+        <div className="sticky top-0 z-10 bg-background border-b p-3 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 text-base min-h-[44px] rounded-xl"
+            />
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto p-3 space-y-4">
+          {/* Template list */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Templates</h3>
+            {loading ? (
+              [1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+              ))
+            ) : filteredTemplates.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No templates match your search.</p>
+            ) : (
+              filteredTemplates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTemplateForSheet(t)}
+                  className="w-full text-left p-4 rounded-xl border bg-card shadow-sm min-h-[44px] transition-all active:scale-[0.99]"
+                >
+                  <p className="font-medium text-base truncate">{t.title}</p>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {stripHtml(t.content).slice(0, 80)}
+                    {stripHtml(t.content).length > 80 ? "…" : ""}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+          {/* AI section */}
+          <div className="space-y-3 pt-4 border-t">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Wand2 className="h-3 w-3" />
+              AI Writer
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant={aiWriterMode === "compose" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 min-h-[44px] text-sm"
+                onClick={() => setAiWriterMode("compose")}
+              >
+                Compose
+              </Button>
+              <Button
+                variant={aiWriterMode === "polish" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 min-h-[44px] text-sm"
+                onClick={() => setAiWriterMode("polish")}
+              >
+                Polish
+              </Button>
+            </div>
+            <Textarea
+              placeholder={
+                aiWriterMode === "compose"
+                  ? "Describe the situation or paste the member's inquiry..."
+                  : "Paste your draft response to polish..."
+              }
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              className="min-h-[100px] text-base rounded-xl"
+            />
+            <Button
+              onClick={handleAiGenerate}
+              className="w-full min-h-[44px] rounded-xl"
+              disabled={!aiInput.trim() || aiLoading}
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  {aiWriterMode === "compose" ? "Generate Response" : "Polish Response"}
+                </>
+              )}
+            </Button>
+            {aiOutput && (
+              <div className="border rounded-xl p-4 bg-primary/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge className="rounded-none text-xs">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    HUME Voice
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyAiOutput}
+                    className="min-h-[44px] rounded-xl"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
+                <div className="text-sm whitespace-pre-wrap leading-relaxed pt-2">{aiOutput}</div>
+              </div>
+            )}
+          </div>
+        </div>
+        <Sheet open={!!selectedTemplateForSheet} onOpenChange={(open) => !open && setSelectedTemplateForSheet(null)}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <SheetHeader>
+              <SheetTitle className="text-left">
+                {selectedTemplateForSheet?.title}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-auto px-4 pb-8 space-y-4">
+              {selectedTemplateForSheet && (
+                <>
+                  <div
+                    className="text-sm prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
+                    style={{ fontFamily: "'Aptos', 'Calibri', 'Helvetica Neue', sans-serif" }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedTemplateForSheet.content) }}
+                  />
+                  <Button
+                    className="w-full min-h-[44px] rounded-xl"
+                    onClick={() => handleCopy(selectedTemplateForSheet)}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy to Clipboard
+                  </Button>
+                </>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     );
   }
 

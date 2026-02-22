@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { format } from "date-fns";
-import { Search, FileText, ChevronLeft, ChevronRight, Monitor } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { format, subDays } from "date-fns";
+import { Search, FileText } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Pagination,
   PaginationContent,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/pagination";
 import { useSubmittedShiftReports } from "@/hooks/useShiftReports";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePageWrapper } from "@/components/mobile/MobilePageWrapper";
 
 const ITEMS_PER_PAGE = 12;
 const PREVIEW_LENGTH = 100;
@@ -85,21 +86,37 @@ function summarizeJsonArray(arr: unknown): string {
   return JSON.stringify(first).slice(0, 80) + (JSON.stringify(first).length > 80 ? "…" : "");
 }
 
+const DEFAULT_DATE_FROM = format(subDays(new Date(), 30), "yyyy-MM-dd");
+const DEFAULT_DATE_TO = format(new Date(), "yyyy-MM-dd");
+
 export function PastReportsView() {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [page, setPage] = useState(0);
   const [detailReport, setDetailReport] = useState<ReportRow | null>(null);
+  const [dateFrom, setDateFrom] = useState(DEFAULT_DATE_FROM);
+  const [dateTo, setDateTo] = useState(DEFAULT_DATE_TO);
 
-  const { data: reports = [], isLoading } = useSubmittedShiftReports(200);
+  const { data: reports = [], isLoading, refetch } = useSubmittedShiftReports(200);
 
   const filteredReports = useMemo(() => {
     const list = reports as ReportRow[];
-    if (!debouncedSearch.trim()) return list;
-    const q = debouncedSearch.trim().toLowerCase();
-    return list.filter((r) => getSearchableText(r).includes(q));
-  }, [reports, debouncedSearch]);
+    let out = list;
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.trim().toLowerCase();
+      out = out.filter((r) => getSearchableText(r).includes(q));
+    }
+    if (isMobile && (dateFrom || dateTo)) {
+      out = out.filter((r) => {
+        const d = r.report_date;
+        if (dateFrom && d < dateFrom) return false;
+        if (dateTo && d > dateTo) return false;
+        return true;
+      });
+    }
+    return out;
+  }, [reports, debouncedSearch, isMobile, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages - 1);
@@ -116,14 +133,141 @@ export function PastReportsView() {
     if (page >= totalPages && totalPages > 0) setPage(0);
   }, [totalPages, page]);
 
+  const handleMobileRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const detailContent = detailReport && (
+    <div className="space-y-4 text-sm pb-8">
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Staff</span>
+        <p className="mt-0.5">{detailReport.staff_name ?? "—"}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Summary</span>
+        <p className="mt-0.5 whitespace-pre-wrap">{detailReport.management_notes || "—"}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Busiest areas</span>
+        <p className="mt-0.5">{detailReport.busiest_areas || "—"}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tour notes</span>
+        <p className="mt-0.5">{summarizeJsonArray(detailReport.tour_notes as unknown[])}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Member feedback</span>
+        <p className="mt-0.5">{summarizeJsonArray(detailReport.member_feedback as unknown[])}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Facility issues</span>
+        <p className="mt-0.5">{summarizeJsonArray(detailReport.facility_issues as unknown[])}</p>
+      </div>
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Handoff notes</span>
+        <p className="mt-0.5">{summarizeJsonArray(detailReport.future_shift_notes as unknown[])}</p>
+      </div>
+      {detailReport.cafe_notes && (
+        <div>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Cafe notes</span>
+          <p className="mt-0.5">{detailReport.cafe_notes}</p>
+        </div>
+      )}
+    </div>
+  );
+
   if (isMobile) {
     return (
-      <div className="rounded-lg border border-border bg-muted/30 p-6 text-center">
-        <Monitor className="mx-auto h-10 w-10 text-muted-foreground" />
-        <p className="mt-2 text-sm text-muted-foreground">
-          Past reports are available on desktop.
-        </p>
-      </div>
+      <>
+        <MobilePageWrapper onRefresh={handleMobileRefresh} className="flex flex-col min-h-0">
+          <div className="sticky top-0 z-10 bg-background border-b p-3 space-y-2 shrink-0">
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="flex-1 text-base min-h-[44px]"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="flex-1 text-base min-h-[44px]"
+              />
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search reports..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 text-base min-h-[44px] rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
+            {isLoading ? (
+              [1, 2, 3, 4, 5].map((i) => (
+                <Card key={i} className="rounded-xl border">
+                  <CardContent className="p-4">
+                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                    <div className="mt-2 h-3 w-32 bg-muted animate-pulse rounded" />
+                    <div className="mt-3 h-16 bg-muted animate-pulse rounded" />
+                  </CardContent>
+                </Card>
+              ))
+            ) : filteredReports.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground" />
+                <p className="mt-2 text-sm font-medium">
+                  {reports.length === 0 ? "No past reports yet." : "No reports match your search or date range."}
+                </p>
+              </div>
+            ) : (
+              filteredReports.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setDetailReport(r)}
+                  className="w-full text-left rounded-xl border bg-card shadow-sm p-4 min-h-[44px] transition-all active:scale-[0.99]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-base font-medium">
+                      {format(new Date(r.report_date + "T12:00:00"), "EEE, MMM d")}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {r.shift_type === "AM" ? "AM" : "PM"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{r.staff_name ?? "—"}</p>
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                    {preview(r.management_notes, PREVIEW_LENGTH)}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </MobilePageWrapper>
+        <Sheet open={!!detailReport} onOpenChange={(open) => !open && setDetailReport(null)}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <SheetHeader>
+              <SheetTitle>
+                {detailReport && (
+                  <>
+                    {format(new Date(detailReport.report_date + "T12:00:00"), "EEEE, MMM d")} · {detailReport.shift_type === "AM" ? "AM" : "PM"}
+                    {detailReport.submitted_at && (
+                      <span className="block text-xs font-normal text-muted-foreground mt-1">
+                        Submitted {format(new Date(detailReport.submitted_at), "MMM d, h:mm a")}
+                      </span>
+                    )}
+                  </>
+                )}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-auto px-4 pb-8">{detailContent}</div>
+          </SheetContent>
+        </Sheet>
+      </>
     );
   }
 

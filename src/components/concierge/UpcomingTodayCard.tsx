@@ -52,7 +52,12 @@ interface UnifiedEvent {
 
 const PM_BOUNDARY_HOUR = 13.5; // 1:30 PM as decimal hours
 
-export function UpcomingTodayCard() {
+interface UpcomingTodayCardProps {
+  /** Optional max number of events to show (e.g. 3 for mobile home). */
+  maxItems?: number;
+}
+
+export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   const { currentShift } = useCurrentShift();
   const today = format(new Date(), "yyyy-MM-dd");
   const now = new Date();
@@ -209,7 +214,7 @@ export function UpcomingTodayCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {upcomingEvents.slice(0, 10).map((event) => {
+          {upcomingEvents.slice(0, maxItems ?? 10).map((event) => {
             const isPast = isBefore(event.sortTime, now);
             const isNext = event.id === nextEvent?.id;
 

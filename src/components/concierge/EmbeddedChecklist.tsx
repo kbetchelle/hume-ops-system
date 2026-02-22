@@ -127,12 +127,18 @@ function getCurrentChecklistType(isWeekend: boolean): { title: string; shiftTime
   }
 }
 
-export function EmbeddedChecklist() {
+interface EmbeddedChecklistProps {
+  /** When "compact", show only progress + "View checklist" that expands to full content. */
+  variant?: "default" | "compact";
+}
+
+export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProps = {}) {
   const { currentShift } = useCurrentShift();
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
   const currentHour = new Date().getHours();
   const isWeekend = [0, 6].includes(new Date().getDay());
+  const [compactExpanded, setCompactExpanded] = useState(false);
   
   // Get the specific checklist based on time of day
   const checklistType = getCurrentChecklistType(isWeekend);
@@ -499,14 +505,54 @@ export function EmbeddedChecklist() {
     });
   };
 
+  const compactCard = variant === "compact" && !compactExpanded;
+  if (compactCard) {
+    return (
+      <Card className="w-full border border-border shadow-sm bg-card rounded-xl">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-2 font-semibold text-sm">
+              <CheckSquare className="h-4 w-4" />
+              {checklist?.title || checklistType.title}
+            </p>
+            <Badge variant="outline" className="text-xs">
+              {completedCount}/{totalCount}
+            </Badge>
+          </div>
+          <Progress value={progressPercentage} className="h-1.5 mt-2" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-3 min-h-[44px]"
+            onClick={() => setCompactExpanded(true)}
+          >
+            View checklist
+          </Button>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full border-2 border-border shadow-md bg-card">
+    <Card className={cn("w-full border-2 border-border shadow-md bg-card", variant === "compact" && "rounded-xl")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <p className="flex items-center gap-2 font-semibold" style={{ fontSize: '15.75px' }}>
-            <CheckSquare className="h-5 w-5" />
-            {checklist?.title || checklistType.title}
-          </p>
+          <div className="flex items-center gap-2">
+            {variant === "compact" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 -ml-2"
+                onClick={() => setCompactExpanded(false)}
+              >
+                <ChevronDown className="h-4 w-4 rotate-180" />
+              </Button>
+            )}
+            <p className="flex items-center gap-2 font-semibold" style={{ fontSize: '15.75px' }}>
+              <CheckSquare className="h-5 w-5" />
+              {checklist?.title || checklistType.title}
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[12px]">
               {completedCount}/{totalCount} complete

@@ -35,6 +35,7 @@ import {
 import { Search, Plus, MapPin, Calendar, User, ImagePlus, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
 import { supabase } from "@/integrations/supabase/client";
 import { compressPhoto, generatePhotoFilename } from "@/lib/compressPhoto";
@@ -487,7 +488,7 @@ export function LostAndFoundTab() {
   const detailContent = selectedItem && (
     <div className="space-y-4 py-2">
       {selectedItem.photo_url && (
-        <div className="w-full max-h-64 rounded-lg overflow-hidden bg-muted">
+        <div className={cn("w-full rounded-lg overflow-hidden bg-muted", isMobile ? "max-h-[280px] min-h-[200px]" : "max-h-64")}>
           <img src={selectedItem.photo_url} alt={selectedItem.description} className="w-full h-full object-contain" />
         </div>
       )}
@@ -548,8 +549,21 @@ export function LostAndFoundTab() {
       {isMobile && (
         <>
           <div className="flex flex-col min-h-0 flex-1">
+            <div className="sticky top-0 z-10 bg-background border-b shrink-0">
+              <div className="p-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 text-base min-h-[44px] rounded-xl"
+                  />
+                </div>
+              </div>
+            </div>
             <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12 bg-muted/30">
+              <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12 bg-muted/30 shrink-0">
                 {statusTabs.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value} className="rounded-none text-xs min-h-[44px]">
                     {tab.label}

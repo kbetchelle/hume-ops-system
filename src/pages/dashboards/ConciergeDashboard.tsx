@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Users, AlertCircle, Package } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ConciergeSidebar, type ConciergeView } from "@/components/concierge/ConciergeSidebar";
@@ -8,6 +11,7 @@ import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
+import { MobilePageWrapper } from "@/components/mobile/MobilePageWrapper";
 import { getConciergeMobileTabs, getConciergeMoreItems } from "@/components/mobile/mobile-nav-config";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
@@ -26,6 +30,8 @@ import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
+import { usePackageStats } from "@/hooks/usePackages";
+import { supabase } from "@/integrations/supabase/client";
 import { QuickLinksTab } from "@/components/staff-resources/QuickLinksTab";
 import { ResourcePagesTab } from "@/components/staff-resources/ResourcePagesTab";
 import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
@@ -33,6 +39,7 @@ import { useActiveRole } from "@/hooks/useActiveRole";
 import { useQuickLinkGroupsByRole, useResourcePagesByRole } from "@/hooks/useStaffResources";
 import { usePolicies } from "@/hooks/usePolicies";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const CONCIERGE_TAB_IDS = ["home", "report", "messages", "lost-found", "more"] as const;
 function conciergeViewToTabId(view: ConciergeView): string {
@@ -56,6 +63,33 @@ export default function ConciergeDashboard() {
   const { data: policies = [], isLoading: polLoading } = usePolicies();
 
   const { count: unreadMessageCount } = useUnreadMessageCount();
+  const queryClient = useQueryClient();
+  const today = format(new Date(), "yyyy-MM-dd");
+  const { data: packageStats } = usePackageStats();
+  const { data: guestsCheckedInCount } = useQuery({
+    queryKey: ["guests-checked-in-today", today],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("arketa_reservations")
+        .select("id", { count: "exact", head: true })
+        .eq("checked_in", true)
+        .eq("class_date", today);
+      if (error) return 0;
+      return count ?? 0;
+    },
+  });
+
+  const handleHomeRefresh = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["concierge-checklists"] }),
+      queryClient.invalidateQueries({ queryKey: ["concierge-completions"] }),
+      queryClient.invalidateQueries({ queryKey: ["shift-submission"] }),
+      queryClient.invalidateQueries({ queryKey: ["scheduled-tours-upcoming"] }),
+      queryClient.invalidateQueries({ queryKey: ["daily-schedule-upcoming"] }),
+      queryClient.invalidateQueries({ queryKey: ["package-stats"] }),
+      queryClient.invalidateQueries({ queryKey: ["guests-checked-in-today", today] }),
+    ]);
+  }, [queryClient, today]);
 
   const viewTitles: Record<ConciergeView, string> = {
     home: "Home",
@@ -75,6 +109,41 @@ export default function ConciergeDashboard() {
   const renderContent = () => {
     switch (activeView) {
       case "home":
+        if (isMobile) {
+          return (
+            <MobilePageWrapper
+              scrollKey="concierge-home"
+              onRefresh={handleHomeRefresh}
+              className="flex flex-col min-h-0 p-4 space-y-4"
+            >
+              <div className="grid grid-cols-3 gap-2 shrink-0">
+                <Card className="rounded-xl shadow-sm border">
+                  <CardContent className="p-3 flex flex-col items-center gap-1">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-lg font-semibold tabular-nums">{guestsCheckedInCount ?? "—"}</span>
+                    <span className="text-xs text-muted-foreground text-center">Guests in</span>
+                  </CardContent>
+                </Card>
+                <Card className="rounded-xl shadow-sm border">
+                  <CardContent className="p-3 flex flex-col items-center gap-1">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-lg font-semibold tabular-nums">—</span>
+                    <span className="text-xs text-muted-foreground text-center">Open incidents</span>
+                  </CardContent>
+                </Card>
+                <Card className="rounded-xl shadow-sm border">
+                  <CardContent className="p-3 flex flex-col items-center gap-1">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-lg font-semibold tabular-nums">{packageStats?.pending ?? "—"}</span>
+                    <span className="text-xs text-muted-foreground text-center">Pending pkgs</span>
+                  </CardContent>
+                </Card>
+              </div>
+              <EmbeddedChecklist variant="compact" />
+              <UpcomingTodayCard maxItems={3} />
+            </MobilePageWrapper>
+          );
+        }
         return (
           <div className="flex flex-wrap gap-4 p-4">
             <div className="flex-1 basis-[450px] min-w-[450px]" style={{ paddingTop: '25px' }}>

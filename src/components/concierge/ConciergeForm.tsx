@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { format } from 'date-fns';
-import { FileText, Plus, Trash2, Send, Save, CheckCircle2, Clock, History, Cloud, RefreshCw, Upload, X } from 'lucide-react';
+import { FileText, Plus, Trash2, Send, Save, CheckCircle2, Clock, History, Cloud, RefreshCw, Upload, X, List } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,8 +39,29 @@ import type { FormDataType, ConciergeDraft, CelebratoryEventType, CancelPauseRea
 import { INITIAL_FORM_DATA, hasMeaningfulContent } from '@/types/concierge-form';
 import type { Database } from '@/integrations/supabase/types';
 import { createLogger } from '@/lib/logger';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const logger = createLogger('[ConciergeForm]');
+
+const CONCIERGE_FORM_SECTIONS: { id: string; label: string }[] = [
+  { id: 'shift-header', label: 'Shift & date' },
+  { id: 'members', label: 'Members' },
+  { id: 'cancel-pause', label: 'Cancel/Pause' },
+  { id: 'celebratory', label: 'Celebratory events' },
+  { id: 'tours', label: 'Tours' },
+  { id: 'facilities', label: 'Facilities' },
+  { id: 'busiest', label: 'Busiest areas' },
+  { id: 'system-issues', label: 'System issues' },
+  { id: 'management-notes', label: 'Management notes' },
+  { id: 'future-notes', label: 'Notes for future shift' },
+  { id: 'submit', label: 'Submit' },
+];
 
 /** Normalize legacy shift_type (morning/afternoon/evening) or AM/PM to 'AM' | 'PM'. Noon cutoff. */
 function normalizeShiftType(st: string): 'AM' | 'PM' {
@@ -74,6 +95,9 @@ export function ConciergeForm() {
   const staffNameInputRef = useRef<HTMLInputElement>(null);
   const localVersionRef = useRef(localVersion);
   const isDirtyRef = useRef(isDirty);
+  const isMobile = useIsMobile();
+  const [sectionJumpOpen, setSectionJumpOpen] = useState(false);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const reportDate = formData.reportDate;
   const shiftType = formData.shiftTime;
@@ -501,7 +525,8 @@ export function ConciergeForm() {
       
       <Card>
         {/* ── Shift Report Document Header ── */}
-        <div className="px-6 pt-6 pb-0 space-y-0 py-[2px]">
+        <div id="shift-header" ref={(el) => { sectionRefs.current['shift-header'] = el; }} className="scroll-mt-24">
+        <div className={cn("px-6 pt-6 pb-0 space-y-0 py-[2px]", isMobile && "px-4")}>
           {/* Title */}
           
 
@@ -509,7 +534,7 @@ export function ConciergeForm() {
           
 
           {/* Info row: AM/PM toggle | Date | Staff names */}
-          <div className="flex items-center justify-between gap-4 py-3 border-b border-border">
+          <div className={cn("flex items-center justify-between gap-4 py-3 border-b border-border", isMobile && "flex-wrap gap-2")}>
             {/* Left: AM/PM toggle */}
             <div className="flex items-center gap-1">
               <button
@@ -568,7 +593,7 @@ export function ConciergeForm() {
               }}
               disabled={isSubmitted}
               placeholder="Staff names"
-              className="w-48 text-sm text-right"
+              className={cn("w-48 text-sm text-right", isMobile && "text-base min-h-[44px] flex-1")}
               autoFocus /> :
 
 
@@ -591,7 +616,19 @@ export function ConciergeForm() {
             }
           </div>
 
-          {/* Secondary toolbar: History, Save indicator, Auto-submit */}
+          {/* Save indicator (mobile: compact in header) */}
+          {isMobile && (
+            <div className="pt-2">
+              <AutoSaveIndicator
+                isSaving={isSaving}
+                lastSaved={lastSaved}
+                isDirty={isDirty}
+                isOnline={isOnline}
+                queueSize={queueSize}
+              />
+            </div>
+          )}
+        </div>
         </div>
 
         {/* History Dialog */}
@@ -631,7 +668,7 @@ export function ConciergeForm() {
           </DialogContent>
         </Dialog>
         
-        <CardContent className="space-y-6 pt-4">
+        <CardContent className={cn("space-y-6 pt-4", isMobile && "px-4 pb-8")}>
 
           {/* Notes for this shift (alert banners) */}
           {notesForShift.length > 0 &&
@@ -680,8 +717,10 @@ export function ConciergeForm() {
           }
           
           {/* MEMBERS — Feedback */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Members</h3>
+          <div id="members" ref={(el) => { sectionRefs.current['members'] = el; }} className="scroll-mt-24 space-y-3">
+            <h3 className={cn("text-sm font-semibold uppercase tracking-wider", isMobile && "sticky top-12 z-10 bg-background py-3 px-4 -mx-4 border-b flex items-center justify-between")}>
+              Members
+            </h3>
             <p className="text-sm text-muted-foreground">
               Please report any feedback or issues from members or staff/ general shift notes. For general notes, please select neutral:
             </p>
@@ -714,7 +753,7 @@ export function ConciergeForm() {
                 }}
                 disabled={isSubmitted}
                 placeholder="Enter feedback or issue"
-                className="flex-1" />
+                className={cn("flex-1", isMobile && "text-base min-h-[44px] py-3 px-4")} />
 
                 {!isSubmitted && i === 0 &&
               <Button variant="ghost" size="icon" onClick={addMemberFeedback}>
@@ -736,7 +775,7 @@ export function ConciergeForm() {
           </div>
 
           {/* MEMBERS — Cancel/Pause requests */}
-          <div className="space-y-3">
+          <div id="cancel-pause" ref={(el) => { sectionRefs.current['cancel-pause'] = el; }} className="scroll-mt-24 space-y-3">
             <Label className="text-sm">Were there any requests to cancel or pause membership?</Label>
             {formData.membershipCancelRequests.map((request, i) =>
             <div key={request.id ?? i} className="space-y-2 p-3">
@@ -864,7 +903,7 @@ export function ConciergeForm() {
           <Separator />
           
           {/* MEMBERS — Celebratory Events */}
-          <div className="space-y-3">
+          <div id="celebratory" ref={(el) => { sectionRefs.current['celebratory'] = el; }} className="scroll-mt-24 space-y-3">
             <Label className="text-sm">Did any members share any celebratory events?</Label>
             <p className="text-xs text-muted-foreground">Add any special/giftable events to tracker.</p>
             {formData.celebratoryEvents.map((event, i) =>
@@ -951,8 +990,8 @@ export function ConciergeForm() {
           <Separator />
           
           {/* TOURS */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Tours</h3>
+          <div id="tours" ref={(el) => { sectionRefs.current['tours'] = el; }} className="scroll-mt-24 space-y-4">
+            <h3 className={cn("text-sm font-semibold uppercase tracking-wider", isMobile && "sticky top-12 z-10 bg-background py-3 px-4 -mx-4 border-b")}>Tours</h3>
             <ScheduledToursDisplay reportDate={reportDate} disabled={isSubmitted} />
             <div className="space-y-3">
               <Label className="text-sm">Did you tour anyone? (Add notes)</Label>
@@ -1002,8 +1041,8 @@ export function ConciergeForm() {
           <Separator />
           
           {/* FACILITIES */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Facilities</h3>
+          <div id="facilities" ref={(el) => { sectionRefs.current['facilities'] = el; }} className="scroll-mt-24 space-y-3">
+            <h3 className={cn("text-sm font-semibold uppercase tracking-wider", isMobile && "sticky top-12 z-10 bg-background py-3 px-4 -mx-4 border-b")}>Facilities</h3>
             <Label className="text-sm">Any facility issues? (maintenance, equipment, etc.)</Label>
             {formData.facilityIssues.map((issue, i) =>
             <div key={issue.id ?? i} className="flex gap-2 items-start">
@@ -1053,7 +1092,7 @@ export function ConciergeForm() {
           <Separator />
           
           {/* Crowd/Space — busiest areas (required) */}
-          <div className="space-y-2">
+          <div id="busiest" ref={(el) => { sectionRefs.current['busiest'] = el; }} className="scroll-mt-24 space-y-2">
             <Label className="text-sm">What areas of the gym were busiest and when?</Label>
             <Textarea
               value={formData.busiestAreas}
@@ -1067,7 +1106,7 @@ export function ConciergeForm() {
           <Separator />
           
           {/* System Issues & Questions for Management */}
-          <div className="space-y-3">
+          <div id="system-issues" ref={(el) => { sectionRefs.current['system-issues'] = el; }} className="scroll-mt-24 space-y-3">
             <div className="flex items-center gap-2">
               <Label className="text-sm">Any issues with Arketa, Jolt, Database, or questions for management</Label>
             </div>
@@ -1137,8 +1176,8 @@ export function ConciergeForm() {
           <Separator />
           
           {/* Management Notes */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Management Notes</h3>
+          <div id="management-notes" ref={(el) => { sectionRefs.current['management-notes'] = el; }} className="scroll-mt-24 space-y-2">
+            <h3 className={cn("text-sm font-semibold uppercase tracking-wider", isMobile && "sticky top-12 z-10 bg-background py-3 px-4 -mx-4 border-b")}>Management Notes</h3>
             <Label className="text-sm sr-only">Notes for management</Label>
             <Textarea
               value={formData.managementNotes}
@@ -1146,15 +1185,15 @@ export function ConciergeForm() {
               disabled={isSubmitted}
               placeholder="Notes for management..."
               rows={4}
-              className="resize-y" />
+              className={cn("resize-y", isMobile && "text-base min-h-[44px] py-3 px-4")} />
 
           </div>
 
           <Separator />
           
           {/* Notes for Future Shift */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Notes for Future Shift</h3>
+          <div id="future-notes" ref={(el) => { sectionRefs.current['future-notes'] = el; }} className="scroll-mt-24 space-y-3">
+            <h3 className={cn("text-sm font-semibold uppercase tracking-wider", isMobile && "sticky top-12 z-10 bg-background py-3 px-4 -mx-4 border-b")}>Notes for Future Shift</h3>
             <p className="text-xs text-muted-foreground">Unfinished tasks, emails etc.</p>
             {formData.futureNotes.map((note, i) =>
             <div key={note.id ?? i} className="flex flex-wrap gap-2 items-center">
@@ -1216,30 +1255,63 @@ export function ConciergeForm() {
 
         </CardContent>
         
-        <CardFooter className="flex gap-3 border-t pt-4">
-          {!isSubmitted &&
-          <>
-              <Button
-              variant="outline"
-              onClick={() => saveDraft()}
-              disabled={isSaving || !isDirty}
-              className="flex-1">
+        <div id="submit" ref={(el) => { sectionRefs.current['submit'] = el; }} className="scroll-mt-24">
+          <CardFooter className="flex gap-3 border-t pt-4">
+            {!isSubmitted &&
+            <>
+                <Button
+                variant="outline"
+                onClick={() => saveDraft()}
+                disabled={isSaving || !isDirty}
+                className={cn("flex-1", isMobile && "min-h-[44px]")}>
 
-                <Save className="h-4 w-4 mr-2" />
-                Save Draft
-              </Button>
-              <Button
-              onClick={handleSubmit}
-              disabled={isSaving}
-              className="flex-1">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Draft
+                </Button>
+                <Button
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className={cn("flex-1", isMobile && "min-h-[44px]")}>
 
-                <Send className="h-4 w-4 mr-2" />
-                Submit Shift Report
-              </Button>
-            </>
-          }
-        </CardFooter>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit Shift Report
+                </Button>
+              </>
+            }
+          </CardFooter>
+        </div>
       </Card>
+
+      {isMobile && (
+        <Popover open={sectionJumpOpen} onOpenChange={setSectionJumpOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="icon"
+              className="fixed z-40 h-12 w-12 rounded-full shadow-lg right-4 bottom-[calc(64px+env(safe-area-inset-bottom)+16px)]"
+              aria-label="Jump to section"
+            >
+              <List className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-2 rounded-xl">
+            <div className="max-h-[60vh] overflow-auto space-y-0">
+              {CONCIERGE_FORM_SECTIONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-muted flex items-center justify-between gap-2 min-h-[44px]"
+                  onClick={() => {
+                    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth' });
+                    setSectionJumpOpen(false);
+                  }}
+                >
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {photoUploadOpen &&
       <PhotoUpload

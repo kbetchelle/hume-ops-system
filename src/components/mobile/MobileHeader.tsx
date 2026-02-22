@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Bell, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, Bell, ChevronDown, ArrowLeftRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthContext } from "@/features/auth/AuthProvider";
+import { isSharedDevice } from "@/components/auth/LockScreen";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -38,7 +39,8 @@ function getInitials(name: string | null | undefined): string {
 export function MobileHeader({ title }: MobileHeaderProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { user, signOut } = useAuthContext();
+  const { user, signOut, lockSession } = useAuthContext();
+  const showSwitchUser = isSharedDevice();
   const { data: profile } = useUserProfile(user?.id);
   const { activeRole, availableRoles, setActiveRole, getRoleLabel } = useActiveRole();
   const { t } = useLanguage();
@@ -151,6 +153,15 @@ export function MobileHeader({ title }: MobileHeaderProps) {
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
+              {showSwitchUser && (
+                <DropdownMenuItem
+                  onClick={() => lockSession()}
+                  className="text-xs uppercase tracking-widest cursor-pointer rounded-none"
+                >
+                  <ArrowLeftRight className="mr-2 h-3 w-3" />
+                  Switch User
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => setShowBugReport(true)}
                 className="text-xs uppercase tracking-widest cursor-pointer rounded-none"

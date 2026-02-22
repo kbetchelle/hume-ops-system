@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { sanitizeHtml } from "@/lib/utils";
+import { sanitizeHtml, stripHtml } from "@/lib/utils";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import {
   useResourceSearch,
@@ -19,6 +19,7 @@ import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { MyEditablePages } from "./MyEditablePages";
 import { useMyEditablePages } from "@/hooks/useResourcePageEditors";
+import { extractSearchSnippet } from "@/lib/searchSnippets";
 
 export function StaffResourcesView() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,7 +58,7 @@ export function StaffResourcesView() {
 
         {/* Show unified search results when there's a query */}
         {hasSearch && (
-          <SearchResults results={results} isLoading={isLoading} />
+          <SearchResults results={results} isLoading={isLoading} searchTerm={searchTerm} />
         )}
       </div>
     </div>
@@ -71,9 +72,11 @@ export function StaffResourcesView() {
 function SearchResults({
   results,
   isLoading,
+  searchTerm,
 }: {
   results: ReturnType<typeof useResourceSearch>["results"];
   isLoading: boolean;
+  searchTerm: string;
 }) {
   if (isLoading) {
     return (
@@ -95,7 +98,7 @@ function SearchResults({
     <div className="space-y-6">
       {results.quickLinks.length > 0 && (
         <ResultSection title="Quick Links" count={results.quickLinks.length}>
-          <QuickLinkResults groups={results.quickLinks} />
+          <QuickLinkResults groups={results.quickLinks} searchTerm={searchTerm} />
         </ResultSection>
       )}
 
@@ -104,7 +107,7 @@ function SearchResults({
           title="Resource Pages"
           count={results.resourcePages.length}
         >
-          <ResourcePageResults pages={results.resourcePages} />
+          <ResourcePageResults pages={results.resourcePages} searchTerm={searchTerm} />
         </ResultSection>
       )}
 
@@ -145,7 +148,7 @@ function ResultSection({
 // Quick link results
 // ===========================================================================
 
-function QuickLinkResults({ groups }: { groups: SearchQuickLinkGroup[] }) {
+function QuickLinkResults({ groups, searchTerm }: { groups: SearchQuickLinkGroup[]; searchTerm: string }) {
   const ownRole = groups.filter((g) => g.isOwnRole);
   const otherRole = groups.filter((g) => !g.isOwnRole);
 
@@ -166,78 +169,88 @@ function QuickLinkResults({ groups }: { groups: SearchQuickLinkGroup[] }) {
     }
   };
 
-  const renderGroup = (group: SearchQuickLinkGroup) => (
-    <ResourceFlagContextMenu
-      key={group.id}
-      resourceType="quick_link_group"
-      resourceId={group.id}
-      resourceLabel={group.title}
-      hasPendingFlag={groupFlagsMap?.has(group.id) ?? false}
-    >
-      <Card data-resource-id={group.id} className="rounded-none">
-        <CardContent className="p-2.5">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-medium text-sm">{group.title}</h4>
-            {groupFlagsMap?.has(group.id) && <UnderReviewBadge />}
-            {!group.isOwnRole && (
-              <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                other role
-              </Badge>
-            )}
-          </div>
-          {group.description && (
-            <div
-              className="prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline text-muted-foreground mb-2 text-xs"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(group.description),
-              }}
-            />
-          )}
-          {group.items.length > 0 && (
-            <div className="flex flex-col">
-              {group.items.map((link) => (
-                <ResourceFlagContextMenu
-                  key={link.id}
-                  resourceType="quick_link_item"
-                  resourceId={link.id}
-                  resourceLabel={link.name}
-                  hasPendingFlag={itemFlagsMap?.has(link.id) ?? false}
-                >
-                  <a
-                    data-resource-id={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-2 px-1 py-1 hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="text-muted-foreground text-base shrink-0 leading-none">
-                      &bull;
-                    </span>
-                    <span className="text-sm text-primary hover:underline truncate">
-                      {link.name}
-                    </span>
-                    {itemFlagsMap?.has(link.id) && <UnderReviewBadge />}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleCopy(link.url);
-                      }}
-                      className="ml-[10px] opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
-                      title="Copy URL"
-                    >
-                      <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  </a>
-                </ResourceFlagContextMenu>
-              ))}
+  const renderGroup = (group: SearchQuickLinkGroup) => {
+    // Generate snippet from description if it matches
+    const descPlainText = group.description ? stripHtml(group.description) : "";
+    const descSnippet = descPlainText ? extractSearchSnippet(descPlainText, searchTerm.trim()) : [];
+
+    return (
+      <ResourceFlagContextMenu
+        key={group.id}
+        resourceType="quick_link_group"
+        resourceId={group.id}
+        resourceLabel={group.title}
+        hasPendingFlag={groupFlagsMap?.has(group.id) ?? false}
+      >
+        <Card data-resource-id={group.id} className="rounded-none">
+          <CardContent className="p-2.5">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-medium text-sm">{group.title}</h4>
+              {groupFlagsMap?.has(group.id) && <UnderReviewBadge />}
+              {!group.isOwnRole && (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                  other role
+                </Badge>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </ResourceFlagContextMenu>
-  );
+            {/* Search snippet preview */}
+            {descSnippet.length > 0 && (
+              <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
+                {descSnippet.map((seg, idx) =>
+                  seg.isMatch ? (
+                    <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">{seg.text}</span>
+                  ) : (
+                    <span key={idx}>{seg.text}</span>
+                  )
+                )}
+              </p>
+            )}
+            {group.items.length > 0 && (
+              <div className="flex flex-col">
+                {group.items.map((link) => (
+                  <ResourceFlagContextMenu
+                    key={link.id}
+                    resourceType="quick_link_item"
+                    resourceId={link.id}
+                    resourceLabel={link.name}
+                    hasPendingFlag={itemFlagsMap?.has(link.id) ?? false}
+                  >
+                    <a
+                      data-resource-id={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-2 px-1 py-1 hover:bg-muted/50 transition-colors"
+                    >
+                      <span className="text-muted-foreground text-base shrink-0 leading-none">
+                        &bull;
+                      </span>
+                      <span className="text-sm text-primary hover:underline truncate">
+                        {link.name}
+                      </span>
+                      {itemFlagsMap?.has(link.id) && <UnderReviewBadge />}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCopy(link.url);
+                        }}
+                        className="ml-[10px] opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded-sm"
+                        title="Copy URL"
+                      >
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </a>
+                  </ResourceFlagContextMenu>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </ResourceFlagContextMenu>
+    );
+  };
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -258,7 +271,7 @@ function QuickLinkResults({ groups }: { groups: SearchQuickLinkGroup[] }) {
 // Resource page results
 // ===========================================================================
 
-function ResourcePageResults({ pages }: { pages: SearchResourcePage[] }) {
+function ResourcePageResults({ pages, searchTerm }: { pages: SearchResourcePage[]; searchTerm: string }) {
   const navigate = useNavigate();
   const ownRole = pages.filter((p) => p.isOwnRole);
   const otherRole = pages.filter((p) => !p.isOwnRole);
@@ -267,6 +280,10 @@ function ResourcePageResults({ pages }: { pages: SearchResourcePage[] }) {
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
 
   const renderPage = (page: SearchResourcePage) => {
+    // Generate snippet from content
+    const plainContent = page.content ? stripHtml(page.content) : "";
+    const contentSnippet = plainContent ? extractSearchSnippet(plainContent, searchTerm.trim()) : [];
+
     return (
       <ResourceFlagContextMenu
         key={page.id}
@@ -290,24 +307,17 @@ function ResourcePageResults({ pages }: { pages: SearchResourcePage[] }) {
                 </Badge>
               )}
             </div>
-            {/* Show tags if available */}
-            {page.tags && page.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {page.tags.slice(0, 3).map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="text-[9px] px-1.5 py-0"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-                {page.tags.length > 3 && (
-                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                    +{page.tags.length - 3}
-                  </Badge>
+            {/* Search snippet preview instead of tags */}
+            {contentSnippet.length > 0 && (
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-1.5">
+                {contentSnippet.map((seg, idx) =>
+                  seg.isMatch ? (
+                    <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">{seg.text}</span>
+                  ) : (
+                    <span key={idx}>{seg.text}</span>
+                  )
                 )}
-              </div>
+              </p>
             )}
           </CardContent>
         </Card>

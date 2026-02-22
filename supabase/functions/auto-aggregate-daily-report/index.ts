@@ -64,6 +64,20 @@ async function fetchWeather(date: string): Promise<{ temp: string; condition: st
   }
 }
 
+/** Check if any source data exists for a given date. */
+async function hasSourceData(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  date: string
+): Promise<boolean> {
+  const [res, toast, history] = await Promise.all([
+    supabase.from("arketa_reservations_history").select("id", { count: "exact", head: true }).eq("class_date", date),
+    supabase.from("toast_sales").select("id", { count: "exact", head: true }).eq("business_date", date),
+    supabase.from("daily_report_history").select("id", { count: "exact", head: true }).eq("report_date", date),
+  ]);
+  return (res.count ?? 0) > 0 || (toast.count ?? 0) > 0 || (history.count ?? 0) > 0;
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -76,6 +90,7 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().slice(0, 10);
     let dates: string[] = [];
+    let skipEmptyDates = false; // When true, skip dates with no source data
     if (body.date) {
       dates = [body.date];
     } else if (body.start_date && body.end_date) {
@@ -84,8 +99,16 @@ Deno.serve(async (req) => {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(d.toISOString().slice(0, 10));
       }
+      skipEmptyDates = true; // Backfill range: skip dates with no data
     } else {
-      dates = [today];
+      // Default (cron): today + past 7 days to catch late edits
+      const LOOKBACK_DAYS = 7;
+      for (let i = LOOKBACK_DAYS; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().slice(0, 10));
+      }
+      skipEmptyDates = true; // Skip days with zero source data
     }
 
     const dateRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -100,7 +123,18 @@ Deno.serve(async (req) => {
 
     const results: { date: string; report: unknown; data_sources: unknown }[] = [];
 
+    const skippedDates: string[] = [];
+
     for (const report_date of dates) {
+      // When skipEmptyDates is true, only aggregate dates that have source data
+      if (skipEmptyDates) {
+        const hasData = await hasSourceData(supabase, report_date);
+        if (!hasData) {
+          skippedDates.push(report_date);
+          continue;
+        }
+      }
+
       const dataSources: Record<string, unknown> = {};
 
       // 1) Arketa reservations
@@ -404,9 +438,9 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(
-        dates.length === 1
+        dates.length === 1 && !skipEmptyDates
           ? { success: true, ...results[0] }
-          : { success: true, dates, results }
+          : { success: true, dates_requested: dates.length, dates_aggregated: results.length, dates_skipped: skippedDates.length, skippedDates, results }
       ),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

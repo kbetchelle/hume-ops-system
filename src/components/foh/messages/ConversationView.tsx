@@ -470,40 +470,41 @@ function MessageBubble({
             )}
           </div>
 
-          {/* Reactions */}
+          {/* Reactions + Timestamp row */}
           {!isEditing && !isTemp && (
-            <div className="flex items-center gap-2">
-              <ReactionPills
-                reactions={groupedReactions}
-                onToggle={(emoji) =>
-                  onToggleReaction({ messageId: message.id, emoji })
-                }
-                currentUserId={currentUserId}
-              />
-              <ReactionPicker
-                onSelect={(emoji) =>
-                  onToggleReaction({ messageId: message.id, emoji })
-                }
-              />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ReactionPills
+                  reactions={groupedReactions}
+                  onToggle={(emoji) =>
+                    onToggleReaction({ messageId: message.id, emoji })
+                  }
+                  currentUserId={currentUserId}
+                />
+                <ReactionPicker
+                  onSelect={(emoji) =>
+                    onToggleReaction({ messageId: message.id, emoji })
+                  }
+                />
+              </div>
+              {showTimestamp && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">
+                    {format(parseISO(message.created_at), 'h:mm a')}
+                  </span>
+                  {isSelf && (
+                    <ReadReceipt
+                      message={message}
+                      reads={allReads}
+                      staffNames={staffNames}
+                      currentUserId={currentUserId}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {showTimestamp && (
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[10px] text-muted-foreground">
-              {format(parseISO(message.created_at), 'h:mm a')}
-            </span>
-            {isSelf && (
-              <ReadReceipt
-                message={message}
-                reads={allReads}
-                staffNames={staffNames}
-                currentUserId={currentUserId}
-              />
-            )}
-          </div>
-        )}
       </div>
 
       {isSelf && (

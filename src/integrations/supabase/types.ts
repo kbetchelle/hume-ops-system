@@ -6231,6 +6231,7 @@ export type Database = {
         Args: { _trainer_id: string }
         Returns: string[]
       }
+      get_unread_message_count: { Args: { p_user_id: string }; Returns: number }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]

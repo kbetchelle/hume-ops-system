@@ -47,7 +47,7 @@ async function resolveStaffIds(
     console.error('[check-mat-cleaning] user_roles query error:', error);
     return [];
   }
-  const ids: string[] = [...new Set((rows || []).map((r: { user_id: string }) => r.user_id))];
+  const ids: string[] = [...new Set((rows || []).map((r: { user_id: string }) => r.user_id))] as string[];
   return ids;
 }
 

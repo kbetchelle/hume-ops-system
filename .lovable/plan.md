@@ -1,78 +1,44 @@
 
+# Import Concierge Reports CSV into daily_report_history
 
-## Target Groups - Universal Staff Grouping System
+## Overview
+Import ~608 rows from the uploaded CSV into the `daily_report_history` table, matching columns with appropriate transformations. When duplicate (report_date, shift_type) pairs exist, later rows overwrite earlier ones.
 
-### Overview
-Create a centralized "Target Groups" management page within User Management that replaces the existing `staff_message_groups` table. These groups will be universal -- usable across messaging, announcements, weekly updates, and any future feature that needs staff targeting. Only admins and managers can create/manage groups. Members are selected individually from the staff list.
+## Step 1: Database Migration -- Make staff_user_id nullable
+Alter the `daily_report_history` table to allow NULL values for `staff_user_id`, since the CSV has no staff_id data.
 
----
-
-### What Changes
-
-**Database**
-- Rename the existing `staff_message_groups` table to `target_groups` via migration
-- Add new columns: `description` (optional text), `usage_context` (text array -- tracks where the group is used, e.g. `['messaging', 'announcements']` for display purposes)
-- Update RLS policies so only admin/manager roles can insert, update, and delete; all authenticated users can read (since they need to see groups they belong to)
-- Existing data and foreign key references (from `staff_messages.group_id`) will be preserved through the rename
-
-**New Tab in User Management**
-- Add a "Target Groups" tab to the User Management page (positioned after "Sling Linking")
-- The tab shows a table listing all groups with columns: Group Name, Members (count + avatars/names), Created By, Last Updated
-- Each row has Edit and Delete actions
-- A "Create Group" button opens a dialog
-
-**Create/Edit Dialog**
-- Group name input field
-- Optional description field
-- Staff member picker with search -- checkboxes next to each staff member, showing name and email
-- Selected member count badge with "Clear All" option
-- Minimum 2 members required
-- Save/Cancel buttons
-
-**Delete Flow**
-- Confirmation dialog warning that the group will be removed from all features that reference it
-- Existing messages that used the group will retain their `group_name` field (already stored as denormalized text)
-
-**Refactor Existing Code**
-- Update `src/types/messaging.ts`: rename `StaffMessageGroup` to `TargetGroup`, update the interface
-- Update `src/hooks/useMessageGroups.ts`: rename to `src/hooks/useTargetGroups.ts`, update table references from `staff_message_groups` to `target_groups`, update query keys
-- Update all consuming components to use the new hook/type names:
-  - `GroupDialogs.tsx` -- update imports and table references
-  - `NewConversationDialog.tsx` -- update imports
-  - `StaffMessagesInbox.tsx` -- update imports
-  - `MessagesOptionsMenu.tsx` -- update imports
-  - `MessageComposer.tsx` -- update imports
-- Update `supabase/functions/data-api/index.ts` to reference `target_groups` instead of `staff_message_groups`
-
-**New Components**
-- `src/components/admin/TargetGroupsTable.tsx` -- main table view for the User Management tab
-- `src/components/admin/TargetGroupDialog.tsx` -- create/edit dialog (similar to existing `GroupDialogs.tsx` but styled for the admin context)
-
----
-
-### Technical Details
-
-**Migration SQL**
-```text
--- Rename table
-ALTER TABLE staff_message_groups RENAME TO target_groups;
-
--- Add new columns
-ALTER TABLE target_groups 
-  ADD COLUMN description text,
-  ADD COLUMN usage_context text[] DEFAULT '{}';
-
--- Update RLS policies for admin/manager write access
--- All authenticated can read (needed for messaging recipient resolution)
+```sql
+ALTER TABLE public.daily_report_history ALTER COLUMN staff_user_id DROP NOT NULL;
 ```
 
-**File Changes Summary**
-1. Database migration (rename table, add columns, update RLS)
-2. New: `src/components/admin/TargetGroupsTable.tsx`
-3. New: `src/components/admin/TargetGroupDialog.tsx`
-4. Rename: `src/hooks/useMessageGroups.ts` -> `src/hooks/useTargetGroups.ts`
-5. Edit: `src/types/messaging.ts` (rename type)
-6. Edit: `src/pages/admin/UserManagementPage.tsx` (add tab)
-7. Edit: 5 messaging components (update imports)
-8. Edit: `supabase/functions/data-api/index.ts` (update table name)
+## Step 2: Update the Edge Function
+Modify `import-concierge-reports-csv` to no longer require `staff_id` -- skip the validation that rejects rows without it. The function already handles all the column mapping and transformations correctly:
 
+| CSV Column | Table Column | Transformation |
+|---|---|---|
+| id | id | Direct (UUID) |
+| report_date | report_date | Parse to YYYY-MM-DD |
+| shift_time | shift_type | Uppercase (AM/PM) |
+| staff_name | staff_name | Direct (text) |
+| notes_for_next_shift | future_shift_notes | Text to JSONB array |
+| member_feedback | member_feedback | Parse JSON or wrap as JSONB |
+| membership_cancel_requests | membership_requests | Text to JSONB array |
+| tour_followup_completed | tour_followup_completed | Parse boolean |
+| facility_issues | facility_issues | Text to JSONB array |
+| busiest_areas | busiest_areas | Direct (text) |
+| system_issues | system_issues | Text to JSONB array |
+| management_notes | management_notes | Direct (text) |
+| created_at | created_at | Parse timestamp |
+| updated_at | updated_at | Parse timestamp |
+
+Skipped CSV columns (no matching table column): `meaningful_conversations`, `tour_name`, `created_by`, `arketa_screenshot_url`, `extracted_*`, `notes_target_date`, `notes_target_shift`, `resolved`.
+
+## Step 3: Deploy and Run
+1. Deploy the updated edge function
+2. Read the CSV file content and invoke the edge function with `overwriteExisting: true`
+3. The function processes in batches of 50, using `ON CONFLICT (report_date, shift_type) DO UPDATE` -- so duplicate date+shift pairs get overwritten by the last occurrence
+
+## Technical Details
+- The edge function's `mapRow()` function will be updated to allow `null` for `staff_user_id` instead of returning `null` (skipping) when it's missing
+- Status will default to `"submitted"` for all imported rows
+- JSONB fields that are empty strings will default to `[]`

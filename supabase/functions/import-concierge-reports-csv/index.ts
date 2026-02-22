@@ -140,12 +140,9 @@ function mapRow(headers: string[], values: string[]): Record<string, unknown> | 
 
   const reportDate = parseDate(get("report_date"));
   const shiftType = (unquote(get("shift_time")) || "").toUpperCase();
-  const staffUserId = unquote(get("staff_id")).trim();
+  const staffUserId = unquote(get("staff_id")).trim() || null;
 
   if (!reportDate || !shiftType || (shiftType !== "AM" && shiftType !== "PM")) {
-    return null;
-  }
-  if (!staffUserId) {
     return null;
   }
 

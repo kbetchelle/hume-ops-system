@@ -2653,7 +2653,7 @@ export type Database = {
           shift_type: string
           sling_shift_data: Json | null
           staff_name: string | null
-          staff_user_id: string
+          staff_user_id: string | null
           status: string | null
           submitted_at: string | null
           system_issues: Json | null
@@ -2687,7 +2687,7 @@ export type Database = {
           shift_type: string
           sling_shift_data?: Json | null
           staff_name?: string | null
-          staff_user_id: string
+          staff_user_id?: string | null
           status?: string | null
           submitted_at?: string | null
           system_issues?: Json | null
@@ -2721,7 +2721,7 @@ export type Database = {
           shift_type?: string
           sling_shift_data?: Json | null
           staff_name?: string | null
-          staff_user_id?: string
+          staff_user_id?: string | null
           status?: string | null
           submitted_at?: string | null
           system_issues?: Json | null

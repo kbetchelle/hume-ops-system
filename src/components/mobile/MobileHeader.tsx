@@ -64,7 +64,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
   if (!isMobile) return null;
 
   return (
-    <header className="sticky top-0 z-50 h-12 max-h-12 border-b border-border bg-background flex-shrink-0">
+    <header className="sticky top-0 z-50 border-b border-border bg-background flex-shrink-0" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex h-full items-center justify-between gap-2 px-3">
         {/* Left: logo */}
         <button
@@ -80,8 +80,8 @@ export function MobileHeader({ title }: MobileHeaderProps) {
           />
         </button>
 
-        {/* Center: title; optional role chip when multi-role */}
-        <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
+        {/* Center: role chip (no title) */}
+        <div className="flex-1 min-w-0 flex items-center justify-center">
           {availableRoles.length > 1 && activeRole && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -107,9 +107,6 @@ export function MobileHeader({ title }: MobileHeaderProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <h1 className="text-sm uppercase tracking-widest font-normal truncate text-center flex-1 min-w-0">
-            {title}
-          </h1>
         </div>
 
         {/* Right: notification bell + avatar */}

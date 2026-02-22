@@ -807,11 +807,9 @@ export function DashboardLayout({
             className="flex-1 min-h-0 overflow-auto p-4 pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]"
           >
             {showBiometricPrompt && (
-              <div className="mb-4">
-                <BiometricSetupPrompt
-                  onSkip={() => localStorage.setItem("hume_webauthn_prompt_skipped", "true")}
-                />
-              </div>
+              <BiometricSetupPrompt
+                onSkip={() => localStorage.setItem("hume_webauthn_prompt_skipped", "true")}
+              />
             )}
             {children}
           </main>

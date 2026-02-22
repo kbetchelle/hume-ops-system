@@ -718,7 +718,7 @@ export function StaffAnnouncementsManager() {
       {/* Description + Action Button */}
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm text-muted-foreground mr-[80px]">
-          Create staff announcements and weekly updates to send to targeted groups (BoH, Concierge, Management) or all staff.
+          Create staff announcements and weekly updates for targeted roles or all staff.
         </p>
         <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />

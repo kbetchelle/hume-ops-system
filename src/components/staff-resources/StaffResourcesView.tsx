@@ -19,7 +19,7 @@ import { UnderReviewBadge } from "@/components/shared/UnderReviewBadge";
 import { useActiveResourceFlags } from "@/hooks/useResourceFlags";
 import { MyEditablePages } from "./MyEditablePages";
 import { useMyEditablePages } from "@/hooks/useResourcePageEditors";
-import { extractSearchSnippet } from "@/lib/searchSnippets";
+import { extractSearchSnippet, extractAllSearchSnippets } from "@/lib/searchSnippets";
 
 export function StaffResourcesView() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -198,7 +198,7 @@ function QuickLinkResults({ groups, searchTerm }: { groups: SearchQuickLinkGroup
               <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
                 {descSnippet.map((seg, idx) =>
                   seg.isMatch ? (
-                    <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">{seg.text}</span>
+                    <span key={idx} className="bg-accent/50 font-medium">{seg.text}</span>
                   ) : (
                     <span key={idx}>{seg.text}</span>
                   )
@@ -280,9 +280,9 @@ function ResourcePageResults({ pages, searchTerm }: { pages: SearchResourcePage[
   const { data: pageFlagsMap } = useActiveResourceFlags("resource_page", pageIds);
 
   const renderPage = (page: SearchResourcePage) => {
-    // Generate snippet from content
+    // Generate all matching snippets from content
     const plainContent = page.content ? stripHtml(page.content) : "";
-    const contentSnippet = plainContent ? extractSearchSnippet(plainContent, searchTerm.trim()) : [];
+    const allSnippets = plainContent ? extractAllSearchSnippets(plainContent, searchTerm.trim()) : [];
 
     return (
       <ResourceFlagContextMenu
@@ -307,17 +307,20 @@ function ResourcePageResults({ pages, searchTerm }: { pages: SearchResourcePage[
                 </Badge>
               )}
             </div>
-            {/* Search snippet preview instead of tags */}
-            {contentSnippet.length > 0 && (
-              <p className="text-[11px] text-muted-foreground leading-relaxed mt-1.5">
-                {contentSnippet.map((seg, idx) =>
-                  seg.isMatch ? (
-                    <span key={idx} className="bg-yellow-200 dark:bg-yellow-900/50 font-medium">{seg.text}</span>
-                  ) : (
-                    <span key={idx}>{seg.text}</span>
-                  )
-                )}
-              </p>
+            {allSnippets.length > 0 && (
+              <div className="mt-1.5 space-y-1">
+                {allSnippets.map((snippet, snippetIdx) => (
+                  <p key={snippetIdx} className="text-[11px] text-muted-foreground leading-relaxed">
+                    {snippet.map((seg, idx) =>
+                      seg.isMatch ? (
+                        <span key={idx} className="bg-accent/50 font-medium">{seg.text}</span>
+                      ) : (
+                        <span key={idx}>{seg.text}</span>
+                      )
+                    )}
+                  </p>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

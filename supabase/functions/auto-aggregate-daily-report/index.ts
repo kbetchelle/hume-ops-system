@@ -195,8 +195,10 @@ Deno.serve(async (req) => {
 
       // 2) Arketa payments (amount in cents -> dollars; use offering_name for membership vs other)
       const { data: payRows, error: payErr } = await supabase
-        .from("arketa_payments_staging")
-        .select("amount, offering_name, created_at_api")
+        .from("arketa_payments")
+        .select("amount, offering_name, normalized_category, created_at_api")
+        .gte("created_at_api", `${report_date}T00:00:00`)
+        .lt("created_at_api", `${report_date}T23:59:59.999`)
         .not("amount", "is", null);
 
       if (payErr) {
@@ -209,8 +211,6 @@ Deno.serve(async (req) => {
       let grossSalesMembership = 0;
       let grossSalesOther = 0;
       for (const p of payRows ?? []) {
-        const apiDate = (p.created_at_api as string)?.slice(0, 10);
-        if (apiDate !== report_date) continue;
         const cents = Number(p.amount ?? 0);
         const dollars = cents / 100;
         if (isMembershipPayment(p.offering_name as string[] | null)) grossSalesMembership += dollars;

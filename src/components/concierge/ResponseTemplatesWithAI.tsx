@@ -1748,3 +1748,5 @@ export function ResponseTemplatesWithAI() {
     </>
   );
 }
+
+export default ResponseTemplatesWithAI;

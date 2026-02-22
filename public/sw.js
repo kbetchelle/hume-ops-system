@@ -1,13 +1,14 @@
 // HUME Ops System Service Worker
-const CACHE_NAME = 'hume-ops-v1';
-const STATIC_CACHE_NAME = 'hume-ops-static-v1';
-const DYNAMIC_CACHE_NAME = 'hume-ops-dynamic-v1';
+const CACHE_NAME = 'hume-ops-v2';
+const STATIC_CACHE_NAME = 'hume-ops-static-v2';
+const DYNAMIC_CACHE_NAME = 'hume-ops-dynamic-v2';
 
 // Static assets to cache immediately (app shell)
 const STATIC_ASSETS_BASE = [
   '/',
+  '/index.html',
   '/manifest.json',
-  // Note: Vite-generated assets will be automatically cached via precache
+  // Note: Vite-generated JS/CSS are cached on first load
 ];
 
 // On Lovable host, /manifest.json redirects to auth-bridge and causes CORS; skip caching it
@@ -172,6 +173,10 @@ self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') {
     self.skipWaiting();
   }
+
+  if (event.data === 'BOOTSTRAP_COMPLETE') {
+    console.log('[SW] Bootstrap complete');
+  }
   
   if (event.data === 'clearCache') {
     event.waitUntil(
@@ -189,39 +194,46 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Push notification handler
+// Push notification handler — supports structured payload
 self.addEventListener('push', function (event) {
   var data = {};
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {}
   var title = data.title || 'Notification';
+  var body = data.body || '';
+  var url = (data.data && data.data.url) || data.url || '/';
+  var badge = data.badge != null ? data.badge : undefined;
   var options = {
-    body: data.body,
+    body: body,
     icon: '/icons/icon-192x192.svg',
     badge: '/icons/icon-192x192.svg',
-    data: data.data || {},
+    data: Object.assign({ url: url }, data.data || {}),
     tag: data.type || 'hume-notification'
   };
+  if (badge != null) {
+    options.badge = '/icons/icon-192x192.svg';
+  }
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click handler
+// Notification click handler — navigate to payload url when present
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
+  var navUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
-      var appUrl = self.location.origin + '/';
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
         if (client.url.indexOf(self.location.origin) !== -1) {
           client.focus();
-          client.postMessage({ type: 'NOTIFICATION_CLICK', data: event.notification.data });
+          client.postMessage({ type: 'NOTIFICATION_CLICK', data: event.notification.data, url: navUrl });
+          client.navigate(navUrl);
           return;
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
+        return self.clients.openWindow(navUrl);
       }
     })
   );

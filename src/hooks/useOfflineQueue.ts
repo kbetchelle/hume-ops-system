@@ -14,6 +14,32 @@ const DB_VERSION = 1;
 const STORE_NAME = 'operations';
 const MAX_RETRIES = 3;
 
+/** One-off read of pending operations count from IndexedDB (for global offline banner). */
+export function getOfflineQueueCount(): Promise<number> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => resolve(0);
+    request.onsuccess = () => {
+      const db = (request as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.close();
+        return resolve(0);
+      }
+      const tx = db.transaction([STORE_NAME], 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const countRequest = store.count();
+      countRequest.onsuccess = () => {
+        db.close();
+        resolve(countRequest.result ?? 0);
+      };
+      countRequest.onerror = () => {
+        db.close();
+        resolve(0);
+      };
+    };
+  });
+}
+
 export function useOfflineQueue() {
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(navigator.onLine);

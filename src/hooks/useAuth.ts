@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Check whether the user chose "session-only" login and this is a new
  * browser session (i.e. they closed and reopened the browser).
- * Reads from localStorage / sessionStorage **at call-time** to avoid stale closures.
+ * On mobile we always persist (hume_mobile_session), so never sign out for session-only.
  */
 function shouldSignOutSessionOnlyUser(): boolean {
+  if (localStorage.getItem("hume_mobile_session") === "true") return false;
   const isSessionOnly = localStorage.getItem("hume_stay_signed_in") === "false";
   const hadSessionMarker = sessionStorage.getItem("hume_session_only") === "true";
   return isSessionOnly && !hadSessionMarker;
@@ -84,7 +85,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    // Clear session markers on sign out
+    sessionStorage.setItem("hume_explicit_signout", "1");
     sessionStorage.removeItem("hume_session_only");
     const { error } = await supabase.auth.signOut();
     return { error };

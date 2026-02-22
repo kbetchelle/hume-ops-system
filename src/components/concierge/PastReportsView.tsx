@@ -443,3 +443,5 @@ export function PastReportsView() {
     </div>
   );
 }
+
+export default PastReportsView;

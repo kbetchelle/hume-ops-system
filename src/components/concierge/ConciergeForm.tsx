@@ -1337,3 +1337,5 @@ export function ConciergeForm() {
     </>);
 
 }
+
+export default ConciergeForm;

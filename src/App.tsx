@@ -1,3 +1,4 @@
+import { applyMobileQueryDefaults } from "@/lib/queryClientMobile";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -108,6 +109,13 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+if (
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 768px)").matches
+) {
+  applyMobileQueryDefaults(queryClient);
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

@@ -39,7 +39,7 @@ function getInitials(name: string | null | undefined): string {
 export function MobileHeader({ title }: MobileHeaderProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { user, signOut, lockSession } = useAuthContext();
+  const { user, signOut, openUserSwitchScreen } = useAuthContext();
   const showSwitchUser = isSharedDevice();
   const { data: profile } = useUserProfile(user?.id);
   const { activeRole, availableRoles, setActiveRole, getRoleLabel } = useActiveRole();
@@ -155,7 +155,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
               <DropdownMenuSeparator className="bg-border" />
               {showSwitchUser && (
                 <DropdownMenuItem
-                  onClick={() => lockSession()}
+                  onClick={() => openUserSwitchScreen()}
                   className="text-xs uppercase tracking-widest cursor-pointer rounded-none"
                 >
                   <ArrowLeftRight className="mr-2 h-3 w-3" />

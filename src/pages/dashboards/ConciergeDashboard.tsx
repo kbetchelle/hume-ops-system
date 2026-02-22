@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -9,6 +9,10 @@ import { ConciergeSidebar, type ConciergeView } from "@/components/concierge/Con
 import { ConciergeBottomNav } from "@/components/concierge/ConciergeBottomNav";
 import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { GlobalOfflineBanner } from "@/components/mobile/GlobalOfflineBanner";
+import { PWAInstallBanner } from "@/components/mobile/PWAInstallBanner";
+import { PushPromptBanner } from "@/components/mobile/PushPromptBanner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
 import { MobilePageWrapper } from "@/components/mobile/MobilePageWrapper";
@@ -16,14 +20,16 @@ import { getConciergeMobileTabs, getConciergeMoreItems } from "@/components/mobi
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
 import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
-import { ConciergeForm } from "@/components/concierge/ConciergeForm";
-import { PastReportsView } from "@/components/concierge/PastReportsView";
 import { AnnouncementsBoard } from "@/components/concierge/AnnouncementsBoard";
 import { StaffMessagesInbox } from "@/components/foh/messages";
 import { PoliciesAndQA } from "@/components/concierge/PoliciesAndQA";
-import { ResponseTemplatesWithAI } from "@/components/concierge/ResponseTemplatesWithAI";
 import { StaffResourcesView } from "@/components/staff-resources/StaffResourcesView";
-import { LostAndFoundTab } from "@/components/concierge/LostAndFoundTab";
+import { SkeletonLoader } from "@/components/mobile/SkeletonLoader";
+
+const ConciergeForm = lazy(() => import("@/components/concierge/ConciergeForm"));
+const PastReportsView = lazy(() => import("@/components/concierge/PastReportsView"));
+const ResponseTemplatesWithAI = lazy(() => import("@/components/concierge/ResponseTemplatesWithAI"));
+const LostAndFoundTab = lazy(() => import("@/components/concierge/LostAndFoundTab"));
 import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
@@ -36,6 +42,8 @@ import { QuickLinksTab } from "@/components/staff-resources/QuickLinksTab";
 import { ResourcePagesTab } from "@/components/staff-resources/ResourcePagesTab";
 import { PoliciesTab } from "@/components/staff-resources/PoliciesTab";
 import { useActiveRole } from "@/hooks/useActiveRole";
+import { useOfflineBootstrap } from "@/hooks/useOfflineBootstrap";
+import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useQuickLinkGroupsByRole, useResourcePagesByRole } from "@/hooks/useStaffResources";
 import { usePolicies } from "@/hooks/usePolicies";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -56,6 +64,18 @@ export default function ConciergeDashboard() {
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
   const { activeRole } = useActiveRole();
   const effectiveRole = activeRole ?? "concierge";
+  const { user } = useAuthContext();
+
+  useOfflineBootstrap(
+    isMobile && user?.id && effectiveRole
+      ? { userId: user.id, role: effectiveRole }
+      : null
+  );
+
+  const pushNotifications = usePushNotifications({
+    userId: user?.id,
+    activeRole: effectiveRole,
+  });
 
   // Data hooks for resource sub-views
   const { data: quickLinkGroups = [], isLoading: qlLoading } = useQuickLinkGroupsByRole(effectiveRole);
@@ -171,10 +191,14 @@ export default function ConciergeDashboard() {
                   <TabsTrigger value="past" className="rounded-none">Past reports</TabsTrigger>
                 </TabsList>
                 <TabsContent value="current">
-                  <ConciergeForm />
+                  <Suspense fallback={<SkeletonLoader variant="form" />}>
+                    <ConciergeForm />
+                  </Suspense>
                 </TabsContent>
                 <TabsContent value="past">
-                  <PastReportsView />
+                  <Suspense fallback={<SkeletonLoader variant="card-list" count={6} />}>
+                    <PastReportsView />
+                  </Suspense>
                 </TabsContent>
               </Tabs>
             </div>
@@ -208,7 +232,9 @@ export default function ConciergeDashboard() {
       case "templates":
         return (
           <div className="p-6 md:p-8 flex flex-col h-full">
-            <ResponseTemplatesWithAI />
+            <Suspense fallback={<SkeletonLoader variant="card-list" count={6} />}>
+              <ResponseTemplatesWithAI />
+            </Suspense>
           </div>);
 
       case "resources":
@@ -240,7 +266,9 @@ export default function ConciergeDashboard() {
         return (
           <div className="flex-1 flex flex-col p-6 md:p-8 min-h-0">
             <div className="flex-1 min-h-0">
-              <LostAndFoundTab />
+              <Suspense fallback={<SkeletonLoader variant="card-list" count={6} />}>
+                <LostAndFoundTab />
+              </Suspense>
             </div>
           </div>);
 
@@ -264,6 +292,16 @@ export default function ConciergeDashboard() {
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
           <MobileHeader title={viewTitles[activeView]} />
+          <PWAInstallBanner />
+          {pushNotifications.showPrompt && (
+            <PushPromptBanner
+              onEnable={async () => {
+                await pushNotifications.enablePush();
+              }}
+              onLater={pushNotifications.dismissPrompt}
+            />
+          )}
+          <GlobalOfflineBanner />
           <main className="flex-1 min-h-0 overflow-auto pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]">
             {renderContent()}
           </main>

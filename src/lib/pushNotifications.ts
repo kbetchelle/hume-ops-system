@@ -14,25 +14,33 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+export interface SubscribeToPushOptions {
+  staffId: string;
+  deviceInfo?: string;
+}
+
 /**
  * Subscribe the current device to push notifications for the given staff user.
  * Requests notification permission, gets VAPID key, subscribes via the service worker, then saves the subscription server-side.
  * @returns true if subscription succeeded, false if push unsupported, permission denied, or an error occurred.
  */
-export async function subscribeToPush(staffId: string): Promise<boolean> {
-  if (!('PushManager' in window)) {
+export async function subscribeToPush(staffIdOrOptions: string | SubscribeToPushOptions): Promise<boolean> {
+  const staffId = typeof staffIdOrOptions === "string" ? staffIdOrOptions : staffIdOrOptions.staffId;
+  const deviceInfo = typeof staffIdOrOptions === "string" ? navigator.userAgent : (staffIdOrOptions.deviceInfo ?? navigator.userAgent);
+
+  if (!("PushManager" in window)) {
     return false;
   }
 
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
+  if (permission !== "granted") {
     return false;
   }
 
   const sw = await navigator.serviceWorker.ready;
 
-  const { data: vapidData, error: vapidError } = await supabase.functions.invoke('push-notifications', {
-    body: { action: 'get-vapid-key' },
+  const { data: vapidData, error: vapidError } = await supabase.functions.invoke("push-notifications", {
+    body: { action: "get-vapid-key" },
   });
   if (vapidError || !vapidData?.publicKey) {
     return false;
@@ -41,7 +49,7 @@ export async function subscribeToPush(staffId: string): Promise<boolean> {
   const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
   let subscription: PushSubscription;
   try {
-    subscription = await (sw as any).pushManager.subscribe({
+    subscription = await (sw as { pushManager: PushManager }).pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey,
     });
@@ -55,12 +63,12 @@ export async function subscribeToPush(staffId: string): Promise<boolean> {
     keys: subscriptionJson.keys,
   };
 
-  const { error: subscribeError } = await supabase.functions.invoke('push-notifications', {
+  const { error: subscribeError } = await supabase.functions.invoke("push-notifications", {
     body: {
-      action: 'subscribe',
+      action: "subscribe",
       staffId,
       subscription: payload,
-      deviceInfo: navigator.userAgent,
+      deviceInfo,
     },
   });
   if (subscribeError) {

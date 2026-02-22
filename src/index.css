@@ -87,6 +87,15 @@
     font-size: small;
   }
 
+  /* Touch: remove 300ms tap delay on interactive elements */
+  button,
+  a,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    touch-action: manipulation;
+  }
+
   /* Global minimum font size - clamp all text to at least 'small' (13.33px) */
   p, span, a, li, td, th, label, input, textarea, select, button, div {
     font-size: max(inherit, small);

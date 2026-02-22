@@ -13,8 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import humeLogo from "@/assets/hume-logo.png";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BiometricLoginButton } from "@/components/auth/BiometricLoginButton";
 
 const STAY_SIGNED_IN_KEY = "hume_stay_signed_in";
+const MOBILE_SESSION_KEY = "hume_mobile_session";
+
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 768px)").matches;
+}
 
 const loginSchema = z.object({
   emailOrUsername: z.string().min(1, "Enter your email or username"),
@@ -27,30 +35,37 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const navigate = useNavigate();
   const { signIn } = useAuthContext();
+  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const mobileSession = isMobile || isMobileDevice();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       emailOrUsername: "",
       password: "",
-      staySignedIn: localStorage.getItem(STAY_SIGNED_IN_KEY) !== "false",
+      staySignedIn: mobileSession ? true : localStorage.getItem(STAY_SIGNED_IN_KEY) !== "false",
     },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      // Store the preference
-      localStorage.setItem(STAY_SIGNED_IN_KEY, String(data.staySignedIn));
-
-      // If not staying signed in, set a session marker
-      if (!data.staySignedIn) {
-        sessionStorage.setItem("hume_session_only", "true");
-      } else {
+      if (mobileSession) {
+        localStorage.setItem(MOBILE_SESSION_KEY, "true");
+        localStorage.setItem(STAY_SIGNED_IN_KEY, "true");
         sessionStorage.removeItem("hume_session_only");
+      } else {
+        localStorage.removeItem(MOBILE_SESSION_KEY);
+        localStorage.setItem(STAY_SIGNED_IN_KEY, String(data.staySignedIn));
+        if (!data.staySignedIn) {
+          sessionStorage.setItem("hume_session_only", "true");
+        } else {
+          sessionStorage.removeItem("hume_session_only");
+        }
       }
 
       const identifier = (data.emailOrUsername ?? "").trim();
@@ -110,6 +125,7 @@ export default function Login() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <BiometricLoginButton onSuccess={() => navigate("/dashboard")} />
             <FormField
               control={form.control}
               name="emailOrUsername"
@@ -169,23 +185,25 @@ export default function Login() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="staySignedIn"
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="text-[10px] uppercase tracking-widest font-normal cursor-pointer">
-                    Stay signed in
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            {!mobileSession && (
+              <FormField
+                control={form.control}
+                name="staySignedIn"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-[10px] uppercase tracking-widest font-normal cursor-pointer">
+                      Stay signed in
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

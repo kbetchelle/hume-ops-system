@@ -24,6 +24,13 @@ import { getWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkt
 import { WalkthroughOverlay } from "@/components/walkthrough";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { GlobalOfflineBanner } from "@/components/mobile/GlobalOfflineBanner";
+import { PWAInstallBanner } from "@/components/mobile/PWAInstallBanner";
+import { PushPromptBanner } from "@/components/mobile/PushPromptBanner";
+import { useOfflineBootstrap } from "@/hooks/useOfflineBootstrap";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { BiometricSetupPrompt } from "@/components/auth/BiometricSetupPrompt";
+import { useWebAuthn } from "@/hooks/useWebAuthn";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
 import { getBohMobileTabs, getBohMoreItems } from "@/components/mobile/mobile-nav-config";
@@ -740,6 +747,26 @@ export function DashboardLayout({
   const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
   const bohActiveTabId = getBohActiveTabId(location.pathname);
 
+  useOfflineBootstrap(
+    isMobile && user?.id && effectiveRole
+      ? { userId: user.id, role: effectiveRole }
+      : null
+  );
+
+  const pushNotifications = usePushNotifications({
+    userId: user?.id,
+    activeRole: effectiveRole,
+  });
+
+  const webauthn = useWebAuthn();
+  const showBiometricPrompt =
+    isMobile &&
+    user &&
+    webauthn.isSupported &&
+    !webauthn.hasStoredCredential() &&
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem("hume_webauthn_prompt_skipped") !== "true";
+
   useEffect(() => {
     if (needsWalkthrough && isBoh && !hasAutoCompletedBohRef.current) {
       hasAutoCompletedBohRef.current = true;
@@ -766,9 +793,26 @@ export function DashboardLayout({
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
           <MobileHeader title={title} />
+          <PWAInstallBanner />
+          {pushNotifications.showPrompt && (
+            <PushPromptBanner
+              onEnable={async () => {
+                await pushNotifications.enablePush();
+              }}
+              onLater={pushNotifications.dismissPrompt}
+            />
+          )}
+          <GlobalOfflineBanner />
           <main
             className="flex-1 min-h-0 overflow-auto p-4 pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]"
           >
+            {showBiometricPrompt && (
+              <div className="mb-4">
+                <BiometricSetupPrompt
+                  onSkip={() => localStorage.setItem("hume_webauthn_prompt_skipped", "true")}
+                />
+              </div>
+            )}
             {children}
           </main>
           {isBohRole && effectiveRole && (
@@ -805,6 +849,7 @@ export function DashboardLayout({
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader title={title} />
+          <GlobalOfflineBanner />
           <main className="flex-1 p-4 md:p-8 overflow-auto my-0 py-0 px-0">
             {children}
           </main>

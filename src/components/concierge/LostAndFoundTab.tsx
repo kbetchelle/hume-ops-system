@@ -1363,3 +1363,5 @@ export function LostAndFoundTab() {
     </>);
 
 }
+
+export default LostAndFoundTab;

@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
   const location = useLocation();
-  const { user, loading: authLoading, isLocked } = useAuthContext();
+  const { user, loading: authLoading, isLocked, sessionExpired } = useAuthContext();
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: roles, isLoading: rolesLoading } = useUserRoles(user?.id);
 
@@ -34,12 +34,17 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     );
   }
 
-  // Not authenticated (and not locked — when locked, LockScreen overlay is shown)
-  if (!user && !isLocked) {
+  // Not authenticated (and not locked, and not session expired — overlay is shown by AuthProvider)
+  if (!user && !isLocked && !sessionExpired) {
     // #region agent log
     fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:30',message:'Redirecting unauthenticated user',data:{pathname:location.pathname},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
     // #endregion
     return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  // Session expired: render children; UserSwitchScreen overlay is shown by AuthProvider
+  if (sessionExpired) {
+    return <>{children}</>;
   }
 
   // Locked: render children; LockScreen overlay is shown by AuthProvider

@@ -12,7 +12,7 @@ export function ConciergeHeader({ title = "Concierge" }: ConciergeHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="flex h-20 items-center justify-between px-4 md:px-6">
-        <h1 className="text-[18px] uppercase tracking-widest font-normal truncate">
+        <h1 className="text-[18px] uppercase tracking-widest truncate font-semibold">
           {title}
         </h1>
 
@@ -21,10 +21,10 @@ export function ConciergeHeader({ title = "Concierge" }: ConciergeHeaderProps) {
             src={humeLogo}
             alt="Hume"
             className="h-[50px] w-auto cursor-pointer hover:opacity-70 transition-opacity my-[12px]"
-            onClick={() => navigate("/dashboard")}
-          />
+            onClick={() => navigate("/dashboard")} />
+
         </div>
       </div>
-    </header>
-  );
+    </header>);
+
 }

@@ -33,7 +33,7 @@ import { BiometricSetupPrompt } from "@/components/auth/BiometricSetupPrompt";
 import { useWebAuthn } from "@/hooks/useWebAuthn";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
-import { getBohMobileTabs, getBohMoreItems } from "@/components/mobile/mobile-nav-config";
+import { getBohMobileTabs, getBohMoreItems, getGenericMobileTabs, getGenericMoreItems } from "@/components/mobile/mobile-nav-config";
 
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
@@ -723,6 +723,12 @@ function getBohActiveTabId(path: string): string {
   return "more";
 }
 
+function getGenericActiveTabId(path: string): string {
+  if (path === "/dashboard" || path === "/dashboard/") return "home";
+  if (path === "/dashboard/messages") return "messages";
+  return "more";
+}
+
 export function DashboardLayout({
   children,
   title
@@ -814,7 +820,7 @@ export function DashboardLayout({
             )}
             {children}
           </main>
-          {isBohRole && effectiveRole && (
+          {isBohRole && effectiveRole ? (
             <>
               <MobileBottomNav
                 tabs={getBohMobileTabs(effectiveRole, unreadMessageCount)}
@@ -825,6 +831,29 @@ export function DashboardLayout({
                 open={moreSheetOpen}
                 onOpenChange={setMoreSheetOpen}
                 items={getBohMoreItems()}
+                onItemSelect={async (item) => {
+                  if (item.id === "sign-out") {
+                    const { error } = await signOut();
+                    if (error) toast.error("Failed to sign out");
+                    else { toast.success("Signed out"); navigate("/"); }
+                    return;
+                  }
+                  if (item.id === "report-bug") { setShowBugReport(true); return; }
+                  if (item.path) navigate(item.path);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <MobileBottomNav
+                tabs={getGenericMobileTabs(unreadMessageCount)}
+                activeId={getGenericActiveTabId(location.pathname)}
+                onMoreClick={() => setMoreSheetOpen(true)}
+              />
+              <MoreMenuSheet
+                open={moreSheetOpen}
+                onOpenChange={setMoreSheetOpen}
+                items={getGenericMoreItems()}
                 onItemSelect={async (item) => {
                   if (item.id === "sign-out") {
                     const { error } = await signOut();

@@ -271,7 +271,7 @@ export default function ConciergeDashboard() {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
-          <MobileHeader title={viewTitles[activeView]} hideAvatar />
+          <MobileHeader title={viewTitles[activeView]} hideAvatar roleChipClassName="rounded-none" />
           <PWAInstallBanner />
           {pushNotifications.showPrompt && (
             <PushPromptBanner

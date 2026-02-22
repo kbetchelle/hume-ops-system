@@ -110,6 +110,58 @@ export function extractSearchSnippet(
 }
 
 /**
+ * Extract snippets for ALL matches in text, each with surrounding context.
+ * Returns an array of snippet arrays (one per match occurrence).
+ */
+export function extractAllSearchSnippets(
+  text: string,
+  query: string,
+  maxSnippets: number = 5
+): SnippetMatch[][] {
+  if (!text || !query) return [];
+
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const allSnippets: SnippetMatch[][] = [];
+
+  let searchFrom = 0;
+  while (allSnippets.length < maxSnippets) {
+    const matchIndex = lowerText.indexOf(lowerQuery, searchFrom);
+    if (matchIndex === -1) break;
+
+    const matchEnd = matchIndex + query.length;
+    let start = Math.max(0, matchIndex - CONTEXT_LENGTH);
+    let end = Math.min(text.length, matchEnd + CONTEXT_LENGTH);
+
+    // Adjust to word boundaries
+    if (start > 0) {
+      const spaceIndex = text.lastIndexOf(' ', start);
+      if (spaceIndex > 0 && spaceIndex > start - 20) start = spaceIndex + 1;
+    }
+    if (end < text.length) {
+      const spaceIndex = text.indexOf(' ', end);
+      if (spaceIndex > 0 && spaceIndex < end + 20) end = spaceIndex;
+    }
+
+    const snippet = text.substring(start, end);
+    const relStart = matchIndex - start;
+    const relEnd = relStart + query.length;
+    const segments: SnippetMatch[] = [];
+
+    if (start > 0) segments.push({ text: '...', start: 0, end: 3, isMatch: false });
+    if (relStart > 0) segments.push({ text: snippet.substring(0, relStart), start: 0, end: relStart, isMatch: false });
+    segments.push({ text: snippet.substring(relStart, relEnd), start: relStart, end: relEnd, isMatch: true });
+    if (relEnd < snippet.length) segments.push({ text: snippet.substring(relEnd), start: relEnd, end: snippet.length, isMatch: false });
+    if (end < text.length) segments.push({ text: '...', start: snippet.length, end: snippet.length + 3, isMatch: false });
+
+    allSnippets.push(segments);
+    searchFrom = matchEnd;
+  }
+
+  return allSnippets;
+}
+
+/**
  * Highlight matches in title text
  * Returns array of segments for rendering
  */

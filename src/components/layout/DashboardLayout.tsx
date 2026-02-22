@@ -730,7 +730,7 @@ export function DashboardLayout({
   useInAppNotifications();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const { user, signOut } = useAuthContext();
   const { t } = useLanguage();
   const { data: profile } = useUserProfile(user?.id);
   const { data: roles } = useUserRoles(user?.id);
@@ -738,6 +738,7 @@ export function DashboardLayout({
   const isMobile = useIsMobile();
   const { count: unreadMessageCount } = useUnreadMessageCount();
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
   const needsWalkthrough = useNeedsWalkthrough();
   const markWalkthroughCompleted = useMarkWalkthroughCompleted();
   const isBoh = activeRole !== null && isBohWalkthroughRole(activeRole);
@@ -824,12 +825,20 @@ export function DashboardLayout({
                 open={moreSheetOpen}
                 onOpenChange={setMoreSheetOpen}
                 items={getBohMoreItems()}
-                onItemSelect={(item) => {
+                onItemSelect={async (item) => {
+                  if (item.id === "sign-out") {
+                    const { error } = await signOut();
+                    if (error) toast.error("Failed to sign out");
+                    else { toast.success("Signed out"); navigate("/"); }
+                    return;
+                  }
+                  if (item.id === "report-bug") { setShowBugReport(true); return; }
                   if (item.path) navigate(item.path);
                 }}
               />
             </>
           )}
+          <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
         </div>
         {showOverlay && (
           <WalkthroughOverlay

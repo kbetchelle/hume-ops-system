@@ -152,6 +152,11 @@ function mapRow(headers: string[], values: string[]): Record<string, unknown> | 
   const updated = parseTimestamp(get("updated_at"));
   const tourFollowupCompleted = parseBoolean(get("tour_followup_completed"));
 
+  const meaningfulConversations = unquote(get("meaningful_conversations")).trim() || null;
+  const tourName = unquote(get("tour_name")).trim() || null;
+  const notesTargetDate = parseDate(get("notes_target_date"));
+  const notesTargetShift = (unquote(get("notes_target_shift")) || "").toUpperCase() || null;
+
   const row: Record<string, unknown> = {
     ...(id && { id }),
     report_date: reportDate,
@@ -161,6 +166,8 @@ function mapRow(headers: string[], values: string[]): Record<string, unknown> | 
     future_shift_notes: toJsonb(get("notes_for_next_shift")),
     member_feedback: toJsonb(get("member_feedback")),
     membership_requests: toJsonb(get("membership_cancel_requests")),
+    meaningful_conversations: meaningfulConversations,
+    tour_name: tourName,
     facility_issues: toJsonb(get("facility_issues")),
     busiest_areas: unquote(get("busiest_areas")).trim() || null,
     system_issues: toJsonb(get("system_issues")),
@@ -170,6 +177,10 @@ function mapRow(headers: string[], values: string[]): Record<string, unknown> | 
   if (created) row.created_at = created;
   if (updated) row.updated_at = updated;
   if (tourFollowupCompleted !== null) row.tour_followup_completed = tourFollowupCompleted;
+  if (notesTargetDate) row.notes_target_date = notesTargetDate;
+  if (notesTargetShift && (notesTargetShift === "AM" || notesTargetShift === "PM")) {
+    row.notes_target_shift = notesTargetShift;
+  }
   return row;
 }
 
@@ -213,7 +224,7 @@ serve(async (req) => {
       if (!row) {
         detailedErrors.push({
           rowNumber: i + 2,
-          reason: "Missing or invalid report_date, shift_type, or staff_id",
+          reason: "Missing or invalid report_date or shift_type",
         });
         continue;
       }

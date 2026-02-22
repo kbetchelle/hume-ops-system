@@ -32,6 +32,7 @@ export function BoHChecklistView() {
   const { data: userRolesData } = useUserRoles(user?.id);
   const { activeRole } = useActiveRole();
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const roles = userRolesData || [];
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
@@ -89,6 +90,10 @@ export function BoHChecklistView() {
   const completedCount = completions?.filter(c => c.completed_at).length || 0;
   const totalCount = checklist?.boh_checklist_items?.length || 0;
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refetchChecklist(), refetchCompletions()]);
+  }, [refetchChecklist, refetchCompletions]);
+
   if (!userBoHRole) {
     return (
       <Card>
@@ -116,11 +121,6 @@ export function BoHChecklistView() {
       </Card>
     );
   }
-
-  const isMobile = useIsMobile();
-  const handleRefresh = useCallback(async () => {
-    await Promise.all([refetchChecklist(), refetchCompletions()]);
-  }, [refetchChecklist, refetchCompletions]);
 
   if (isMobile) {
     const items = checklist.boh_checklist_items?.sort((a: any, b: any) => a.sort_order - b.sort_order) || [];

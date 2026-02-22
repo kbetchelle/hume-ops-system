@@ -282,6 +282,15 @@ async function transferPayments(
       raw_data: r.raw_data ?? null,
       synced_at: new Date().toISOString(),
       sync_batch_id: r.sync_batch_id ?? null,
+      cursor_position: r.cursor_position ?? null,
+      source_endpoint: r.source_endpoint ?? null,
+      category: r.category ?? null,
+      offering_id: r.offering_id ?? null,
+      start_date: r.start_date ?? null,
+      end_date: r.end_date ?? null,
+      remaining_uses: r.remaining_uses ?? null,
+      total_refunded: r.total_refunded ?? null,
+      stripe_fees: r.stripe_fees ?? null,
     })).filter((r: any) => r.payment_id);
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {

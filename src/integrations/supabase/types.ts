@@ -689,6 +689,7 @@ export type Database = {
         Row: {
           amount: number | null
           amount_refunded: number | null
+          category: string | null
           client_email: string | null
           client_first_name: string | null
           client_id: string | null
@@ -697,102 +698,24 @@ export type Database = {
           created_at: string | null
           created_at_api: string | null
           currency: string | null
+          cursor_position: string | null
           description: string | null
+          end_date: string | null
           id: string
           invoice_id: string | null
           location_name: string | null
           net_sales: number | null
           normalized_category: string[] | null
+          offering_id: string | null
           offering_name: string[] | null
           payment_id: string
           payment_type: string | null
           promo_code: string | null
           raw_data: Json | null
+          remaining_uses: number | null
           seller_name: string | null
           source: string | null
-          status: string | null
-          synced_at: string | null
-          tax: number | null
-          transaction_fees: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount?: number | null
-          amount_refunded?: number | null
-          client_email?: string | null
-          client_first_name?: string | null
-          client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at?: string | null
-          created_at_api?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          invoice_id?: string | null
-          location_name?: string | null
-          net_sales?: number | null
-          normalized_category?: string[] | null
-          offering_name?: string[] | null
-          payment_id: string
-          payment_type?: string | null
-          promo_code?: string | null
-          raw_data?: Json | null
-          seller_name?: string | null
-          source?: string | null
-          status?: string | null
-          synced_at?: string | null
-          tax?: number | null
-          transaction_fees?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number | null
-          amount_refunded?: number | null
-          client_email?: string | null
-          client_first_name?: string | null
-          client_id?: string | null
-          client_last_name?: string | null
-          client_phone?: string | null
-          created_at?: string | null
-          created_at_api?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          invoice_id?: string | null
-          location_name?: string | null
-          net_sales?: number | null
-          normalized_category?: string[] | null
-          offering_name?: string[] | null
-          payment_id?: string
-          payment_type?: string | null
-          promo_code?: string | null
-          raw_data?: Json | null
-          seller_name?: string | null
-          source?: string | null
-          status?: string | null
-          synced_at?: string | null
-          tax?: number | null
-          transaction_fees?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      arketa_payments_history: {
-        Row: {
-          amount: number | null
-          category: string | null
-          client_id: string | null
-          currency: string | null
-          description: string | null
-          end_date: string | null
-          net_sales: number | null
-          offering_id: string | null
-          payment_id: string
-          payment_type: string | null
-          record_id: string
-          remaining_uses: number | null
-          source_endpoint: string
+          source_endpoint: string | null
           start_date: string | null
           status: string | null
           stripe_fees: number | null
@@ -805,18 +728,34 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          amount_refunded?: number | null
           category?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          created_at_api?: string | null
           currency?: string | null
+          cursor_position?: string | null
           description?: string | null
           end_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
+          normalized_category?: string[] | null
           offering_id?: string | null
+          offering_name?: string[] | null
           payment_id: string
           payment_type?: string | null
-          record_id?: string
+          promo_code?: string | null
+          raw_data?: Json | null
           remaining_uses?: number | null
-          source_endpoint: string
+          seller_name?: string | null
+          source?: string | null
+          source_endpoint?: string | null
           start_date?: string | null
           status?: string | null
           stripe_fees?: number | null
@@ -829,18 +768,34 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          amount_refunded?: number | null
           category?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
           client_id?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          created_at_api?: string | null
           currency?: string | null
+          cursor_position?: string | null
           description?: string | null
           end_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          location_name?: string | null
           net_sales?: number | null
+          normalized_category?: string[] | null
           offering_id?: string | null
+          offering_name?: string[] | null
           payment_id?: string
           payment_type?: string | null
-          record_id?: string
+          promo_code?: string | null
+          raw_data?: Json | null
           remaining_uses?: number | null
-          source_endpoint?: string
+          seller_name?: string | null
+          source?: string | null
+          source_endpoint?: string | null
           start_date?: string | null
           status?: string | null
           stripe_fees?: number | null

@@ -364,7 +364,7 @@ function MessageBubble({
     <div
       className={cn('flex gap-2 group', isSelf ? 'justify-end' : 'justify-start')}
     >
-      {!isSelf && (
+      {false && !isSelf && (
         <Avatar className="h-6 w-6 rounded-none flex-shrink-0">
           <AvatarFallback className="text-[10px] rounded-none">
             {getInitials(senderName)}
@@ -375,11 +375,9 @@ function MessageBubble({
       <div
         className={cn('flex flex-col gap-1 max-w-[70%]', isSelf && 'items-end')}
       >
-        {!isSelf && (
-          <span className="text-[10px] text-muted-foreground px-1">
-            {senderName}
-          </span>
-        )}
+        <span className={cn("text-[10px] text-muted-foreground px-1", isSelf && "text-right")}>
+          {isSelf ? 'You' : senderName}
+        </span>
 
         <div className="space-y-1">
           <div className="relative">
@@ -507,7 +505,7 @@ function MessageBubble({
         </div>
       </div>
 
-      {isSelf && (
+      {false && isSelf && (
         <Avatar className="h-6 w-6 rounded-none flex-shrink-0">
           <AvatarFallback className="text-[10px] rounded-none">
             {getInitials(senderName)}

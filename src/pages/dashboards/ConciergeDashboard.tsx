@@ -202,9 +202,6 @@ export default function ConciergeDashboard() {
       case "announcements":
         return (
           <div className="p-6 md:p-8">
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-4">
-              Announcements
-            </h2>
             <div className="max-w-3xl">
               <AnnouncementsBoard contextRole="concierge" />
             </div>

@@ -136,29 +136,6 @@ export default function ConciergeDashboard() {
               onRefresh={handleHomeRefresh}
               className="flex flex-col min-h-0 p-4 space-y-4"
             >
-              <div className="grid grid-cols-3 gap-2 shrink-0">
-                <Card className="rounded-xl shadow-sm border">
-                  <CardContent className="p-3 flex flex-col items-center gap-1">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-lg font-semibold tabular-nums">{guestsCheckedInCount ?? "—"}</span>
-                    <span className="text-xs text-muted-foreground text-center">Guests in</span>
-                  </CardContent>
-                </Card>
-                <Card className="rounded-xl shadow-sm border">
-                  <CardContent className="p-3 flex flex-col items-center gap-1">
-                    <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-lg font-semibold tabular-nums">—</span>
-                    <span className="text-xs text-muted-foreground text-center">Open incidents</span>
-                  </CardContent>
-                </Card>
-                <Card className="rounded-xl shadow-sm border">
-                  <CardContent className="p-3 flex flex-col items-center gap-1">
-                    <Package className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-lg font-semibold tabular-nums">{packageStats?.pending ?? "—"}</span>
-                    <span className="text-xs text-muted-foreground text-center">Pending pkgs</span>
-                  </CardContent>
-                </Card>
-              </div>
               <EmbeddedChecklist variant="compact" />
               <UpcomingTodayCard maxItems={3} />
             </MobilePageWrapper>

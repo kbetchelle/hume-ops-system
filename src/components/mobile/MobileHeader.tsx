@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { User, Settings, LogOut, Bell, ChevronDown, ArrowLeftRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthContext } from "@/features/auth/AuthProvider";
@@ -25,6 +26,7 @@ import type { AppRole } from "@/types/roles";
 interface MobileHeaderProps {
   title: string;
   hideAvatar?: boolean;
+  roleChipClassName?: string;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -37,7 +39,7 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-export function MobileHeader({ title, hideAvatar = false }: MobileHeaderProps) {
+export function MobileHeader({ title, hideAvatar = false, roleChipClassName }: MobileHeaderProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { user, signOut, openUserSwitchScreen } = useAuthContext();
@@ -89,7 +91,7 @@ export function MobileHeader({ title, hideAvatar = false }: MobileHeaderProps) {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="rounded-full text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0"
+                  className={cn("rounded-full text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
                 >
                   <span className="truncate max-w-[80px]">{getRoleLabel(activeRole)}</span>
                   <ChevronDown className="h-3 w-3 shrink-0" />

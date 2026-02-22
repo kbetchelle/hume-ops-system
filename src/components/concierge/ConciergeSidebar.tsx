@@ -219,7 +219,7 @@ export function ConciergeSidebar({
         { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
         { id: "lost-found", label: "Lost & Found", icon: Eye },
         { id: "whos-working", label: "Who's Working", icon: Users },
-        { id: "qa", label: "Q&A", icon: HelpCircle },
+        
       ],
     },
   ];

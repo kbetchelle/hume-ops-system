@@ -174,6 +174,14 @@ if (records.length === 0) {
   process.exit(1);
 }
 
+// Deduplicate by (report_date, shift_type): keep last occurrence so ON CONFLICT only sees each key once.
+const key = (r: Record<string, unknown>) => `${r.report_date}|${r.shift_type}`;
+const seen = new Map<string, Record<string, unknown>>();
+for (const r of records) {
+  seen.set(key(r), r);
+}
+const uniqueRecords = [...seen.values()];
+
 // Omit id so DB can default; keeps INSERT uniform. Use report_date+shift_type for conflict.
 const cols = [
   "report_date", "shift_type", "staff_user_id", "staff_name",
@@ -184,11 +192,11 @@ const cols = [
 
 const BATCH = 25;
 console.log("-- Concierge CSV import for daily_report_history (run in Lovable SQL editor)");
-console.log("-- Rows:", records.length);
+console.log("-- Rows:", uniqueRecords.length, uniqueRecords.length < records.length ? `(deduplicated from ${records.length} CSV rows)` : "");
 console.log("");
 
-for (let i = 0; i < records.length; i += BATCH) {
-  const batch = records.slice(i, i + BATCH);
+for (let i = 0; i < uniqueRecords.length; i += BATCH) {
+  const batch = uniqueRecords.slice(i, i + BATCH);
   const valuesList = batch
     .map((row) => {
       const vals = cols.map((c) => sqlValue(row[c]));
@@ -205,4 +213,4 @@ for (let i = 0; i < records.length; i += BATCH) {
   );
 }
 
-console.error(`Wrote SQL for ${records.length} rows. Paste the output above into Lovable SQL editor and run.`);
+console.error(`Wrote SQL for ${uniqueRecords.length} rows. Paste the output above into Lovable SQL editor and run.`);

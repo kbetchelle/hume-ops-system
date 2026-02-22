@@ -297,10 +297,10 @@ COMMENT ON COLUMN public.daily_report_history.tour_followup_completed IS 'Whethe
 
 **Step 2: Generate import SQL from your CSV (on your machine, from the repo)**
 
-From the project root, run (replace with the path to your CSV file):
+From the project root, run (use the **full path** to your CSV file—e.g. `~/Downloads/concierge_reports-export-2026-02-21_14-44-15.csv`; do not use literal `…` in the filename):
 
 ```bash
-npx tsx scripts/concierge-csv-to-sql.ts /path/to/concierge_reports-export-2026-02-21_14-44-15.csv > concierge-import.sql
+npx tsx scripts/concierge-csv-to-sql.ts ~/Downloads/concierge_reports-export-2026-02-21_14-44-15.csv > concierge-import.sql
 ```
 
 **Step 3: Run the generated SQL in Lovable's SQL editor**

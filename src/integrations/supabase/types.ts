@@ -2645,8 +2645,11 @@ export type Database = {
           future_shift_notes_na: boolean | null
           id: string
           management_notes: string | null
+          meaningful_conversations: string | null
           member_feedback: Json | null
           membership_requests: Json | null
+          notes_target_date: string | null
+          notes_target_shift: string | null
           report_date: string
           scheduled_tours: Json | null
           screenshot: string | null
@@ -2663,6 +2666,7 @@ export type Database = {
           total_revenue: number | null
           total_visits: number | null
           tour_followup_completed: boolean | null
+          tour_name: string | null
           tour_notes: Json | null
           updated_at: string
         }
@@ -2679,8 +2683,11 @@ export type Database = {
           future_shift_notes_na?: boolean | null
           id?: string
           management_notes?: string | null
+          meaningful_conversations?: string | null
           member_feedback?: Json | null
           membership_requests?: Json | null
+          notes_target_date?: string | null
+          notes_target_shift?: string | null
           report_date: string
           scheduled_tours?: Json | null
           screenshot?: string | null
@@ -2697,6 +2704,7 @@ export type Database = {
           total_revenue?: number | null
           total_visits?: number | null
           tour_followup_completed?: boolean | null
+          tour_name?: string | null
           tour_notes?: Json | null
           updated_at?: string
         }
@@ -2713,8 +2721,11 @@ export type Database = {
           future_shift_notes_na?: boolean | null
           id?: string
           management_notes?: string | null
+          meaningful_conversations?: string | null
           member_feedback?: Json | null
           membership_requests?: Json | null
+          notes_target_date?: string | null
+          notes_target_shift?: string | null
           report_date?: string
           scheduled_tours?: Json | null
           screenshot?: string | null
@@ -2731,6 +2742,7 @@ export type Database = {
           total_revenue?: number | null
           total_visits?: number | null
           tour_followup_completed?: boolean | null
+          tour_name?: string | null
           tour_notes?: Json | null
           updated_at?: string
         }

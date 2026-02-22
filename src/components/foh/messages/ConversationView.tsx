@@ -497,7 +497,7 @@ function MessageBubble({
                   }
                 />
               </div>
-              {showTimestamp && (
+              {isLastMessage && (
                 <div className="flex items-center gap-1">
                   <span className="text-[10px] text-muted-foreground">
                     {format(parseISO(message.created_at), 'h:mm a')}

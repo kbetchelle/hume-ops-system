@@ -83,41 +83,74 @@ export function MobileHeader({ title, hideAvatar = false, roleChipClassName }: M
           />
         </button>
 
-        {/* Center: role chip (no title) */}
-        <div className="flex-1 min-w-0 flex items-center justify-center">
-          {availableRoles.length > 1 && activeRole && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={cn("rounded-full text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
-                >
-                  <span className="truncate max-w-[80px]">{getRoleLabel(activeRole)}</span>
-                  <ChevronDown className="h-3 w-3 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="min-w-[160px]">
-                {availableRoles.map(({ role }) => (
-                  <DropdownMenuItem
-                    key={role}
-                    onClick={() => handleRoleSelect(role as AppRole)}
-                    className="text-xs uppercase tracking-widest cursor-pointer"
+        {/* Center: role chip (when avatar is shown) */}
+        {!hideAvatar && (
+          <div className="flex-1 min-w-0 flex items-center justify-center">
+            {availableRoles.length > 1 && activeRole && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn("rounded-full text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
                   >
-                    {getRoleLabel(role as AppRole)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+                    <span className="truncate max-w-[80px]">{getRoleLabel(activeRole)}</span>
+                    <ChevronDown className="h-3 w-3 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-[160px]">
+                  {availableRoles.map(({ role }) => (
+                    <DropdownMenuItem
+                      key={role}
+                      onClick={() => handleRoleSelect(role as AppRole)}
+                      className="text-xs uppercase tracking-widest cursor-pointer"
+                    >
+                      {getRoleLabel(role as AppRole)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        )}
 
-        {/* Right: notification bell + avatar */}
+        {/* Right side: bell + avatar OR (hideAvatar) spacer + bell + role chip */}
+        {hideAvatar ? (
+          <div className="flex-1 flex items-center justify-end gap-0 shrink-0">
+            <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <NotificationBell />
+            </div>
+            {availableRoles.length > 1 && activeRole && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn("rounded-full text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
+                  >
+                    <span className="truncate max-w-[80px]">{getRoleLabel(activeRole)}</span>
+                    <ChevronDown className="h-3 w-3 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[160px]">
+                  {availableRoles.map(({ role }) => (
+                    <DropdownMenuItem
+                      key={role}
+                      onClick={() => handleRoleSelect(role as AppRole)}
+                      className="text-xs uppercase tracking-widest cursor-pointer"
+                    >
+                      {getRoleLabel(role as AppRole)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        ) : (
         <div className="flex items-center gap-0 shrink-0">
           <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
             <NotificationBell />
           </div>
-          {!hideAvatar && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -178,8 +211,8 @@ export function MobileHeader({ title, hideAvatar = false, roleChipClassName }: M
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          )}
         </div>
+        )}
       </div>
       <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
     </header>

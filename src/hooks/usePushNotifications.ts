@@ -66,11 +66,11 @@ export function usePushNotifications({
       platform: navigator.userAgent,
       role: activeRole ?? "concierge",
     });
+    localStorage.setItem(PROMPT_ASKED_KEY, "true");
+    setShowPrompt(false);
     const ok = await subscribeToPush({ staffId: userId, deviceInfo });
     if (ok) {
       setIsSubscribed(true);
-      setShowPrompt(false);
-      localStorage.setItem(PROMPT_ASKED_KEY, "true");
     }
   }, [userId, activeRole]);
 

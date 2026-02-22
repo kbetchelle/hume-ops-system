@@ -28,19 +28,19 @@ const notificationIcons: Record<string, React.ComponentType<{ className?: string
   mat_cleaning: Sparkles,
 };
 
-// Brand palette color-coding per notification type
+// Brand palette color-coding per notification type (using add-* tokens)
 const notificationColors: Record<string, { bg: string; text: string }> = {
-  qa_answered:      { bg: 'bg-[#009ddc]/15', text: 'text-[#009ddc]' },   // Sky Blue
-  qa_new_question:  { bg: 'bg-[#009ddc]/15', text: 'text-[#009ddc]' },   // Sky Blue
-  announcement:     { bg: 'bg-[#fcb827]/15', text: 'text-[#fcb827]' },   // Amber
-  message:          { bg: 'bg-[#62bb47]/15', text: 'text-[#62bb47]' },   // Olive
-  bug_report_update:{ bg: 'bg-[#e03a3c]/15', text: 'text-[#e03a3c]' },  // Crimson
-  member_alert:     { bg: 'bg-[#f6821f]/15', text: 'text-[#f6821f]' },  // Burnt Orange
-  account_approval_pending: { bg: 'bg-[#f6821f]/15', text: 'text-[#f6821f]' }, // Burnt Orange
-  account_approved: { bg: 'bg-[#62bb47]/15', text: 'text-[#62bb47]' },  // Olive
-  account_rejected: { bg: 'bg-[#e03a3c]/15', text: 'text-[#e03a3c]' },  // Crimson
-  class_turnover:   { bg: 'bg-[#009ddc]/15', text: 'text-[#009ddc]' },  // Sky Blue
-  mat_cleaning:     { bg: 'bg-[#62bb47]/15', text: 'text-[#62bb47]' },  // Olive
+  qa_answered:      { bg: 'bg-add-blue/15',   text: 'text-add-blue' },
+  qa_new_question:  { bg: 'bg-add-purple/15', text: 'text-add-purple' },
+  announcement:     { bg: 'bg-add-yellow/15', text: 'text-add-yellow' },
+  message:          { bg: 'bg-add-green/15',  text: 'text-add-green' },
+  bug_report_update:{ bg: 'bg-add-red/15',    text: 'text-add-red' },
+  member_alert:     { bg: 'bg-add-orange/15', text: 'text-add-orange' },
+  account_approval_pending: { bg: 'bg-add-orange/15', text: 'text-add-orange' },
+  account_approved: { bg: 'bg-add-green/15',  text: 'text-add-green' },
+  account_rejected: { bg: 'bg-add-red/15',    text: 'text-add-red' },
+  class_turnover:   { bg: 'bg-add-blue/15',   text: 'text-add-blue' },
+  mat_cleaning:     { bg: 'bg-add-pink/15',   text: 'text-add-pink' },
 };
 
 interface NotificationItemProps {
@@ -81,7 +81,7 @@ export function NotificationItem({
       }}
       className={cn(
         'group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50',
-        !notification.is_read && 'bg-[#fcb82719]'
+        !notification.is_read && 'bg-add-yellow/10'
       )}
     >
       {/* Icon */}
@@ -117,7 +117,7 @@ export function NotificationItem({
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
         {!notification.is_read && (
-          <div className="h-2 w-2 bg-primary shrink-0 mt-1" />
+          <div className="h-2 w-2 bg-add-red shrink-0 mt-1" />
         )}
         <Button
           variant="ghost"

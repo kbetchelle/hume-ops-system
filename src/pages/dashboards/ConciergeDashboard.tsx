@@ -162,6 +162,15 @@ export default function ConciergeDashboard() {
 
 
       case "report":
+        if (isMobile) {
+          return (
+            <div className="px-0 py-4">
+              <Suspense fallback={<SkeletonLoader variant="form" />}>
+                <ConciergeForm />
+              </Suspense>
+            </div>
+          );
+        }
         return (
           <div className="p-6 md:p-8 md:px-[30px]">
             <div className="max-w-3xl mx-auto">

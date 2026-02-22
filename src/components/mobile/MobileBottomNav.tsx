@@ -12,8 +12,6 @@ const TAB_HEIGHT = 64;
 const SAFE_BOTTOM = "env(safe-area-inset-bottom)";
 
 export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNavProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
 
   return (
     <nav

@@ -170,16 +170,10 @@ export function WhosWorkingView() {
   if (isMobile) {
     return (
       <div className="flex flex-col min-h-0">
-        <div className="sticky top-0 z-10 p-3 border-b bg-background shrink-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search name or role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 min-h-[44px]"
-            />
-          </div>
+        <div className="sticky top-0 z-10 px-3 py-2 border-b bg-background shrink-0">
+          <p className="text-sm text-muted-foreground">
+            {format(nowLA, "EEEE, MMMM d")}
+          </p>
         </div>
         <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
           {isLoading ? (
@@ -194,47 +188,39 @@ export function WhosWorkingView() {
                 </div>
               ))}
             </div>
-          ) : filteredStaff.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No staff found</p>
+          ) : staffWithStatus.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No staff scheduled today</p>
           ) : (
             POSITION_ORDER.map((position) => {
-              const positionStaff = groupedFiltered[position];
+              const positionStaff = groupedStaff[position];
               if (!positionStaff || positionStaff.length === 0) return null;
 
               return (
-                <Collapsible key={position} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full py-3 px-3 rounded-lg border bg-muted/50 min-h-[44px]">
-                    <span className="font-semibold text-sm">{position}</span>
-                    <span className="text-muted-foreground text-xs">{positionStaff.length}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="pt-1 space-y-0">
-                      {positionStaff.map((person) => (
-                        <div
-                          key={person.id}
-                          className="flex items-center gap-3 py-3 px-3 min-h-[48px] border-b last:border-b-0"
-                        >
-                          <Avatar className="h-10 w-10 rounded-full shrink-0">
-                            <AvatarFallback className="text-xs bg-muted">
-                              {getInitials(person.user_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-base font-medium truncate">{person.user_name || "Unknown"}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatTimeRange(person.shift_start, person.shift_end)}
-                            </p>
-                          </div>
-                          {person.is_currently_working && (
-                            <Badge className="shrink-0 text-xs">On Shift</Badge>
-                          )}
-                        </div>
-                      ))}
+                <div key={position} className="space-y-0">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">{position}</p>
+                  {positionStaff.map((person) => (
+                    <div
+                      key={person.id}
+                      className="flex items-center gap-3 py-3 px-3 min-h-[48px] border-b last:border-b-0"
+                    >
+                      <Avatar className="h-10 w-10 rounded-full shrink-0">
+                        <AvatarFallback className="text-xs bg-muted">
+                          {getInitials(person.user_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-medium truncate">{person.user_name || "Unknown"}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatTimeRange(person.shift_start, person.shift_end)}
+                        </p>
+                      </div>
+                      {person.is_currently_working && (
+                        <Badge className="shrink-0 text-xs">On Shift</Badge>
+                      )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  ))}
+                </div>
               );
             })
           )}

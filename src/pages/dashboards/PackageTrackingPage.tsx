@@ -179,17 +179,17 @@ export default function PackageTrackingPage() {
         )}
       </div>
       <Tabs value={activeTab} onValueChange={(v: "pending_pickup" | "picked_up") => { setActiveTab(v); setSelectedPackages([]); }} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="grid w-full grid-cols-2 h-12 shrink-0 rounded-xl">
-          <TabsTrigger value="pending_pickup" className="rounded-xl">
+        <TabsList className="grid w-full grid-cols-2 h-12 shrink-0 rounded-none">
+          <TabsTrigger value="pending_pickup" className="rounded-none">
             Pending {stats && stats.pending > 0 && `(${stats.pending})`}
           </TabsTrigger>
-          <TabsTrigger value="picked_up" className="rounded-xl">Picked Up</TabsTrigger>
+          <TabsTrigger value="picked_up" className="rounded-none">Picked Up</TabsTrigger>
         </TabsList>
         <TabsContent value="pending_pickup" className="flex-1 min-h-0 mt-3">
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
+                <div key={i} className="h-24 rounded-none bg-muted animate-pulse" />
               ))}
             </div>
           ) : packages.length === 0 ? (
@@ -205,7 +205,7 @@ export default function PackageTrackingPage() {
                   type="button"
                   onClick={() => handleViewDetails(pkg)}
                   className={cn(
-                    "w-full text-left p-4 rounded-xl border bg-card shadow-sm min-h-[44px] transition-all active:scale-[0.99]",
+                    "w-full text-left p-4 rounded-none border bg-card shadow-sm min-h-[44px] transition-all active:scale-[0.99]",
                     selectedPackages.includes(pkg.id) && "ring-2 ring-primary"
                   )}
                 >
@@ -228,7 +228,7 @@ export default function PackageTrackingPage() {
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
+                <div key={i} className="h-24 rounded-none bg-muted animate-pulse" />
               ))}
             </div>
           ) : packages.length === 0 ? (
@@ -243,7 +243,7 @@ export default function PackageTrackingPage() {
                   key={pkg.id}
                   type="button"
                   onClick={() => handleViewDetails(pkg)}
-                  className="w-full text-left p-4 rounded-xl border bg-card shadow-sm min-h-[44px] transition-all active:scale-[0.99]"
+                  className="w-full text-left p-4 rounded-none border bg-card shadow-sm min-h-[44px] transition-all active:scale-[0.99]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-base truncate flex-1">

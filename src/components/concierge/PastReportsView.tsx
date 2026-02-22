@@ -76,6 +76,32 @@ function preview(text: string | null, maxLen: number): string {
   return t.length <= maxLen ? t : t.slice(0, maxLen) + "…";
 }
 
+/** Find the first matching snippet across all searchable fields of a report */
+function findMatchSnippet(r: ReportRow, query: string, contextLen = 80): string | null {
+  if (!query) return null;
+  const q = query.toLowerCase();
+  const fields: { label: string; value: string }[] = [
+    { label: "Summary", value: r.management_notes ?? "" },
+    { label: "Feedback", value: summarizeJsonArray(r.member_feedback) },
+    { label: "Facility", value: summarizeJsonArray(r.facility_issues) },
+    { label: "Tour notes", value: summarizeJsonArray(r.tour_notes) },
+    { label: "Handoff", value: summarizeJsonArray(r.future_shift_notes) },
+    { label: "Busiest", value: r.busiest_areas ?? "" },
+    { label: "Café", value: r.cafe_notes ?? "" },
+    { label: "Systems", value: summarizeJsonArray(r.system_issues) },
+    { label: "Staff", value: r.staff_name ?? "" },
+  ];
+  for (const f of fields) {
+    const idx = f.value.toLowerCase().indexOf(q);
+    if (idx === -1) continue;
+    const start = Math.max(0, idx - 20);
+    const end = Math.min(f.value.length, idx + q.length + contextLen);
+    const snippet = (start > 0 ? "…" : "") + f.value.slice(start, end) + (end < f.value.length ? "…" : "");
+    return `${f.label}: ${snippet}`;
+  }
+  return null;
+}
+
 function extractItemText(item: unknown): string {
   if (typeof item === "string") return item;
   if (item && typeof item === "object") {
@@ -246,10 +272,18 @@ export function PastReportsView() {
                       {r.shift_type === "AM" ? "AM" : "PM"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{r.staff_name ?? "—"}</p>
-                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                    {preview(r.management_notes, PREVIEW_LENGTH)}
-                  </p>
+                  {debouncedSearch.trim() ? (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {findMatchSnippet(r, debouncedSearch.trim()) ?? preview(r.management_notes, PREVIEW_LENGTH)}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground mt-1">{r.staff_name ?? "—"}</p>
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {preview(r.management_notes, PREVIEW_LENGTH)}
+                      </p>
+                    </>
+                  )}
                 </button>
               ))
             )}
@@ -340,12 +374,20 @@ export function PastReportsView() {
                       {r.shift_type === "AM" ? "AM" : "PM"}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {r.staff_name ?? "—"}
-                  </p>
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                    {preview(r.management_notes, PREVIEW_LENGTH)}
-                  </p>
+                  {debouncedSearch.trim() ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {findMatchSnippet(r as ReportRow, debouncedSearch.trim()) ?? preview(r.management_notes, PREVIEW_LENGTH)}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {r.staff_name ?? "—"}
+                      </p>
+                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                        {preview(r.management_notes, PREVIEW_LENGTH)}
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ))}

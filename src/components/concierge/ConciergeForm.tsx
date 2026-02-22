@@ -1256,14 +1256,14 @@ export function ConciergeForm() {
         </CardContent>
         
         <div id="submit" ref={(el) => { sectionRefs.current['submit'] = el; }} className="scroll-mt-24">
-          <CardFooter className="flex gap-3 border-t pt-4">
+          <CardFooter className={cn("flex gap-3 border-t pt-4", isMobile && "flex-col w-full")}>
             {!isSubmitted &&
             <>
                 <Button
                 variant="outline"
                 onClick={() => saveDraft()}
                 disabled={isSaving || !isDirty}
-                className={cn("flex-1", isMobile && "min-h-[44px]")}>
+                className={cn("flex-1", isMobile && "min-h-[44px] w-full")}>
 
                   <Save className="h-4 w-4 mr-2" />
                   Save Draft
@@ -1271,7 +1271,7 @@ export function ConciergeForm() {
                 <Button
                 onClick={handleSubmit}
                 disabled={isSaving}
-                className={cn("flex-1", isMobile && "min-h-[44px]")}>
+                className={cn("flex-1", isMobile && "min-h-[44px] w-full")}>
 
                   <Send className="h-4 w-4 mr-2" />
                   Submit Shift Report

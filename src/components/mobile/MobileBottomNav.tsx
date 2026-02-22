@@ -17,8 +17,8 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-border backdrop-blur-lg bg-white/90 flex-shrink-0"
       style={{
-        height: `calc(${TAB_HEIGHT}px + ${SAFE_BOTTOM})`,
-        paddingBottom: SAFE_BOTTOM,
+        height: `calc(${TAB_HEIGHT}px + ${SAFE_BOTTOM} + 8px)`,
+        paddingBottom: `calc(${SAFE_BOTTOM} + 8px)`,
       }}
     >
       <div className="flex items-stretch justify-around h-16">

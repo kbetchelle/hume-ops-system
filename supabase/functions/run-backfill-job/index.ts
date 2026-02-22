@@ -355,6 +355,8 @@ Deno.serve(async (req) => {
     let totalRecords = job.total_records || 0;
     let totalNewRecords = job.total_new_records || 0;
     let batchHitPageLimit = false;
+    let cumulativeInserted = job.cumulative_inserted || 0;
+    let cumulativeUpdated = job.cumulative_updated || 0;
 
     for (const date of datesToProcess) {
       const dateStr = formatDate(date);
@@ -365,7 +367,14 @@ Deno.serve(async (req) => {
         });
       }
 
-      await supabase.from("backfill_jobs").update({ processing_date: dateStr }).eq("id", jobId);
+      // Update phase: fetching
+      await supabase.from("backfill_jobs").update({
+        processing_date: dateStr,
+        sync_phase: "fetching",
+        current_batch_count: datesToProcess.indexOf(date) + 1,
+        records_in_current_batch: 0,
+      }).eq("id", jobId);
+
       // arketa_payments uses created_at_api (timestamptz): count by date range; others use date eq
       const countQuery =
         jobType === "arketa_payments"
@@ -379,6 +388,9 @@ Deno.serve(async (req) => {
       const existingCount = existingBefore || 0;
 
       try {
+        // Update phase: staging
+        await supabase.from("backfill_jobs").update({ sync_phase: "staging" }).eq("id", jobId);
+
         const syncBody = buildSyncBody(jobType, dateStr);
         const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${config.syncFunction}`, {
           method: "POST",
@@ -391,6 +403,15 @@ Deno.serve(async (req) => {
           results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
         } else {
           const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
+
+          // Update phase: transferring (for types that need staging→prod transfer)
+          if (config.needsTransfer) {
+            await supabase.from("backfill_jobs").update({
+              sync_phase: "transferring",
+              records_in_current_batch: recordCount,
+            }).eq("id", jobId);
+          }
+
           await new Promise(resolve => setTimeout(resolve, 500));
           const afterCountQuery =
             jobType === "arketa_payments"
@@ -404,6 +425,8 @@ Deno.serve(async (req) => {
           const newRecords = Math.max(0, (afterCount || 0) - existingCount);
           totalRecords += recordCount;
           totalNewRecords += newRecords;
+          cumulativeInserted += newRecords;
+          cumulativeUpdated += Math.max(0, recordCount - newRecords);
           
           const hitPageLimit = totalFetched > 0 && totalFetched % (jobType === "toast_orders" ? 100 : 400) === 0;
           if (hitPageLimit) {
@@ -417,17 +440,27 @@ Deno.serve(async (req) => {
         results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
       }
 
-      await supabase.from("backfill_jobs").update({ completed_dates: results.length, total_records: totalRecords, total_new_records: totalNewRecords, results }).eq("id", jobId);
+      await supabase.from("backfill_jobs").update({
+        completed_dates: results.length,
+        total_records: totalRecords,
+        total_new_records: totalNewRecords,
+        cumulative_inserted: cumulativeInserted,
+        cumulative_updated: cumulativeUpdated,
+        results,
+        sync_phase: "idle",
+      }).eq("id", jobId);
 
       // 20-second break between each date in the batch
       if (datesToProcess.indexOf(date) < datesToProcess.length - 1) {
         console.log(`[run-backfill-job] ${BATCH_BREAK_MS / 1000}s break between dates...`);
+        await supabase.from("backfill_jobs").update({ sync_phase: "cooldown" }).eq("id", jobId);
         await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
       }
     }
 
     // Transfer staging → history after each batch (only for types that use staging)
     if (config.needsTransfer && config.transferApi && results.some(r => r.success && r.recordCount > 0)) {
+      await supabase.from("backfill_jobs").update({ sync_phase: "transferring" }).eq("id", jobId);
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
           method: "POST",
@@ -437,6 +470,7 @@ Deno.serve(async (req) => {
       } catch (err) {
         console.error("Failed to trigger sync-from-staging:", err);
       }
+      await supabase.from("backfill_jobs").update({ sync_phase: "idle" }).eq("id", jobId);
     }
 
     const isComplete = results.length >= allDates.length;

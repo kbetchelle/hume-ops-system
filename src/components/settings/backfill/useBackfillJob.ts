@@ -100,8 +100,13 @@ export function useBackfillJob(jobType: BackfillJobType) {
         totalRecords: activeJob.total_records || activeJob.records_processed || 0,
         results: (activeJob.results as unknown as SyncResult[] | null) || [],
         startTime: activeJob.started_at ? new Date(activeJob.started_at).getTime() : null,
+        syncPhase: activeJob.sync_phase || null,
+        currentBatchCount: activeJob.current_batch_count || 0,
+        recordsInCurrentBatch: activeJob.records_in_current_batch || 0,
+        cumulativeInserted: activeJob.cumulative_inserted || 0,
+        cumulativeUpdated: activeJob.cumulative_updated || 0,
       }
-    : { isRunning: false, currentDate: null, totalDates: 0, completedDates: 0, totalRecords: 0, results: [], startTime: null };
+    : { isRunning: false, currentDate: null, totalDates: 0, completedDates: 0, totalRecords: 0, results: [], startTime: null, syncPhase: null, currentBatchCount: 0, recordsInCurrentBatch: 0, cumulativeInserted: 0, cumulativeUpdated: 0 };
 
   const totalNewRecords: number = activeJob?.total_new_records || 0;
 

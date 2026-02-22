@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { SyncProgress } from "./types";
 
 interface SyncProgressCardProps {
@@ -27,12 +28,19 @@ function estimateRemaining(completed: number, total: number, elapsedMs: number):
   return formatElapsed(remaining);
 }
 
+const PHASE_LABELS: Record<string, { label: string; color: string }> = {
+  fetching: { label: "Fetching", color: "bg-blue-500/15 text-blue-700 dark:text-blue-400" },
+  staging: { label: "Staging", color: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  transferring: { label: "Transferring", color: "bg-purple-500/15 text-purple-700 dark:text-purple-400" },
+  cooldown: { label: "Cooldown", color: "bg-muted text-muted-foreground" },
+  idle: { label: "Idle", color: "bg-muted text-muted-foreground" },
+};
+
 export default function SyncProgressCard({
   syncProgress,
   startDate,
   endDate,
   isRange,
-  hasCooldown,
 }: SyncProgressCardProps) {
   if (!syncProgress.isRunning) return null;
 
@@ -41,10 +49,26 @@ export default function SyncProgressCard({
   const eta = estimateRemaining(syncProgress.completedDates, syncProgress.totalDates, elapsedMs);
   const rangeLabel = isRange ? `${startDate} → ${endDate}` : startDate;
 
+  const phase = syncProgress.syncPhase && syncProgress.syncPhase !== "idle"
+    ? PHASE_LABELS[syncProgress.syncPhase] ?? { label: syncProgress.syncPhase, color: "bg-muted text-muted-foreground" }
+    : null;
+
+  const isCooldown = syncProgress.syncPhase === "cooldown";
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Progress</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Progress</CardTitle>
+          {phase && (
+            <Badge variant="outline" className={`text-xs font-medium ${phase.color} border-0`}>
+              {isCooldown ? "⏳ " : ""}{phase.label}
+              {syncProgress.syncPhase === "fetching" && syncProgress.recordsInCurrentBatch > 0 && (
+                <span className="ml-1 opacity-70">({syncProgress.recordsInCurrentBatch})</span>
+              )}
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Range & active date */}
@@ -79,11 +103,19 @@ export default function SyncProgressCard({
           </div>
         </div>
 
+        {/* Inserted / Updated breakdown */}
+        {(syncProgress.cumulativeInserted > 0 || syncProgress.cumulativeUpdated > 0) && (
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <span>New: <span className="font-medium text-foreground">{syncProgress.cumulativeInserted.toLocaleString()}</span></span>
+            <span>Updated: <span className="font-medium text-foreground">{syncProgress.cumulativeUpdated.toLocaleString()}</span></span>
+          </div>
+        )}
+
         <Progress value={pct} className="h-2" />
 
-        {hasCooldown && (
+        {isCooldown && (
           <p className="text-xs text-muted-foreground">
-            ⏳ Page limit reached — auto-restarting after 2 min cooldown.
+            ⏳ 20s cooldown between dates to avoid API rate limits.
           </p>
         )}
       </CardContent>

@@ -1,11 +1,15 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { toZonedTime, format as formatTz } from "date-fns-tz";
-import { Users, Clock } from "lucide-react";
+import { toZonedTime } from "date-fns-tz";
+import { Users, Clock, Search, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StaffOnShift {
@@ -148,6 +152,96 @@ export function WhosWorkingView() {
 
   const currentlyWorkingCount = staffWithStatus.filter((s) => s.is_currently_working).length;
   const groupedStaff = groupByPosition(staffWithStatus);
+
+  const isMobile = useIsMobile();
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredStaff = useMemo(() => {
+    if (!searchQuery.trim()) return staffWithStatus;
+    const q = searchQuery.toLowerCase().trim();
+    return staffWithStatus.filter(
+      (s) =>
+        s.user_name?.toLowerCase().includes(q) ||
+        normalizePosition(s.position).toLowerCase().includes(q) ||
+        (s.position?.toLowerCase().includes(q) ?? false)
+    );
+  }, [staffWithStatus, searchQuery]);
+  const groupedFiltered = groupByPosition(filteredStaff);
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col min-h-0">
+        <div className="sticky top-0 z-10 p-3 border-b bg-background shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search name or role..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 min-h-[44px]"
+            />
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-3 min-h-[48px]">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredStaff.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No staff found</p>
+          ) : (
+            POSITION_ORDER.map((position) => {
+              const positionStaff = groupedFiltered[position];
+              if (!positionStaff || positionStaff.length === 0) return null;
+
+              return (
+                <Collapsible key={position} defaultOpen>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-3 px-3 rounded-lg border bg-muted/50 min-h-[44px]">
+                    <span className="font-semibold text-sm">{position}</span>
+                    <span className="text-muted-foreground text-xs">{positionStaff.length}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pt-1 space-y-0">
+                      {positionStaff.map((person) => (
+                        <div
+                          key={person.id}
+                          className="flex items-center gap-3 py-3 px-3 min-h-[48px] border-b last:border-b-0"
+                        >
+                          <Avatar className="h-10 w-10 rounded-full shrink-0">
+                            <AvatarFallback className="text-xs bg-muted">
+                              {getInitials(person.user_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-medium truncate">{person.user_name || "Unknown"}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatTimeRange(person.shift_start, person.shift_end)}
+                            </p>
+                          </div>
+                          {person.is_currently_working && (
+                            <Badge className="shrink-0 text-xs">On Shift</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="rounded-none border border-border flex-1 w-full">

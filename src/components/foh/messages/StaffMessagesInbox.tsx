@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -196,6 +197,7 @@ export function StaffMessagesInbox({
   };
 
   const isLoading = messagesLoading || readsLoading;
+  const isMobile = useIsMobile();
 
   // Render based on view
   if (view === 'conversation' && selectedConversation) {
@@ -518,45 +520,91 @@ export function StaffMessagesInbox({
   }
 
   // Default: conversations list
+  const listContent = (
+    <>
+      <div className={cn("border-b shrink-0", isMobile ? "px-3 py-2" : "px-6 pt-6 pb-0")}>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm uppercase tracking-wider">
+            Messages
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleNewMessage}
+              className={cn("rounded-none", isMobile && "min-h-[44px]")}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New
+            </Button>
+            <MessagesOptionsMenu
+              onViewChange={handleViewChange}
+              archivedCount={archivedConversations.length}
+              scheduledCount={scheduledMessages.length}
+            />
+          </div>
+        </div>
+      </div>
+      <div className={cn("flex-1 min-h-0 overflow-auto", isMobile && "flex flex-col")}>
+        <ConversationList
+          conversations={conversations}
+          selectedConversationKey={selectedConversationKey}
+          onSelectConversation={handleSelectConversation}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          isLoading={isLoading}
+          showArchived={false}
+          currentUserId={user?.id || ''}
+        />
+      </div>
+    </>
+  );
+
   return (
     <>
-      <Card className="rounded-none border h-full">
-        <CardHeader className="border-b-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-wider">
-              Messages
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleNewMessage}
-                className="rounded-none"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New
-              </Button>
-              <MessagesOptionsMenu
-                onViewChange={handleViewChange}
-                archivedCount={archivedConversations.length}
-                scheduledCount={scheduledMessages.length}
-              />
+      {isMobile ? (
+        <div className="flex flex-col h-full min-h-0 bg-background">
+          {listContent}
+        </div>
+      ) : (
+        <Card className="rounded-none border h-full flex flex-col">
+          <CardHeader className="border-b-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wider">
+                Messages
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleNewMessage}
+                  className="rounded-none"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New
+                </Button>
+                <MessagesOptionsMenu
+                  onViewChange={handleViewChange}
+                  archivedCount={archivedConversations.length}
+                  scheduledCount={scheduledMessages.length}
+                />
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ConversationList
-            conversations={conversations}
-            selectedConversationKey={selectedConversationKey}
-            onSelectConversation={handleSelectConversation}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            isLoading={isLoading}
-            showArchived={false}
-            currentUserId={user?.id || ''}
-          />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+            <ConversationList
+              conversations={conversations}
+              selectedConversationKey={selectedConversationKey}
+              onSelectConversation={handleSelectConversation}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              isLoading={isLoading}
+              showArchived={false}
+              currentUserId={user?.id || ''}
+            />
+          </CardContent>
+        </Card>
+      )}
       <MessageComposer
         isOpen={showComposer}
         onClose={() => {

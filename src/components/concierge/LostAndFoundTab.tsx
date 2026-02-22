@@ -20,7 +20,9 @@ import {
   DialogTitle,
   DialogFooter } from
 "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -458,6 +460,8 @@ export function LostAndFoundTab() {
     fetchItems();
   };
 
+  const isMobile = useIsMobile();
+
   if (loading) {
     return (
       <Card className="rounded-none border">
@@ -473,8 +477,137 @@ export function LostAndFoundTab() {
 
   }
 
+  const statusTabs = [
+    { value: "all" as const, label: "All" },
+    { value: "unclaimed" as const, label: "Lost" },
+    { value: "claimed" as const, label: "Claimed" },
+    { value: "disposed" as const, label: "Disposed" },
+  ];
+
+  const detailContent = selectedItem && (
+    <div className="space-y-4 py-2">
+      {selectedItem.photo_url && (
+        <div className="w-full max-h-64 rounded-lg overflow-hidden bg-muted">
+          <img src={selectedItem.photo_url} alt={selectedItem.description} className="w-full h-full object-contain" />
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <p className="text-muted-foreground">Item Name</p>
+          <p className="font-medium">{selectedItem.description}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Category</p>
+          <p className="font-medium">{selectedItem.object_category ? CATEGORY_LABELS[selectedItem.object_category] : "—"}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Status</p>
+          <div>{getStatusBadge(selectedItem.status)}</div>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Found Date</p>
+          <p className="font-medium">{format(new Date(selectedItem.date_found), "MMM d, yyyy")}</p>
+        </div>
+        {selectedItem.location_found && (
+          <div className="col-span-2">
+            <p className="text-muted-foreground">Location</p>
+            <p className="font-medium">{selectedItem.location_found}</p>
+          </div>
+        )}
+        {selectedItem.notes && (
+          <div className="col-span-2">
+            <p className="text-muted-foreground">Notes</p>
+            <p className="font-medium italic">{selectedItem.notes}</p>
+          </div>
+        )}
+        {selectedItem.status === "claimed" && selectedItem.claimed_by && (
+          <div className="col-span-2">
+            <p className="text-muted-foreground">Claimed By</p>
+            <p className="font-medium">
+              {selectedItem.claimed_by}
+              {selectedItem.claimed_date ? ` on ${format(new Date(selectedItem.claimed_date), "MMM d, yyyy")}` : ""}
+            </p>
+          </div>
+        )}
+      </div>
+      {selectedItem.status === "unclaimed" && (
+        <div className="flex gap-2 pt-2">
+          <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => { setIsDetailDialogOpen(false); setIsClaimDialogOpen(true); }}>
+            Claim
+          </Button>
+          <Button variant="ghost" size="sm" className="flex-1 min-h-[44px]" onClick={() => { if (selectedItem) handleDispose(selectedItem); setIsDetailDialogOpen(false); setSelectedItem(null); }}>
+            Dispose
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
+      {isMobile && (
+        <>
+          <div className="flex flex-col min-h-0 flex-1">
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12 bg-muted/30">
+                {statusTabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="rounded-none text-xs min-h-[44px]">
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
+                {filteredAndSortedItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No items</p>
+                ) : (
+                  filteredAndSortedItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { setSelectedItem(item); setIsDetailDialogOpen(true); }}
+                      className="w-full text-left p-4 rounded-xl border shadow-sm bg-card min-h-[44px] transition-all"
+                    >
+                      <div className="flex gap-3">
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                            <span className="text-muted-foreground text-xs">No photo</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-base truncate">{item.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {getStatusBadge(item.status)}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{format(new Date(item.date_found), "MMM d, yyyy")}</p>
+                          {item.location_found && <p className="text-xs text-muted-foreground truncate">{item.location_found}</p>}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </Tabs>
+          </div>
+          <Button
+            className="fixed bottom-[calc(64px+env(safe-area-inset-bottom)+16px)] right-4 h-12 w-12 rounded-full shadow-lg min-h-[44px] min-w-[44px] z-40"
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+          <Sheet open={isDetailDialogOpen} onOpenChange={(open) => { if (!open) { setIsDetailDialogOpen(false); setSelectedItem(null); } }}>
+            <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-hidden flex flex-col">
+              <SheetHeader>
+                <SheetTitle className="text-sm uppercase tracking-wider font-normal">Item Details</SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-auto p-4">{detailContent}</div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
+      {!isMobile && (
+        <>
       <Tabs defaultValue="items" className="w-full">
         <TabsList className="w-full rounded-none mb-4">
           <TabsTrigger value="items" className="flex-1 rounded-none text-xs">
@@ -885,12 +1018,15 @@ export function LostAndFoundTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
 
       {/* Add Item Dialog */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        capture={isMobile ? "environment" : undefined}
         className="hidden"
         onChange={handlePhotoSelect} />
 

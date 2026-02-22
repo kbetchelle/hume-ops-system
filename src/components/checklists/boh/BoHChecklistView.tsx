@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useActiveRole } from '@/hooks/useActiveRole';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { BoHChecklistItem } from './BoHChecklistItem';
+import { MobilePageWrapper } from '@/components/mobile/MobilePageWrapper';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,7 +46,8 @@ export function BoHChecklistView() {
     ? roles.find(r => r.role === activeRole)
     : roles.find(r => bohRoles.includes(r.role));
 
-  const { data: checklist, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  const { data: checklist, isLoading, refetch: refetchChecklist } = useQuery({
     queryKey: ['boh-checklist', shiftTime, isWeekend, userBoHRole?.role],
     queryFn: async () => {
       if (!userBoHRole) return null;
@@ -67,7 +70,7 @@ export function BoHChecklistView() {
     enabled: !!userBoHRole,
   });
 
-  const { data: completions } = useQuery({
+  const { data: completions, refetch: refetchCompletions } = useQuery({
     queryKey: ['boh-completions', selectedDate, shiftTime, user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -111,6 +114,117 @@ export function BoHChecklistView() {
           <p className="text-sm mt-2">{t('Contact your manager to set up checklists.', 'Contacta a tu gerente para configurar las listas.')}</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  const isMobile = useIsMobile();
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refetchChecklist(), refetchCompletions()]);
+  }, [refetchChecklist, refetchCompletions]);
+
+  if (isMobile) {
+    const items = checklist.boh_checklist_items?.sort((a: any, b: any) => a.sort_order - b.sort_order) || [];
+    const grouped: Record<string, any[]> = {};
+    items.forEach((item: any) => {
+      const section = item.time_hint || t('Other', 'Otro');
+      if (!grouped[section]) grouped[section] = [];
+      grouped[section].push(item);
+    });
+    const groupedEntries = Object.entries(grouped);
+    let sectionIdx = 0;
+    const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    return (
+      <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0">
+        {/* Progress bar */}
+        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shrink-0">
+          <div
+            className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-red-500 via-amber-500 to-green-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        {/* Date + Shift + Hide completed */}
+        <div className="flex flex-wrap items-center gap-2 p-3 border-b bg-background shrink-0">
+          <div className="flex items-center gap-2 min-h-[44px]">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border rounded-lg text-base min-h-[44px]"
+            />
+          </div>
+          <div className="flex gap-1 min-h-[44px] items-center">
+            <Button
+              variant={shiftTime === 'AM' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShiftTime('AM')}
+              className="min-h-[44px] min-w-[44px]"
+            >
+              AM
+            </Button>
+            <Button
+              variant={shiftTime === 'PM' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShiftTime('PM')}
+              className="min-h-[44px] min-w-[44px]"
+            >
+              PM
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 min-h-[44px] ml-auto">
+            <Label htmlFor="hide-completed-boh-mobile" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">{t('Hide completed', 'Ocultar completados')}</Label>
+            <Switch id="hide-completed-boh-mobile" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
+          </div>
+        </div>
+        {/* Sections + items */}
+        <div className="flex-1 min-h-0 overflow-auto scroll-smooth">
+          {groupedEntries.map(([section, sectionItems]) => {
+            const filteredItems = hideCompleted
+              ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
+              : sectionItems;
+            if (filteredItems.length === 0) return null;
+            const hasCheckboxes = sectionItems.some((i: any) => i.task_type === 'checkbox');
+            const currentSectionIdx = hasCheckboxes ? sectionIdx++ : 0;
+            const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
+            return (
+              <div key={section}>
+                <div className="sticky top-0 z-10 px-4 py-2 bg-muted/95 backdrop-blur border-b font-semibold text-sm flex items-center justify-between">
+                  <span>{section}</span>
+                  <span className="text-muted-foreground font-normal">{sectionCompleted}/{sectionItems.length}</span>
+                </div>
+                <div className="divide-y">
+                  {filteredItems.map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="min-h-[48px] py-4 px-5 bg-card border-b last:border-b-0"
+                    >
+                      <BoHChecklistItem
+                        item={item}
+                        completion={completionMap.get(item.id)}
+                        checklistId={checklist.id}
+                        completionDate={selectedDate}
+                        shiftTime={shiftTime}
+                        checkboxIndex={currentSectionIdx}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {groupedEntries.every(([, sectionItems]) => {
+            const filtered = hideCompleted
+              ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
+              : sectionItems;
+            return filtered.length === 0;
+          }) && (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-muted-foreground">
+              <p className="text-base font-medium">{t('All done! Great work.', '¡Todo listo! Buen trabajo.')}</p>
+            </div>
+          )}
+        </div>
+      </MobilePageWrapper>
     );
   }
 

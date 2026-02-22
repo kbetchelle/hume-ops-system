@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useStaffList, useSendMessage, useMarkMessageRead, useEditMessage, useDeleteMessage, useMessageReads } from '@/hooks/useMessaging';
 import { useReactions, useToggleReaction, useReactionsRealtime, groupReactions } from '@/hooks/useMessageReactions';
 import { useTargetGroups } from '@/hooks/useTargetGroups';
@@ -193,21 +194,23 @@ export function ConversationView({
     }
   });
 
+  const isMobile = useIsMobile();
+
   return (
-    <Card className="rounded-none border h-full flex flex-col">
+    <Card className={cn("rounded-none border h-full flex flex-col", isMobile && "rounded-none border-0 shadow-none")}>
       {/* Header */}
-      <CardHeader className="pb-3 border-b">
+      <CardHeader className={cn("pb-3 border-b shrink-0", isMobile && "py-3")}>
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            size="sm"
+            size={isMobile ? "icon" : "sm"}
             onClick={onBack}
-            className="rounded-none"
+            className={cn("rounded-none", isMobile && "min-h-[44px] min-w-[44px]")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
 
-          <Avatar className="h-8 w-8 rounded-none">
+          <Avatar className={cn("rounded-none", isMobile ? "h-10 w-10" : "h-8 w-8")}>
             <AvatarFallback className="text-xs rounded-none">
               {conversation.isGroup ? '👥' : getInitials(title)}
             </AvatarFallback>
@@ -295,21 +298,21 @@ export function ConversationView({
       </CardContent>
 
       {/* Input */}
-      <div className="border-t p-4">
+      <div className={cn("border-t p-4 shrink-0 bg-background", isMobile && "pb-[calc(16px+env(safe-area-inset-bottom))]")}>
         <div className="flex gap-2">
           <Textarea
             placeholder="Type a message..."
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            rows={2}
-            className="rounded-none text-xs resize-none"
+            rows={isMobile ? 1 : 2}
+            className={cn("rounded-none resize-none", isMobile ? "text-base min-h-[44px]" : "text-xs")}
             disabled={isSending}
           />
           <Button
             onClick={handleSend}
             disabled={!messageInput.trim() || isSending}
-            className="rounded-none self-end"
+            className={cn("rounded-none self-end", isMobile && "min-h-[44px] min-w-[44px]")}
             size="sm"
           >
             <Send className="h-4 w-4" />

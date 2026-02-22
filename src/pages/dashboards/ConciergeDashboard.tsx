@@ -1,9 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ConciergeSidebar, type ConciergeView } from "@/components/concierge/ConciergeSidebar";
 import { ConciergeBottomNav } from "@/components/concierge/ConciergeBottomNav";
 import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
+import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
+import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
+import { getConciergeMobileTabs, getConciergeMoreItems } from "@/components/mobile/mobile-nav-config";
 import { WhosWorkingView } from "@/components/concierge/WhosWorkingView";
 import { ShiftEventsMiniCalendar } from "@/components/concierge/ShiftEventsMiniCalendar";
 import { ConciergeChecklistView } from "@/components/checklists/concierge/ConciergeChecklistView";
@@ -29,9 +34,17 @@ import { useQuickLinkGroupsByRole, useResourcePagesByRole } from "@/hooks/useSta
 import { usePolicies } from "@/hooks/usePolicies";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
+const CONCIERGE_TAB_IDS = ["home", "report", "messages", "lost-found", "more"] as const;
+function conciergeViewToTabId(view: ConciergeView): string {
+  if (CONCIERGE_TAB_IDS.includes(view as (typeof CONCIERGE_TAB_IDS)[number])) return view;
+  return "more";
+}
+
 export default function ConciergeDashboard() {
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const [reportView, setReportView] = useState<"current" | "past">("current");
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
   const { activeRole } = useActiveRole();
@@ -181,20 +194,27 @@ export default function ConciergeDashboard() {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex flex-col w-full bg-background">
-          <ConciergeHeader title={viewTitles[activeView]} />
-          <main className="flex-1 overflow-auto pb-20">
+          <MobileHeader title={viewTitles[activeView]} />
+          <main className="flex-1 min-h-0 overflow-auto pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]">
             {renderContent()}
           </main>
-          <ConciergeBottomNav
-            activeView={activeView}
-            onViewChange={setActiveView}
-            hasUnreadAnnouncements={!!hasUnreadAnnouncements}
-            unreadMessageCount={unreadMessageCount}
+          <MobileBottomNav
+            tabs={getConciergeMobileTabs(unreadMessageCount, setActiveView)}
+            activeId={conciergeViewToTabId(activeView)}
+            onMoreClick={() => setMoreSheetOpen(true)}
           />
-
+          <MoreMenuSheet
+            open={moreSheetOpen}
+            onOpenChange={setMoreSheetOpen}
+            items={getConciergeMoreItems()}
+            onItemSelect={(item) => {
+              if (item.path) navigate(item.path);
+              if (item.view) setActiveView(item.view);
+            }}
+          />
         </div>
-      </SidebarProvider>);
-
+      </SidebarProvider>
+    );
   }
 
   return (

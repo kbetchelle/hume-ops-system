@@ -1,5 +1,6 @@
-import { format } from "date-fns";
-import { RefreshCw, Calendar, Users, Clock, User, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { format, addDays, subDays } from "date-fns";
+import { RefreshCw, Calendar, Users, Clock, User, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,14 +8,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { useTodaysClasses, useSyncArketaClasses } from "@/hooks/useArketaApi";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 export function ClassScheduleView() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const { data: classes, isLoading, error, refetch } = useTodaysClasses(today);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const { data: classes, isLoading, error, refetch } = useTodaysClasses(isMobile ? selectedDate : today);
   const syncClasses = useSyncArketaClasses();
 
   const handleSync = async () => {
-    await syncClasses.mutateAsync({ start_date: today, end_date: today });
+    const date = isMobile ? selectedDate : today;
+    await syncClasses.mutateAsync({ start_date: date, end_date: date });
     refetch();
   };
 
@@ -79,6 +86,101 @@ export function ClassScheduleView() {
   const activeClasses = classes?.filter(c => !c.is_cancelled) || [];
   const totalBooked = activeClasses.reduce((sum, c) => sum + (c.booked_count || 0), 0);
   const totalCapacity = activeClasses.reduce((sum, c) => sum + (c.capacity || 0), 0);
+
+  if (isMobile) {
+    const isToday = selectedDate === today;
+    const now = new Date();
+    return (
+      <div className="flex flex-col min-h-0">
+        <div className="flex items-center justify-between gap-2 p-3 border-b bg-background shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0"
+            onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <span className="text-base font-medium min-w-[120px] text-center">
+            {isToday ? "Today" : format(new Date(selectedDate), "EEE, MMM d")}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0"
+            onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto scroll-smooth relative">
+          {activeClasses.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No classes scheduled for this day.</p>
+          ) : (
+            <div className="space-y-2 p-3 pb-6">
+              {activeClasses.map((cls) => {
+                const booked = cls.booked_count || 0;
+                const capacity = cls.capacity || 0;
+                const isPast = new Date(cls.start_time) < now;
+                const isExpanded = expandedClassId === cls.id;
+                return (
+                  <div key={cls.id} className="space-y-0">
+                    {isToday && activeClasses[0]?.id === cls.id && (
+                      <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+                        <div className="h-px flex-1 bg-primary/50" />
+                        <span>Now</span>
+                        <div className="h-px flex-1 bg-primary/50" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}
+                      className={cn(
+                        "w-full text-left p-4 rounded-xl border shadow-sm transition-all duration-200 min-h-[44px]",
+                        isPast && "opacity-60",
+                        cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border bg-card"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-medium text-muted-foreground shrink-0 w-16">
+                          {formatTime(cls.start_time)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-medium truncate">{cls.name}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {[cls.instructor_name, cls.room_name].filter(Boolean).join(" · ") || "—"}
+                          </p>
+                        </div>
+                        {(cls.is_cancelled || (isPast && !cls.is_cancelled)) && (
+                          <Badge variant={cls.is_cancelled ? "destructive" : "secondary"} className="text-[10px] shrink-0">
+                            {cls.is_cancelled ? "Cancelled" : "Done"}
+                          </Badge>
+                        )}
+                      </div>
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-t space-y-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>{booked} / {capacity} enrolled</span>
+                          </div>
+                          {cls.duration_minutes && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              <span>{cls.duration_minutes} min</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="border border-border rounded-none">

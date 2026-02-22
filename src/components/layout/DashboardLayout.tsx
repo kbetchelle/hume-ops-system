@@ -22,6 +22,11 @@ import { useInAppNotifications } from "@/hooks/useInAppNotifications";
 import { useNeedsWalkthrough, useMarkWalkthroughCompleted } from "@/hooks/useWalkthroughState";
 import { getWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
 import { WalkthroughOverlay } from "@/components/walkthrough";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
+import { MoreMenuSheet } from "@/components/mobile/MoreMenuSheet";
+import { getBohMobileTabs, getBohMoreItems } from "@/components/mobile/mobile-nav-config";
 
 const RESOURCE_SUB_ITEMS = [
   { title: "Quick Links", url: "/dashboard/resources/quick-links", icon: Link2 },
@@ -694,20 +699,46 @@ function DashboardHeader({ title }: { title: string }) {
     </header>
   );
 }
+function getEffectiveRoleFromPath(path: string, activeRole: AppRole | null): AppRole | null {
+  if (path.startsWith("/dashboard/admin")) return "admin";
+  if (path.startsWith("/dashboard/manager")) return "manager";
+  if (path.startsWith("/dashboard/floater")) return "floater";
+  if (path.startsWith("/dashboard/spa/male")) return "male_spa_attendant";
+  if (path.startsWith("/dashboard/spa/female")) return "female_spa_attendant";
+  if (path.startsWith("/dashboard/spa")) return activeRole === "male_spa_attendant" ? "male_spa_attendant" : "female_spa_attendant";
+  return activeRole;
+}
+
+function getBohActiveTabId(path: string): string {
+  if (path.startsWith("/dashboard/spa/female") || path.startsWith("/dashboard/spa/male") || path.startsWith("/dashboard/floater")) return "checklist";
+  if (path === "/dashboard/messages") return "messages";
+  if (path === "/dashboard/class-schedule") return "schedule";
+  return "more";
+}
+
 export function DashboardLayout({
   children,
   title
 }: DashboardLayoutProps) {
   useInAppNotifications();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuthContext();
   const { t } = useLanguage();
   const { data: profile } = useUserProfile(user?.id);
   const { data: roles } = useUserRoles(user?.id);
   const { activeRole, availableRoles, isLoading: activeRoleLoading } = useActiveRole();
+  const isMobile = useIsMobile();
+  const { count: unreadMessageCount } = useUnreadMessageCount();
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const needsWalkthrough = useNeedsWalkthrough();
   const markWalkthroughCompleted = useMarkWalkthroughCompleted();
   const isBoh = activeRole !== null && isBohWalkthroughRole(activeRole);
   const hasAutoCompletedBohRef = useRef(false);
+
+  const effectiveRole = getEffectiveRoleFromPath(location.pathname, activeRole);
+  const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
+  const bohActiveTabId = getBohActiveTabId(location.pathname);
 
   useEffect(() => {
     if (needsWalkthrough && isBoh && !hasAutoCompletedBohRef.current) {
@@ -729,6 +760,44 @@ export function DashboardLayout({
     !activeRoleLoading &&
     activeRole !== null &&
     walkthroughSteps.length > 0;
+
+  if (isMobile) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full bg-background">
+          <MobileHeader title={title} />
+          <main
+            className="flex-1 min-h-0 overflow-auto p-4 pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]"
+          >
+            {children}
+          </main>
+          {isBohRole && effectiveRole && (
+            <>
+              <MobileBottomNav
+                tabs={getBohMobileTabs(effectiveRole, unreadMessageCount)}
+                activeId={bohActiveTabId}
+                onMoreClick={() => setMoreSheetOpen(true)}
+              />
+              <MoreMenuSheet
+                open={moreSheetOpen}
+                onOpenChange={setMoreSheetOpen}
+                items={getBohMoreItems()}
+                onItemSelect={(item) => {
+                  if (item.path) navigate(item.path);
+                }}
+              />
+            </>
+          )}
+        </div>
+        {showOverlay && (
+          <WalkthroughOverlay
+            steps={walkthroughSteps}
+            onClose={() => {}}
+          />
+        )}
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>

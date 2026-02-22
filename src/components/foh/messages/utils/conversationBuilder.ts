@@ -246,6 +246,10 @@ export function getConversationTitle(
   }
 
   if (conversation.participants.length === 0) {
+    // Try to get a name from the last message sender_name
+    if (conversation.lastMessage?.sender_name) {
+      return `You + ${conversation.lastMessage.sender_name}`;
+    }
     return 'New Conversation';
   }
 

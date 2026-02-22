@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,10 +20,28 @@ interface MobileHeaderProps {
   roleChipClassName?: string;
 }
 
+function getCurrentViewRole(path: string, activeRole: AppRole | null): AppRole | null {
+  if (path.includes("/dashboard/admin")) return "admin";
+  if (path.includes("/dashboard/manager")) return "manager";
+  if (path.includes("/dashboard/concierge")) return "concierge";
+  if (path.includes("/dashboard/trainer")) return "trainer";
+  if (path.includes("/dashboard/spa/male")) return "male_spa_attendant";
+  if (path.includes("/dashboard/spa/female")) return "female_spa_attendant";
+  if (path.includes("/dashboard/spa")) {
+    if (activeRole === "male_spa_attendant" || activeRole === "female_spa_attendant") return activeRole;
+    return null;
+  }
+  if (path.includes("/dashboard/floater")) return "floater";
+  if (path.includes("/dashboard/cafe")) return "cafe";
+  return activeRole;
+}
+
 export function MobileHeader({ title, roleChipClassName }: MobileHeaderProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeRole, availableRoles, setActiveRole, getRoleLabel } = useActiveRole();
+  const currentViewRole = getCurrentViewRole(location.pathname, activeRole);
 
   const handleRoleSelect = (role: AppRole) => {
     setActiveRole(role);
@@ -54,7 +72,7 @@ export function MobileHeader({ title, roleChipClassName }: MobileHeaderProps) {
           <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
             <NotificationBell />
           </div>
-          {availableRoles.length > 1 && activeRole && (
+          {availableRoles.length > 1 && currentViewRole && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -62,7 +80,7 @@ export function MobileHeader({ title, roleChipClassName }: MobileHeaderProps) {
                   size="sm"
                   className={cn("rounded-none text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
                 >
-                  <span className="truncate max-w-[80px]">{getRoleLabel(activeRole)}</span>
+                  <span className="truncate max-w-[80px]">{getRoleLabel(currentViewRole)}</span>
                   <ChevronDown className="h-3 w-3 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>

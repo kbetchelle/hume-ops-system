@@ -1,51 +1,44 @@
 
 
-# Past Reports: Continuous Scrollable View
+# Fix: Phantom Unread Message Badge
 
-## Overview
-Replace the current paginated card grid (click-to-open detail) with a single scrollable page where all report content is displayed inline, grouped by date with AM/PM sections. No more dialogs or sheets -- everything is visible on one page.
+## Problem
+You're seeing a "1" unread badge but no unopened threads. The cause: the "Test Message" you sent to a group (that includes yourself as a recipient) is counted as unread because the database function doesn't exclude messages where you are the sender.
 
-## Layout
+## Solution
+Update the `get_unread_message_count` database function to exclude messages sent by the requesting user. Messages you send yourself should never count as "unread" for you.
 
-```text
-[Search bar]                              [X reports]
+## Technical Details
 
----- Mon, Feb 16, 2026 ----
-  AM · Staff Name
-    Summary: ...
-    Busiest areas: ...
-    Tour notes: ...
-    Member feedback: ...
-    Facility issues: ...
-    Handoff notes: ...
+### 1. Database Migration
+Alter the `get_unread_message_count` function to add a `AND m.sender_id != p_user_id` condition:
 
-  PM · Staff Name
-    Summary: ...
-    ...
-
----- Sun, Feb 15, 2026 ----
-  AM · Staff Name
-    ...
+```sql
+CREATE OR REPLACE FUNCTION public.get_unread_message_count(p_user_id uuid)
+  RETURNS integer
+  LANGUAGE sql
+  STABLE SECURITY DEFINER
+  SET search_path TO 'public'
+AS $$
+  SELECT COUNT(*)::integer
+  FROM staff_messages m
+  WHERE m.is_sent = true
+    AND m.sender_id != p_user_id          -- NEW: exclude own messages
+    AND (
+      m.recipient_ids IS NULL
+      OR p_user_id = ANY(m.recipient_ids)
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM staff_message_reads r
+      WHERE r.message_id = m.id
+        AND r.staff_id = p_user_id
+    );
+$$;
 ```
 
-- Reports grouped by `report_date` (descending), then AM before PM within each date
-- Each date gets a sticky or visual header divider
-- Each shift section shows all the detail fields inline (the same content currently in the dialog/sheet)
-- Empty fields show a dash or are omitted entirely to keep things clean
-- Search still works: filters reports, and highlights matching snippets
-- On mobile: same continuous layout inside `MobilePageWrapper` with pull-to-refresh; date range filters remain at top
-- Pagination and the detail dialog/sheet are removed entirely
+### 2. Client-Side Consistency
+Review the conversation list's `hasUnread` logic (in the conversation builder utilities) to also exclude self-sent messages from unread calculations, ensuring the badge and the conversation list stay in sync.
 
-## Technical Changes
+This is a one-line SQL change plus a minor client-side alignment -- no new tables or columns needed.
 
-**File: `src/components/concierge/PastReportsView.tsx`**
-
-1. Remove `Dialog`, `Sheet`, pagination imports and related state (`detailReport`, `page`, `currentPage`, `paginatedReports`, `totalPages`)
-2. Group `filteredReports` by `report_date` using a `useMemo` that produces `Map<string, ReportRow[]>` (sorted by date desc, AM first within each date)
-3. Replace the card grid with a flat list:
-   - Date header divider for each group
-   - For each report in the group, render the full detail content inline (reuse the existing `detailContent` markup as a component)
-4. Keep `ITEMS_PER_PAGE` as a "load more" batch size -- show first 30 reports initially with a "Show more" button at the bottom (avoids rendering 150+ reports at once)
-5. Mobile and desktop share the same continuous layout; only the sticky search/date-filter header differs
-
-No database or edge function changes needed.

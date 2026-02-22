@@ -731,7 +731,7 @@ export function StaffAnnouncementsManager() {
         value={typeFilter}
         onValueChange={(v) => setTypeFilter(v as "all" | "announcement" | "weekly_update")}
       >
-        <TabsList className="w-full max-w-2xl">
+        <TabsList className="w-full">
           <TabsTrigger value="all" className="flex-1 gap-2">
             <Bell className="h-4 w-4" />
             All

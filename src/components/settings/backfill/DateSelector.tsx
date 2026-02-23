@@ -54,7 +54,7 @@ export default function DateSelector({
               <Button
                 variant="outline"
                 className={cn(
-                  "w-[160px] justify-start text-left font-normal",
+                  "w-[160px] justify-center text-center font-normal",
                   !startDate && "text-muted-foreground"
                 )}
               >
@@ -79,7 +79,7 @@ export default function DateSelector({
               <Button
                 variant="outline"
                 className={cn(
-                  "w-[160px] justify-start text-left font-normal",
+                  "w-[160px] justify-center text-center font-normal",
                   !endDate && "text-muted-foreground"
                 )}
               >

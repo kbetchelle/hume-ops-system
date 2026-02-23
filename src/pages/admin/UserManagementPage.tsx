@@ -51,13 +51,13 @@ export default function UserManagementPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
           <TabsList className="w-full">
-            <TabsTrigger value="users">
+            <TabsTrigger value="users" className="flex-1 gap-2">
               Users & Roles
             </TabsTrigger>
-            <TabsTrigger value="create-from-sling">
+            <TabsTrigger value="create-from-sling" className="flex-1 gap-2">
               Create from Sling
             </TabsTrigger>
-            <TabsTrigger value="approvals">
+            <TabsTrigger value="approvals" className="flex-1 gap-2">
               <div className="flex items-center gap-2">
                 Pending Approvals
                 {pendingApprovalsCount > 0 && (
@@ -67,10 +67,10 @@ export default function UserManagementPage() {
                 )}
               </div>
             </TabsTrigger>
-            <TabsTrigger value="sling">
+            <TabsTrigger value="sling" className="flex-1 gap-2">
               Sling Linking
             </TabsTrigger>
-            <TabsTrigger value="target-groups">
+            <TabsTrigger value="target-groups" className="flex-1 gap-2">
               Target Groups
             </TabsTrigger>
           </TabsList>

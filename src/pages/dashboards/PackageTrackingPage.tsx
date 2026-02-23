@@ -179,11 +179,11 @@ export default function PackageTrackingPage() {
         )}
       </div>
       <Tabs value={activeTab} onValueChange={(v: "pending_pickup" | "picked_up") => { setActiveTab(v); setSelectedPackages([]); }} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="grid w-full grid-cols-2 h-12 shrink-0 rounded-none">
-          <TabsTrigger value="pending_pickup" className="rounded-none">
+        <TabsList className="w-full shrink-0">
+          <TabsTrigger value="pending_pickup" className="flex-1 gap-2">
             Pending {stats && stats.pending > 0 && `(${stats.pending})`}
           </TabsTrigger>
-          <TabsTrigger value="picked_up" className="rounded-none">Picked Up</TabsTrigger>
+          <TabsTrigger value="picked_up" className="flex-1 gap-2">Picked Up</TabsTrigger>
         </TabsList>
         <TabsContent value="pending_pickup" className="flex-1 min-h-0 mt-3">
           {isLoading ? (
@@ -389,8 +389,8 @@ export default function PackageTrackingPage() {
             setActiveTab(v);
             setSelectedPackages([]);
           }}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pending_pickup">
+            <TabsList className="w-full">
+              <TabsTrigger value="pending_pickup" className="flex-1 gap-2">
                 Pending Pickup
                 {stats && stats.pending > 0 && (
                   <Badge variant="secondary" className="ml-2">
@@ -398,7 +398,7 @@ export default function PackageTrackingPage() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="picked_up">Picked Up</TabsTrigger>
+              <TabsTrigger value="picked_up" className="flex-1 gap-2">Picked Up</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pending_pickup" className="mt-6">

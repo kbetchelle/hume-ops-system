@@ -30,7 +30,10 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
     <div
       role="article"
       className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50 cursor-pointer")}
-      style={!item.isRead ? tintBorderStyle(HEX) : undefined}
+      style={{
+        backgroundColor: `${HEX}1A`,
+        ...(!item.isRead ? tintBorderStyle(HEX) : undefined),
+      }}
       onClick={() => navigate("/dashboard/concierge")}
     >
       {/* Icon badge – solid */}

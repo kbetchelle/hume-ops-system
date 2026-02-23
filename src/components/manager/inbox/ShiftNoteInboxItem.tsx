@@ -47,7 +47,6 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
           >
             Shift Note
           </span>
-          <span className="text-[10px] text-muted-foreground">{data.staffName}</span>
           <span className="text-[10px] text-muted-foreground">
             {format(parseISO(data.reportDate), "MMM d, yyyy")}
           </span>

@@ -341,6 +341,7 @@ function SidebarNav() {
     permissions
   } = usePermissions();
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const devToolsRef = useRef<HTMLDivElement>(null);
   const { count: unreadBugCount } = useUnreadBugReportCount();
   const { count: unreadMessageCount } = useUnreadMessageCount();
   const { data: unreadInboxCount } = useUnreadInboxCount();
@@ -560,7 +561,14 @@ function SidebarNav() {
                   </SidebarMenuItem>)}
 
                 {/* Dev Tools Submenu */}
-                <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={setDevToolsOpen}>
+                <Collapsible open={devToolsOpen || isDevToolsActive} onOpenChange={(open) => {
+                    setDevToolsOpen(open);
+                    if (open) {
+                      setTimeout(() => {
+                        devToolsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                      }, 150);
+                    }
+                  }}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton className={cn("flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-widest transition-colors w-full text-muted-foreground", "hover:bg-muted/50", isDevToolsActive && "bg-muted/70 text-foreground")}>
@@ -570,7 +578,7 @@ function SidebarNav() {
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                   </SidebarMenuItem>
-                  <CollapsibleContent>
+                  <CollapsibleContent ref={devToolsRef}>
                     {settingsGroups[0].items.map(item => <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
                           <NavLink to={item.url} className={cn("flex items-center gap-3 pl-8 pr-3 py-2 text-xs uppercase tracking-widest transition-colors text-muted-foreground", "hover:bg-muted/50")} activeClassName="bg-muted text-foreground font-medium">

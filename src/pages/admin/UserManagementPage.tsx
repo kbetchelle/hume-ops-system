@@ -90,11 +90,13 @@ export default function UserManagementPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="approvals" className="mt-6">
+          <TabsContent value="approvals" className="mt-6 space-y-4">
+            <p className="text-xs text-muted-foreground tracking-wide">These people have tried to 'Create an Account' on the login page, use caution in approving these. Create from Sling is preferred.</p>
             <AccountApprovalsSection />
           </TabsContent>
 
-          <TabsContent value="users" className="mt-6">
+          <TabsContent value="users" className="mt-6 space-y-4">
+            <p className="text-xs text-muted-foreground tracking-wide">These accounts are active or pending. Pending accounts have not yet been logged into by the user using their username/email and the default password.</p>
             {isLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -119,15 +121,18 @@ export default function UserManagementPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="sling" className="mt-6">
+          <TabsContent value="sling" className="mt-6 space-y-4">
+            <p className="text-xs text-muted-foreground tracking-wide">If Account created from Pending Approvals and later added to sling users, link the employee to their sling account on this page.</p>
             <SlingUserLinkingTable />
           </TabsContent>
 
-          <TabsContent value="create-from-sling" className="mt-6">
+          <TabsContent value="create-from-sling" className="mt-6 space-y-4">
+            <p className="text-xs text-muted-foreground tracking-wide">Create users here. Employee should exist in sling and will be synced to appear here, create their account and username and their account will become PENDING with the default password. If user not appearing, go in Manager Role View navigation menu to Dev Tools → API Syncing → Sling Users → SYNC</p>
             <CreateFromSlingTable />
           </TabsContent>
 
-          <TabsContent value="target-groups" className="mt-6">
+          <TabsContent value="target-groups" className="mt-6 space-y-4">
+            <p className="text-xs text-muted-foreground tracking-wide">Add new employees to Messaging and Announcement groups here.</p>
             <TargetGroupsTable />
           </TabsContent>
         </Tabs>

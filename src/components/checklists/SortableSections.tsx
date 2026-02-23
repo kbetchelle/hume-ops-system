@@ -127,6 +127,10 @@ interface SortableSectionsProps {
   onReorder: (reorderedItems: { id: string; sort_order: number }[]) => void;
   onRenameSection: (oldName: string, newName: string) => void;
   secondaryField?: 'category' | 'time_hint';
+  /** Which item field to group sections by. Defaults to 'time_hint'. */
+  groupField?: 'time_hint' | 'category';
+  /** Label shown when an item has no value for the group field. */
+  ungroupedLabel?: string;
 }
 
 export function SortableSections({
@@ -136,6 +140,8 @@ export function SortableSections({
   onReorder,
   onRenameSection,
   secondaryField = 'category',
+  groupField = 'time_hint',
+  ungroupedLabel = 'Ungrouped',
 }: SortableSectionsProps) {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -146,7 +152,7 @@ export function SortableSections({
   const groupOrder: string[] = [];
   const grouped: Record<string, typeof sorted> = {};
   sorted.forEach((item) => {
-    const group = item.time_hint || 'Ungrouped';
+    const group = (groupField === 'category' ? item.category : item.time_hint) || ungroupedLabel;
     if (!grouped[group]) {
       grouped[group] = [];
       groupOrder.push(group);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical, X } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
-import { SortableChecklistItems, SortableItem } from '@/components/checklists/SortableChecklistItems';
+import { SortableSections } from '@/components/checklists/SortableSections';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -132,6 +132,21 @@ export function CafeChecklistManager() {
     }
   }, [expandedId, updateItem, toast]);
 
+  const handleRenameSection = useCallback(async (oldName: string, newName: string) => {
+    if (!items || !expandedId) return;
+    const sectionItems = items.filter(i => (i.category || 'Uncategorized') === oldName);
+    try {
+      await Promise.all(
+        sectionItems.map(item =>
+          updateItem.mutateAsync({ id: item.id, checklistId: expandedId, updates: { category: newName } })
+        )
+      );
+      toast({ title: `Section renamed to "${newName}"` });
+    } catch (error: any) {
+      toast({ title: 'Rename failed', description: error.message, variant: 'destructive' });
+    }
+  }, [items, expandedId, updateItem, toast]);
+
   if (isLoading) return <div>Loading...</div>;
 
   return (
@@ -219,36 +234,16 @@ export function CafeChecklistManager() {
                     </div>
                   </div>
 
-                  {(() => {
-                    const sorted = [...(items || [])].sort((a, b) => a.sort_order - b.sort_order);
-                    const grouped: Record<string, typeof sorted> = {};
-                    sorted.forEach((item) => {
-                      const group = item.category || 'Uncategorized';
-                      if (!grouped[group]) grouped[group] = [];
-                      grouped[group].push(item);
-                    });
-                    return (
-                      <div>
-                        {Object.entries(grouped).map(([group, groupItems]) => (
-                          <Collapsible key={group} defaultOpen>
-                            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                              <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
-                              <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="pl-1">
-                              <SortableChecklistItems
-                                items={groupItems}
-                                onEdit={(item) => { setEditingItem(item as CafeChecklistItem); setIsItemDialogOpen(true); }}
-                                onDelete={handleDeleteItem}
-                                onReorder={handleReorder}
-                                secondaryField="time_hint"
-                              />
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  <SortableSections
+                    items={(items || []) as any}
+                    onEdit={(item) => { setEditingItem(item as CafeChecklistItem); setIsItemDialogOpen(true); }}
+                    onDelete={handleDeleteItem}
+                    onReorder={handleReorder}
+                    onRenameSection={handleRenameSection}
+                    secondaryField="time_hint"
+                    groupField="category"
+                    ungroupedLabel="Uncategorized"
+                  />
                 </div>
               </CardContent>
             )}

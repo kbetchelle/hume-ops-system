@@ -388,6 +388,7 @@ function SidebarNav() {
   const cafeRefItems: NavItem[] = [
     { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
     { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
+    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];
 

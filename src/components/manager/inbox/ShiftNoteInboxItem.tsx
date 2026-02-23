@@ -47,9 +47,6 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
           >
             Shift Note
           </span>
-          <span className="text-[10px] text-muted-foreground">
-            {format(parseISO(data.reportDate), "MMM d, yyyy")}
-          </span>
           <span
             className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0 bg-muted text-muted-foreground border border-border"
           >

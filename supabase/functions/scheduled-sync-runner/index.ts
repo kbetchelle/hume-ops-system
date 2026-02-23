@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
-    const { sync_type: specificSyncType, run_all, start_date: customStartDate, end_date: customEndDate } = body;
+    const { sync_type: specificSyncType, run_all } = body;
 
     console.log('[Scheduled Sync Runner] Starting sync check...');
 
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       try {
         // Wrap sync execution with timeout
         result = await withTimeout(
-          runSync(supabase, sync.sync_type, supabaseUrl, supabaseKey, customStartDate, customEndDate),
+          runSync(supabase, sync.sync_type, supabaseUrl, supabaseKey),
           SYNC_TIMEOUT_MS,
           `${sync.sync_type} sync`
         );
@@ -283,9 +283,7 @@ async function runSync(
   supabase: any,
   syncType: string,
   supabaseUrl: string,
-  serviceRoleKey: string,
-  customStartDate?: string,
-  customEndDate?: string,
+  serviceRoleKey: string
 ): Promise<SyncResult> {
   // Look up function name from sync_schedule table
   const { data: syncConfig, error: lookupError } = await supabase
@@ -302,54 +300,35 @@ async function runSync(
   const functionName = syncConfig.function_name;
 
   // Prepare request body based on sync type
-  let requestBody: Record<string, unknown> = {};
+  let requestBody = {};
   if (syncType === 'sling_users') {
     requestBody = { action: 'sync-users' };
   } else if (syncType === 'sling_shifts') {
     requestBody = { action: 'sync-shifts' };
-    if (customStartDate && customEndDate) {
-      requestBody.start_date = customStartDate;
-      requestBody.end_date = customEndDate;
-    }
   } else if (syncType === 'toast_sales') {
-    if (customStartDate && customEndDate) {
-      requestBody = { start_date: customStartDate, end_date: customEndDate };
-    } else {
-      requestBody = { days_back: 1 };
-    }
+    // Sync last 1 day of sales data
+    requestBody = { days_back: 1 };
   } else if (syncType === 'toast_backfill') {
+    // Backfill through 08/01/24; no body needed (uses toast_backfill_state cursor)
     requestBody = {};
   } else if (syncType === 'order_checks_backfill') {
+    // Order checks backfill; no body needed (uses order_checks_backfill_state cursor)
     requestBody = {};
   } else if (syncType === 'calendly_events') {
+    // Sync 7 days past to 90 days future
     requestBody = { limit: 400 };
-    if (customStartDate && customEndDate) {
-      requestBody.start_date = customStartDate;
-      requestBody.end_date = customEndDate;
-    }
   } else if (syncType === 'arketa_classes') {
-    // Combined classes + reservations sync
+    // Combined classes + reservations sync: -7 to +7 days
     const today = new Date();
-    const start = customStartDate || new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
-    const today2 = new Date();
-    const end = customEndDate || new Date(today2.setDate(today2.getDate() + 7)).toISOString().split('T')[0];
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
     requestBody = {
-      start_date: start,
-      end_date: end,
-      triggeredBy: customStartDate ? 'manual' : 'scheduled',
+      start_date: start.toISOString().split('T')[0],
+      end_date: end.toISOString().split('T')[0],
+      triggeredBy: 'scheduled',
     };
-  } else if (syncType === 'daily_report_aggregation') {
-    if (customStartDate && customEndDate) {
-      requestBody = { start_date: customStartDate, end_date: customEndDate };
-    }
-  } else if (syncType === 'daily_schedule') {
-    if (customStartDate && customEndDate) {
-      requestBody = { start_date: customStartDate, end_date: customEndDate };
-    }
-  } else if (syncType === 'arketa_reservations') {
-    if (customStartDate && customEndDate) {
-      requestBody = { start_date: customStartDate, end_date: customEndDate };
-    }
   }
 
   // Call the appropriate edge function

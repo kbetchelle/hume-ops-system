@@ -82,12 +82,9 @@ export function useRunSync() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ syncType, startDate, endDate }: { syncType: string; startDate?: string; endDate?: string }) => {
-      const body: Record<string, unknown> = { sync_type: syncType };
-      if (startDate) body.start_date = startDate;
-      if (endDate) body.end_date = endDate;
+    mutationFn: async (syncType: string) => {
       const { data, error } = await supabase.functions.invoke("scheduled-sync-runner", {
-        body,
+        body: { sync_type: syncType },
       });
       if (error) throw error;
       return data;

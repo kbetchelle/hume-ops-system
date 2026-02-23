@@ -300,7 +300,7 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
                     </div>
                   )}
                   {isNext && (
-                    <Badge variant="default" className="mt-2 text-xs">
+                    <Badge variant="default" className="mt-2 text-xs rounded-none border-none text-white" style={{ backgroundColor: '#f6821f' }}>
                       Next Up
                     </Badge>
                   )}

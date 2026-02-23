@@ -25,6 +25,7 @@ import {
   ConciergeChecklistItem,
 } from '@/hooks/checklists/useConciergeChecklists';
 import { useToast } from '@/hooks/use-toast';
+import { BulkAddItemsDialog } from '@/components/checklists/BulkAddItemsDialog';
 
 const TASK_TYPES = [
   { value: 'checkbox', label: 'Checkbox' },
@@ -48,6 +49,7 @@ export function ConciergeChecklistManager() {
   const [editingItem, setEditingItem] = useState<ConciergeChecklistItem | null>(null);
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
 
   const { data: items } = useConciergeChecklistItems(expandedId || undefined);
   
@@ -170,6 +172,17 @@ export function ConciergeChecklistManager() {
         </Button>
       </div>
 
+      {expandedId && (
+        <BulkAddItemsDialog
+          open={isBulkDialogOpen}
+          onOpenChange={setIsBulkDialogOpen}
+          checklistId={expandedId}
+          currentItemCount={items?.length || 0}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          createItem={(data) => createItem.mutateAsync(data)}
+        />
+      )}
+
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
           <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''} ${checklist.is_weekend ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
@@ -227,10 +240,16 @@ export function ConciergeChecklistManager() {
                     <h3 className="text-sm font-medium">
                       ({items?.length || 0})
                     </h3>
-                    <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Item
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Bulk Add
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Item
+                      </Button>
+                    </div>
                   </div>
 
                   {(() => {

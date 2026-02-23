@@ -124,7 +124,7 @@ export function CafeChecklistView() {
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <Badge variant={isAllComplete ? 'default' : 'secondary'}>
+                  <Badge variant={isAllComplete ? 'default' : 'secondary'} className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#f6821f', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                     {completedCount} / {totalCount} Complete
                   </Badge>
                   <div className="flex items-center gap-2">

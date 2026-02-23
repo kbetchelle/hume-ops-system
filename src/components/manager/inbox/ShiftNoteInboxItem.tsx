@@ -38,17 +38,15 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
-            <span
-              className="text-[10px] font-bold leading-none"
-              style={{ ...solidStyle(HEX), paddingLeft: '6.75px', paddingRight: '6.75px', paddingTop: '2.25px', paddingBottom: '2.25px' }}
-            >
-              {data.shiftType}
-            </span>
-            From Concierge Shift Report
-          </p>
-          <span className="text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="text-[10px] font-bold leading-none shrink-0"
+            style={{ ...solidStyle(HEX), paddingLeft: '6.75px', paddingRight: '6.75px', paddingTop: '2.25px', paddingBottom: '2.25px' }}
+          >
+            {data.shiftType}
+          </span>
+          <p className="text-sm font-bold text-foreground truncate">From Concierge Shift Report</p>
+          <span className="text-[10px] text-muted-foreground shrink-0 ml-auto">
             {differenceInDays(new Date(), parseISO(item.createdAt)) > 5
               ? format(parseISO(item.createdAt), "MMM. dd")
               : formatDistanceToNow(parseISO(item.createdAt), { addSuffix: true })}

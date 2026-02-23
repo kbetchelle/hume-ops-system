@@ -305,7 +305,7 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
                     </Badge>
                   )}
                   {isPast && (
-                    <Badge variant="secondary" className="mt-2 text-xs rounded-none border-none text-white" style={{ backgroundColor: '#62bb47' }}>
+                    <Badge variant="secondary" className="mt-2 text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#62bb47', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                       In Progress
                     </Badge>
                   )}

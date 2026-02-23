@@ -194,11 +194,32 @@ Deno.serve(async (req) => {
       };
 
       // 2) Arketa payments (amount in cents -> dollars; use offering_name for membership vs other)
+      // Convert report_date (PST calendar day) to UTC range for querying
+      // PST = UTC-8, PDT = UTC-7. Use Intl to determine correct offset for the date.
+      const pstStart = new Date(new Date(`${report_date}T00:00:00-08:00`).toISOString());
+      const pstEnd = new Date(new Date(`${report_date}T23:59:59.999-08:00`).toISOString());
+      // Adjust for PDT if applicable (March-November)
+      const reportMonth = parseInt(report_date.slice(5, 7), 10);
+      const reportDay = parseInt(report_date.slice(8, 10), 10);
+      // Simple DST check: PDT is roughly Mar 9 - Nov 2 (2nd Sun Mar to 1st Sun Nov)
+      const isDST = reportMonth > 3 && reportMonth < 11 ||
+        (reportMonth === 3 && reportDay >= 9) ||
+        (reportMonth === 11 && reportDay < 2);
+      const utcStartStr = isDST
+        ? `${report_date}T07:00:00.000Z`
+        : `${report_date}T08:00:00.000Z`;
+      const nextDate = new Date(`${report_date}T12:00:00Z`);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().slice(0, 10);
+      const utcEndStr = isDST
+        ? `${nextDateStr}T07:00:00.000Z`
+        : `${nextDateStr}T08:00:00.000Z`;
+
       const { data: payRows, error: payErr } = await supabase
         .from("arketa_payments")
         .select("amount, offering_name, normalized_category, created_at_api")
-        .gte("created_at_api", `${report_date}T00:00:00`)
-        .lt("created_at_api", `${report_date}T23:59:59.999`)
+        .gte("created_at_api", utcStartStr)
+        .lt("created_at_api", utcEndStr)
         .not("amount", "is", null);
 
       if (payErr) {

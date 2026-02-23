@@ -48,6 +48,7 @@ import SubscriptionPastDuePage from "./pages/members/SubscriptionPastDuePage";
 import TemporaryMembershipsPage from "./pages/members/TemporaryMembershipsPage";
 import PausesPage from "./pages/members/PausesPage";
 import CancellationsPage from "./pages/members/CancellationsPage";
+import MastercardPage from "./pages/members/MastercardPage";
 import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
 import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
 import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
@@ -340,6 +341,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
                   <CancellationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/members/mastercard"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <MastercardPage />
                 </ProtectedRoute>
               }
             />

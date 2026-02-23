@@ -17,7 +17,8 @@ export type NotificationType =
   | 'resource_outdated'
   | 'package_arrived'
   | 'room_turnover'
-  | 'tour_alert';
+  | 'tour_alert'
+  | 'mastercard_arrival';
 
 interface SendNotificationParams {
   userId: string;

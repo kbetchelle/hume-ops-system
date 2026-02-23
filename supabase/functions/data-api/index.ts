@@ -16,6 +16,7 @@ const TABLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'member_checkins': { management: ['select', 'insert', 'update'], concierge: ['select'] },
   'class_schedule': { management: ['select', 'insert', 'update'], concierge: ['select'], staff: ['select'] },
   'scheduled_tours': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select', 'update'] },
+  'mastercard_visits': { management: ['select', 'insert', 'update', 'delete'], concierge: ['select'] },
   'members': { management: ['select', 'insert', 'update'], concierge: ['select'] },
   'sling_users': { management: ['select', 'insert', 'update', 'delete'] },
   'api_sync_status': { management: ['select', 'insert', 'update'] },

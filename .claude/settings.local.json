@@ -22,7 +22,8 @@
       "Bash(npm install:*)",
       "Bash(xargs:*)",
       "Bash(git pull:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ]
   }
 }

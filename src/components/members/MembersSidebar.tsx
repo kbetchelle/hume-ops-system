@@ -32,6 +32,7 @@ const additionalItems: NavItem[] = [
   { title: "Temporary Memberships", url: "/dashboard/members/temporary-memberships" },
   { title: "Pauses", url: "/dashboard/members/pauses" },
   { title: "Cancellations", url: "/dashboard/members/cancellations" },
+  { title: "Mastercard", url: "/dashboard/members/mastercard" },
 ];
 
 export function MembersSidebar() {

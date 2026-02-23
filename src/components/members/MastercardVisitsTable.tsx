@@ -102,7 +102,6 @@ export function MastercardVisitsTable() {
               <TableHead>Guests</TableHead>
               <TableHead>Assigned Concierge</TableHead>
               <TableHead>Purpose</TableHead>
-              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -125,7 +124,7 @@ export function MastercardVisitsTable() {
               ))
             ) : visits.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No visits found
                 </TableCell>
               </TableRow>
@@ -160,11 +159,6 @@ export function MastercardVisitsTable() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {visit.visit_purpose || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={statusStyles[visit.status] ?? ""}>
-                      {visit.status}
-                    </Badge>
                   </TableCell>
                 </TableRow>
               ))

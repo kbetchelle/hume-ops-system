@@ -11,12 +11,24 @@ import { useTodaysClasses, useSyncArketaClasses } from "@/hooks/useArketaApi";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-export function ClassScheduleView() {
-  const today = format(new Date(), "yyyy-MM-dd");
+export function ClassScheduleView({ filterClassesOnly = false }: { filterClassesOnly?: boolean } = {}) {
+  // Use PST date for "today"
+  const today = (() => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")!.value;
+    const m = parts.find((p) => p.type === "month")!.value;
+    const d = parts.find((p) => p.type === "day")!.value;
+    return `${y}-${m}-${d}`;
+  })();
   const [selectedDate, setSelectedDate] = useState(today);
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const { data: classes, isLoading, error, refetch } = useTodaysClasses(isMobile ? selectedDate : today);
+  const { data: classes, isLoading, error, refetch } = useTodaysClasses(isMobile ? selectedDate : today, filterClassesOnly);
   const syncClasses = useSyncArketaClasses();
 
   const handleSync = async () => {

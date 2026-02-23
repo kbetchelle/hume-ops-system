@@ -84,22 +84,39 @@ export interface ArketaInstructor {
 }
 
 // Fetch today's classes from database
-export function useTodaysClasses(date?: string) {
-  const targetDate = date || format(new Date(), "yyyy-MM-dd");
+export function useTodaysClasses(date?: string, filterClassesOnly = false) {
+  // Default to PST "today" if no date provided
+  const targetDate = date || (() => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")!.value;
+    const m = parts.find((p) => p.type === "month")!.value;
+    const d = parts.find((p) => p.type === "day")!.value;
+    return `${y}-${m}-${d}`;
+  })();
   
   return useQuery({
-    queryKey: ["arketaClasses", targetDate],
+    queryKey: ["arketaClasses", targetDate, filterClassesOnly],
     queryFn: async () => {
       const startOfDay = `${targetDate}T00:00:00`;
       const endOfDay = `${targetDate}T23:59:59`;
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("arketa_classes")
         .select("*")
         .gte("start_time", startOfDay)
         .lte("start_time", endOfDay)
         .order("start_time", { ascending: true });
 
+      if (filterClassesOnly) {
+        query = query.eq("reservation_type", "Classes");
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as ArketaClass[];
     },

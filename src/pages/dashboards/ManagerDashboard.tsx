@@ -1,11 +1,11 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ManagementInbox } from "@/components/manager/ManagementInbox";
+import { DashboardGrid } from "@/components/manager/dashboard/DashboardGrid";
 
 export default function ManagerDashboard() {
   return (
     <DashboardLayout title="Manager Dashboard">
-      <div className="flex flex-col h-full m-0 border border-border/50 rounded-lg" style={{ padding: '20px 25px' }}>
-        <ManagementInbox />
+      <div className="p-4 md:p-6">
+        <DashboardGrid />
       </div>
     </DashboardLayout>
   );

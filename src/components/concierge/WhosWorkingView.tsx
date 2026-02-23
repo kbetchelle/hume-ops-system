@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { add_color } from "@/lib/constants";
 
 interface StaffOnShift {
   id: string;
@@ -26,6 +27,14 @@ interface StaffWithStatus extends StaffOnShift {
 
 const POSITION_ORDER = ["Concierge", "Trainer", "Spa", "Cafe", "Other"];
 const LA_TIMEZONE = "America/Los_Angeles";
+
+const POSITION_COLOR: Record<string, string> = {
+  Concierge: add_color.blue,
+  Trainer: add_color.green,
+  Spa: add_color.purple,
+  Cafe: add_color.orange,
+  Other: add_color.yellow,
+};
 
 const getInitials = (name: string): string => {
   if (!name) return "??";
@@ -270,17 +279,16 @@ export function WhosWorkingView() {
                   {position}
                 </h4>
                 <div className="space-y-2">
-                  {positionStaff.map((person) => (
+                  {positionStaff.map((person) => {
+                    const posColor = POSITION_COLOR[position] || add_color.yellow;
+                    return (
                     <div
                       key={person.id}
-                      className={`
-                        flex items-center gap-3 p-3 border transition-colors duration-200
-                        ${
-                          person.is_currently_working
-                            ? "bg-primary/5 border-primary/20"
-                            : "border-border hover:bg-muted/50"
-                        }
-                      `}
+                      className="flex items-center gap-3 p-3 border transition-colors duration-200"
+                      style={{
+                        backgroundColor: `${posColor}1A`,
+                        borderColor: posColor,
+                      }}
                     >
                       <Avatar className="h-8 w-8 rounded-none">
                         <AvatarFallback className="rounded-none text-[10px] bg-muted">
@@ -306,7 +314,8 @@ export function WhosWorkingView() {
                         </Badge>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

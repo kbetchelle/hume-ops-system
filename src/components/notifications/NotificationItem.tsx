@@ -3,7 +3,7 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { getNotificationFormat, solidStyle, tintStyle } from '@/lib/notificationConfig';
+import { getNotificationFormat, solidStyle, tintBorderStyle } from '@/lib/notificationConfig';
 import { add_color } from '@/lib/constants';
 import type { StaffNotification } from '@/hooks/useNotificationCenter';
 
@@ -40,8 +40,8 @@ export function NotificationItem({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') handleClick();
       }}
-      className="group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
-      style={!notification.is_read ? tintStyle(fmt.hex) : undefined}
+      className="group flex items-start gap-3 p-3 cursor-pointer border transition-colors hover:bg-muted/50"
+      style={!notification.is_read ? tintBorderStyle(fmt.hex) : undefined}
     >
       {/* Icon badge – solid color */}
       <div className="h-7 w-7 shrink-0 flex items-center justify-center" style={solidStyle(fmt.hex)}>
@@ -50,9 +50,17 @@ export function NotificationItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
-          {notification.title}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
+            {notification.title}
+          </p>
+          <span
+            className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+            style={solidStyle(fmt.hex)}
+          >
+            {fmt.labelEn}
+          </span>
+        </div>
         {notification.body && (
           <p className="text-[10px] text-muted-foreground truncate">{notification.body}</p>
         )}

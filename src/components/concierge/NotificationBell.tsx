@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { getNotificationRoute } from '@/lib/notificationRoutes';
-import { getNotificationFormat, solidStyle, tintStyle } from '@/lib/notificationConfig';
+import { getNotificationFormat, solidStyle, tintBorderStyle } from '@/lib/notificationConfig';
 import { add_color } from '@/lib/constants';
 
 interface Notification {
@@ -134,8 +134,8 @@ export function NotificationBell() {
               return (
                 <DropdownMenuItem
                   key={notification.id}
-                  className="flex items-start gap-3 p-3 cursor-pointer"
-                  style={!notification.is_read ? tintStyle(fmt.hex) : undefined}
+                  className="flex items-start gap-3 p-3 cursor-pointer border"
+                  style={!notification.is_read ? tintBorderStyle(fmt.hex) : undefined}
                   onClick={() => {
                     if (!notification.is_read) markAsRead.mutate(notification.id);
                     setOpen(false);
@@ -149,9 +149,17 @@ export function NotificationBell() {
                     <Icon className={cn('h-4 w-4', notification.is_read ? 'text-muted-foreground' : 'text-white')} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
-                      {notification.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
+                        {notification.title}
+                      </p>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+                        style={solidStyle(fmt.hex)}
+                      >
+                        {fmt.labelEn}
+                      </span>
+                    </div>
                     {notification.body && (
                       <p className="text-[10px] text-muted-foreground truncate">{notification.body}</p>
                     )}

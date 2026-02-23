@@ -288,7 +288,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                               />
                             </div>
                             {cls.waitlist_count > 0 && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 rounded-none border-none text-white" style={{ backgroundColor: add_color.orange }}>
+                              <Badge variant="outline" className="text-[10px] p-1 rounded-none border-none text-white" style={{ backgroundColor: add_color.orange }}>
                                 <AlertCircle className="h-3 w-3 mr-1" />
                                 {cls.waitlist_count} waitlist
                               </Badge>

@@ -1,6 +1,7 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { add_color } from '@/lib/constants';
 import {
   NOTIFICATION_FORMAT,
   ROLE_NOTIFICATION_TYPES,
@@ -31,6 +32,7 @@ const SAMPLE_DATA: Record<NotificationType, { title: string; body: string }> = {
   tour_alert:               { title: 'Tour scheduled',                    body: 'Prospective member arriving at 11:30 AM for a tour.' },
 };
 
+/* ── Notification item (inbox-style) ── */
 function NotificationSample({ type }: { type: NotificationType }) {
   const fmt = getNotificationFormat(type);
   const sample = SAMPLE_DATA[type];
@@ -56,15 +58,96 @@ function NotificationSample({ type }: { type: NotificationType }) {
   );
 }
 
+/* ── Banner / toast style ── */
+function BannerSample({ type, variant }: { type: NotificationType; variant: 'default' | 'urgent' }) {
+  const fmt = getNotificationFormat(type);
+  const sample = SAMPLE_DATA[type];
+  const Icon = fmt.icon;
+
+  if (variant === 'urgent') {
+    return (
+      <div className="flex items-center gap-3 p-3 border border-add-red/40 bg-add-red/10">
+        <div className="p-1.5 bg-add-red/20 shrink-0">
+          <Icon className="h-4 w-4 text-add-red" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">
+            Urgent: {sample.title}
+          </p>
+          <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
+        </div>
+        <span className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest bg-add-red/20 text-add-red shrink-0">
+          Urgent
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('flex items-center gap-3 p-3 border', `border-current/20`, fmt.bg)}>
+      <div className={cn('p-1.5 shrink-0', fmt.bg)}>
+        <Icon className={cn('h-4 w-4', fmt.text)} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium truncate">{sample.title}</p>
+        <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
+      </div>
+      <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0', fmt.bg, fmt.text)}>
+        {fmt.labelEn}
+      </span>
+    </div>
+  );
+}
+
 export default function NotificationExamplesPage() {
   return (
     <DashboardLayout title="Notification Examples">
       <div className="p-6 md:p-8 space-y-6">
-        {/* Color legend */}
+
+        {/* ── Brand Color Palette ── */}
         <Card className="rounded-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] uppercase tracking-widest font-normal">
-              Color Legend
+              App Color Palette (add_color)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-6 gap-3">
+              {Object.entries(add_color).map(([name, hex]) => (
+                <div key={name} className="flex flex-col items-center gap-1.5">
+                  <div
+                    className="w-full aspect-square border border-border"
+                    style={{ backgroundColor: hex }}
+                  />
+                  <span className="text-[10px] uppercase tracking-widest font-medium">{name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{hex}</span>
+                </div>
+              ))}
+            </div>
+            {/* Token usage reference */}
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+                Tailwind Token Usage
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.keys(add_color).map((name) => (
+                  <div key={name} className="flex items-center gap-2">
+                    <div className={`w-3 h-3 bg-add-${name}`} style={{ backgroundColor: add_color[name as keyof typeof add_color] }} />
+                    <code className="text-[10px] text-muted-foreground">
+                      bg-add-{name}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Color Legend (notification type mapping) ── */}
+        <Card className="rounded-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] uppercase tracking-widest font-normal">
+              Notification Type → Color Mapping
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -84,7 +167,32 @@ export default function NotificationExamplesPage() {
           </CardContent>
         </Card>
 
-        {/* Per-role sections */}
+        {/* ── Banner / Toast Styles ── */}
+        <Card className="rounded-none overflow-hidden">
+          <CardHeader className="pb-0">
+            <CardTitle className="text-[10px] uppercase tracking-widest font-normal">
+              Banner / Toast Styles
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 mt-2 space-y-0">
+            <div className="px-3 py-2 border-b border-border">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Default Banners</p>
+            </div>
+            <BannerSample type="announcement" variant="default" />
+            <BannerSample type="message" variant="default" />
+            <BannerSample type="class_turnover" variant="default" />
+            <BannerSample type="member_alert" variant="default" />
+            <BannerSample type="package_arrived" variant="default" />
+            <BannerSample type="bug_report_update" variant="default" />
+            <div className="px-3 py-2 border-b border-border">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Urgent Banner</p>
+            </div>
+            <BannerSample type="message" variant="urgent" />
+            <BannerSample type="member_alert" variant="urgent" />
+          </CardContent>
+        </Card>
+
+        {/* ── Per-role sections (inbox-style) ── */}
         {ALL_ROLES.map((role) => {
           const types = ROLE_NOTIFICATION_TYPES[role];
           const roleLabel = ROLE_LABELS[role];

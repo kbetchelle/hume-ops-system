@@ -118,7 +118,7 @@ export function CafeChecklistView() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{checklist.title}</CardTitle>
+                  <CardTitle className="font-bold">{checklist.title}</CardTitle>
                   {checklist.description && (
                     <p className="text-sm text-muted-foreground mt-1">{checklist.description}</p>
                   )}

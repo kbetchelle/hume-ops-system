@@ -5,6 +5,16 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  safelist: [
+    // Notification system: solid backgrounds
+    'bg-add-green', 'bg-add-yellow', 'bg-add-purple', 'bg-add-blue', 'bg-add-red', 'bg-add-orange',
+    // Notification system: text colors
+    'text-add-green', 'text-add-yellow', 'text-add-purple', 'text-add-blue', 'text-add-red', 'text-add-orange',
+    // Notification system: tint backgrounds (10% opacity)
+    'bg-add-green/10', 'bg-add-yellow/10', 'bg-add-purple/10', 'bg-add-blue/10', 'bg-add-red/10', 'bg-add-orange/10',
+    // Notification system: borders (40% opacity)
+    'border-add-green/40', 'border-add-yellow/40', 'border-add-purple/40', 'border-add-blue/40', 'border-add-red/40', 'border-add-orange/40',
+  ],
   theme: {
     container: {
       center: true,

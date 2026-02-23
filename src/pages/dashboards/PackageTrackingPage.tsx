@@ -293,11 +293,6 @@ export default function PackageTrackingPage() {
       <div className={cn("p-6 space-y-6", isMobile && "p-0 pt-0 flex flex-col min-h-0 flex-1")}>
         {isMobile ? mobileContent : (
         <>
-        <div>
-          <p className="text-muted-foreground">
-            Manage incoming packages for residents and staff
-          </p>
-        </div>
 
       {/* Filters */}
       <Card>

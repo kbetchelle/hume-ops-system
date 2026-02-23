@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -126,11 +126,12 @@ export default function DevUpdatesPage() {
               <Label className="text-[10px] uppercase tracking-widest">
                 Details (optional)
               </Label>
-              <Textarea
+              <RichTextEditor
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={setBody}
                 placeholder="Describe the update..."
-                className="rounded-none text-xs min-h-[80px]"
+                minHeight="120px"
+                className="rounded-none text-xs"
               />
             </div>
 

@@ -7,7 +7,7 @@ export default function ClassSchedulePage() {
 
   return (
     <DashboardLayout title="Class Schedule">
-      <div className={isMobile ? "p-0 flex-1 flex flex-col min-h-0" : "max-w-3xl"}>
+      <div className={isMobile ? "p-0 flex-1 flex flex-col min-h-0" : "max-w-3xl flex-1 flex flex-col min-h-0"}>
         <ClassScheduleView filterClassesOnly />
       </div>
     </DashboardLayout>

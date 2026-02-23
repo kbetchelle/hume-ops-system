@@ -197,7 +197,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
   }
 
   return (
-    <Card className="border border-border rounded-none">
+    <Card className="border border-border rounded-none flex-1 flex flex-col min-h-0">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-sm font-normal tracking-wide flex items-center gap-2">
@@ -218,11 +218,11 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
           <RefreshCw className={`h-3 w-3 ${syncClasses.isPending ? "animate-spin" : ""}`} />
         </Button>
       </CardHeader>
-      <CardContent>
-        {activeClasses.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No classes scheduled for today.</p>
-        ) : (
-          <ScrollArea className="h-[350px] pr-2">
+        <CardContent className="flex-1 min-h-0 flex flex-col">
+          {activeClasses.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No classes scheduled for today.</p>
+          ) : (
+            <ScrollArea className="flex-1 pr-2">
             <div className="space-y-3">
               {activeClasses.map((cls) => {
                 const booked = cls.booked_count || 0;

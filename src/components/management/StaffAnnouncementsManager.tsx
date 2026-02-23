@@ -532,7 +532,7 @@ function AnnouncementCard({
                 <Badge className="bg-green-600 text-white border-green-600 text-[10px]">This Week</Badge>
               )}
               {isWeekly ? (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px]">
+                <Badge variant="secondary" className="text-white border-none text-[10px]" style={{ backgroundColor: '#009ddc' }}>
                   <Calendar className="h-3 w-3 mr-1" />
                   Weekly Update
                 </Badge>

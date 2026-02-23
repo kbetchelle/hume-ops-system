@@ -3499,6 +3499,69 @@ export type Database = {
           },
         ]
       }
+      mastercard_visits: {
+        Row: {
+          assigned_concierge: string | null
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          created_by: string | null
+          end_time: string | null
+          id: string
+          mastercard_tier: string | null
+          notes: string | null
+          number_of_guests: number | null
+          service_preferences: string | null
+          special_requests: string | null
+          start_time: string
+          status: string | null
+          updated_at: string | null
+          visit_date: string
+          visit_purpose: string | null
+        }
+        Insert: {
+          assigned_concierge?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          mastercard_tier?: string | null
+          notes?: string | null
+          number_of_guests?: number | null
+          service_preferences?: string | null
+          special_requests?: string | null
+          start_time: string
+          status?: string | null
+          updated_at?: string | null
+          visit_date: string
+          visit_purpose?: string | null
+        }
+        Update: {
+          assigned_concierge?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          mastercard_tier?: string | null
+          notes?: string | null
+          number_of_guests?: number | null
+          service_preferences?: string | null
+          special_requests?: string | null
+          start_time?: string
+          status?: string | null
+          updated_at?: string | null
+          visit_date?: string
+          visit_purpose?: string | null
+        }
+        Relationships: []
+      }
       member_checkins: {
         Row: {
           arketa_client_id: string | null

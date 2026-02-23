@@ -48,7 +48,8 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
             Shift Note
           </p>
           <span
-            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0 bg-muted text-muted-foreground border border-border"
+            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+            style={solidStyle(HEX)}
           >
             {data.shiftType}
           </span>

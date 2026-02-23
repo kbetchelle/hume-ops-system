@@ -407,20 +407,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Also write to staging for backfill pipeline compatibility
-    const syncBatchId = crypto.randomUUID();
-    const stagingRows = deduped.map(p => ({
-      ...toDbRow(p),
-      sync_batch_id: syncBatchId,
-      cursor_position: cursor,
-    }));
-
-    for (let i = 0; i < stagingRows.length; i += UPSERT_BATCH) {
-      const batch = stagingRows.slice(i, i + UPSERT_BATCH);
-      const { error: stagingErr } = await supabase.from('arketa_payments_staging').insert(batch);
-      if (stagingErr) console.warn('Staging insert error:', stagingErr.message);
-    }
-
     // Update sync state
     const finalStatus = !hasMore ? 'completed' : failedCount > 0 ? 'partial' : 'running';
     await supabase.from('arketa_payments_sync_state').upsert({

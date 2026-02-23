@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
 import { formatDistanceToNow, parseISO, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { solidStyle, tintBorderStyle } from "@/lib/notificationConfig";
 import { add_color } from "@/lib/constants";
@@ -30,8 +29,9 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
   return (
     <div
       role="article"
-      className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50")}
+      className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50 cursor-pointer")}
       style={!item.isRead ? tintBorderStyle(HEX) : undefined}
+      onClick={() => navigate("/dashboard/concierge")}
     >
       {/* Icon badge – solid */}
       <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>
@@ -66,17 +66,6 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
         </p>
       </div>
 
-      {/* Actions */}
-      <div className="shrink-0 flex items-start">
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-none text-xs"
-          onClick={() => navigate("/dashboard/concierge")}
-        >
-          View Full Report
-        </Button>
-      </div>
     </div>
   );
 }

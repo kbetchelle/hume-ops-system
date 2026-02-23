@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuBadge, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
-import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox, Download } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList, MessageSquare, BarChart3, Dumbbell, Calendar, FileText, Building, Home, Bell, Briefcase, ArrowLeftRight, RefreshCw, Database, Wrench, Bug, FileCode2, HelpCircle, BookOpen, Package, AlertCircle, Wine, Link2, FolderOpen, Inbox, Download, Megaphone } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 import { useInAppNotifications } from "@/hooks/useInAppNotifications";
 import { useNeedsWalkthrough, useMarkWalkthroughCompleted } from "@/hooks/useWalkthroughState";
@@ -232,6 +232,10 @@ const settingsGroups: SettingsGroup[] = [{
     url: "/dashboard/testing",
     icon: Wrench
   }, {
+    title: "Dev Updates",
+    url: "/dashboard/dev-updates",
+    icon: Megaphone
+  }, {
     title: "Notification Examples",
     url: "/dashboard/notification-examples",
     icon: Bell
@@ -413,11 +417,11 @@ function SidebarNav() {
   ];
 
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
-  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/notification-examples"].some((p) => location.pathname.startsWith(p));
+  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/dev-updates", "/dashboard/notification-examples"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/notification-examples");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/dev-updates") || location.pathname.startsWith("/dashboard/notification-examples");
 
   const walkthroughIdByUrl: Record<string, string> = {
     "/dashboard/package-tracking": "package-tracking",

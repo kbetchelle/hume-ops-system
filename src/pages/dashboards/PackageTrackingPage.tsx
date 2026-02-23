@@ -293,16 +293,10 @@ export default function PackageTrackingPage() {
       <div className={cn("p-6 space-y-6", isMobile && "p-0 pt-0 flex flex-col min-h-0 flex-1")}>
         {isMobile ? mobileContent : (
         <>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">
-              Manage incoming packages for residents and staff
-            </p>
-          </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Add Package
-          </Button>
+        <div>
+          <p className="text-muted-foreground">
+            Manage incoming packages for residents and staff
+          </p>
         </div>
 
       {/* Filters */}

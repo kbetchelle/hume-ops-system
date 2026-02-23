@@ -26,31 +26,6 @@ export default function CafeDashboard() {
   return (
     <DashboardLayout title="Cafe Dashboard">
       <div className="space-y-6">
-        {/* Shift toggle for cafe: AM / PM */}
-        <div className="flex items-center gap-2" data-walkthrough="cafe-shift-toggle">
-          <span className="text-sm uppercase tracking-widest text-muted-foreground">Shift</span>
-          <div className="flex rounded-none border border-border bg-muted/30 p-0.5">
-            <Button
-              variant={currentShift === "AM" ? "default" : "ghost"}
-              size="sm"
-              className={cn("rounded-none text-xs uppercase tracking-widest", currentShift === "AM" && "bg-primary")}
-              onClick={() => currentShift !== "AM" && toggleShift()}
-            >
-              AM
-            </Button>
-            <Button
-              variant={currentShift === "PM" ? "default" : "ghost"}
-              size="sm"
-              className={cn("rounded-none text-xs uppercase tracking-widest", currentShift === "PM" && "bg-primary")}
-              onClick={() => currentShift !== "PM" && toggleShift()}
-            >
-              PM
-            </Button>
-          </div>
-          {isManualOverride && (
-            <span className="text-xs text-muted-foreground">Manual</span>
-          )}
-        </div>
 
         {/* Today's Checklist */}
         <CafeChecklistView />

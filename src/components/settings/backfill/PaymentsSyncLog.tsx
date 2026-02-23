@@ -42,20 +42,20 @@ export default function PaymentsSyncLog({ results, isRunning, totalRecords, tota
             )}
             <div className="flex flex-wrap gap-3 text-sm">
               <div className="flex items-center gap-1.5">
-                <Badge variant="outline">Staged</Badge>
+                <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-primary bg-primary/10 text-primary">Staged</Badge>
                 <span className="font-semibold">{totalRecords.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Badge variant="default" className="bg-green-600">New</Badge>
+                <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-green-600 bg-green-600/10 text-green-600">New</Badge>
                 <span className="font-semibold">{totalNewRecords.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Badge variant="secondary">Updated</Badge>
+                <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-muted-foreground bg-muted text-muted-foreground">Updated</Badge>
                 <span className="font-semibold">{updatedCount.toLocaleString()}</span>
               </div>
               {failedCount > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <Badge variant="destructive">Failed</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-destructive bg-destructive/10 text-destructive animate-pulse">Failed</Badge>
                   <span className="font-semibold">{failedCount}</span>
                 </div>
               )}

@@ -70,7 +70,7 @@ export function DashboardEventsWidget() {
         </div>
       ) : activeClasses.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          No classes scheduled for today
+          No schedule found for today
         </div>
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">

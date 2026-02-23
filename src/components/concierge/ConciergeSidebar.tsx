@@ -328,14 +328,14 @@ export function ConciergeSidebar({
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                         {item.hasUnreadDot && (
-                          <SidebarMenuBadge className="ml-auto text-[10px] px-1.5 py-0.5 rounded-none bg-destructive text-destructive-foreground animate-pulse">
+                          <SidebarMenuBadge className="ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none bg-add-red text-white">
                             !
                           </SidebarMenuBadge>
                         )}
                         {item.badge !== undefined && !item.hasUnreadDot && (
                           <SidebarMenuBadge className={cn(
-                            "ml-auto text-[10px] px-1.5 py-0.5 rounded-none",
-                            item.badge > 0 ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-primary text-primary-foreground"
+                            "ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none",
+                            item.badge > 0 ? "bg-add-red text-white" : "bg-add-blue text-white"
                           )}>
                             {item.badge}
                           </SidebarMenuBadge>

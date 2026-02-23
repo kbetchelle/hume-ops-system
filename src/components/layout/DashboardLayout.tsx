@@ -437,12 +437,12 @@ function SidebarNav() {
           </NavLink>
         </SidebarMenuButton>
         {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
-          <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+          <SidebarMenuBadge className="bg-add-red text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
             {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
           </SidebarMenuBadge>
         )}
         {item.url === "/dashboard" && isAdminManagerRole && (unreadInboxCount ?? 0) > 0 && (
-          <SidebarMenuBadge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+          <SidebarMenuBadge className="bg-add-orange text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
             {(unreadInboxCount ?? 0) > 99 ? "99+" : unreadInboxCount}
           </SidebarMenuBadge>
         )}
@@ -511,7 +511,7 @@ function SidebarNav() {
                       </NavLink>
                     </SidebarMenuButton>
                     {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
-                      <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none animate-pulse">
+                      <SidebarMenuBadge className="bg-add-red text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
                         {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
                       </SidebarMenuBadge>
                     )}

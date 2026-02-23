@@ -1,105 +1,161 @@
+# Add `reservation_type` Calculated Column to `arketa_classes` and `daily_schedule`
 
+## New Column
 
-# CSV Import to `arketa_reservations_history` and `arketa_classes`
-
-Both CSV files share the same columns (in slightly different order):
-**First Name, Last Name, Time Booked, Class Name, Class Time, Instructor, Location, Status, Client ID, Class ID, Class Date, Type, Class Time Only**
-
-**Note:** Values are triple-quoted (e.g. `"""Thomas"""`) -- the import function will need to strip these extra quotes.
+Add a `reservation_type TEXT` column (nullable, default `NULL`) to both `arketa_classes` and `daily_schedule`. This column will be populated via a database function that pattern-matches against the class `name`.
 
 ---
 
-## File Summary
+## Classification Rules
 
-| File | Rows | Date Range |
-|------|------|------------|
-| `next_4week_res_filtered` | 464 rows | Feb 23 - Apr 1, 2026 |
-| `missingfeb_filtered` | 18,434 rows | Jan 20 - Apr 1, 2026 |
+The DB function `classify_reservation_type(class_name TEXT) RETURNS TEXT` will apply these rules in order (case-insensitive):
+
+**"Personal Training"** -- matches if name contains:
+
+- `Personal Training`
+- `Personal Program`
+- `Duo Training`
+- `SAME DAY Personal Training`
+- `FIND YOUR DUO`
+- `Private Boxing`
+- `Private Breathwork`
+- `Private Pilates`
+- `Private Yoga`
+- `Private Yoga / Meditation / Breathwork`
+- `Private Alignment`
+
+**"Private Treatment"** -- matches if name contains:
+
+- `Massage` (Deep Reset Massage, 50min/80min/90min variants, Sound & Massage, Prenatal Massage)
+- `Acupuncture`
+- `Reiki`
+- `Bodywork`
+- `Lymphatic Treatment` (Detox by Rebecca variants)
+- `Physical Therapy`
+- `Fascia Release` (standalone, not "Yin Yoga into Fascia Release" which is a class)
+- `Stretch + Percussive Therapy`
+- `IV Drip`
+- `Vitamin Shot`
+- `NAD` (NAD Detox IV, NAD Shot)
+- `Ballancer` (Compression Suit)
+- `Hyperbaric`
+- `Express Stretch`
+- `Nutrition Coaching`
+- `Macro Nutrition`
+- `Endurance Testing`
+- `Metabolic Testing`
+
+**"Classes"** -- matches if name contains:
+
+- `(Heated)` or `(Non-Heated`
+- `Reformer Pilates`
+- `Sound Bath`
+- `(Rooftop)` or `(Roof)` or `(High Roof)`
+- `(Ground Floor)` or `(Ground Floor Studio)`
+- `(Impact Room)` or `(Impact)`
+- `(Gym Floor)` or `(Gym Floor Balcony)`
+- `Vinyasa Yoga`, `Hatha Yoga`, `Yin Yoga`, `Kundalini`
+- `Mat Pilates`
+- `HIIT`, `Circuit Strength`, `Boxing`
+- `Breathwork` (standalone class variants)
+- `Meditation`
+- `Dance`, `Conditioning`, `Qigong`
+- `Signature Sculpt`, `Signature Flow`, `Signature Yoga`
+- `Morning Practice`, `Morning Energy`
+- `Flow Into Yin`, `Core Flow`, `Core Sculpt`, `Core Strength`
+- `Power Core Flow`
+- `Primal Flow`, `Animal Flow`
+- `Move & Mobilize`, `Mobility`
+- `Dynamic Stretch`, `Static Stretch`, `Roll & Release`
+- `Functional Movement`, `Speed & Agility`, `Kettlebell`
+- `Yoga Nidra`, `Yoga Sculpt`, `Yoga Play`, `Yoga for`
+- `Rooted Strength`, `Focused Strength`, `Strength, Mobility`
+- `Warm Mat Pilates`, `Shadowboxing`
+- `RUN by HUME`
+- `Intro to` (Reformer, Weight Training, Dumbbells)
+- `Foundations of`
+- `Gentle Movement`
+- `Acupressure Yin Yoga`
+- `Beach Bootcamp`
+- `Full Moon` (Ceremony, Sound Bath, Practice)
+- `Sunrise Rooftop Yoga`
+- `Community` (class variants)
+- `Ecstatic Dance`
+- `Active Breathwork`, `Activated Breathwork`
+- `Breathwork for Athletes`
+- `Infrared` yoga variants
+- `Yin & Sound`
+- `Somatic`
+- `Transformational Breathwork`
 
 ---
 
-## Table 1: `arketa_reservations_history`
+## Names Needing Further Classification (Uncategorized)
 
-### Column Mapping
+These do not clearly match any of the three categories:
 
-| DB Column | Source | Calculation / Notes |
-|-----------|--------|---------------------|
-| `reservation_id` | **Calculated** | `{Client ID}_{unix_timestamp(Time Booked)}_{random_8chars}` -- matches existing pattern (e.g. `QS0QV...f2_1750111311_hMBAXiphQdEO`) |
-| `client_id` | CSV `Client ID` | Direct map |
-| `class_id` | CSV `Class ID` | Direct map |
-| `class_name` | CSV `Class Name` | Direct map (may be empty for "Gym Check in" style records) |
-| `class_date` | CSV `Class Date` | Parse from `MM/DD/YYYY` to `YYYY-MM-DD` |
-| `status` | CSV `Status` | Map: "Checked In" -> "ATTENDED", "Confirmed" -> "CONFIRMED", "Canceled" -> "CANCELLED", "Waitlist" -> "WAITLIST" |
-| `checked_in` | CSV `Status` | `true` if Status = "Checked In", else `false` |
-| `checked_in_at` | CSV `Time Booked` | Only populated when Status = "Checked In" (use Time Booked as approximate check-in time) |
-| `reservation_type` | CSV `Type` | Direct map ("Subscription", "Unpaid", "Waitlist", etc.) |
-| `client_first_name` | CSV `First Name` | Direct map |
-| `client_last_name` | CSV `Last Name` | Direct map |
-| `created_at_api` | CSV `Time Booked` | Parse timestamp (strip PST, treat as America/Los_Angeles) |
-| `late_cancel` | -- | `false` (default, not in CSV) |
-| `gross_amount_paid` | -- | `null` (not in CSV) |
-| `net_amount_paid` | -- | `null` (not in CSV) |
-| `spot_id` | -- | `null` (not in CSV) |
-| `spot_name` | -- | `null` (not in CSV) |
-| `client_email` | -- | `null` (not in CSV) |
-| `client_phone` | -- | `null` (not in CSV) |
-| `raw_data` | -- | Store full CSV row as JSON for traceability |
-| `sync_batch_id` | -- | Generated per import run |
 
-**Unique constraint:** `(reservation_id, class_id)` -- the generated `reservation_id` includes client_id + timestamp, making it unique per booking.
+| Class Name                                                                                                                                                                                                            | Suggested Category? |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `Block` (and all `Block *` variants ~20 names)                                                                                                                                                                        | [null]              |
+| `Gym Check in`                                                                                                                                                                                                        | Gym Check Ins       |
+| [null]                                                                                                                                                                                                                | [null]              |
+| `Weekly Wellness`                                                                                                                                                                                                     | [null]              |
+| `Teacher Class` / `Teachers Class`                                                                                                                                                                                    | Staff Class         |
+| `STAFF CLASS: Reformer Pilates...` / `STAFF Reformer...`                                                                                                                                                              | Staff Class         |
+| `TEST EVENT`                                                                                                                                                                                                          | [null]              |
+| `Unknown`                                                                                                                                                                                                             | [null]              |
+| Various workshops (`HUMAN DESIGN`, `PELVIC FLOOR`, `INVERSION`, `HANDSTAND`, `PRENATAL`, etc.)                                                                                                                        | Workshops           |
+| Various events (`AN EVENING WITH BEN GREENFIELD`, `Book Launch`, `HUME MOVIE NIGHT`, `TACOS + TEQUILA`, `SUNSET SERVE`, `Saturday Social` variants, `Spring Equinox`, `Summer Solstice`, `Friday Night Lights`, etc.) | Events              |
+| `Complimentary Ceremonial Cacao Tasting`                                                                                                                                                                              | Events              |
+| `A Beginner's Guide to Cold Plunge`                                                                                                                                                                                   | Workshops           |
+| `5k TURKEY TROT`                                                                                                                                                                                                      | Events              |
+| `Heal From Within Detox Masterclass`                                                                                                                                                                                  | Workshops           |
+| `POWER & STRENGTH 50`                                                                                                                                                                                                 | Classes             |
+| `Sunset Practice`                                                                                                                                                                                                     | Classes             |
+| `New Year's Practice`                                                                                                                                                                                                 | Classes             |
+| `Sunchasers at Sunset`                                                                                                                                                                                                | Events              |
+| `Train Smart with Endurance Expert`                                                                                                                                                                                   | Workshops           |
+| Various `WORKSHOP:` prefixed names                                                                                                                                                                                    | Workshops           |
+| `CONNECT: The Intersection of Pilates, Yoga & Breath`                                                                                                                                                                 | Workshops           |
+| `BOX + FLOW 60: Shadowboxing + Animal Flow (High Roof)`                                                                                                                                                               | Classes             |
+| `PULSE & PRESENCE: A LIVE MUSIC FLOW`                                                                                                                                                                                 | Events              |
+| `RECEIVE + RELEASE: Heart Opening Flow 60 (Rooftop)`                                                                                                                                                                  | Classes             |
+| `Active Alignment with Dr. Hannah Venus`                                                                                                                                                                              | Private Treatment   |
+| `Exploring the Human Emotional Experience`                                                                                                                                                                            | Workshops           |
+| `TEACHER WORKSHOP` variants                                                                                                                                                                                           | Workshops           |
+| `Upcycle x Saturday Social`                                                                                                                                                                                           | Events              |
+| `DIVINE FEMININE FLOW` variants                                                                                                                                                                                       | Classes             |
+| `Breath & Sound 30`                                                                                                                                                                                                   | Classes             |
+| `Movement, Meditation & Breathwork`                                                                                                                                                                                   | Classes             |
+| `SPINAL HEALTH & LONGEVITY 60`                                                                                                                                                                                        | Classes             |
+| `Heart-Opening Yin and Tea (Heated)`                                                                                                                                                                                  | Classes             |
+| `Fundamentals of Weight Training`                                                                                                                                                                                     | Classes             |
+| `Morning Practice` (no room suffix)                                                                                                                                                                                   | Classes             |
 
----
-
-## Table 2: `arketa_classes`
-
-Classes will be **extracted from the CSV** by collecting distinct `Class ID` values and their associated metadata.
-
-### Column Mapping
-
-| DB Column | Source | Calculation / Notes |
-|-----------|--------|---------------------|
-| `external_id` | CSV `Class ID` | Direct map |
-| `name` | CSV `Class Name` | First non-empty name found for that Class ID |
-| `class_date` | CSV `Class Date` | Parse from `MM/DD/YYYY` to `YYYY-MM-DD` |
-| `start_time` | CSV `Class Time` | Parse full timestamp to `timestamptz` |
-| `instructor_name` | CSV `Instructor` | First non-empty value found for that Class ID |
-| `location_name` | CSV `Location` | Default to "HUME" |
-| `booked_count` | **Calculated** | Count of non-cancelled reservations per (Class ID, Class Date) |
-| `capacity` | -- | `null` (not in CSV) |
-| `duration_minutes` | -- | `null` (not in CSV) |
-| `waitlist_count` | **Calculated** | Count of "Waitlist" status records per (Class ID, Class Date) |
-| `status` | -- | `null` |
-| `is_cancelled` | -- | `false` |
-| `is_deleted` | -- | `false` |
-| `room_name` | -- | `null` |
-| `description` | -- | `null` |
-| `raw_data` | -- | `null` |
-| `synced_at` | -- | `now()` |
-
-**Unique constraint:** `(external_id, class_date)` -- upsert will update `booked_count` and `waitlist_count` if the class already exists.
 
 ---
 
-## Deduplication Concern
+## Technical Implementation
 
-The CSVs may contain duplicate reservation rows (same Client ID + Class ID + Time Booked). The edge function will deduplicate by keeping the latest `Time Booked` entry for each `(Client ID, Class ID, Class Date)` combination before inserting.
+### 1. Database Migration
 
----
+- Add `reservation_type TEXT` to `arketa_classes` and `daily_schedule`
+- Create `classify_reservation_type(TEXT) RETURNS TEXT` function with the pattern-matching rules above
+- Backfill existing rows: `UPDATE arketa_classes SET reservation_type = classify_reservation_type(name)`
 
-## Implementation Plan
+### 2. Update `refresh_daily_schedule` RPC
 
-1. **Create a new edge function** `import-arketa-csv` that:
-   - Accepts the raw CSV content
-   - Strips triple-quote wrapping from all values
-   - Parses and deduplicates reservations
-   - Generates `reservation_id` matching the existing `{clientId}_{unixTimestamp}_{random}` pattern
-   - Maps status values (Checked In -> ATTENDED, etc.)
-   - Extracts distinct classes from the reservation data
-   - Upserts to `arketa_classes` first (so FK-like references are valid)
-   - Upserts to `arketa_reservations_history` second
-   - Returns counts of inserted/updated/skipped per table
+Add `reservation_type` to the `INSERT INTO daily_schedule` SELECT, calling `classify_reservation_type(c.name)`.
 
-2. **Add a UI trigger** on the Dev Tools or Backfill page to upload these CSVs and call the new function, processing in chunks of 1000 rows (similar to existing `useCSVImport` pattern).
+### 3. Update `upsert_arketa_classes_from_staging` RPC
 
-3. **Process the two files** -- the smaller file (464 rows) in one batch, the larger (18,434 rows) in ~19 chunks.
+Compute `reservation_type` during upsert from staging so new synced classes are auto-classified.
 
+### 4. Update `import-arketa-csv` Edge Function
+
+Set `reservation_type` when inserting classes from CSV imports.
+
+### 5. Frontend
+
+No UI changes required unless you want to display/filter by `reservation_type` later. The column will be available in the data layer immediately.

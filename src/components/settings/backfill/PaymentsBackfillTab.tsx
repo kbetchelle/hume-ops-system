@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import DateSelector from "./DateSelector";
 import { useBackfillJob } from "./useBackfillJob";
-import BackfillSyncLog from "./BackfillSyncLog";
+import PaymentsSyncLog from "./PaymentsSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 import SyncProgressCard from "./SyncProgressCard";
 
@@ -50,7 +50,7 @@ export default function PaymentsBackfillTab() {
           </div>
         </CardContent>
       </Card>
-      <BackfillSyncLog
+      <PaymentsSyncLog
         results={syncProgress.results}
         isRunning={syncProgress.isRunning}
         totalRecords={syncProgress.totalRecords}

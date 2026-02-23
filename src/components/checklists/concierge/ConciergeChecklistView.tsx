@@ -174,7 +174,7 @@ export function ConciergeChecklistView() {
       </div>
 
       {/* Checklist card */}
-      <Card>
+      <Card className="border-none p-0">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

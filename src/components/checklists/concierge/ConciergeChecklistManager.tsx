@@ -641,9 +641,10 @@ function MultipleChoiceConfig({
   const [newOption, setNewOption] = useState('');
 
   const addOption = () => {
-    const trimmed = newOption.trim();
-    if (trimmed && !options.includes(trimmed)) {
-      setMetadata({ options: [...options, trimmed] });
+    const parts = newOption.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const unique = parts.filter(p => !options.includes(p));
+    if (unique.length > 0) {
+      setMetadata({ options: [...options, ...unique] });
       setNewOption('');
     }
   };
@@ -676,7 +677,7 @@ function MultipleChoiceConfig({
           <Input
             value={newOption}
             onChange={(e) => setNewOption(e.target.value)}
-            placeholder="Add an option..."
+            placeholder="Add options (comma-separated)..."
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

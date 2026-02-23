@@ -82,7 +82,7 @@ export function ManagementInbox() {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             Management Inbox
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-xs">
+              <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-destructive bg-destructive text-destructive-foreground animate-pulse">
                 {unreadCount}
               </Badge>
             )}

@@ -414,7 +414,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
   );
 
   return (
-    <div className="space-y-6 px-8">
+    <div className="space-y-6">
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'weekly' | 'announcements')}>
         <TabsList className="w-full max-w-2xl overflow-x-auto flex-nowrap justify-start">

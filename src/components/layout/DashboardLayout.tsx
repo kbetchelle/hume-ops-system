@@ -585,12 +585,7 @@ function SidebarNav() {
                             <item.icon className="h-4 w-4 shrink-0 stroke-[1.5]" />
                             <span>{item.title}</span>
                           </NavLink>
-                        </SidebarMenuButton>
-                        {item.url === "/dashboard/bug-reports" && unreadBugCount > 0 && (
-                          <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-none">
-                            {unreadBugCount > 99 ? "99+" : unreadBugCount}
-                          </SidebarMenuBadge>
-                        )}
+                      </SidebarMenuButton>
                       </SidebarMenuItem>)}
                   </CollapsibleContent>
                 </Collapsible>

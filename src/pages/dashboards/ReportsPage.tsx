@@ -105,9 +105,9 @@ export default function ReportsPage() {
     <DashboardLayout title="Reports">
       <div className="space-y-6 overflow-hidden">
         <Tabs defaultValue="export" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="export">Export</TabsTrigger>
-            <TabsTrigger value="history">Report History</TabsTrigger>
+          <TabsList className="w-full">
+            <TabsTrigger value="export" className="flex-1 gap-2">Export</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 gap-2">Report History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="export" className="space-y-6 mt-4">
@@ -251,9 +251,9 @@ export default function ReportsPage() {
 
           <TabsContent value="history" className="space-y-4 mt-4">
             <Tabs defaultValue="single" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="single">Single Day</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly History</TabsTrigger>
+              <TabsList className="w-full">
+                <TabsTrigger value="single" className="flex-1 gap-2">Single Day</TabsTrigger>
+                <TabsTrigger value="weekly" className="flex-1 gap-2">Weekly History</TabsTrigger>
               </TabsList>
 
               <TabsContent value="single" className="space-y-4 mt-4">

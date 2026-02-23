@@ -21,6 +21,8 @@ const UPSERT_BATCH = 100;
 const MAX_RETRIES = 8;
 const BASE_DELAY_MS = 3000;
 const MAX_DELAY_MS = 60000;
+const BACKFILL_PAGE_LIMIT = 100; // Arketa max page size
+const BACKFILL_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
 
 interface PaymentDTO {
   id: string;
@@ -61,6 +63,8 @@ interface SyncRequest {
   startDate?: string;
   endDate?: string;
   sync_batch_id?: string;
+  /** Resume cursor for date-mode backfill (full nextStartAfterId value) */
+  backfill_cursor?: string;
 }
 
 /** Purchase API shape (GET /purchases) - may use camelCase or snake_case */
@@ -218,7 +222,8 @@ Deno.serve(async (req) => {
     const endDate = body.end_date ?? body.endDate;
     const isDateMode = !!startDate && !!endDate;
 
-    // ── Date-mode (backfill): use documented GET /purchases with date range; write only to staging ──
+    // ── Date-mode (backfill): use documented GET /purchases with date range ──
+    // Features: 50s timeout guard, cursor-based resumption, limit=100 (Arketa max)
     if (isDateMode) {
       let headers: Record<string, string>;
       try {
@@ -229,25 +234,45 @@ Deno.serve(async (req) => {
       }
       const prodBase = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0/${ARKETA_PARTNER_ID}/purchases`;
       const allPurchases: PurchaseLike[] = [];
-      let nextCursor: string | undefined;
-      const limit = 400;
+      // Use full cursor value from previous run if provided (includes "purchases%2F..." prefix)
+      let nextCursor: string | undefined = body.backfill_cursor ?? undefined;
+      let pageCount = 0;
+      let timedOut = false;
+
       do {
-        let url = `${prodBase}?limit=${limit}&start_date=${startDate}&end_date=${endDate}`;
-        if (nextCursor) url += `&cursor=${encodeURIComponent(nextCursor)}`;
-        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers });
+        // Wall-clock timeout guard: stop fetching before gateway kills us
+        if (Date.now() - startTime > BACKFILL_TIMEOUT_MS) {
+          logger.warn(`Backfill timeout guard hit after ${pageCount} pages (${allPurchases.length} records). Cursor saved for resume.`);
+          timedOut = true;
+          break;
+        }
+
+        const url = new URL(prodBase);
+        url.searchParams.set('limit', String(BACKFILL_PAGE_LIMIT));
+        url.searchParams.set('start_date', startDate!);
+        url.searchParams.set('end_date', endDate!);
+        if (nextCursor) {
+          // Decode first to prevent double-encoding (cursor may contain %2F)
+          url.searchParams.set('start_after', decodeURIComponent(nextCursor));
+        }
+
+        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
         if (!response.ok) {
           const errText = await response.text();
           logger.error(`Purchases fetch failed: HTTP ${response.status}`, { body: errText.substring(0, 300) });
           return new Response(
-            JSON.stringify({ success: false, error: `Purchases API error: ${response.status}`, syncedCount: 0, totalFetched: 0, payments_staged: 0 }),
+            JSON.stringify({ success: false, error: `Purchases API error: ${response.status}`, syncedCount: 0, totalFetched: allPurchases.length, payments_staged: 0 }),
             { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         const data = await response.json();
         const items = Array.isArray(data) ? data : (data.purchases ?? data.items ?? data.data ?? []);
         allPurchases.push(...(items as PurchaseLike[]));
-        nextCursor = data?.pagination?.nextCursor ?? data?.pagination?.nextStartAfterId ?? undefined;
-        if (items.length > 0) logger.info(`Purchases page: ${items.length} (total: ${allPurchases.length})`);
+        pageCount++;
+
+        // Use the FULL nextStartAfterId value for cursor (e.g. "purchases%2Fabc123")
+        nextCursor = data?.pagination?.nextStartAfterId ?? data?.pagination?.nextCursor ?? undefined;
+        if (items.length > 0) logger.info(`Purchases page ${pageCount}: ${items.length} records (total: ${allPurchases.length}, hasMore: ${!!nextCursor})`);
       } while (nextCursor);
 
       const syncBatchId = body.sync_batch_id ?? crypto.randomUUID();
@@ -266,7 +291,7 @@ Deno.serve(async (req) => {
         if (error) {
           logger.error('Staging insert failed', error);
           return new Response(
-            JSON.stringify({ success: false, error: error.message, syncedCount: staged, totalFetched: allPurchases.length, payments_staged: staged }),
+            JSON.stringify({ success: false, error: error.message, syncedCount: staged, totalFetched: allPurchases.length, payments_staged: staged, backfill_cursor: nextCursor }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -280,6 +305,9 @@ Deno.serve(async (req) => {
           syncedCount: staged,
           totalFetched: allPurchases.length,
           payments_staged: staged,
+          hasMore: timedOut && !!nextCursor,
+          backfill_cursor: timedOut ? nextCursor : null,
+          pages: pageCount,
           data: { payments_staged: staged },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

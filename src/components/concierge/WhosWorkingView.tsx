@@ -217,11 +217,7 @@ export function WhosWorkingView() {
                       key={person.id}
                       className="flex items-center gap-3 py-3 px-3 min-h-[48px] border-b last:border-b-0"
                     >
-                      <Avatar className="h-10 w-10 rounded-full shrink-0">
-                        <AvatarFallback className="text-xs bg-muted">
-                          {getInitials(person.user_name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-medium truncate">{person.user_name || "Unknown"}</p>
                         <p className="text-xs text-muted-foreground">{person.position || position}</p>
@@ -293,11 +289,8 @@ export function WhosWorkingView() {
                         borderColor: posColor,
                       }}
                     >
-                      <Avatar className="h-8 w-8 rounded-none">
-                        <AvatarFallback className="rounded-none text-[10px] bg-muted">
-                          {getInitials(person.user_name)}
-                        </AvatarFallback>
-                      </Avatar>
+
+
 
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-normal truncate">

@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore } from "date-fns";
-import { Calendar, Clock, Users, Dumbbell, MapPin } from "lucide-react";
+import { Calendar, Clock, Users, Dumbbell, MapPin, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,9 +37,21 @@ interface StaffShift {
   shift_end: string;
 }
 
+interface MastercardVisit {
+  id: string;
+  client_name: string | null;
+  client_email: string | null;
+  mastercard_tier: string | null;
+  start_time: string;
+  end_time: string | null;
+  number_of_guests: number | null;
+  visit_purpose: string | null;
+  status: string;
+}
+
 interface UnifiedEvent {
   id: string;
-  type: "tour" | "class" | "shift";
+  type: "tour" | "class" | "shift" | "mastercard";
   title: string;
   subtitle?: string;
   time: string;
@@ -93,7 +105,23 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
     refetchInterval: 60000,
   });
 
-  const isLoading = toursLoading || classesLoading;
+  const { data: mastercardVisits, isLoading: mastercardLoading } = useQuery({
+    queryKey: ["mastercard-visits-upcoming", today],
+    queryFn: async () => {
+      const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
+        filters: [
+          { type: "eq", column: "visit_date", value: today },
+          { type: "eq", column: "status", value: "scheduled" },
+        ],
+        order: { column: "start_time", ascending: true },
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 60000,
+  });
+
+  const isLoading = toursLoading || classesLoading || mastercardLoading;
 
   const filterByShift = useCallback((startTime: string): boolean => {
     try {
@@ -146,12 +174,29 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
         };
       });
 
+    const mastercardEvents: UnifiedEvent[] = (mastercardVisits || [])
+      .filter((m) => filterByShift(m.start_time))
+      .map((m) => {
+        const startTime = parseISO(m.start_time);
+        return {
+          id: `mc-${m.id}`,
+          type: "mastercard" as const,
+          title: m.client_name || "Mastercard Client",
+          subtitle: m.mastercard_tier || "Mastercard",
+          time: format(startTime, "h:mm a"),
+          endTime: m.end_time ? format(parseISO(m.end_time), "h:mm a") : undefined,
+          details: m.visit_purpose || undefined,
+          icon: <CreditCard className="h-4 w-4" />,
+          sortTime: startTime,
+          color: "text-amber-500",
+        };
+      });
 
     // Combine and sort all events
-    return [...tourEvents, ...classEvents].sort(
+    return [...tourEvents, ...classEvents, ...mastercardEvents].sort(
       (a, b) => a.sortTime.getTime() - b.sortTime.getTime()
     );
-  }, [tours, classes, filterByShift]);
+  }, [tours, classes, mastercardVisits, filterByShift]);
 
   // Filter to only show upcoming events (future or within last 30 minutes)
   const upcomingEvents = unifiedEvents.filter((event) => {

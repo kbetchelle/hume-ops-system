@@ -23,6 +23,7 @@ import {
   MapPin,
   Clock,
   Download,
+  CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,9 +70,22 @@ interface StaffShift {
   shift_end: string;
 }
 
+interface MastercardVisit {
+  id: string;
+  visit_date: string;
+  client_name: string | null;
+  client_email: string | null;
+  mastercard_tier: string | null;
+  start_time: string;
+  end_time: string | null;
+  number_of_guests: number | null;
+  visit_purpose: string | null;
+  status: string;
+}
+
 interface CalendarEvent {
   id: string;
-  type: "tour" | "class" | "shift";
+  type: "tour" | "class" | "shift" | "mastercard";
   title: string;
   subtitle?: string;
   startTime: Date;
@@ -83,7 +97,7 @@ interface CalendarEvent {
 }
 
 type ViewMode = "week" | "day";
-type FilterType = "all" | "tour" | "class" | "shift";
+type FilterType = "all" | "tour" | "class" | "shift" | "mastercard";
 
 export function MasterCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -160,7 +174,24 @@ export function MasterCalendar() {
     refetchInterval: 60000,
   });
 
-  const isLoading = toursLoading || classesLoading || shiftsLoading;
+  const { data: mastercardVisits, isLoading: mastercardLoading } = useQuery({
+    queryKey: ["mastercard-visits-calendar", startDateStr, endDateStr],
+    queryFn: async () => {
+      const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
+        filters: [
+          { type: "gte", column: "visit_date", value: startDateStr },
+          { type: "lte", column: "visit_date", value: endDateStr },
+          { type: "neq", column: "status", value: "cancelled" },
+        ],
+        order: { column: "start_time", ascending: true },
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 60000,
+  });
+
+  const isLoading = toursLoading || classesLoading || shiftsLoading || mastercardLoading;
 
   // Convert all events to unified format
   const allEvents: CalendarEvent[] = useMemo(() => {
@@ -206,8 +237,21 @@ export function MasterCalendar() {
       icon: <Briefcase className="h-3 w-3" />,
     }));
 
-    return [...tourEvents, ...classEvents, ...shiftEvents];
-  }, [tours, classes, shifts]);
+    const mastercardEvents: CalendarEvent[] = (mastercardVisits || []).map((m) => ({
+      id: `mastercard-${m.id}`,
+      type: "mastercard" as const,
+      title: m.client_name || "Mastercard Client",
+      subtitle: m.mastercard_tier || "Mastercard",
+      startTime: parseISO(m.start_time),
+      endTime: m.end_time ? parseISO(m.end_time) : undefined,
+      details: m.visit_purpose || undefined,
+      date: m.visit_date,
+      color: "bg-amber-100 border-amber-300 text-amber-900",
+      icon: <CreditCard className="h-3 w-3" />,
+    }));
+
+    return [...tourEvents, ...classEvents, ...shiftEvents, ...mastercardEvents];
+  }, [tours, classes, shifts, mastercardVisits]);
 
   // Filter events by type
   const filteredEvents = useMemo(() => {
@@ -332,6 +376,7 @@ export function MasterCalendar() {
                 <SelectItem value="tour">Tours</SelectItem>
                 <SelectItem value="class">Classes</SelectItem>
                 <SelectItem value="shift">Shifts</SelectItem>
+                <SelectItem value="mastercard">Mastercard</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" onClick={handleExport}>

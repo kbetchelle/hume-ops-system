@@ -36,6 +36,7 @@ import { StaffSchedulePanel } from "@/components/concierge/StaffSchedulePanel";
 import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
+import { MastercardArrivalBanner } from "@/components/concierge/MastercardArrivalBanner";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { usePackageStats } from "@/hooks/usePackages";
@@ -109,6 +110,8 @@ export default function ConciergeDashboard() {
       queryClient.invalidateQueries({ queryKey: ["shift-submission"] }),
       queryClient.invalidateQueries({ queryKey: ["scheduled-tours-upcoming"] }),
       queryClient.invalidateQueries({ queryKey: ["daily-schedule-upcoming"] }),
+      queryClient.invalidateQueries({ queryKey: ["mastercard-visits-upcoming", today] }),
+      queryClient.invalidateQueries({ queryKey: ["mastercard-arrivals", today] }),
       queryClient.invalidateQueries({ queryKey: ["package-stats"] }),
       queryClient.invalidateQueries({ queryKey: ["guests-checked-in-today", today] }),
     ]);
@@ -139,18 +142,22 @@ export default function ConciergeDashboard() {
               onRefresh={handleHomeRefresh}
               className="flex flex-col min-h-0 p-4 space-y-4"
             >
+              <MastercardArrivalBanner />
               <EmbeddedChecklist variant="compact" />
               <UpcomingTodayCard maxItems={3} />
             </MobilePageWrapper>
           );
         }
         return (
-          <div className="flex flex-wrap gap-4 p-4">
-            <div className="flex-1 basis-[450px] min-w-[450px]" style={{ paddingTop: '25px' }}>
-              <EmbeddedChecklist />
-            </div>
-            <div className="flex-1 basis-[450px] min-w-[450px]">
-              <UpcomingTodayCard />
+          <div className="flex flex-col gap-4 p-4">
+            <MastercardArrivalBanner />
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 basis-[450px] min-w-[450px]" style={{ paddingTop: '25px' }}>
+                <EmbeddedChecklist />
+              </div>
+              <div className="flex-1 basis-[450px] min-w-[450px]">
+                <UpcomingTodayCard />
+              </div>
             </div>
           </div>);
 

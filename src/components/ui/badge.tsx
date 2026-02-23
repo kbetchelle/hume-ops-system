@@ -10,7 +10,7 @@ const badgeVariants = cva(
       variant: {
         default: "border-add-yellow bg-add-yellow/10 text-add-yellow hover:opacity-70",
         secondary: "border-add-blue bg-add-blue/10 text-add-blue hover:opacity-70",
-        destructive: "border-add-red bg-add-red/10 text-add-red hover:opacity-70",
+        destructive: "border-none bg-[#009ddc] text-white text-[10px] hover:opacity-70 py-[2.25px] px-[6.75px]",
         outline: "border-add-orange text-add-orange hover:opacity-70",
       },
     },

@@ -108,7 +108,7 @@ export function CafeChecklistItem({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
-            {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+            {item.required && <Badge variant="destructive">Required</Badge>}
             {item.is_high_priority && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.orange }}>High Priority</Badge>}
           </div>
           {item.time_hint && (
@@ -134,7 +134,7 @@ export function CafeChecklistItem({
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -197,7 +197,7 @@ export function CafeChecklistItem({
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -258,7 +258,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -289,7 +289,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -326,7 +326,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -353,7 +353,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          {item.required && <Badge variant="destructive">Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>

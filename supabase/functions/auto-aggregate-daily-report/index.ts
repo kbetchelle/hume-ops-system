@@ -20,9 +20,9 @@ function isGymCheckin(className: string | null): boolean {
   return (className ?? "").toLowerCase().trim() === "gym check in";
 }
 
-function isPrivateAppointment(className: string | null): boolean {
-  const n = (className ?? "").toLowerCase();
-  return n.includes("personal training") || n.includes("duo training");
+function isPrivateAppointment(reservationType: string | null): boolean {
+  const rt = (reservationType ?? "").toLowerCase();
+  return rt === "personal training" || rt === "private treatment";
 }
 
 function mergeTextFields(existing: { text?: string }[], newItems: { text?: string }[]): { text: string }[] {
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
       const dataSources: Record<string, unknown> = {};
 
-      // 1) Arketa reservations
+      // 1) Arketa reservations + class reservation_type lookup
       const { data: resRows, error: resErr } = await supabase
         .from("arketa_reservations_history")
         .select("class_id, class_date, class_name, status, checked_in")
@@ -164,6 +164,20 @@ Deno.serve(async (req) => {
           JSON.stringify({ success: false, error: resErr.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Build reservation_type lookup from arketa_classes (calculated field)
+      const resClassIds = [...new Set((resRows ?? []).map((r) => r.class_id).filter(Boolean))] as string[];
+      const classReservationTypeMap: Record<string, string> = {};
+      if (resClassIds.length > 0) {
+        const { data: classTypeRows } = await supabase
+          .from("arketa_classes")
+          .select("external_id, reservation_type, name")
+          .in("external_id", resClassIds)
+          .eq("class_date", report_date);
+        for (const ct of classTypeRows ?? []) {
+          classReservationTypeMap[ct.external_id as string] = (ct.reservation_type as string) ?? "";
+        }
       }
 
       let totalGymCheckins = 0;
@@ -193,8 +207,11 @@ Deno.serve(async (req) => {
 
         if (!checkedIn) continue;
 
+        // Use calculated reservation_type from arketa_classes
+        const calcResType = classReservationTypeMap[r.class_id as string] ?? "";
+
         if (isGymCheckin(className)) totalGymCheckins++;
-        else if (isPrivateAppointment(className)) privateAppointments++;
+        else if (isPrivateAppointment(calcResType)) privateAppointments++;
         else totalClassCheckins++;
       }
 

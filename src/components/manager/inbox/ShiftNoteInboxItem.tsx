@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { FileText } from "lucide-react";
 import { formatDistanceToNow, parseISO, format, differenceInDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -36,10 +35,6 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
       }}
       onClick={() => navigate("/dashboard/concierge")}
     >
-      {/* Icon badge – solid */}
-      <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>
-        <FileText className="h-4 w-4" />
-      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">

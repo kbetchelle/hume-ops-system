@@ -314,7 +314,7 @@ export function BoHChecklistView() {
             </Button>
           </div>
         </div>
-        <Badge variant={completedCount === totalCount ? 'default' : 'secondary'}>
+        <Badge variant={completedCount === totalCount ? 'default' : 'secondary'} className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#f6821f', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
           {completedCount} / {totalCount} {t('Complete', 'Completo')}
         </Badge>
       </div>

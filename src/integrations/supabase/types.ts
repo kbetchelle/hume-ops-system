@@ -105,6 +105,7 @@ export type Database = {
           created_at: string
           feedback_text: string | null
           id: string
+          priority_rank: number | null
           rating: string
           template_guide_id: string | null
           user_id: string
@@ -116,6 +117,7 @@ export type Database = {
           created_at?: string
           feedback_text?: string | null
           id?: string
+          priority_rank?: number | null
           rating: string
           template_guide_id?: string | null
           user_id: string
@@ -127,6 +129,7 @@ export type Database = {
           created_at?: string
           feedback_text?: string | null
           id?: string
+          priority_rank?: number | null
           rating?: string
           template_guide_id?: string | null
           user_id?: string

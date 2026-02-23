@@ -71,6 +71,7 @@ import BugReportsPage from "./pages/admin/BugReportsPage";
 import DevTestingPage from "./pages/admin/DevTestingPage";
 import DevUpdatesPage from "./pages/admin/DevUpdatesPage";
 import NotificationExamplesPage from "./pages/admin/NotificationExamplesPage";
+import AIFeedbackPage from "./pages/admin/AIFeedbackPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -743,6 +744,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <DevTestingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* AI Feedback (Dev Tools) for Admin */}
+            <Route
+              path="/dashboard/ai-feedback"
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <AIFeedbackPage />
                 </ProtectedRoute>
               }
             />

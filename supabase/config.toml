@@ -2,3 +2,6 @@ project_id = "aypdvbnyjuzdzxofdhnd"
 
 [functions.admin-create-accounts-from-sling]
 verify_jwt = false
+
+[functions.import-arketa-csv]
+verify_jwt = false

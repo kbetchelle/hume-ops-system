@@ -219,6 +219,7 @@ export function WhosWorkingView() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-medium truncate">{person.user_name || "Unknown"}</p>
+                        <p className="text-xs text-muted-foreground">{person.position || position}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatTimeRange(person.shift_start, person.shift_end)}
@@ -297,6 +298,7 @@ export function WhosWorkingView() {
                         <p className="text-xs font-normal truncate">
                           {person.user_name || "Unknown"}
                         </p>
+                        <p className="text-[10px] text-muted-foreground">{person.position || position}</p>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           <span className="text-[10px]">

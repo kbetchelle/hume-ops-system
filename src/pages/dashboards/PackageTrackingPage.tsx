@@ -290,7 +290,7 @@ export default function PackageTrackingPage() {
 
   return (
     <DashboardLayout title="Package Tracking">
-      <div className={cn("p-6 space-y-6", isMobile && "p-0 pt-0 flex flex-col min-h-0 flex-1")}>
+      <div className={cn("space-y-6", isMobile && "p-0 pt-0 flex flex-col min-h-0 flex-1")}>
         {isMobile ? mobileContent : (
         <>
 

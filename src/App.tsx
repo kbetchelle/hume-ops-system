@@ -68,6 +68,7 @@ import DataPatternsPage from "./pages/admin/DataPatternsPage";
 import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import BugReportsPage from "./pages/admin/BugReportsPage";
 import DevTestingPage from "./pages/admin/DevTestingPage";
+import DevUpdatesPage from "./pages/admin/DevUpdatesPage";
 import NotificationExamplesPage from "./pages/admin/NotificationExamplesPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
@@ -743,6 +744,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <NotificationExamplesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Dev Updates (Dev Tools) for Admin only */}
+            <Route
+              path="/dashboard/dev-updates"
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <DevUpdatesPage />
                 </ProtectedRoute>
               }
             />

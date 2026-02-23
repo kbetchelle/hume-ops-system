@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { add_color } from "@/lib/constants";
 import { RefreshCw, Calendar, Users, Clock, User, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -242,6 +243,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                     className={`p-3 border rounded-none transition-colors ${
                       isPast ? "opacity-60" : ""
                     } ${cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border"}`}
+                    style={!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : undefined}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

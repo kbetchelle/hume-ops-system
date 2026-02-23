@@ -1,95 +1,138 @@
 
 
-# Unified Global Notification Formatting and Style
+# Global Color Differentiation and Badge Standardization
 
 ## Summary
 
-Remap 10 notification types to new colors from app_colors, expand the global config with explicit style tokens for badges/banners/labels, and apply them consistently across all 4 consuming components.
+Standardize all badges, icons, and color indicators across the entire application to match the Notification Examples page formatting. Every badge becomes a perfect square, every color maps to the brand palette (`add_color`), and all roles see consistent visual treatment.
 
 ---
 
-## 1. New Color Assignments
+## Color Assignment Map
 
-| Notification Type | Current Color | New Color |
+### Sidebar Nav Badges (ALL roles)
+
+| Nav Item | Badge Color | Shape |
 |---|---|---|
-| message | green | **yellow** |
-| announcement | yellow | **orange** |
-| bug_report_update | red | **green** |
-| member_alert | orange | **purple** |
-| class_turnover | blue | blue (no change) |
-| mat_cleaning | green | **blue** |
-| resource_outdated | yellow | **orange** |
-| package_arrived | purple | purple (no change) |
-| room_turnover | orange | **green** |
-| tour_alert | blue | blue (no change) |
+| Messages | Yellow (`#fcb827`) | Square h-5 w-5 |
+| Announcements | Orange (`#f6821f`) | Square h-5 w-5 |
+| Dashboard (Mgmt Inbox) | Orange (`#f6821f`) | Square h-5 w-5 |
+| Bug Reports (Dev Tools) | Red (`#e03a3c`) | Square h-5 w-5 |
+| Package Tracking | Purple (`#7c3aed`) | Square h-5 w-5 |
 
-Unchanged types: qa_answered (blue), qa_new_question (purple), account_pending (orange), account_approved (green), account_rejected (red).
+### Mobile Bottom Nav Badges
+- Messages: Yellow (`#fcb827`), rounded pill (keep existing shape)
+- Color change only, shape stays rounded
 
----
+### Notification Bell (Header)
+- Change from pulsing red dot to a red square badge (`h-4 w-4`) showing unread count
+- No animation (static)
 
-## 2. Style Tokens (opacity rules)
+### Concierge Sidebar Badges
+- Messages: Yellow (was red)
+- Announcements: Orange (was red "!")
+- Announcement badge shows count instead of "!"
 
-Three distinct contexts with different styling:
-
-- **Icon badge** (small square with icon): Solid color background, white icon (`bg-add-{color} text-white`)
-- **Label tag** (type pill like "ANNOUNCEMENT"): Solid color background, white text (`bg-add-{color} text-white`)
-- **Banner background**: 90% transparency = 10% opacity tint, black text/icons (`bg-add-{color}/10 text-foreground`)
-- **Banner border**: Matches type color at 40% opacity (`border-add-{color}/40`)
-- **Unread row highlight**: Per-type color at 10% opacity (`bg-add-{color}/10`)
-- **Unread dot**: Stays universal red (`bg-add-red`)
+### User Management Page
+- Pending Approvals: Red (`#e03a3c`), square (was rounded-full)
 
 ---
 
-## 3. Technical Changes
+## Management Inbox Item Colors
 
-### File: `src/lib/notificationConfig.ts`
+| Inbox Type | Icon Badge | Label Tag | Tinted Row |
+|---|---|---|---|
+| Shift Note | Yellow solid | Yellow solid | Yellow 10% |
+| Q&A Question | Purple solid | Purple solid | Purple 10% |
+| Outdated Flag | Orange solid | Orange solid | Orange 10% |
+| Sick Day | Orange solid (was purple) | Orange solid | Orange 10% |
 
-Expand `NotificationFormatConfig` interface with new properties:
+- All text on tinted rows stays black
+- All label tags remain solid (colored bg + white text)
+- Shift type tags (AM/PM) change to neutral gray
 
-```text
-interface NotificationFormatConfig {
-  icon: ...;
-  // Solid color tokens (for icon badge + label tag)
-  solidBg: string;       // e.g. 'bg-add-yellow'
-  solidText: string;     // 'text-white'
-  // Tint tokens (for banners + unread rows)
-  tintBg: string;        // e.g. 'bg-add-yellow/10'
-  tintText: string;      // 'text-foreground'
-  tintBorder: string;    // e.g. 'border-add-yellow/40'
-  // Icon color (for banner icons where bg is tinted)
-  iconColor: string;     // e.g. 'text-add-yellow'
-  // Labels
-  labelEn: string;
-  labelEs: string;
-}
-```
+---
 
-Remove old `bg` and `text` fields (replaced by the above). Update all 15 entries with the correct color mappings.
+## Badge Component Remap
 
-### File: `src/components/notifications/NotificationItem.tsx`
+Remap the `Badge` component variants to use `add_color` palette:
 
-- Icon badge: use `fmt.solidBg` + `fmt.solidText` (solid square)
-- Label tag: use `fmt.solidBg` + `fmt.solidText`
-- Unread row: use `fmt.tintBg` instead of hardcoded `bg-add-yellow/10`
-- Unread dot: keep `bg-add-red`
+| Variant | Current | New |
+|---|---|---|
+| default | amber/amber | `add_color.yellow` (#fcb827) |
+| secondary | skyBlue/skyBlue | `add_color.blue` (#009ddc) |
+| destructive | crimson/crimson | `add_color.red` (#e03a3c) |
+| outline | burntOrange | `add_color.orange` (#f6821f) |
 
-### File: `src/components/concierge/NotificationBell.tsx`
+---
 
-- Same formatting as inbox (consistent everywhere)
-- Icon badge: solid color when unread, `bg-muted` when read
-- Unread row: per-type `fmt.tintBg`
+## Icon Badge Sizing
 
-### File: `src/pages/admin/NotificationExamplesPage.tsx`
+Notification icon badges change from padded (p-1.5) to fixed square dimensions:
+- `h-7 w-7` with centered icon (`h-4 w-4`)
+- Applied in: `NotificationItem.tsx`, `NotificationBell.tsx`, all Management Inbox items, `NotificationExamplesPage.tsx`
 
-- `NotificationSample` (inbox-style): use solid badge + solid label tag
-- `BannerSample` (default): use `fmt.tintBg` for background, `fmt.tintBorder` for border, `fmt.tintText` for text, `fmt.iconColor` for the icon
-- `BannerSample` (urgent): keep red urgent override
-- Color legend section: update to reflect new mappings
-- All changes will be visible on the examples page immediately
+---
 
-### Cleanup
+## Technical Changes by File
 
-- Remove the old `bg` and `text` fields from the config interface
-- Update the `getNotificationFormat` return and `FALLBACK_FORMAT` to use the new properties
-- `useInAppNotifications.ts` does not use color tokens (only toasts via sonner) so no changes needed there
+### 1. `src/components/ui/badge.tsx`
+- Remap all 4 variants to `add_color` values using inline styles or updated Tailwind tokens
 
+### 2. `src/components/layout/DashboardLayout.tsx`
+- Messages badge: change `bg-add-red` to yellow (`add_color.yellow`) via inline style
+- Dashboard (Inbox) badge: keep orange (already correct)
+- Bug Reports in Dev Tools: add red badge with `unreadBugCount`
+- Package Tracking: add purple badge (requires hooking into a pending packages count if available)
+- All badges: ensure `h-5 w-5 rounded-none` square
+
+### 3. `src/components/concierge/ConciergeSidebar.tsx`
+- Messages badge: yellow instead of red
+- Announcements badge: orange instead of red, show count instead of "!"
+- All badges: use inline styles with `solidStyle()` for consistency
+
+### 4. `src/components/concierge/NotificationBell.tsx`
+- Replace pulsing red dot with a static red square badge (`h-4 w-4`) showing unread count
+- Use `solidStyle(add_color.red)` for the badge
+
+### 5. `src/components/notifications/NotificationItem.tsx`
+- Icon badge: change from `p-1.5` to fixed `h-7 w-7 flex items-center justify-center`
+
+### 6. `src/components/mobile/MobileBottomNav.tsx`
+- Messages badge: change `bg-primary` to yellow (`add_color.yellow`) with white text
+- Keep rounded pill shape
+
+### 7. `src/components/manager/inbox/SickDayInboxItem.tsx`
+- Change `HEX` from `add_color.purple` to `add_color.orange`
+- Icon badge: fixed square sizing
+
+### 8. `src/components/manager/inbox/ShiftNoteInboxItem.tsx`
+- Shift type tag: change from green tinted to neutral gray (`bg-muted text-muted-foreground border-border`)
+- Icon badge: fixed square sizing
+
+### 9. `src/components/manager/inbox/QAInboxItem.tsx`
+- Icon badge: fixed square sizing (color stays purple)
+
+### 10. `src/components/manager/inbox/FlagInboxItem.tsx`
+- Icon badge: fixed square sizing (color stays orange)
+
+### 11. `src/pages/admin/UserManagementPage.tsx`
+- Pending Approvals badge: change from `rounded-full` to `rounded-none`, keep red
+- Use inline style `solidStyle(add_color.red)`
+
+### 12. `src/pages/admin/NotificationExamplesPage.tsx`
+- Update icon badge samples to use fixed square sizing
+- Ensure all samples reflect the finalized color mappings
+
+### 13. `src/lib/notificationConfig.ts`
+- No structural changes needed (hex-based system already in place)
+- Already has correct mappings from previous work
+
+---
+
+## What Stays the Same
+- Nav icons remain monochrome (black/muted)
+- Mobile badge shape stays rounded pill
+- All text on tinted backgrounds stays black
+- Label tags in inbox stay solid style
+- Management Inbox badge stays orange

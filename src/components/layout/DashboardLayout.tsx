@@ -84,6 +84,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
   if (role === "cafe") {
     return [];
   }
+  // Concierge role: grouped nav is handled separately in SidebarNav, return empty here
+  if (role === "concierge") {
+    return [];
+  }
   const baseItems: NavItem[] = [{
     title: "Dashboard",
     url: "/dashboard",
@@ -366,6 +370,7 @@ function SidebarNav() {
   const navItems = getNavItems(effectiveRole, permissions);
   const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
   const isCafeRole = effectiveRole === "cafe";
+  const isConciergeRole = effectiveRole === "concierge";
   const isAdminManagerRole = effectiveRole === "admin" || effectiveRole === "manager";
 
   // Admin/Manager grouped nav items
@@ -392,6 +397,23 @@ function SidebarNav() {
   const cafeRefItems: NavItem[] = [
     { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
     { title: "Event Drinks", url: "/dashboard/cafe/event-drinks", icon: Wine },
+    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+  ];
+
+  // Concierge grouped nav items
+  const conciergeMainItems: NavItem[] = [
+    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Shift Report", url: "/dashboard/concierge", icon: FileText },
+  ];
+  const conciergeCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/communications", icon: Bell },
+  ];
+  const conciergeRefItems: NavItem[] = [
+    { title: "Response Templates", url: "/dashboard/concierge?view=templates", icon: FileCode2 },
+    { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
+    { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
     { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];
@@ -490,6 +512,12 @@ function SidebarNav() {
             {renderGroup("Main", cafeMainItems)}
             {renderGroup("Communications", cafeCommsItems)}
             {renderGroup("References", cafeRefItems)}
+          </>
+        ) : isConciergeRole ? (
+          <>
+            {renderGroup("Main", conciergeMainItems)}
+            {renderGroup("Communications", conciergeCommsItems)}
+            {renderGroup("References", conciergeRefItems)}
           </>
         ) : isAdminManagerRole ? (
           <>

@@ -34,8 +34,23 @@ export function BoHChecklistView() {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const roles = userRolesData || [];
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
+  // Use PST date to avoid UTC day-boundary mismatch
+  const getPSTDate = () => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    return `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
+  };
+  const getPSTDayOfWeek = (dateStr: string) => {
+    // Parse as local PST date components to get correct day-of-week
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).getDay();
+  };
+  const [selectedDate, setSelectedDate] = useState(getPSTDate);
+  const isWeekend = [0, 6].includes(getPSTDayOfWeek(selectedDate));
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
 
   const bohRoles = ['floater', 'male_spa_attendant', 'female_spa_attendant'];

@@ -37,15 +37,56 @@ export function BoHChecklistView() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
-  
-  const currentHour = new Date().getHours();
-  const detectedShift = isWeekend ? (currentHour < 13 ? 'AM' : 'PM') : (currentHour < 14 ? 'AM' : 'PM');
-  const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
 
   const bohRoles = ['floater', 'male_spa_attendant', 'female_spa_attendant'];
   const userBoHRole = (activeRole && bohRoles.includes(activeRole))
     ? roles.find(r => r.role === activeRole)
     : roles.find(r => bohRoles.includes(r.role));
+
+  // Query PM checklist time_hints to auto-detect shift cutoff per role
+  const { data: pmChecklist } = useQuery({
+    queryKey: ['boh-pm-start', isWeekend, userBoHRole?.role],
+    queryFn: async () => {
+      if (!userBoHRole) return null;
+      const { data, error } = await supabase
+        .from('boh_checklists')
+        .select('boh_checklist_items(time_hint)')
+        .eq('role_type', userBoHRole.role)
+        .eq('shift_time', 'PM')
+        .eq('is_weekend', isWeekend)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data;
+    },
+    enabled: !!userBoHRole,
+  });
+
+  // Parse earliest PM time_hint to determine shift cutoff
+  const getPmStartMinutes = useCallback(() => {
+    const items = (pmChecklist as any)?.boh_checklist_items ?? [];
+    let earliest = Infinity;
+    for (const item of items) {
+      const hint = item.time_hint;
+      if (!hint || hint === 'End of Shift') continue;
+      const match = hint.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const mins = parseInt(match[2]);
+        const period = match[3].toUpperCase();
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        const total = hours * 60 + mins;
+        if (total < earliest) earliest = total;
+      }
+    }
+    return earliest === Infinity ? (isWeekend ? 780 : 840) : earliest;
+  }, [pmChecklist, isWeekend]);
+
+  const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const pmCutoff = getPmStartMinutes();
+  const detectedShift = currentMinutes < pmCutoff ? 'AM' : 'PM';
+  const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>(detectedShift);
 
   const queryClient = useQueryClient();
   const { data: checklist, isLoading, refetch: refetchChecklist } = useQuery({

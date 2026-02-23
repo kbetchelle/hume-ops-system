@@ -50,8 +50,8 @@ export function DashboardFacilityWidget() {
           Recent Facility Issues
           {pendingIssues.length > 0 &&
           <span
-            className="text-[10px] px-1.5 py-0.5 font-medium"
-            style={{ backgroundColor: add_color.orange, color: "#fff" }}>
+            className="text-[10px] flex items-center justify-center font-medium"
+            style={{ backgroundColor: add_color.orange, color: "#fff", width: "38px", height: "38px" }}>
 
               {pendingIssues.length}
             </span>

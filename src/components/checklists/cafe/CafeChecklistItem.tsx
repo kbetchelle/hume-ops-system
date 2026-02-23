@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { SignaturePad } from '@/components/ui/SignaturePad';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import { getTaskColorStyle } from '@/components/checklists/checklistColors';
+import { add_color } from '@/lib/constants';
 
 interface CafeChecklistItemProps {
   item: any;
@@ -107,8 +108,8 @@ export function CafeChecklistItem({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
-            {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-            {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
+            {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+            {item.is_high_priority && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.orange }}>High Priority</Badge>}
           </div>
           {item.time_hint && (
             <p className="text-xs text-muted-foreground mt-1">{item.time_hint}</p>
@@ -133,7 +134,7 @@ export function CafeChecklistItem({
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -196,7 +197,7 @@ export function CafeChecklistItem({
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -257,7 +258,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -288,7 +289,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -325,7 +326,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -352,7 +353,7 @@ export function CafeChecklistItem({
       <div className={`p-3 border space-y-2`} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>

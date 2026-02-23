@@ -239,7 +239,8 @@ Deno.serve(async (req) => {
         .select("amount, transaction_fees, normalized_category, created_at_api")
         .gte("created_at_api", wideStart)
         .lte("created_at_api", wideEnd)
-        .not("amount", "is", null);
+        .not("amount", "is", null)
+        .eq("status", "succeeded");
 
       if (payErr) {
         return new Response(

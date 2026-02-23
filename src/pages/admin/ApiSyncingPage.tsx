@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, subDays, addDays } from "date-fns";
 import {
   RefreshCw,
   Play,
@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Activity,
+  CalendarIcon,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -36,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   useSyncSchedules,
   useUpdateSyncSchedule,
@@ -332,6 +340,17 @@ function SyncDetailPanel({ syncType, isRunning }: { syncType: string; isRunning:
   );
 }
 
+// Sync types that accept start_date / end_date (exclude payments, subscriptions, clients, instructors, users, backfills)
+const DATE_RANGE_SYNC_TYPES = new Set([
+  "arketa_classes",
+  "arketa_reservations",
+  "sling_shifts",
+  "toast_sales",
+  "calendly_events",
+  "daily_report_aggregation",
+  "daily_schedule",
+]);
+
 // API Sync Overview Table Component
 function SyncOverviewTable() {
   const { data: schedules, isLoading, error, refetch } = useSyncSchedules();
@@ -341,6 +360,18 @@ function SyncOverviewTable() {
   const intervalOptions = getIntervalOptions();
   const [runningSyncType, setRunningSyncType] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [syncDates, setSyncDates] = useState<Record<string, { start: Date; end: Date }>>({});
+
+  const getSyncDates = (syncType: string) => {
+    return syncDates[syncType] || { start: subDays(new Date(), 7), end: addDays(new Date(), 7) };
+  };
+
+  const updateSyncDate = (syncType: string, field: "start" | "end", date: Date) => {
+    setSyncDates(prev => ({
+      ...prev,
+      [syncType]: { ...getSyncDates(syncType), [field]: date },
+    }));
+  };
 
   const handleIntervalChange = (id: string, value: string) => {
     updateSchedule.mutate({
@@ -351,16 +382,17 @@ function SyncOverviewTable() {
 
   const handleRunNow = async (syncType: string) => {
     setRunningSyncType(syncType);
-    // Auto-expand the row being synced
     setExpandedRow(syncType);
+    const dates = getSyncDates(syncType);
+    const startDate = DATE_RANGE_SYNC_TYPES.has(syncType) ? format(dates.start, "yyyy-MM-dd") : undefined;
+    const endDate = DATE_RANGE_SYNC_TYPES.has(syncType) ? format(dates.end, "yyyy-MM-dd") : undefined;
     try {
-      // Arketa Classes + Reservations: invoke wrapper directly for reliable manual sync and clearer errors
       if (syncType === "arketa_classes") {
         await syncArketaClassesAndReservations.mutateAsync(undefined);
         refetch();
         return;
       }
-      await runSync.mutateAsync(syncType);
+      await runSync.mutateAsync({ syncType, startDate, endDate });
     } finally {
       setRunningSyncType(null);
     }
@@ -494,25 +526,64 @@ function SyncOverviewTable() {
                     </Badge>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRunNow(sync.sync_type)}
-                      disabled={runningSyncType !== null}
-                      className="gap-1"
-                    >
-                      {isThisRunning ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-xs">Syncing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4" />
-                          <span className="text-xs">Sync Now</span>
-                        </>
+                    <div className="space-y-2">
+                      {DATE_RANGE_SYNC_TYPES.has(sync.sync_type) && (
+                        <div className="flex items-center gap-1">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
+                                <CalendarIcon className="h-3 w-3" />
+                                {format(getSyncDates(sync.sync_type).start, "MM/dd")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={getSyncDates(sync.sync_type).start}
+                                onSelect={(d) => d && updateSyncDate(sync.sync_type, "start", d)}
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-[10px] text-muted-foreground">→</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2">
+                                <CalendarIcon className="h-3 w-3" />
+                                {format(getSyncDates(sync.sync_type).end, "MM/dd")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={getSyncDates(sync.sync_type).end}
+                                onSelect={(d) => d && updateSyncDate(sync.sync_type, "end", d)}
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       )}
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRunNow(sync.sync_type)}
+                        disabled={runningSyncType !== null}
+                        className="gap-1"
+                      >
+                        {isThisRunning ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-xs">Syncing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4" />
+                            <span className="text-xs">Sync Now</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
                 {isExpanded && (

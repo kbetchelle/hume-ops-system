@@ -1,47 +1,47 @@
 // Shared color mapping for checklist task types
-// Based on the standardized Female Spa Attendant PM pattern
+// Uses add_color palette for consistency with notification system
 
-export const TASK_TYPE_COLOR_MAP: Record<string, string> = {
-  checkbox: 'blue',
-  photo: 'purple',
-  signature: 'pink',
-  yes_no: 'orange',
-  multiple_choice: 'yellow',
-  free_response: 'teal',
-  short_entry: 'green',
-  employee: 'gray',
+import type React from 'react';
+import { add_color } from '@/lib/constants';
+
+export const TASK_TYPE_COLOR_HEX: Record<string, string> = {
+  checkbox: add_color.blue,
+  photo: add_color.purple,
+  signature: add_color.orange,
+  yes_no: add_color.yellow,
+  multiple_choice: add_color.green,
+  free_response: add_color.blue,
+  short_entry: add_color.green,
+  employee: add_color.purple,
+  header: add_color.red,
 };
 
-export const COLOR_BORDER_MAP: Record<string, string> = {
-  red: 'border-l-add-red',
-  orange: 'border-l-add-orange',
-  yellow: 'border-l-yellow-500',
-  green: 'border-l-green-500',
-  blue: 'border-l-add-blue',
-  purple: 'border-l-purple-500',
-  gray: 'border-l-gray-500',
-  teal: 'border-l-add-green',
-  pink: 'border-l-add-orange',
-};
+/**
+ * Returns inline style object for checklist item left border + tinted background.
+ * Uses add_color hex values for build stability (no Tailwind purge issues).
+ */
+export function getTaskColorStyle(
+  taskType: string,
+  checkboxIndex?: number
+): React.CSSProperties {
+  let hex = TASK_TYPE_COLOR_HEX[taskType];
 
-export const COLOR_BG_MAP: Record<string, string> = {
-  red: 'bg-add-red/5',
-  orange: 'bg-add-orange/5',
-  yellow: 'bg-yellow-500/5',
-  green: 'bg-green-500/5',
-  blue: 'bg-add-blue/5',
-  purple: 'bg-purple-500/5',
-  gray: 'bg-gray-500/5',
-  teal: 'bg-add-green/5',
-  pink: 'bg-add-orange/5',
-};
-
-export function getTaskColorClass(taskType: string, checkboxIndex?: number): string {
-  let color = TASK_TYPE_COLOR_MAP[taskType];
-  // Alternate checkbox colors between blue and green by hourly block
+  // Alternate checkbox colors between blue and green
   if (taskType === 'checkbox' && checkboxIndex !== undefined) {
-    color = checkboxIndex % 2 === 0 ? 'blue' : 'green';
+    hex = checkboxIndex % 2 === 0 ? add_color.blue : add_color.green;
   }
-  if (!color) return '';
-  return `border-l-4 ${COLOR_BORDER_MAP[color] || ''} ${COLOR_BG_MAP[color] || ''}`;
+
+  if (!hex) return {};
+
+  return {
+    borderLeftWidth: '4px',
+    borderLeftStyle: 'solid',
+    borderLeftColor: hex,
+    backgroundColor: `${hex}0D`, // ~5% opacity
+  };
+}
+
+// Keep legacy class-based function for backward compat
+export function getTaskColorClass(_taskType: string, _checkboxIndex?: number): string {
+  return '';
 }

@@ -39,6 +39,42 @@ function parseCsvLine(line: string): string[] {
   return result.map(stripQuotes);
 }
 
+function classifyReservationType(className: string): string | null {
+  if (!className || !className.trim()) return null;
+  const n = className.toLowerCase().trim();
+
+  // Personal Training
+  if (/personal training|personal program|duo training|find your duo|private boxing|private breathwork|private pilates|private yoga|private alignment/.test(n))
+    return "Personal Training";
+
+  // Private Treatment
+  if (/massage|acupuncture|reiki|bodywork|lymphatic treatment|physical therapy|stretch \+ percussive therapy|iv drip|vitamin shot|nad|ballancer|hyperbaric|express stretch|nutrition coaching|macro nutrition|endurance testing|metabolic testing|active alignment/.test(n))
+    return "Private Treatment";
+  if (/fascia release/.test(n) && !/yin yoga/.test(n))
+    return "Private Treatment";
+
+  // Staff Class
+  if (/^staff |staff class|^teacher|teachers class/.test(n))
+    return "Staff Class";
+
+  // Gym Check Ins
+  if (/gym check in/.test(n)) return "Gym Check Ins";
+
+  // Workshops
+  if (/^workshop|masterclass|human design|pelvic floor|inversion|handstand|prenatal|beginner's guide|train smart|connect: the intersection|exploring the human|teacher workshop/.test(n))
+    return "Workshops";
+
+  // Events
+  if (/an evening with|book launch|movie night|tacos|sunset serve|saturday social|spring equinox|summer solstice|friday night lights|turkey trot|cacao tasting|sunchasers|pulse [&+] presence|upcycle|osea|new year's/.test(n))
+    return "Events";
+
+  // Classes (broadest)
+  if (/\(heated\)|\(non-heated|\(rooftop\)|\(roof\)|\(high roof\)|\(ground floor|\(impact|\(gym floor|reformer pilates|sound bath|vinyasa|hatha|yin yoga|yin & sound|kundalini|mat pilates|warm mat pilates|hiit|circuit strength|boxing|shadowboxing|breathwork|meditation|dance|conditioning|qigong|signature sculpt|signature flow|signature yoga|morning practice|morning energy|flow into yin|core flow|core sculpt|core strength|power core|primal flow|animal flow|move & mobilize|mobility|dynamic stretch|static stretch|roll & release|functional movement|speed & agility|kettlebell|yoga nidra|yoga sculpt|yoga play|yoga for|rooted strength|focused strength|strength, mobility|run by hume|intro to|foundations of|fundamentals of|gentle movement|acupressure|beach bootcamp|full moon|sunrise rooftop|community|ecstatic dance|infrared|somatic|divine feminine|breath & sound|movement, meditation|spinal health|sunset practice|power & strength|heart-opening/.test(n))
+    return "Classes";
+
+  return null;
+}
+
 const STATUS_MAP: Record<string, string> = {
   "checked in": "ATTENDED",
   confirmed: "CONFIRMED",
@@ -241,6 +277,7 @@ Deno.serve(async (req) => {
       is_cancelled: false,
       is_deleted: false,
       synced_at: new Date().toISOString(),
+      reservation_type: classifyReservationType(c.name),
     }));
 
     let classesUpserted = 0;

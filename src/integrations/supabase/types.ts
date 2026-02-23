@@ -357,6 +357,7 @@ export type Database = {
           location_name: string | null
           name: string
           raw_data: Json | null
+          reservation_type: string | null
           room_name: string | null
           start_time: string
           status: string | null
@@ -381,6 +382,7 @@ export type Database = {
           location_name?: string | null
           name: string
           raw_data?: Json | null
+          reservation_type?: string | null
           room_name?: string | null
           start_time: string
           status?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           location_name?: string | null
           name?: string
           raw_data?: Json | null
+          reservation_type?: string | null
           room_name?: string | null
           start_time?: string
           status?: string | null
@@ -2876,6 +2879,7 @@ export type Database = {
           id: string
           instructor: string | null
           max_capacity: number | null
+          reservation_type: string | null
           schedule_date: string
           start_time: string | null
           total_booked: number | null
@@ -2891,6 +2895,7 @@ export type Database = {
           id?: string
           instructor?: string | null
           max_capacity?: number | null
+          reservation_type?: string | null
           schedule_date: string
           start_time?: string | null
           total_booked?: number | null
@@ -2906,6 +2911,7 @@ export type Database = {
           id?: string
           instructor?: string | null
           max_capacity?: number | null
+          reservation_type?: string | null
           schedule_date?: string
           start_time?: string | null
           total_booked?: number | null
@@ -6198,6 +6204,10 @@ export type Database = {
       admin_update_user_username: {
         Args: { _target_user_id: string; _username: string }
         Returns: undefined
+      }
+      classify_reservation_type: {
+        Args: { class_name: string }
+        Returns: string
       }
       cleanup_archived_lost_and_found: { Args: never; Returns: undefined }
       cleanup_archived_packages: { Args: never; Returns: undefined }

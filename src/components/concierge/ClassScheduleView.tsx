@@ -39,8 +39,14 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
   };
 
   const formatTime = (dateString: string) => {
-    const pstDate = toZonedTime(new Date(dateString), "America/Los_Angeles");
-    return format(pstDate, "h:mm a");
+    // start_time stores PST local times with a +00 offset, so parse without TZ conversion
+    const match = dateString.match(/(\d{2}):(\d{2})/);
+    if (!match) return dateString;
+    const hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const period = hours >= 12 ? "PM" : "AM";
+    const h = hours % 12 || 12;
+    return `${h}:${minutes} ${period}`;
   };
 
   const getCapacityColor = (booked: number, capacity: number) => {

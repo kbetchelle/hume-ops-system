@@ -2875,6 +2875,7 @@ export type Database = {
           class_name: string | null
           created_at: string
           description: string | null
+          duration_minutes: number | null
           end_time: string | null
           id: string
           instructor: string | null
@@ -2891,6 +2892,7 @@ export type Database = {
           class_name?: string | null
           created_at?: string
           description?: string | null
+          duration_minutes?: number | null
           end_time?: string | null
           id?: string
           instructor?: string | null
@@ -2907,6 +2909,7 @@ export type Database = {
           class_name?: string | null
           created_at?: string
           description?: string | null
+          duration_minutes?: number | null
           end_time?: string | null
           id?: string
           instructor?: string | null

@@ -50,6 +50,56 @@ type ReportRow = {
   class_details: { time: string; name: string; instructor: string; signups: number; waitlist: number }[] | null;
 };
 
+type PaymentRow = {
+  payment_id: string;
+  amount: number | null;
+  status: string | null;
+  created_at_api: string | null;
+  offering_name: string[] | null;
+  normalized_category: string[] | null;
+  description: string | null;
+  client_first_name: string | null;
+  client_last_name: string | null;
+  payment_type: string | null;
+  source: string | null;
+  net_sales: number | null;
+};
+
+/** Convert a UTC ISO timestamp to PST/PDT formatted string */
+function formatTimePST(isoStr: string | null): string {
+  if (!isoStr) return "—";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return isoStr.slice(0, 16);
+  }
+}
+
+/** Get UTC date range for a PST calendar date */
+function getPSTDateRangeUTC(reportDate: string): { utcStart: string; utcEnd: string } {
+  const month = parseInt(reportDate.slice(5, 7), 10);
+  const day = parseInt(reportDate.slice(8, 10), 10);
+  const isDST = (month > 3 && month < 11) ||
+    (month === 3 && day >= 9) ||
+    (month === 11 && day < 2);
+  const offset = isDST ? "07" : "08";
+  const nextDate = new Date(`${reportDate}T12:00:00Z`);
+  nextDate.setDate(nextDate.getDate() + 1);
+  const nextDateStr = nextDate.toISOString().slice(0, 10);
+  return {
+    utcStart: `${reportDate}T${offset}:00:00.000Z`,
+    utcEnd: `${nextDateStr}T${offset}:00:00.000Z`,
+  };
+}
+
 function jsonbToLines(arr: { text?: string; description?: string }[] | null): string {
   if (!Array.isArray(arr)) return "";
   return arr.map((x) => (x.text ?? x.description ?? "")).filter(Boolean).join("\n");
@@ -136,6 +186,61 @@ function addDataFinancialsSection(doc: jsPDF, report: ReportRow, startY: number)
   doc.text(`Total: ${formatMoney(report.total_sales)}`, rightX, y);
 
   return startY + 0.6 + 4 * 0.28 + 0.2;
+}
+
+function addPaymentsDetailSection(doc: jsPDF, payments: PaymentRow[], startY: number): number {
+  doc.setFillColor(...COLORS.headerMedium);
+  doc.rect(0.5, startY, 11 - 1, 0.3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("ARKETA PAYMENTS DETAIL (PST)", 0.5 + 0.1, startY + 0.2);
+
+  if (payments.length === 0) {
+    const y = startY + 0.55;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.text("No payment records for this date.", 0.5, y);
+    return y + 0.3;
+  }
+
+  let y = startY + 0.5;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(7);
+  doc.text("Time (PST)", 0.5, y);
+  doc.text("Client", 2.0, y);
+  doc.text("Description", 4.0, y);
+  doc.text("Category", 6.5, y);
+  doc.text("Amount", 8.5, y);
+  doc.text("Status", 9.5, y);
+  y += 0.22;
+
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7);
+  for (const p of payments) {
+    if (y > 7.8) {
+      // Prevent overflow - stop listing
+      doc.text(`... and ${payments.length - payments.indexOf(p)} more`, 0.5, y);
+      y += 0.2;
+      break;
+    }
+    const timePST = formatTimePST(p.created_at_api);
+    const client = [p.client_first_name, p.client_last_name].filter(Boolean).join(" ") || "—";
+    const desc = (p.description ?? (p.offering_name ?? []).join(", ") ?? "—").slice(0, 40);
+    const category = (p.normalized_category ?? []).join(", ") || "—";
+    const amount = formatMoney(p.amount != null ? p.amount / 100 : null);
+    const status = p.status ?? "—";
+
+    doc.text(timePST.slice(0, 20), 0.5, y);
+    doc.text(client.slice(0, 25), 2.0, y);
+    doc.text(desc.slice(0, 35), 4.0, y);
+    doc.text(category.slice(0, 25), 6.5, y);
+    doc.text(amount, 8.5, y);
+    doc.text(status.slice(0, 12), 9.5, y);
+    y += 0.18;
+  }
+
+  return y + 0.2;
 }
 
 function addNotesSection(doc: jsPDF, report: ReportRow, startY: number): number {
@@ -258,6 +363,7 @@ function addClassSchedulePage(doc: jsPDF, report: ReportRow, dateStr: string) {
 function renderSingleDay(
   doc: jsPDF,
   report: ReportRow,
+  payments: PaymentRow[],
   pageIndex?: number,
   totalPages?: number
 ) {
@@ -273,6 +379,11 @@ function renderSingleDay(
     doc.text(label, 11 / 2 - doc.getTextWidth(label) / 2, 8.5 - 0.35);
     doc.setTextColor(0, 0, 0);
   }
+  // Payments detail page
+  doc.addPage([11, 8.5], "landscape");
+  addPageHeader(doc, report.report_date, "Daily Report — Payments Detail");
+  addPaymentsDetailSection(doc, payments, 0.7);
+  // Class schedule page
   addClassSchedulePage(doc, report, report.report_date);
 }
 
@@ -397,6 +508,20 @@ Deno.serve(async (req) => {
 
     const reports = (rows ?? []) as ReportRow[];
 
+    // Fetch payments for all requested dates using PST date boundaries
+    const paymentsMap: Record<string, PaymentRow[]> = {};
+    for (const d of dates) {
+      const { utcStart, utcEnd } = getPSTDateRangeUTC(d);
+      const { data: payRows } = await supabase
+        .from("arketa_payments")
+        .select("payment_id, amount, status, created_at_api, offering_name, normalized_category, description, client_first_name, client_last_name, payment_type, source, net_sales")
+        .gte("created_at_api", utcStart)
+        .lt("created_at_api", utcEnd)
+        .not("amount", "is", null)
+        .order("created_at_api", { ascending: true });
+      paymentsMap[d] = (payRows ?? []) as PaymentRow[];
+    }
+
     const isSingle = format === "single" && reports.length > 0;
     const isWeekly = format === "weekly" && reports.length > 0;
     const isBatch = format === "batch";
@@ -408,17 +533,17 @@ Deno.serve(async (req) => {
     });
 
     if (isSingle) {
-      renderSingleDay(doc, reports[0]);
+      renderSingleDay(doc, reports[0], paymentsMap[reports[0].report_date] ?? []);
     } else if (isWeekly) {
       renderWeeklySummary(doc, reports, dates[0], dates[dates.length - 1]);
       for (let i = 0; i < reports.length; i++) {
         doc.addPage([11, 8.5], "landscape");
-        renderSingleDay(doc, reports[i], i, reports.length);
+        renderSingleDay(doc, reports[i], paymentsMap[reports[i].report_date] ?? [], i, reports.length);
       }
     } else if (isBatch && reports.length > 0) {
       for (let i = 0; i < reports.length; i++) {
         if (i > 0) doc.addPage([11, 8.5], "landscape");
-        renderSingleDay(doc, reports[i]);
+        renderSingleDay(doc, reports[i], paymentsMap[reports[i].report_date] ?? []);
       }
     }
 

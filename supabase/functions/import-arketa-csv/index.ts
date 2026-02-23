@@ -57,10 +57,15 @@ function generateRandom(len: number): string {
 // Parse "Feb 22, 2026, 9:37 AM PST" -> Date (treat as America/Los_Angeles)
 function parseTimeBooked(raw: string): Date | null {
   if (!raw) return null;
+  // Detect if PDT or PST
+  const isPDT = /PDT/i.test(raw);
   const cleaned = raw.replace(/\s*(PST|PDT|PT)\s*$/i, "").trim();
   const d = new Date(cleaned);
   if (isNaN(d.getTime())) return null;
-  return d;
+  // new Date() parsed as UTC; shift to reflect LA local time
+  // PST = UTC-8, PDT = UTC-7
+  const offsetHours = isPDT ? 7 : 8;
+  return new Date(d.getTime() + offsetHours * 60 * 60 * 1000);
 }
 
 // Parse MM/DD/YYYY -> YYYY-MM-DD

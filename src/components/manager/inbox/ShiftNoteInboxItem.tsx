@@ -45,7 +45,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <p className="text-sm font-bold text-foreground">
-            Shift Note
+            From Concierge Shift Report
           </p>
           <span
             className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"

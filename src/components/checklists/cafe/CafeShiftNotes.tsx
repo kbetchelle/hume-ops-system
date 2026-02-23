@@ -78,7 +78,7 @@ export function CafeShiftNotes() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider">
           <FileText className="h-4 w-4" />
-          Shift Notes
+          Notes for Management
         </CardTitle>
       </CardHeader>
 

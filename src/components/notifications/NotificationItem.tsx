@@ -44,7 +44,7 @@ export function NotificationItem({
       style={!notification.is_read ? tintStyle(fmt.hex) : undefined}
     >
       {/* Icon badge – solid color */}
-      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
+      <div className="h-7 w-7 shrink-0 flex items-center justify-center" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
 

@@ -97,9 +97,11 @@ export function NotificationBell() {
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <span
-              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse"
+              className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-[9px] font-medium text-white"
               style={{ backgroundColor: add_color.red }}
-            />
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -141,7 +143,7 @@ export function NotificationBell() {
                   }}
                 >
                   <div
-                    className="p-1.5"
+                    className="h-7 w-7 flex items-center justify-center"
                     style={notification.is_read ? { backgroundColor: 'hsl(var(--muted))' } : solidStyle(fmt.hex)}
                   >
                     <Icon className={cn('h-4 w-4', notification.is_read ? 'text-muted-foreground' : 'text-white')} />

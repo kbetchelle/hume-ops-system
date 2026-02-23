@@ -33,7 +33,7 @@ export function QAInboxItem({ item, onAnswer, onMarkRead }: QAInboxItemProps) {
       style={!item.isRead ? tintStyle(HEX) : undefined}
     >
       {/* Icon badge – solid */}
-      <div className="shrink-0 p-1.5" style={solidStyle(HEX)}>
+      <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>
         <HelpCircle className="h-4 w-4" />
       </div>
 

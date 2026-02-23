@@ -70,9 +70,9 @@ export default function UserManagementPage() {
               <div className="flex items-center gap-2">
                 Pending Approvals
                 {pendingApprovalsCount > 0 && (
-                  <Badge variant="destructive" className="rounded-full h-5 w-5 flex items-center justify-center p-0 text-[10px]">
+                  <span className="h-5 w-5 flex items-center justify-center p-0 text-[10px] text-white" style={{ backgroundColor: '#e03a3c' }}>
                     {pendingApprovalsCount}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </TabsTrigger>

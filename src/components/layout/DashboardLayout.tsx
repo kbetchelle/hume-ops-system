@@ -240,6 +240,10 @@ const settingsGroups: SettingsGroup[] = [{
     url: "/dashboard/dev-updates",
     icon: Megaphone
   }, {
+    title: "AI Feedback",
+    url: "/dashboard/ai-feedback",
+    icon: MessageSquare
+  }, {
     title: "Notification Examples",
     url: "/dashboard/notification-examples",
     icon: Bell
@@ -439,11 +443,11 @@ function SidebarNav() {
   ];
 
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
-  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/dev-updates", "/dashboard/notification-examples"].some((p) => location.pathname.startsWith(p));
+  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/dev-updates", "/dashboard/notification-examples", "/dashboard/ai-feedback"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/dev-updates") || location.pathname.startsWith("/dashboard/notification-examples");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/dev-updates") || location.pathname.startsWith("/dashboard/notification-examples") || location.pathname.startsWith("/dashboard/ai-feedback");
 
   const walkthroughIdByUrl: Record<string, string> = {
     "/dashboard/package-tracking": "package-tracking",

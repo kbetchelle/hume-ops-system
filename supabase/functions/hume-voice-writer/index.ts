@@ -112,28 +112,56 @@ serve(async (req) => {
       console.warn("Failed to fetch policies:", policyFetchError);
     }
 
-    // Fetch recent negative feedback for learning context
+    // Fetch ranked feedback for learning context (8 negative, 5 positive)
     let feedbackSection = "";
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (supabaseUrl && serviceRoleKey) {
         const supabaseFb = createClient(supabaseUrl, serviceRoleKey);
-        const { data: negFeedback, error: fbError } = await supabaseFb
+
+        // Fetch top-ranked negative feedback (8)
+        const { data: negFeedback } = await supabaseFb
           .from("ai_writer_feedback")
           .select("feedback_text, ai_input")
           .eq("rating", "negative")
           .not("feedback_text", "is", null)
+          .order("priority_rank", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        // Fetch top-ranked positive feedback (5)
+        const { data: posFeedback } = await supabaseFb
+          .from("ai_writer_feedback")
+          .select("feedback_text, ai_input")
+          .eq("rating", "positive")
+          .not("feedback_text", "is", null)
+          .order("priority_rank", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(5);
 
-        if (!fbError && negFeedback && negFeedback.length > 0) {
+        const sections: string[] = [];
+
+        if (negFeedback && negFeedback.length > 0) {
           const items = negFeedback.map((f, i) => {
             const text = (f.feedback_text || "").slice(0, 200);
             const context = (f.ai_input || "").slice(0, 100);
             return `${i + 1}. ${text} — regarding: "${context}"`;
           }).join("\n");
-          feedbackSection = `\n\n## Recent Feedback (Learning Context)\nStaff have flagged these patterns to avoid or improve:\n${items}`;
+          sections.push(`### Patterns to Avoid\nStaff have flagged these patterns to avoid or improve:\n${items}`);
+        }
+
+        if (posFeedback && posFeedback.length > 0) {
+          const items = posFeedback.map((f, i) => {
+            const text = (f.feedback_text || "").slice(0, 200);
+            const context = (f.ai_input || "").slice(0, 100);
+            return `${i + 1}. ${text} — regarding: "${context}"`;
+          }).join("\n");
+          sections.push(`### Patterns to Replicate\nStaff praised these patterns — lean into them:\n${items}`);
+        }
+
+        if (sections.length > 0) {
+          feedbackSection = `\n\n## Staff Feedback (Learning Context)\n${sections.join("\n\n")}`;
         }
       }
     } catch (fbFetchError) {

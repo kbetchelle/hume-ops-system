@@ -276,11 +276,10 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                           
                           {/* Capacity bar */}
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 text-xs">
-                              <Users className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium">{booked}</span>
-                              <span className="text-muted-foreground">/ {capacity}</span>
-                            </div>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-1 rounded-none border-none text-white" style={{ backgroundColor: add_color.blue }}>
+                              <Users className="h-3 w-3" />
+                              {booked}/{capacity}
+                            </Badge>
                             <div className="flex-1">
                               <Progress 
                                 value={percentage} 

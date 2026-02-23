@@ -133,7 +133,7 @@ export function NotificationBell() {
                   key={notification.id}
                   className={cn(
                     'flex items-start gap-3 p-3 cursor-pointer',
-                    !notification.is_read && 'bg-add-yellow/10'
+                    !notification.is_read && fmt.tintBg
                   )}
                   onClick={() => {
                     if (!notification.is_read) {
@@ -145,9 +145,9 @@ export function NotificationBell() {
                 >
                   <div className={cn(
                     'p-1.5',
-                    notification.is_read ? 'bg-muted' : fmt.bg
+                    notification.is_read ? 'bg-muted' : fmt.solidBg
                   )}>
-                    <Icon className={cn('h-4 w-4', !notification.is_read && fmt.text)} />
+                    <Icon className={cn('h-4 w-4', notification.is_read ? 'text-muted-foreground' : fmt.solidText)} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn(

@@ -50,23 +50,14 @@ export default function UserManagementPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
-          <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0 flex-nowrap overflow-x-auto min-h-0">
-            <TabsTrigger
-              value="users"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
-            >
+          <TabsList>
+            <TabsTrigger value="users">
               Users & Roles
             </TabsTrigger>
-            <TabsTrigger
-              value="create-from-sling"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
-            >
+            <TabsTrigger value="create-from-sling">
               Create from Sling
             </TabsTrigger>
-            <TabsTrigger
-              value="approvals"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
-            >
+            <TabsTrigger value="approvals">
               <div className="flex items-center gap-2">
                 Pending Approvals
                 {pendingApprovalsCount > 0 && (
@@ -76,16 +67,10 @@ export default function UserManagementPage() {
                 )}
               </div>
             </TabsTrigger>
-            <TabsTrigger
-              value="sling"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
-            >
+            <TabsTrigger value="sling">
               Sling Linking
             </TabsTrigger>
-            <TabsTrigger
-              value="target-groups"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3 shrink-0"
-            >
+            <TabsTrigger value="target-groups">
               Target Groups
             </TabsTrigger>
           </TabsList>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, addDays, subDays } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { RefreshCw, Calendar, Users, Clock, User, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,8 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
   };
 
   const formatTime = (dateString: string) => {
-    return format(new Date(dateString), "h:mm a");
+    const pstDate = toZonedTime(new Date(dateString), "America/Los_Angeles");
+    return format(pstDate, "h:mm a");
   };
 
   const getCapacityColor = (booked: number, capacity: number) => {

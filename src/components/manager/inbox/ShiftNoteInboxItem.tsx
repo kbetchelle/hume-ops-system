@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
-import { formatDistanceToNow, parseISO, format } from "date-fns";
+import { formatDistanceToNow, parseISO, format, differenceInDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { solidStyle, tintBorderStyle } from "@/lib/notificationConfig";
@@ -53,7 +53,9 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
             {data.shiftType}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            {formatDistanceToNow(parseISO(item.createdAt), { addSuffix: true })}
+            {differenceInDays(new Date(), parseISO(item.createdAt)) > 5
+              ? format(parseISO(item.createdAt), "MMM. dd")
+              : formatDistanceToNow(parseISO(item.createdAt), { addSuffix: true })}
           </span>
         </div>
 

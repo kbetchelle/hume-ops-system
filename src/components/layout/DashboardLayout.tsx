@@ -231,6 +231,10 @@ const settingsGroups: SettingsGroup[] = [{
     title: "Testing",
     url: "/dashboard/testing",
     icon: Wrench
+  }, {
+    title: "Notification Examples",
+    url: "/dashboard/notification-examples",
+    icon: Bell
   }]
 }];
 const settingsDirectItems: SettingsSubItem[] = [{
@@ -407,11 +411,11 @@ function SidebarNav() {
   ];
 
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
-  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing"].some((p) => location.pathname.startsWith(p));
+  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/notification-examples"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/notification-examples");
 
   const walkthroughIdByUrl: Record<string, string> = {
     "/dashboard/package-tracking": "package-tracking",

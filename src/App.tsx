@@ -68,6 +68,7 @@ import DataPatternsPage from "./pages/admin/DataPatternsPage";
 import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
 import BugReportsPage from "./pages/admin/BugReportsPage";
 import DevTestingPage from "./pages/admin/DevTestingPage";
+import NotificationExamplesPage from "./pages/admin/NotificationExamplesPage";
 import ProfilePage from "./pages/ProfilePage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -740,6 +741,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
                   <DevTestingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Notification Examples (Dev Tools) for Admin/Manager */}
+            <Route
+              path="/dashboard/notification-examples"
+              element={
+                <ProtectedRoute requiredRoles={["admin", "manager"]}>
+                  <NotificationExamplesPage />
                 </ProtectedRoute>
               }
             />

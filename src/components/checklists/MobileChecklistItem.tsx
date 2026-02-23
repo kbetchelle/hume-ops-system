@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getTaskColorClass } from "./checklistColors";
+import { getTaskColorStyle } from "./checklistColors";
 import {
   CheckboxTask,
   YesNoTask,
@@ -94,8 +94,8 @@ export function MobileChecklistItem({
     }
   };
 
-  // Determine color class based on task type
-  const colorClass = getTaskColorClass(item.task_type, checkboxIndex);
+  // Determine color style based on task type
+  const colorStyle = getTaskColorStyle(item.task_type, checkboxIndex, item.time_hint);
 
   return (
     <div
@@ -103,10 +103,9 @@ export function MobileChecklistItem({
         "border border-l-4 rounded-lg transition-all",
         "hover:bg-muted/50",
         "touch-manipulation",
-        colorClass,
         isCompleted && "bg-muted/30 opacity-75"
       )}
-      style={{ padding: '10px' }}
+      style={{ padding: '10px', ...colorStyle }}
     >
       <div className="flex items-center gap-4">
         {/* Task component (checkbox, photo button, etc.) */}

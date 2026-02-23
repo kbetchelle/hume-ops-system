@@ -46,13 +46,13 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <p className="text-sm font-bold text-foreground">
             From Concierge Shift Report
+            <span
+              className="text-sm font-bold ml-1"
+              style={solidStyle(HEX)}
+            >
+              {data.shiftType}
+            </span>
           </p>
-          <span
-            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
-            style={solidStyle(HEX)}
-          >
-            {data.shiftType}
-          </span>
           <span className="text-[10px] text-muted-foreground">
             {differenceInDays(new Date(), parseISO(item.createdAt)) > 5
               ? format(parseISO(item.createdAt), "MMM. dd")

@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { History, CreditCard, BookOpen, BookMarked, Coffee, Activity } from "lucide-react";
+import { History, CreditCard, BookOpen, BookMarked, Coffee, Activity, FileUp } from "lucide-react";
 import ReservationsBackfillTab from "./backfill/ReservationsBackfillTab";
 import PaymentsBackfillTab from "./backfill/PaymentsBackfillTab";
 import ArketaClassesBackfillTab from "./backfill/ArketaClassesBackfillTab";
 import ArketaClassesAndReservationsBackfillTab from "./backfill/ArketaClassesAndReservationsBackfillTab";
 import ToastBackfillTab from "./backfill/ToastBackfillTab";
 import SyncMonitorTab from "./backfill/SyncMonitorTab";
+import ArketaCSVImportTab from "./backfill/ArketaCSVImportTab";
 
 export default function DataBackfillPage() {
   return (
@@ -42,6 +43,10 @@ export default function DataBackfillPage() {
             <Activity className="h-4 w-4" />
             Sync Monitor
           </TabsTrigger>
+          <TabsTrigger value="csv-import" className="gap-2">
+            <FileUp className="h-4 w-4" />
+            CSV Import
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="reservations" className="space-y-4">
           <ReservationsBackfillTab />
@@ -60,6 +65,9 @@ export default function DataBackfillPage() {
         </TabsContent>
         <TabsContent value="sync-monitor" className="space-y-4">
           <SyncMonitorTab />
+        </TabsContent>
+        <TabsContent value="csv-import" className="space-y-4">
+          <ArketaCSVImportTab />
         </TabsContent>
       </Tabs>
     </div>

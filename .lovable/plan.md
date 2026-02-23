@@ -1,70 +1,49 @@
 
-# Fix Concierge Navigation Sidebar
 
-## Problem
-When a Concierge user navigates to standalone pages (like Lost & Found at `/dashboard/lost-and-found`), the sidebar shows the wrong flat navigation menu instead of the grouped Concierge sidebar with **Main**, **Communications**, and **References** sections.
+## Bulk Item Creation for All Checklist Managers
 
-This happens because `SidebarNav` in `DashboardLayout.tsx` has grouped navigation for BOH, Cafe, and Admin/Manager roles, but the Concierge role falls through to the generic flat list.
+### What It Does
+Adds a "Bulk Add Items" button next to the existing "Add Item" button in each checklist manager (Concierge, BoH, Cafe). Opens a dialog where you can set shared settings once (time hint, task type, category) and then add multiple item descriptions using dynamic rows with a "+" button. After saving, a brief confirmation summary shows how many items were created before the dialog closes.
 
-## Solution
-Add a Concierge-specific grouped navigation section in `SidebarNav` (inside `DashboardLayout.tsx`), matching the structure used by `ConciergeSidebar`:
+### How It Works
 
-### Concierge Navigation Groups
+1. **Shared settings at the top of the dialog:**
+   - Time hint (with existing autocomplete suggestions)
+   - Task type dropdown (defaults to Checkbox, applies to all rows)
+   - Category field
 
-**Main**
-- Home (`/dashboard/concierge` or `/dashboard`)
-- Shift Report (`/dashboard/concierge`)
+2. **Dynamic rows section below:**
+   - Each row has a text input for the item description and a remove (X) button
+   - A "+ Add Row" button appends a new empty row
+   - Starts with 2 empty rows by default
 
-**Communications**
-- Messages (`/dashboard/messages`)
-- Announcements (`/dashboard/communications`)
+3. **Save flow:**
+   - All rows are saved with the shared time hint, task type, and category
+   - Sort order is auto-incremented from the current item count
+   - After save, a toast confirmation shows "X items added successfully"
+   - Dialog closes automatically
 
-**References**
-- Response Templates (link back to concierge dashboard templates view)
-- Resources (`/dashboard/resources`)
-- Package Tracking (`/dashboard/package-tracking`)
-- Lost & Found (`/dashboard/lost-and-found`)
-- Who's Working (`/dashboard/whos-working`)
+### Technical Approach
 
-### Technical Details
+- **New shared component**: `BulkAddItemsDialog` in `src/components/checklists/BulkAddItemsDialog.tsx`
+  - Accepts the `createItem` mutation, `checklistId`, current item count, and existing time hints as props
+  - Keeps it generic so all three managers can use it
 
-**File: `src/components/layout/DashboardLayout.tsx`**
+- **Integration into each manager** (3 files):
+  - `ConciergeChecklistManager.tsx`
+  - `BoHChecklistManager.tsx`
+  - `CafeChecklistManager.tsx`
+  - Add state for `isBulkDialogOpen`
+  - Add "Bulk Add" button next to existing "Add Item" button
+  - Render the shared `BulkAddItemsDialog` component
 
-1. Add a `isConciergeRole` check after `isCafeRole` (around line 368):
-   ```typescript
-   const isConciergeRole = effectiveRole === "concierge";
-   ```
+- **No database changes needed** -- uses the same `createItem` mutation that already exists in each manager
 
-2. Define concierge grouped nav items (alongside the existing BOH/Cafe/Admin groups):
-   ```typescript
-   const conciergeMainItems: NavItem[] = [
-     { title: "Dashboard", url: "/dashboard", icon: Home },
-     { title: "Shift Report", url: "/dashboard/concierge", icon: FileText },
-   ];
-   const conciergeCommsItems: NavItem[] = [
-     { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
-     { title: "Announcements", url: "/dashboard/communications", icon: Bell },
-   ];
-   const conciergeRefItems: NavItem[] = [
-     { title: "Response Templates", url: "/dashboard/concierge?view=templates", icon: FileCode },
-     { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
-     { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
-     { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Eye },
-     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
-   ];
-   ```
+### Files to Create
+- `src/components/checklists/BulkAddItemsDialog.tsx`
 
-3. Insert a `isConciergeRole` branch in the render logic (around line 488), before the admin/manager check:
-   ```
-   isBohRole ? ... : isCafeRole ? ... : isConciergeRole ? (
-     renderGroup("Main", conciergeMainItems)
-     renderGroup("Communications", conciergeCommsItems)
-     renderGroup("References", conciergeRefItems)
-   ) : isAdminManagerRole ? ...
-   ```
+### Files to Modify
+- `src/components/checklists/cafe/CafeChecklistManager.tsx`
+- `src/components/checklists/concierge/ConciergeChecklistManager.tsx`
+- `src/components/checklists/boh/BoHChecklistManager.tsx`
 
-4. Update `getNavItems` to return empty for the concierge role (since grouped nav handles it), preventing duplicate items.
-
-5. Update `getEffectiveRole` to detect concierge-specific paths if needed (e.g., `/dashboard/concierge`).
-
-This ensures that all pages using `DashboardLayout` will show the correct grouped Concierge sidebar when the active role is Concierge.

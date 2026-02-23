@@ -1,47 +1,14 @@
 import { format, parseISO } from 'date-fns';
 import {
-  Bell,
-  HelpCircle,
-  Megaphone,
-  MessageSquare,
-  Bug,
-  Users,
-  RefreshCw,
-  Sparkles,
-  X,
   Eye,
   EyeOff,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { getNotificationFormat } from '@/lib/notificationConfig';
 import type { StaffNotification } from '@/hooks/useNotificationCenter';
-
-const notificationIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  qa_answered: HelpCircle,
-  qa_new_question: HelpCircle,
-  announcement: Megaphone,
-  message: MessageSquare,
-  bug_report_update: Bug,
-  member_alert: Users,
-  class_turnover: RefreshCw,
-  mat_cleaning: Sparkles,
-};
-
-// Brand palette color-coding per notification type (using add-* tokens)
-const notificationColors: Record<string, { bg: string; text: string }> = {
-  qa_answered:      { bg: 'bg-add-blue/15',   text: 'text-add-blue' },
-  qa_new_question:  { bg: 'bg-add-purple/15', text: 'text-add-purple' },
-  announcement:     { bg: 'bg-add-yellow/15', text: 'text-add-yellow' },
-  message:          { bg: 'bg-add-green/15',  text: 'text-add-green' },
-  bug_report_update:{ bg: 'bg-add-red/15',    text: 'text-add-red' },
-  member_alert:     { bg: 'bg-add-orange/15', text: 'text-add-orange' },
-  account_approval_pending: { bg: 'bg-add-orange/15', text: 'text-add-orange' },
-  account_approved: { bg: 'bg-add-green/15',  text: 'text-add-green' },
-  account_rejected: { bg: 'bg-add-red/15',    text: 'text-add-red' },
-  class_turnover:   { bg: 'bg-add-blue/15',   text: 'text-add-blue' },
-  mat_cleaning:     { bg: 'bg-add-green/15',  text: 'text-add-green' },
-};
 
 interface NotificationItemProps {
   notification: StaffNotification;
@@ -59,8 +26,9 @@ export function NotificationItem({
   onClick,
 }: NotificationItemProps) {
   const { t } = useLanguage();
-  const Icon = notificationIcons[notification.type] || Bell;
-  const colors = notificationColors[notification.type] || { bg: 'bg-muted', text: 'text-muted-foreground' };
+  const fmt = getNotificationFormat(notification.type);
+  const Icon = fmt.icon;
+  const colors = { bg: fmt.bg, text: fmt.text };
 
   const handleClick = () => {
     onClick(notification);

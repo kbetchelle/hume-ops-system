@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
-import { Bell, HelpCircle, Megaphone, MessageSquare, CheckCheck, Bug, Users, RefreshCw, Sparkles } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { getNotificationRoute } from '@/lib/notificationRoutes';
+import { getNotificationFormat } from '@/lib/notificationConfig';
 
 interface Notification {
   id: string;
@@ -29,17 +30,6 @@ interface Notification {
   is_read: boolean;
   created_at: string;
 }
-
-const notificationIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  qa_answered: HelpCircle,
-  qa_new_question: HelpCircle,
-  announcement: Megaphone,
-  message: MessageSquare,
-  bug_report_update: Bug,
-  member_alert: Users,
-  class_turnover: RefreshCw,
-  mat_cleaning: Sparkles,
-};
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -136,7 +126,8 @@ export function NotificationBell() {
         ) : (
           <div className="max-h-[300px] overflow-y-auto">
             {(notifications || []).slice(0, 10).map((notification) => {
-              const Icon = notificationIcons[notification.type] || Bell;
+              const fmt = getNotificationFormat(notification.type);
+              const Icon = fmt.icon;
               return (
                 <DropdownMenuItem
                   key={notification.id}
@@ -154,9 +145,9 @@ export function NotificationBell() {
                 >
                   <div className={cn(
                     'p-1.5',
-                    notification.is_read ? 'bg-muted' : 'bg-add-blue/15'
+                    notification.is_read ? 'bg-muted' : fmt.bg
                   )}>
-                    <Icon className="h-4 w-4" />
+                    <Icon className={cn('h-4 w-4', !notification.is_read && fmt.text)} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn(

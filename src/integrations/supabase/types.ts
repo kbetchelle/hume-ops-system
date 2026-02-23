@@ -3170,6 +3170,48 @@ export type Database = {
           },
         ]
       }
+      facility_issues: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          photo_url: string | null
+          reported_by_id: string | null
+          reported_by_name: string
+          resolved_at: string | null
+          resolved_by_name: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          photo_url?: string | null
+          reported_by_id?: string | null
+          reported_by_name: string
+          resolved_at?: string | null
+          resolved_by_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          photo_url?: string | null
+          reported_by_id?: string | null
+          reported_by_name?: string
+          resolved_at?: string | null
+          resolved_by_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       facility_issues_tracker: {
         Row: {
           created_at: string | null

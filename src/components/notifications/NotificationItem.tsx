@@ -28,7 +28,6 @@ export function NotificationItem({
   const { t } = useLanguage();
   const fmt = getNotificationFormat(notification.type);
   const Icon = fmt.icon;
-  const colors = { bg: fmt.bg, text: fmt.text };
 
   const handleClick = () => {
     onClick(notification);
@@ -49,17 +48,17 @@ export function NotificationItem({
       }}
       className={cn(
         'group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50',
-        !notification.is_read && 'bg-add-yellow/10'
+        !notification.is_read && fmt.tintBg
       )}
     >
-      {/* Icon */}
+      {/* Icon badge – solid color */}
       <div
         className={cn(
           'p-1.5 shrink-0',
-          colors.bg
+          fmt.solidBg, fmt.solidText
         )}
       >
-        <Icon className={cn('h-4 w-4', colors.text)} />
+        <Icon className="h-4 w-4" />
       </div>
 
       {/* Content */}

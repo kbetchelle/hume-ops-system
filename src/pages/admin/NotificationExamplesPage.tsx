@@ -40,13 +40,15 @@ function NotificationSample({ type }: { type: NotificationType }) {
 
   return (
     <div className="flex items-start gap-3 p-3 border-b border-border">
-      <div className={cn('p-1.5 shrink-0', fmt.bg)}>
-        <Icon className={cn('h-4 w-4', fmt.text)} />
+      {/* Solid icon badge */}
+      <div className={cn('p-1.5 shrink-0', fmt.solidBg, fmt.solidText)}>
+        <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-xs font-medium truncate">{sample.title}</p>
-          <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest', fmt.bg, fmt.text)}>
+          {/* Solid label tag */}
+          <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest', fmt.solidBg, fmt.solidText)}>
             {fmt.labelEn}
           </span>
         </div>
@@ -67,8 +69,8 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
   if (variant === 'urgent') {
     return (
       <div className="flex items-center gap-3 p-3 border border-add-red/40 bg-add-red/10">
-        <div className="p-1.5 bg-add-red/20 shrink-0">
-          <Icon className="h-4 w-4 text-add-red" />
+        <div className="p-1.5 bg-add-red shrink-0">
+          <Icon className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">
@@ -76,7 +78,7 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
           </p>
           <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest bg-add-red/20 text-add-red shrink-0">
+        <span className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest bg-add-red text-white shrink-0">
           Urgent
         </span>
       </div>
@@ -84,15 +86,15 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
   }
 
   return (
-    <div className={cn('flex items-center gap-3 p-3 border', `border-current/20`, fmt.bg)}>
-      <div className={cn('p-1.5 shrink-0', fmt.bg)}>
-        <Icon className={cn('h-4 w-4', fmt.text)} />
+    <div className={cn('flex items-center gap-3 p-3 border', fmt.tintBorder, fmt.tintBg)}>
+      <div className={cn('p-1.5 shrink-0', fmt.solidBg, fmt.solidText)}>
+        <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{sample.title}</p>
+        <p className={cn('text-xs font-medium truncate', fmt.tintText)}>{sample.title}</p>
         <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
       </div>
-      <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0', fmt.bg, fmt.text)}>
+      <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0', fmt.solidBg, fmt.solidText)}>
         {fmt.labelEn}
       </span>
     </div>
@@ -156,8 +158,8 @@ export default function NotificationExamplesPage() {
                 const Icon = fmt.icon;
                 return (
                   <div key={type} className="flex items-center gap-1.5">
-                    <div className={cn('p-1', fmt.bg)}>
-                      <Icon className={cn('h-3 w-3', fmt.text)} />
+                    <div className={cn('p-1', fmt.solidBg, fmt.solidText)}>
+                      <Icon className="h-3 w-3" />
                     </div>
                     <span className="text-[10px] text-muted-foreground">{fmt.labelEn}</span>
                   </div>

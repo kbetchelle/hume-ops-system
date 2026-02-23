@@ -257,9 +257,9 @@ Deno.serve(async (req) => {
       let grossSalesMembership = 0;
       let grossSalesOther = 0;
       for (const p of pstFilteredPayments) {
-        const cents = Number(p.amount ?? 0);
-        const feeCents = Number(p.transaction_fees ?? 0);
-        const dollars = (cents + feeCents) / 100;
+        const amount = Number(p.amount ?? 0);
+        const fees = Number(p.transaction_fees ?? 0);
+        const dollars = amount + fees;
         if (isSubscriptionPayment(p.normalized_category as string[] | null)) {
           grossSalesMembership += dollars;
         } else {

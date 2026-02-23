@@ -537,7 +537,7 @@ function AnnouncementCard({
                   Weekly Update
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-[10px] text-white border-none rounded-none" style={{ backgroundColor: '#f6821f', padding: '2.25px 7.25px' }}>
                   <Bell className="h-3 w-3 mr-1" />
                   Announcement
                 </Badge>

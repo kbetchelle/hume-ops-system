@@ -5,7 +5,6 @@ import { format, parseISO } from 'date-fns';
 import { Bell, CheckCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { getNotificationRoute } from '@/lib/notificationRoutes';
-import { getNotificationFormat } from '@/lib/notificationConfig';
+import { getNotificationFormat, solidStyle, tintStyle } from '@/lib/notificationConfig';
+import { add_color } from '@/lib/constants';
 
 interface Notification {
   id: string;
@@ -62,7 +62,6 @@ export function NotificationBell() {
         .from('staff_notifications')
         .update({ is_read: true })
         .eq('id', id);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -80,7 +79,6 @@ export function NotificationBell() {
         .update({ is_read: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -98,7 +96,10 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative rounded-none">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-add-red rounded-full animate-pulse" />
+            <span
+              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse"
+              style={{ backgroundColor: add_color.red }}
+            />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -131,42 +132,33 @@ export function NotificationBell() {
               return (
                 <DropdownMenuItem
                   key={notification.id}
-                  className={cn(
-                    'flex items-start gap-3 p-3 cursor-pointer',
-                    !notification.is_read && fmt.tintBg
-                  )}
+                  className="flex items-start gap-3 p-3 cursor-pointer"
+                  style={!notification.is_read ? tintStyle(fmt.hex) : undefined}
                   onClick={() => {
-                    if (!notification.is_read) {
-                      markAsRead.mutate(notification.id);
-                    }
+                    if (!notification.is_read) markAsRead.mutate(notification.id);
                     setOpen(false);
                     navigate(getNotificationRoute(notification.type, notification.data));
                   }}
                 >
-                  <div className={cn(
-                    'p-1.5',
-                    notification.is_read ? 'bg-muted' : fmt.solidBg
-                  )}>
-                    <Icon className={cn('h-4 w-4', notification.is_read ? 'text-muted-foreground' : fmt.solidText)} />
+                  <div
+                    className="p-1.5"
+                    style={notification.is_read ? { backgroundColor: 'hsl(var(--muted))' } : solidStyle(fmt.hex)}
+                  >
+                    <Icon className={cn('h-4 w-4', notification.is_read ? 'text-muted-foreground' : 'text-white')} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      'text-xs truncate',
-                      !notification.is_read && 'font-medium'
-                    )}>
+                    <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
                       {notification.title}
                     </p>
                     {notification.body && (
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {notification.body}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">{notification.body}</p>
                     )}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {format(parseISO(notification.created_at), 'MMM d, h:mm a')}
                     </p>
                   </div>
                   {!notification.is_read && (
-                    <div className="h-2 w-2 bg-add-red shrink-0 mt-1" />
+                    <div className="h-2 w-2 shrink-0 mt-1" style={{ backgroundColor: add_color.red }} />
                   )}
                 </DropdownMenuItem>
               );

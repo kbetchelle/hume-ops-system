@@ -1,12 +1,14 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { add_color } from '@/lib/constants';
 import {
   NOTIFICATION_FORMAT,
   ROLE_NOTIFICATION_TYPES,
   ROLE_LABELS,
   getNotificationFormat,
+  solidStyle,
+  tintStyle,
+  tintBorderStyle,
   type AppRole,
 } from '@/lib/notificationConfig';
 import type { NotificationType } from '@/hooks/useNotifications';
@@ -41,21 +43,24 @@ function NotificationSample({ type }: { type: NotificationType }) {
   return (
     <div className="flex items-start gap-3 p-3 border-b border-border">
       {/* Solid icon badge */}
-      <div className={cn('p-1.5 shrink-0', fmt.solidBg, fmt.solidText)}>
+      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-xs font-medium truncate">{sample.title}</p>
           {/* Solid label tag */}
-          <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest', fmt.solidBg, fmt.solidText)}>
+          <span
+            className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+            style={solidStyle(fmt.hex)}
+          >
             {fmt.labelEn}
           </span>
         </div>
         <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
         <p className="text-[10px] text-muted-foreground mt-1">Feb 23, 10:30 AM</p>
       </div>
-      <div className="h-2 w-2 bg-add-red shrink-0 mt-1" />
+      <div className="h-2 w-2 shrink-0 mt-1" style={{ backgroundColor: add_color.red }} />
     </div>
   );
 }
@@ -68,17 +73,21 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
 
   if (variant === 'urgent') {
     return (
-      <div className="flex items-center gap-3 p-3 border border-add-red/40 bg-add-red/10">
-        <div className="p-1.5 bg-add-red shrink-0">
-          <Icon className="h-4 w-4 text-white" />
+      <div
+        className="flex items-center gap-3 p-3 border"
+        style={{ borderColor: `${add_color.red}66`, backgroundColor: `${add_color.red}1A` }}
+      >
+        <div className="p-1.5 shrink-0" style={solidStyle(add_color.red)}>
+          <Icon className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">
-            Urgent: {sample.title}
-          </p>
+          <p className="text-xs font-medium truncate">Urgent: {sample.title}</p>
           <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest bg-add-red text-white shrink-0">
+        <span
+          className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+          style={solidStyle(add_color.red)}
+        >
           Urgent
         </span>
       </div>
@@ -86,15 +95,21 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
   }
 
   return (
-    <div className={cn('flex items-center gap-3 p-3 border', fmt.tintBorder, fmt.tintBg)}>
-      <div className={cn('p-1.5 shrink-0', fmt.solidBg, fmt.solidText)}>
+    <div
+      className="flex items-center gap-3 p-3 border"
+      style={tintBorderStyle(fmt.hex)}
+    >
+      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-xs font-medium truncate', fmt.tintText)}>{sample.title}</p>
+        <p className="text-xs font-medium truncate">{sample.title}</p>
         <p className="text-[10px] text-muted-foreground truncate">{sample.body}</p>
       </div>
-      <span className={cn('text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0', fmt.solidBg, fmt.solidText)}>
+      <span
+        className="text-[10px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+        style={solidStyle(fmt.hex)}
+      >
         {fmt.labelEn}
       </span>
     </div>
@@ -126,18 +141,15 @@ export default function NotificationExamplesPage() {
                 </div>
               ))}
             </div>
-            {/* Token usage reference */}
             <div className="mt-4 border-t border-border pt-3">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
                 Tailwind Token Usage
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {Object.keys(add_color).map((name) => (
+                {Object.entries(add_color).map(([name, hex]) => (
                   <div key={name} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 bg-add-${name}`} style={{ backgroundColor: add_color[name as keyof typeof add_color] }} />
-                    <code className="text-[10px] text-muted-foreground">
-                      bg-add-{name}
-                    </code>
+                    <div className="w-3 h-3" style={{ backgroundColor: hex }} />
+                    <code className="text-[10px] text-muted-foreground">bg-add-{name}</code>
                   </div>
                 ))}
               </div>
@@ -158,7 +170,7 @@ export default function NotificationExamplesPage() {
                 const Icon = fmt.icon;
                 return (
                   <div key={type} className="flex items-center gap-1.5">
-                    <div className={cn('p-1', fmt.solidBg, fmt.solidText)}>
+                    <div className="p-1" style={solidStyle(fmt.hex)}>
                       <Icon className="h-3 w-3" />
                     </div>
                     <span className="text-[10px] text-muted-foreground">{fmt.labelEn}</span>
@@ -186,8 +198,17 @@ export default function NotificationExamplesPage() {
             <BannerSample type="member_alert" variant="default" />
             <BannerSample type="package_arrived" variant="default" />
             <BannerSample type="bug_report_update" variant="default" />
+            <BannerSample type="tour_alert" variant="default" />
+            <BannerSample type="room_turnover" variant="default" />
+            <BannerSample type="mat_cleaning" variant="default" />
+            <BannerSample type="resource_outdated" variant="default" />
+            <BannerSample type="account_approval_pending" variant="default" />
+            <BannerSample type="account_approved" variant="default" />
+            <BannerSample type="account_rejected" variant="default" />
+            <BannerSample type="qa_answered" variant="default" />
+            <BannerSample type="qa_new_question" variant="default" />
             <div className="px-3 py-2 border-b border-border">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Urgent Banner</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Urgent Banners</p>
             </div>
             <BannerSample type="message" variant="urgent" />
             <BannerSample type="member_alert" variant="urgent" />

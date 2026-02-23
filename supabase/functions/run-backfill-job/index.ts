@@ -251,7 +251,7 @@ function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknow
 }
 
 /** Extract record count from sync response based on job type */
-function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>): { recordCount: number; totalFetched: number } {
+function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>): { recordCount: number; totalFetched: number; totalRawFetched?: number } {
   if (jobType === "toast_orders") {
     return {
       recordCount: (syncData?.ordersThisRun as number) ?? 0,
@@ -277,8 +277,9 @@ function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>)
   }
   const data = syncData?.data as Record<string, unknown> | undefined;
   return {
-    recordCount: (data?.reservations_synced as number) ?? (data?.payments_synced as number) ?? (data?.payments_staged as number) ?? (syncData?.recordsInserted as number) ?? (syncData?.recordsProcessed as number) ?? 0,
+    recordCount: (data?.payments_synced as number) ?? (data?.payments_staged as number) ?? (syncData?.syncedCount as number) ?? (syncData?.recordsInserted as number) ?? (syncData?.recordsProcessed as number) ?? 0,
     totalFetched: (syncData?.totalFetched as number) ?? 0,
+    totalRawFetched: (syncData?.totalRawFetched as number) ?? undefined,
   };
 }
 
@@ -402,7 +403,7 @@ Deno.serve(async (req) => {
         if (!syncResponse.ok) {
           results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
         } else {
-          const { recordCount, totalFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
+          const { recordCount, totalFetched, totalRawFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
 
           // Update phase: transferring (for types that need staging→prod transfer)
           if (config.needsTransfer) {
@@ -434,7 +435,16 @@ Deno.serve(async (req) => {
             batchHitPageLimit = true;
           }
           
-          results.push({ date: dateStr, existingBefore: existingCount, newRecords, recordCount, success: syncData?.success !== false, hitPageLimit });
+          results.push({
+            date: dateStr,
+            existingBefore: existingCount,
+            newRecords,
+            recordCount,
+            success: syncData?.success !== false,
+            hitPageLimit,
+            // For payments: include raw vs filtered counts for UI transparency
+            ...(totalRawFetched != null ? { totalRawFetched, filteredCount: totalFetched } : {}),
+          });
         }
       } catch (err) {
         results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });

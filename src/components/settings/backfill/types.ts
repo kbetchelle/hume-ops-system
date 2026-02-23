@@ -6,6 +6,10 @@ export interface SyncResult {
   success: boolean;
   error?: string;
   hitPageLimit?: boolean;
+  /** Raw records returned by the API before client-side date filtering */
+  totalRawFetched?: number;
+  /** Records that matched the target date after filtering */
+  filteredCount?: number;
 }
 
 export interface SyncProgress {

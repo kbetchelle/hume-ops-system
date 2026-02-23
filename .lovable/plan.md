@@ -1,138 +1,105 @@
 
 
-# Global Color Differentiation and Badge Standardization
+# CSV Import to `arketa_reservations_history` and `arketa_classes`
 
-## Summary
+Both CSV files share the same columns (in slightly different order):
+**First Name, Last Name, Time Booked, Class Name, Class Time, Instructor, Location, Status, Client ID, Class ID, Class Date, Type, Class Time Only**
 
-Standardize all badges, icons, and color indicators across the entire application to match the Notification Examples page formatting. Every badge becomes a perfect square, every color maps to the brand palette (`add_color`), and all roles see consistent visual treatment.
-
----
-
-## Color Assignment Map
-
-### Sidebar Nav Badges (ALL roles)
-
-| Nav Item | Badge Color | Shape |
-|---|---|---|
-| Messages | Yellow (`#fcb827`) | Square h-5 w-5 |
-| Announcements | Orange (`#f6821f`) | Square h-5 w-5 |
-| Dashboard (Mgmt Inbox) | Orange (`#f6821f`) | Square h-5 w-5 |
-| Bug Reports (Dev Tools) | Red (`#e03a3c`) | Square h-5 w-5 |
-| Package Tracking | Purple (`#7c3aed`) | Square h-5 w-5 |
-
-### Mobile Bottom Nav Badges
-- Messages: Yellow (`#fcb827`), rounded pill (keep existing shape)
-- Color change only, shape stays rounded
-
-### Notification Bell (Header)
-- Change from pulsing red dot to a red square badge (`h-4 w-4`) showing unread count
-- No animation (static)
-
-### Concierge Sidebar Badges
-- Messages: Yellow (was red)
-- Announcements: Orange (was red "!")
-- Announcement badge shows count instead of "!"
-
-### User Management Page
-- Pending Approvals: Red (`#e03a3c`), square (was rounded-full)
+**Note:** Values are triple-quoted (e.g. `"""Thomas"""`) -- the import function will need to strip these extra quotes.
 
 ---
 
-## Management Inbox Item Colors
+## File Summary
 
-| Inbox Type | Icon Badge | Label Tag | Tinted Row |
-|---|---|---|---|
-| Shift Note | Yellow solid | Yellow solid | Yellow 10% |
-| Q&A Question | Purple solid | Purple solid | Purple 10% |
-| Outdated Flag | Orange solid | Orange solid | Orange 10% |
-| Sick Day | Orange solid (was purple) | Orange solid | Orange 10% |
-
-- All text on tinted rows stays black
-- All label tags remain solid (colored bg + white text)
-- Shift type tags (AM/PM) change to neutral gray
+| File | Rows | Date Range |
+|------|------|------------|
+| `next_4week_res_filtered` | 464 rows | Feb 23 - Apr 1, 2026 |
+| `missingfeb_filtered` | 18,434 rows | Jan 20 - Apr 1, 2026 |
 
 ---
 
-## Badge Component Remap
+## Table 1: `arketa_reservations_history`
 
-Remap the `Badge` component variants to use `add_color` palette:
+### Column Mapping
 
-| Variant | Current | New |
-|---|---|---|
-| default | amber/amber | `add_color.yellow` (#fcb827) |
-| secondary | skyBlue/skyBlue | `add_color.blue` (#009ddc) |
-| destructive | crimson/crimson | `add_color.red` (#e03a3c) |
-| outline | burntOrange | `add_color.orange` (#f6821f) |
+| DB Column | Source | Calculation / Notes |
+|-----------|--------|---------------------|
+| `reservation_id` | **Calculated** | `{Client ID}_{unix_timestamp(Time Booked)}_{random_8chars}` -- matches existing pattern (e.g. `QS0QV...f2_1750111311_hMBAXiphQdEO`) |
+| `client_id` | CSV `Client ID` | Direct map |
+| `class_id` | CSV `Class ID` | Direct map |
+| `class_name` | CSV `Class Name` | Direct map (may be empty for "Gym Check in" style records) |
+| `class_date` | CSV `Class Date` | Parse from `MM/DD/YYYY` to `YYYY-MM-DD` |
+| `status` | CSV `Status` | Map: "Checked In" -> "ATTENDED", "Confirmed" -> "CONFIRMED", "Canceled" -> "CANCELLED", "Waitlist" -> "WAITLIST" |
+| `checked_in` | CSV `Status` | `true` if Status = "Checked In", else `false` |
+| `checked_in_at` | CSV `Time Booked` | Only populated when Status = "Checked In" (use Time Booked as approximate check-in time) |
+| `reservation_type` | CSV `Type` | Direct map ("Subscription", "Unpaid", "Waitlist", etc.) |
+| `client_first_name` | CSV `First Name` | Direct map |
+| `client_last_name` | CSV `Last Name` | Direct map |
+| `created_at_api` | CSV `Time Booked` | Parse timestamp (strip PST, treat as America/Los_Angeles) |
+| `late_cancel` | -- | `false` (default, not in CSV) |
+| `gross_amount_paid` | -- | `null` (not in CSV) |
+| `net_amount_paid` | -- | `null` (not in CSV) |
+| `spot_id` | -- | `null` (not in CSV) |
+| `spot_name` | -- | `null` (not in CSV) |
+| `client_email` | -- | `null` (not in CSV) |
+| `client_phone` | -- | `null` (not in CSV) |
+| `raw_data` | -- | Store full CSV row as JSON for traceability |
+| `sync_batch_id` | -- | Generated per import run |
 
----
-
-## Icon Badge Sizing
-
-Notification icon badges change from padded (p-1.5) to fixed square dimensions:
-- `h-7 w-7` with centered icon (`h-4 w-4`)
-- Applied in: `NotificationItem.tsx`, `NotificationBell.tsx`, all Management Inbox items, `NotificationExamplesPage.tsx`
-
----
-
-## Technical Changes by File
-
-### 1. `src/components/ui/badge.tsx`
-- Remap all 4 variants to `add_color` values using inline styles or updated Tailwind tokens
-
-### 2. `src/components/layout/DashboardLayout.tsx`
-- Messages badge: change `bg-add-red` to yellow (`add_color.yellow`) via inline style
-- Dashboard (Inbox) badge: keep orange (already correct)
-- Bug Reports in Dev Tools: add red badge with `unreadBugCount`
-- Package Tracking: add purple badge (requires hooking into a pending packages count if available)
-- All badges: ensure `h-5 w-5 rounded-none` square
-
-### 3. `src/components/concierge/ConciergeSidebar.tsx`
-- Messages badge: yellow instead of red
-- Announcements badge: orange instead of red, show count instead of "!"
-- All badges: use inline styles with `solidStyle()` for consistency
-
-### 4. `src/components/concierge/NotificationBell.tsx`
-- Replace pulsing red dot with a static red square badge (`h-4 w-4`) showing unread count
-- Use `solidStyle(add_color.red)` for the badge
-
-### 5. `src/components/notifications/NotificationItem.tsx`
-- Icon badge: change from `p-1.5` to fixed `h-7 w-7 flex items-center justify-center`
-
-### 6. `src/components/mobile/MobileBottomNav.tsx`
-- Messages badge: change `bg-primary` to yellow (`add_color.yellow`) with white text
-- Keep rounded pill shape
-
-### 7. `src/components/manager/inbox/SickDayInboxItem.tsx`
-- Change `HEX` from `add_color.purple` to `add_color.orange`
-- Icon badge: fixed square sizing
-
-### 8. `src/components/manager/inbox/ShiftNoteInboxItem.tsx`
-- Shift type tag: change from green tinted to neutral gray (`bg-muted text-muted-foreground border-border`)
-- Icon badge: fixed square sizing
-
-### 9. `src/components/manager/inbox/QAInboxItem.tsx`
-- Icon badge: fixed square sizing (color stays purple)
-
-### 10. `src/components/manager/inbox/FlagInboxItem.tsx`
-- Icon badge: fixed square sizing (color stays orange)
-
-### 11. `src/pages/admin/UserManagementPage.tsx`
-- Pending Approvals badge: change from `rounded-full` to `rounded-none`, keep red
-- Use inline style `solidStyle(add_color.red)`
-
-### 12. `src/pages/admin/NotificationExamplesPage.tsx`
-- Update icon badge samples to use fixed square sizing
-- Ensure all samples reflect the finalized color mappings
-
-### 13. `src/lib/notificationConfig.ts`
-- No structural changes needed (hex-based system already in place)
-- Already has correct mappings from previous work
+**Unique constraint:** `(reservation_id, class_id)` -- the generated `reservation_id` includes client_id + timestamp, making it unique per booking.
 
 ---
 
-## What Stays the Same
-- Nav icons remain monochrome (black/muted)
-- Mobile badge shape stays rounded pill
-- All text on tinted backgrounds stays black
-- Label tags in inbox stay solid style
-- Management Inbox badge stays orange
+## Table 2: `arketa_classes`
+
+Classes will be **extracted from the CSV** by collecting distinct `Class ID` values and their associated metadata.
+
+### Column Mapping
+
+| DB Column | Source | Calculation / Notes |
+|-----------|--------|---------------------|
+| `external_id` | CSV `Class ID` | Direct map |
+| `name` | CSV `Class Name` | First non-empty name found for that Class ID |
+| `class_date` | CSV `Class Date` | Parse from `MM/DD/YYYY` to `YYYY-MM-DD` |
+| `start_time` | CSV `Class Time` | Parse full timestamp to `timestamptz` |
+| `instructor_name` | CSV `Instructor` | First non-empty value found for that Class ID |
+| `location_name` | CSV `Location` | Default to "HUME" |
+| `booked_count` | **Calculated** | Count of non-cancelled reservations per (Class ID, Class Date) |
+| `capacity` | -- | `null` (not in CSV) |
+| `duration_minutes` | -- | `null` (not in CSV) |
+| `waitlist_count` | **Calculated** | Count of "Waitlist" status records per (Class ID, Class Date) |
+| `status` | -- | `null` |
+| `is_cancelled` | -- | `false` |
+| `is_deleted` | -- | `false` |
+| `room_name` | -- | `null` |
+| `description` | -- | `null` |
+| `raw_data` | -- | `null` |
+| `synced_at` | -- | `now()` |
+
+**Unique constraint:** `(external_id, class_date)` -- upsert will update `booked_count` and `waitlist_count` if the class already exists.
+
+---
+
+## Deduplication Concern
+
+The CSVs may contain duplicate reservation rows (same Client ID + Class ID + Time Booked). The edge function will deduplicate by keeping the latest `Time Booked` entry for each `(Client ID, Class ID, Class Date)` combination before inserting.
+
+---
+
+## Implementation Plan
+
+1. **Create a new edge function** `import-arketa-csv` that:
+   - Accepts the raw CSV content
+   - Strips triple-quote wrapping from all values
+   - Parses and deduplicates reservations
+   - Generates `reservation_id` matching the existing `{clientId}_{unixTimestamp}_{random}` pattern
+   - Maps status values (Checked In -> ATTENDED, etc.)
+   - Extracts distinct classes from the reservation data
+   - Upserts to `arketa_classes` first (so FK-like references are valid)
+   - Upserts to `arketa_reservations_history` second
+   - Returns counts of inserted/updated/skipped per table
+
+2. **Add a UI trigger** on the Dev Tools or Backfill page to upload these CSVs and call the new function, processing in chunks of 1000 rows (similar to existing `useCSVImport` pattern).
+
+3. **Process the two files** -- the smaller file (464 rows) in one batch, the larger (18,434 rows) in ~19 chunks.
+

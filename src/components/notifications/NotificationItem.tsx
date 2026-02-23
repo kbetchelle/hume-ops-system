@@ -1,13 +1,10 @@
 import { format, parseISO } from 'date-fns';
-import {
-  Eye,
-  EyeOff,
-  X,
-} from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { getNotificationFormat } from '@/lib/notificationConfig';
+import { getNotificationFormat, solidStyle, tintStyle } from '@/lib/notificationConfig';
+import { add_color } from '@/lib/constants';
 import type { StaffNotification } from '@/hooks/useNotificationCenter';
 
 interface NotificationItemProps {
@@ -29,10 +26,7 @@ export function NotificationItem({
   const fmt = getNotificationFormat(notification.type);
   const Icon = fmt.icon;
 
-  const handleClick = () => {
-    onClick(notification);
-  };
-
+  const handleClick = () => onClick(notification);
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDismiss(notification.id);
@@ -46,35 +40,21 @@ export function NotificationItem({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') handleClick();
       }}
-      className={cn(
-        'group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50',
-        !notification.is_read && fmt.tintBg
-      )}
+      className="group flex items-start gap-3 p-3 cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
+      style={!notification.is_read ? tintStyle(fmt.hex) : undefined}
     >
       {/* Icon badge – solid color */}
-      <div
-        className={cn(
-          'p-1.5 shrink-0',
-          fmt.solidBg, fmt.solidText
-        )}
-      >
+      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            'text-xs truncate',
-            !notification.is_read && 'font-medium'
-          )}
-        >
+        <p className={cn('text-xs truncate', !notification.is_read && 'font-medium')}>
           {notification.title}
         </p>
         {notification.body && (
-          <p className="text-[10px] text-muted-foreground truncate">
-            {notification.body}
-          </p>
+          <p className="text-[10px] text-muted-foreground truncate">{notification.body}</p>
         )}
         <p className="text-[10px] text-muted-foreground mt-1">
           {format(parseISO(notification.created_at), 'MMM d, h:mm a')}
@@ -84,7 +64,7 @@ export function NotificationItem({
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
         {!notification.is_read && (
-          <div className="h-2 w-2 bg-add-red shrink-0 mt-1" />
+          <div className="h-2 w-2 shrink-0 mt-1" style={{ backgroundColor: add_color.red }} />
         )}
         <Button
           variant="ghost"
@@ -92,11 +72,7 @@ export function NotificationItem({
           className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
           onClick={(e) => {
             e.stopPropagation();
-            if (notification.is_read) {
-              onMarkUnread(notification.id);
-            } else {
-              onMarkRead(notification.id);
-            }
+            notification.is_read ? onMarkUnread(notification.id) : onMarkRead(notification.id);
           }}
           title={notification.is_read ? t('Mark as unread', 'Marcar como no leído') : t('Mark as read', 'Marcar como leído')}
         >

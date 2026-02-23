@@ -547,11 +547,9 @@ function AnnouncementCard({
                   <Clock className="h-3 w-3" />
                   Scheduled {format(new Date(announcement.scheduled_at!), "MMM d, h:mm a")}
                 </Badge>
-              ) : announcement.is_active ? (
-                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px]">Active</Badge>
-              ) : (
+              ) : !announcement.is_active ? (
                 <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
-              )}
+              ) : null}
             </div>
 
             <h3 className="font-medium truncate text-sm">{announcement.title}</h3>

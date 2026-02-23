@@ -43,7 +43,7 @@ function NotificationSample({ type }: { type: NotificationType }) {
   return (
     <div className="flex items-start gap-3 p-3 border-b border-border">
       {/* Solid icon badge */}
-      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
+      <div className="h-7 w-7 shrink-0 flex items-center justify-center" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
@@ -77,7 +77,7 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
         className="flex items-center gap-3 p-3 border"
         style={{ borderColor: `${add_color.red}66`, backgroundColor: `${add_color.red}1A` }}
       >
-        <div className="p-1.5 shrink-0" style={solidStyle(add_color.red)}>
+        <div className="h-7 w-7 shrink-0 flex items-center justify-center" style={solidStyle(add_color.red)}>
           <Icon className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ function BannerSample({ type, variant }: { type: NotificationType; variant: 'def
       className="flex items-center gap-3 p-3 border"
       style={tintBorderStyle(fmt.hex)}
     >
-      <div className="p-1.5 shrink-0" style={solidStyle(fmt.hex)}>
+      <div className="h-7 w-7 shrink-0 flex items-center justify-center" style={solidStyle(fmt.hex)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">

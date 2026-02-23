@@ -34,7 +34,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
       style={!item.isRead ? tintStyle(HEX) : undefined}
     >
       {/* Icon badge – solid */}
-      <div className="shrink-0 p-1.5" style={solidStyle(HEX)}>
+      <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>
         <FileText className="h-4 w-4" />
       </div>
 
@@ -52,8 +52,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
             {format(parseISO(data.reportDate), "MMM d, yyyy")}
           </span>
           <span
-            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
-            style={{ backgroundColor: `${add_color.green}1A`, color: add_color.green, border: `1px solid ${add_color.green}66` }}
+            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0 bg-muted text-muted-foreground border border-border"
           >
             {data.shiftType}
           </span>

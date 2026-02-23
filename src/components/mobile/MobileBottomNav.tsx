@@ -39,7 +39,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                 <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px]">
                   <tab.icon className="h-6 w-6" strokeWidth={1.5} />
                   {tab.badge != null && tab.badge > 0 && (
-                    <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+                    <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-white text-[10px] font-medium" style={{ backgroundColor: '#fcb827' }}>
                       {tab.badge > 99 ? "99+" : tab.badge}
                     </span>
                   )}
@@ -89,7 +89,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                 <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px]">
                   <tab.icon className="h-6 w-6" strokeWidth={1.5} />
                   {tab.badge != null && tab.badge > 0 && (
-                    <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+                    <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-white text-[10px] font-medium" style={{ backgroundColor: '#fcb827' }}>
                       {tab.badge > 99 ? "99+" : tab.badge}
                     </span>
                   )}

@@ -8,7 +8,7 @@ import { solidStyle, tintStyle } from "@/lib/notificationConfig";
 import { add_color } from "@/lib/constants";
 import type { InboxItem, InboxItemType, SickDayInboxData } from "@/types/inbox";
 
-const HEX = add_color.purple; // Sick day → purple
+const HEX = add_color.orange; // Sick day → orange
 
 interface SickDayInboxItemProps {
   item: InboxItem;
@@ -57,7 +57,7 @@ export function SickDayInboxItem({ item, onReview, onMarkRead }: SickDayInboxIte
       style={!item.isRead && data.status === "pending" ? tintStyle(HEX) : undefined}
     >
       {/* Icon badge – solid */}
-      <div className="shrink-0 p-1.5" style={solidStyle(HEX)}>
+      <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>
         <CalendarClock className="h-4 w-4" />
       </div>
 

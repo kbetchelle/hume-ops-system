@@ -210,7 +210,7 @@ export function ConciergeSidebar({
           icon: MessageSquare,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { id: "announcements", label: "Announcements", icon: Megaphone, badge: hasUnreadAnnouncements && hasUnreadAnnouncements > 0 ? hasUnreadAnnouncements : undefined },
+        { id: "announcements", label: "Announcements", icon: Megaphone, badge: hasUnreadAnnouncements && hasUnreadAnnouncements > 0 ? Number(hasUnreadAnnouncements) : undefined },
       ],
     },
     {
@@ -327,17 +327,12 @@ export function ConciergeSidebar({
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
-                        {item.hasUnreadDot && (
-                          <SidebarMenuBadge className="ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none bg-add-red text-white">
-                            !
-                          </SidebarMenuBadge>
-                        )}
-                        {item.badge !== undefined && !item.hasUnreadDot && (
+                        {item.badge !== undefined && item.badge > 0 && (
                           <SidebarMenuBadge className={cn(
-                            "ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none",
-                            item.badge > 0 ? "bg-add-red text-white" : "bg-add-blue text-white"
+                            "ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none text-white",
+                            item.id === "messages" ? "bg-add-yellow" : "bg-add-orange"
                           )}>
-                            {item.badge}
+                            {item.badge > 99 ? "99+" : item.badge}
                           </SidebarMenuBadge>
                         )}
                       </SidebarMenuButton>

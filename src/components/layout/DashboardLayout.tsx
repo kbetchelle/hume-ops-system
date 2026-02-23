@@ -438,7 +438,7 @@ function SidebarNav() {
           </NavLink>
         </SidebarMenuButton>
         {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
-          <SidebarMenuBadge className="bg-add-red text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
+          <SidebarMenuBadge className="bg-add-yellow text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
             {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
           </SidebarMenuBadge>
         )}
@@ -512,7 +512,7 @@ function SidebarNav() {
                       </NavLink>
                     </SidebarMenuButton>
                     {item.url === "/dashboard/messages" && unreadMessageCount > 0 && (
-                      <SidebarMenuBadge className="bg-add-red text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
+                      <SidebarMenuBadge className="bg-add-yellow text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
                         {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
                       </SidebarMenuBadge>
                     )}
@@ -586,6 +586,11 @@ function SidebarNav() {
                             <span>{item.title}</span>
                           </NavLink>
                       </SidebarMenuButton>
+                      {item.url === "/dashboard/bug-reports" && unreadBugCount > 0 && (
+                        <SidebarMenuBadge className="bg-add-red text-white text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none">
+                          {unreadBugCount > 99 ? "99+" : unreadBugCount}
+                        </SidebarMenuBadge>
+                      )}
                       </SidebarMenuItem>)}
                   </CollapsibleContent>
                 </Collapsible>

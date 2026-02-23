@@ -52,6 +52,45 @@ export function useDashboardShiftNotes() {
     enabled: !!user?.id,
   });
 
+  // BoH end-of-shift free_response completions (today + yesterday)
+  const { data: bohEndOfShiftData, isLoading: bohLoading } = useQuery({
+    queryKey: ["dashboard-shift-boh-eos", today, yesterday],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boh_completions")
+        .select("id, note_text, completed_by, completion_date, shift_time, completed_at, item_id, checklist_id")
+        .in("completion_date", [today, yesterday])
+        .not("note_text", "is", null)
+        .order("completed_at", { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Get the matching checklist items to filter only end-of-shift free_response
+      const itemIds = [...new Set(data.map((c) => c.item_id).filter(Boolean))];
+      if (itemIds.length === 0) return [];
+
+      const { data: items, error: itemsError } = await supabase
+        .from("boh_checklist_items")
+        .select("id, task_description, time_hint, task_type")
+        .in("id", itemIds)
+        .eq("time_hint", "End of Shift")
+        .eq("task_type", "free_response");
+
+      if (itemsError) throw itemsError;
+      const eosItemIds = new Set((items ?? []).map((i) => i.id));
+      const itemMap = new Map((items ?? []).map((i) => [i.id, i]));
+
+      return data
+        .filter((c) => c.item_id && eosItemIds.has(c.item_id) && c.note_text?.trim())
+        .map((c) => ({
+          ...c,
+          taskDescription: itemMap.get(c.item_id!)?.task_description ?? "",
+        }));
+    },
+    enabled: !!user?.id,
+  });
+
   const notes = useMemo(() => {
     const merged: DashboardShiftNote[] = [];
 
@@ -83,16 +122,29 @@ export function useDashboardShiftNotes() {
       });
     }
 
+    // Map BoH end-of-shift free_response completions
+    for (const comp of bohEndOfShiftData ?? []) {
+      merged.push({
+        id: `boh-eos-${comp.id}`,
+        source: "boh",
+        sourceLabel: "BoH End of Shift",
+        content: `${comp.taskDescription}: ${comp.note_text}`,
+        staffName: comp.completed_by ?? "Unknown",
+        shiftType: comp.shift_time,
+        createdAt: comp.completed_at ?? comp.completion_date,
+      });
+    }
+
     // Sort by createdAt DESC
     merged.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     return merged;
-  }, [conciergeData, qaData]);
+  }, [conciergeData, qaData, bohEndOfShiftData]);
 
   return {
     notes,
-    isLoading: conciergeLoading || qaLoading,
+    isLoading: conciergeLoading || qaLoading || bohLoading,
   };
 }

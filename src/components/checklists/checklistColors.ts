@@ -22,12 +22,17 @@ export const TASK_TYPE_COLOR_HEX: Record<string, string> = {
  */
 export function getTaskColorStyle(
   taskType: string,
-  checkboxIndex?: number
+  checkboxIndex?: number,
+  timeHint?: string
 ): React.CSSProperties {
   let hex = TASK_TYPE_COLOR_HEX[taskType];
 
+  // End of Shift tasks always use green
+  if (timeHint === 'End of Shift') {
+    hex = add_color.green;
+  }
   // Alternate checkbox colors between blue and green
-  if (taskType === 'checkbox' && checkboxIndex !== undefined) {
+  else if (taskType === 'checkbox' && checkboxIndex !== undefined) {
     hex = checkboxIndex % 2 === 0 ? add_color.blue : add_color.green;
   }
 

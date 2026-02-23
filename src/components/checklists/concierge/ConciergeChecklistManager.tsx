@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -121,27 +121,40 @@ export function ConciergeChecklistManager() {
 
   return (
     <div className="space-y-4">
+      {/* Checklist Dialog - stable, outside dynamic content */}
+      <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
+        <ChecklistDialog
+          checklist={editingChecklist}
+          onSave={handleSaveChecklist}
+          onClose={() => {
+            setIsChecklistDialogOpen(false);
+            setEditingChecklist(null);
+          }}
+        />
+      </Dialog>
+
+      {/* Item Dialog - stable, outside dynamic content to prevent unmount on refetch */}
+      <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+        <ItemDialog
+          item={editingItem}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          onSave={handleSaveItem}
+          onClose={() => {
+            setIsItemDialogOpen(false);
+            setEditingItem(null);
+          }}
+        />
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <div>
           <h3 className="font-bold" style={{ fontSize: '20px' }}>Concierge Checklists</h3>
           <p className="text-sm text-muted-foreground">Manage checklists for concierge staff</p>
         </div>
-        <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingChecklist(null)} style={{ paddingLeft: '9px', paddingRight: '9px' }}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Checklist
-            </Button>
-          </DialogTrigger>
-          <ChecklistDialog
-            checklist={editingChecklist}
-            onSave={handleSaveChecklist}
-            onClose={() => {
-              setIsChecklistDialogOpen(false);
-              setEditingChecklist(null);
-            }}
-          />
-        </Dialog>
+        <Button onClick={() => { setEditingChecklist(null); setIsChecklistDialogOpen(true); }} style={{ paddingLeft: '9px', paddingRight: '9px' }}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Checklist
+        </Button>
       </div>
 
       <div className="grid gap-4">
@@ -201,23 +214,10 @@ export function ConciergeChecklistManager() {
                     <h3 className="text-sm font-medium">
                       ({items?.length || 0})
                     </h3>
-                    <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setEditingItem(null)}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <ItemDialog
-                        item={editingItem}
-                        existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
-                        onSave={handleSaveItem}
-                        onClose={() => {
-                          setIsItemDialogOpen(false);
-                          setEditingItem(null);
-                        }}
-                      />
-                    </Dialog>
+                    <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Item
+                    </Button>
                   </div>
 
                   {(() => {
@@ -314,6 +314,20 @@ function ChecklistDialog({
       is_active: true,
     }
   );
+
+  useEffect(() => {
+    if (checklist) {
+      setFormData(checklist);
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        shift_time: 'AM',
+        is_weekend: false,
+        is_active: true,
+      });
+    }
+  }, [checklist]);
 
   return (
     <DialogContent>

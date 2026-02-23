@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical, X } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
+import { SortableChecklistItems, SortableItem } from '@/components/checklists/SortableChecklistItems';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,18 @@ export function ConciergeChecklistManager() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
+
+  const handleReorder = useCallback(async (reorderedItems: { id: string; sort_order: number }[]) => {
+    try {
+      await Promise.all(
+        reorderedItems.map(({ id, sort_order }) =>
+          updateItem.mutateAsync({ id, checklistId: expandedId!, updates: { sort_order } })
+        )
+      );
+    } catch (error: any) {
+      toast({ title: 'Reorder failed', description: error.message, variant: 'destructive' });
+    }
+  }, [expandedId, updateItem, toast]);
 
   if (isLoading) return <div>Loading...</div>;
 
@@ -237,49 +250,13 @@ export function ConciergeChecklistManager() {
                               <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="pl-1">
-                              {groupItems.map((item, idx) => {
-                                const colorClass = getTaskColorClass(item.task_type, idx);
-                                return (
-                                <div
-                                  key={item.id}
-                                  className={`flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors ${colorClass}`}
-                                >
-                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">{item.task_description}</span>
-                                      {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                                      {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                      <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
-                                      {item.category && <span>• {item.category}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditingItem(item);
-                                        setIsItemDialogOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleDeleteItem(item.id)}
-                                    >
-                                      <Trash className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                );
-                              })}
+                              <SortableChecklistItems
+                                items={groupItems}
+                                onEdit={(item) => { setEditingItem(item as ConciergeChecklistItem); setIsItemDialogOpen(true); }}
+                                onDelete={handleDeleteItem}
+                                onReorder={handleReorder}
+                                secondaryField="category"
+                              />
                             </CollapsibleContent>
                           </Collapsible>
                         ))}

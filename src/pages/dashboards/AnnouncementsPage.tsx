@@ -23,7 +23,7 @@ export default function AnnouncementsPage() {
 
   return (
     <DashboardLayout title="Announcements">
-      <div className={isMobile ? "flex-1 flex flex-col min-h-0" : "p-4 md:p-8 max-w-3xl"}>
+      <div className={isMobile ? "flex-1 flex flex-col min-h-0" : "max-w-3xl"}>
         {isMobile ? (
           <MobilePageWrapper
             onRefresh={() => {

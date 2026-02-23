@@ -135,7 +135,7 @@ export function MobileChecklistItem({
             
             {/* Required indicator */}
             {item.required && (
-              <Badge variant="secondary" className="flex-shrink-0">
+              <Badge variant="destructive" className="flex-shrink-0">
                 Required
               </Badge>
             )}

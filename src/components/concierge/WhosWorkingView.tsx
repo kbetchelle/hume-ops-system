@@ -120,16 +120,16 @@ export function WhosWorkingView() {
       const uniqueSlingUserIds = [...new Set(slingUserIds)];
       
       // Fetch sling_users separately if we have IDs
-      let slingUsersMap: Record<string, { first_name: string; last_name: string }> = {};
+      let slingUsersMap: Record<string, { first_name: string; last_name: string; positions: string[] | null }> = {};
       if (uniqueSlingUserIds.length > 0) {
         const { data: slingUsers } = await (supabase
           .from("sling_users") as any)
-          .select("sling_user_id, first_name, last_name")
+          .select("sling_user_id, first_name, last_name, positions")
           .in("sling_user_id", uniqueSlingUserIds.map(id => parseInt(id, 10)));
         
         if (slingUsers) {
           slingUsersMap = Object.fromEntries(
-            slingUsers.map(u => [String(u.sling_user_id), { first_name: u.first_name || '', last_name: u.last_name || '' }])
+            slingUsers.map(u => [String(u.sling_user_id), { first_name: u.first_name || '', last_name: u.last_name || '', positions: u.positions || null }])
           );
         }
       }
@@ -141,10 +141,15 @@ export function WhosWorkingView() {
           ? [slingUser.first_name, slingUser.last_name].filter(Boolean).join(' ') 
           : shift.user_name || 'Unknown';
 
+        // Use sling_users.positions for role display, fallback to shift.position
+        const positionLabel = slingUser?.positions?.length 
+          ? slingUser.positions.join(', ') 
+          : shift.position || null;
+
         return {
           id: shift.id,
           user_name: fullName,
-          position: shift.position,
+          position: positionLabel,
           shift_start: shift.shift_start,
           shift_end: shift.shift_end,
         } as StaffOnShift;

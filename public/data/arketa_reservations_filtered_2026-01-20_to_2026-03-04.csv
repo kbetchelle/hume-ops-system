@@ -1,0 +1,1 @@
+reservation_id,class_id,client_id,reservation_type,class_name,class_date,status,checked_in,checked_in_at,late_cancel,gross_amount_paid,net_amount_paid,created_at_api,updated_at_api,spot_id,spot_name,client_email,client_first_name,client_last_name,client_phone,raw_data,sync_batch_id

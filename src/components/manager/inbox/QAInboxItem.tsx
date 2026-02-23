@@ -3,7 +3,7 @@ import { HelpCircle, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { solidStyle, tintStyle } from "@/lib/notificationConfig";
+import { solidStyle, tintBorderStyle } from "@/lib/notificationConfig";
 import { add_color } from "@/lib/constants";
 import type { InboxItem, InboxItemType, QAInboxData } from "@/types/inbox";
 
@@ -30,7 +30,7 @@ export function QAInboxItem({ item, onAnswer, onMarkRead }: QAInboxItemProps) {
     <div
       role="article"
       className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50")}
-      style={!item.isRead ? tintStyle(HEX) : undefined}
+      style={!item.isRead ? tintBorderStyle(HEX) : undefined}
     >
       {/* Icon badge – solid */}
       <div className="shrink-0 h-7 w-7 flex items-center justify-center" style={solidStyle(HEX)}>

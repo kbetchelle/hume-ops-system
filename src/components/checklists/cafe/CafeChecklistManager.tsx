@@ -338,7 +338,7 @@ function CafeMultipleChoiceConfig({ metadata, setMetadata }: { metadata: Record<
   const options: string[] = metadata.options || [];
   const selectMode: 'single' | 'multiple' = metadata.select_mode || 'single';
   const [newOption, setNewOption] = useState('');
-  const addOption = () => { const trimmed = newOption.trim(); if (trimmed && !options.includes(trimmed)) { setMetadata({ options: [...options, trimmed] }); setNewOption(''); } };
+  const addOption = () => { const parts = newOption.split(',').map(s => s.trim()).filter(s => s.length > 0); const unique = parts.filter(p => !options.includes(p)); if (unique.length > 0) { setMetadata({ options: [...options, ...unique] }); setNewOption(''); } };
   const removeOption = (index: number) => { setMetadata({ options: options.filter((_, i) => i !== index) }); };
 
   return (
@@ -350,7 +350,7 @@ function CafeMultipleChoiceConfig({ metadata, setMetadata }: { metadata: Record<
       <div>
         <Label>Answer Options</Label>
         <div className="flex gap-2 mt-1">
-          <Input value={newOption} onChange={(e) => setNewOption(e.target.value)} placeholder="Add an option..." onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }} />
+          <Input value={newOption} onChange={(e) => setNewOption(e.target.value)} placeholder="Add options (comma-separated)..." onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }} />
           <Button type="button" size="sm" variant="outline" onClick={addOption}><Plus className="h-3 w-3" /></Button>
         </div>
         {options.length > 0 && (<div className="flex flex-wrap gap-2 mt-2">{options.map((opt, i) => (<Badge key={i} variant="secondary" className="gap-1 pr-1">{opt}<button type="button" onClick={() => removeOption(i)} className="ml-1 rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3" /></button></Badge>))}</div>)}

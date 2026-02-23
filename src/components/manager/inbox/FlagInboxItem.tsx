@@ -2,20 +2,13 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, parseISO, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { solidStyle, tintStyle } from "@/lib/notificationConfig";
+import { add_color } from "@/lib/constants";
 import type { InboxItem, InboxItemType, FlagInboxData } from "@/types/inbox";
 
-interface FlagInboxItemProps {
-  item: InboxItem;
-  onResolve: (
-    flagId: string,
-    status: "dismissed" | "resolved",
-    note?: string
-  ) => void;
-  onMarkRead: (itemType: InboxItemType, itemId: string) => void;
-}
+const HEX = add_color.orange; // Outdated flags → orange
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
   quick_link_group: "Quick Link Group",
@@ -38,11 +31,11 @@ const RESOURCE_EDIT_ROUTES: Record<string, string> = {
   club_policy: "/dashboard/manager/staff-resources",
 };
 
-export function FlagInboxItem({
-  item,
-  onResolve,
-  onMarkRead,
-}: FlagInboxItemProps) {
+export function FlagInboxItem({ item, onResolve, onMarkRead }: {
+  item: InboxItem;
+  onResolve: (flagId: string, status: "dismissed" | "resolved", note?: string) => void;
+  onMarkRead: (itemType: InboxItemType, itemId: string) => void;
+}) {
   const data = item.data as FlagInboxData;
   const navigate = useNavigate();
   const markedRef = useRef(false);
@@ -56,16 +49,12 @@ export function FlagInboxItem({
 
   const handleView = () => {
     const route = RESOURCE_VIEW_ROUTES[data.resourceType];
-    if (route) {
-      navigate(`${route}?highlight=${data.resourceId}`);
-    }
+    if (route) navigate(`${route}?highlight=${data.resourceId}`);
   };
 
   const handleEdit = () => {
     const route = RESOURCE_EDIT_ROUTES[data.resourceType];
-    if (route) {
-      navigate(route);
-    }
+    if (route) navigate(route);
   };
 
   const handleDismiss = () => {
@@ -77,28 +66,24 @@ export function FlagInboxItem({
   return (
     <div
       role="article"
-      className={cn(
-        "flex gap-3 p-4 border transition-colors hover:bg-muted/50",
-        !item.isRead && "border-l-2 border-l-amber-500 bg-amber-50/50"
-      )}
+      className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50")}
+      style={!item.isRead ? tintStyle(HEX) : undefined}
     >
-      {/* Icon */}
-      <div className="shrink-0 mt-0.5">
-        <AlertTriangle className="h-5 w-5 text-orange-500" />
+      {/* Icon badge – solid */}
+      <div className="shrink-0 p-1.5" style={solidStyle(HEX)}>
+        <AlertTriangle className="h-4 w-4" />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <Badge
-            variant="outline"
-            className="text-[9px] px-1.5 py-0 text-orange-600 border-orange-300 bg-orange-50 shrink-0"
+          <span
+            className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest shrink-0"
+            style={solidStyle(HEX)}
           >
             Outdated Flag
-          </Badge>
-          <span className="text-[10px] text-muted-foreground">
-            {data.flaggedByName}
           </span>
+          <span className="text-[10px] text-muted-foreground">{data.flaggedByName}</span>
           <span className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(parseISO(item.createdAt), { addSuffix: true })}
           </span>
@@ -107,7 +92,7 @@ export function FlagInboxItem({
         <p className="text-sm font-medium">
           {data.resourceLabel}
           {data.flaggedPageNumber && (
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-2">
+            <span className="text-xs font-semibold ml-2" style={{ color: add_color.blue }}>
               Page {data.flaggedPageNumber}
             </span>
           )}
@@ -116,11 +101,8 @@ export function FlagInboxItem({
           </span>
         </p>
 
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-          {data.note}
-        </p>
+        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{data.note}</p>
 
-        {/* Show page context if available */}
         {data.flaggedPageContext && (
           <p className="text-xs text-muted-foreground mt-2 italic border-l-2 border-muted pl-2 line-clamp-2">
             "{data.flaggedPageContext}"
@@ -132,15 +114,10 @@ export function FlagInboxItem({
             <span className="capitalize">{data.status}</span>
             {data.resolvedByName && <span> by {data.resolvedByName}</span>}
             {data.resolvedAt && (
-              <span>
-                {" "}
-                &bull; {format(parseISO(data.resolvedAt), "MMM d, yyyy")}
-              </span>
+              <span> &bull; {format(parseISO(data.resolvedAt), "MMM d, yyyy")}</span>
             )}
             {data.resolutionNote && (
-              <span className="block mt-0.5 italic">
-                {data.resolutionNote}
-              </span>
+              <span className="block mt-0.5 italic">{data.resolutionNote}</span>
             )}
           </div>
         )}
@@ -149,28 +126,13 @@ export function FlagInboxItem({
       {/* Actions */}
       {data.status === "pending" && (
         <div className="shrink-0 flex flex-col gap-1 items-end">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-none text-xs"
-            onClick={handleView}
-          >
+          <Button variant="outline" size="sm" className="rounded-none text-xs" onClick={handleView}>
             View
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-none text-xs"
-            onClick={handleDismiss}
-          >
+          <Button variant="ghost" size="sm" className="rounded-none text-xs" onClick={handleDismiss}>
             Dismiss
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-none text-xs"
-            onClick={handleEdit}
-          >
+          <Button variant="ghost" size="sm" className="rounded-none text-xs" onClick={handleEdit}>
             Edit Resource
           </Button>
         </div>

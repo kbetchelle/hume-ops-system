@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { Search, Inbox as InboxIcon } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,18 +18,15 @@ import { SickDayInboxItem } from "./inbox/SickDayInboxItem";
 import { AnswerQuestionDialog } from "./inbox/AnswerQuestionDialog";
 import { SickDayReviewDialog } from "./inbox/SickDayReviewDialog";
 
+import { add_color } from "@/lib/constants";
 import type { InboxItem, InboxItemType, QAInboxData } from "@/types/inbox";
 
 export function ManagementInbox() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedQuestion, setSelectedQuestion] = useState<InboxItem | null>(
-    null
-  );
+  const [selectedQuestion, setSelectedQuestion] = useState<InboxItem | null>(null);
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
   const [selectedSickDay, setSelectedSickDay] = useState<InboxItem | null>(null);
-  const [sickDayAction, setSickDayAction] = useState<"approve" | "reject" | null>(
-    null
-  );
+  const [sickDayAction, setSickDayAction] = useState<"approve" | "reject" | null>(null);
   const [sickDayDialogOpen, setSickDayDialogOpen] = useState(false);
 
   const { items, isLoading } = useManagementInbox(searchTerm);
@@ -46,11 +42,7 @@ export function ManagementInbox() {
 
   const handleResolve = useCallback(
     (flagId: string, status: "dismissed" | "resolved", note?: string) => {
-      resolveFlag.mutate({
-        flagId,
-        status,
-        resolutionNote: note,
-      });
+      resolveFlag.mutate({ flagId, status, resolutionNote: note });
     },
     [resolveFlag]
   );
@@ -82,9 +74,12 @@ export function ManagementInbox() {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             Management Inbox
             {unreadCount > 0 && (
-              <Badge className="text-[10px] px-1.5 py-0.5 rounded-none border-destructive bg-destructive text-destructive-foreground animate-pulse">
+              <span
+                className="text-[10px] px-1.5 py-0.5 font-medium"
+                style={{ backgroundColor: add_color.red, color: '#fff' }}
+              >
                 {unreadCount}
-              </Badge>
+              </span>
             )}
           </h2>
         </div>
@@ -109,9 +104,7 @@ export function ManagementInbox() {
         <div className="py-12 text-center">
           <InboxIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm
-              ? "No items match your search."
-              : "Your inbox is empty."}
+            {searchTerm ? "No items match your search." : "Your inbox is empty."}
           </p>
         </div>
       ) : (
@@ -121,38 +114,19 @@ export function ManagementInbox() {
               switch (item.data.type) {
                 case "qa":
                   return (
-                    <QAInboxItem
-                      key={item.id}
-                      item={item}
-                      onAnswer={handleAnswer}
-                      onMarkRead={handleMarkRead}
-                    />
+                    <QAInboxItem key={item.id} item={item} onAnswer={handleAnswer} onMarkRead={handleMarkRead} />
                   );
                 case "flag":
                   return (
-                    <FlagInboxItem
-                      key={item.id}
-                      item={item}
-                      onResolve={handleResolve}
-                      onMarkRead={handleMarkRead}
-                    />
+                    <FlagInboxItem key={item.id} item={item} onResolve={handleResolve} onMarkRead={handleMarkRead} />
                   );
                 case "shift_note":
                   return (
-                    <ShiftNoteInboxItem
-                      key={item.id}
-                      item={item}
-                      onMarkRead={handleMarkRead}
-                    />
+                    <ShiftNoteInboxItem key={item.id} item={item} onMarkRead={handleMarkRead} />
                   );
                 case "sick_day":
                   return (
-                    <SickDayInboxItem
-                      key={item.id}
-                      item={item}
-                      onReview={handleSickDayReview}
-                      onMarkRead={handleMarkRead}
-                    />
+                    <SickDayInboxItem key={item.id} item={item} onReview={handleSickDayReview} onMarkRead={handleMarkRead} />
                   );
               }
             })}

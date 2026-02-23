@@ -211,9 +211,6 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
             <Calendar className="h-4 w-4" />
             Today's Classes
           </CardTitle>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            {activeClasses.length} classes • {totalBooked}/{totalCapacity} booked
-          </p>
         </div>
         <Button
           variant="ghost"

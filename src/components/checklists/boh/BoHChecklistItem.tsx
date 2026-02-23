@@ -116,7 +116,7 @@ export function BoHChecklistItem({
               isCompleted && 'line-through text-muted-foreground',
               isMobile ? 'text-base' : 'text-[13px]'
             )}>{taskLabel}</span>
-            {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+            
             {item.is_high_priority && <Badge variant="default" className="text-xs">{t('High Priority', 'Alta Prioridad')}</Badge>}
           </div>
           {item.time_hint && (
@@ -142,7 +142,7 @@ export function BoHChecklistItem({
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
           <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -205,7 +205,7 @@ export function BoHChecklistItem({
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
           <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+          
         </div>
         {item.time_hint && (
           <p className={cn('text-muted-foreground', isMobile ? 'text-sm' : 'text-xs')}>{item.time_hint}</p>
@@ -266,7 +266,7 @@ export function BoHChecklistItem({
       <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -297,7 +297,7 @@ export function BoHChecklistItem({
       <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>

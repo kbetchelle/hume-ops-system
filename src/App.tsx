@@ -535,7 +535,7 @@ const App = () => (
               }
             />
 
-            {/* Staff Q&A / Management Inbox for Managers */}
+            {/* Staff Q&A / Management Inbox for Managers — redirects to dashboard */}
             <Route
               path="/dashboard/staff-qa"
               element={
@@ -557,14 +557,6 @@ const App = () => (
                   }>
                     <NotificationControlCenterPage />
                   </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/inbox"
-              element={
-                <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <StaffQAPage />
                 </ProtectedRoute>
               }
             />

@@ -166,7 +166,7 @@ export function CafeChecklistView() {
                           <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
                         </div>
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-1 pt-2 pl-1">
+                      <CollapsibleContent className="pt-2 pl-1">
                         {filteredCategoryItems.map((item: any) => (
                           <CafeChecklistItemComponent
                             key={item.id}

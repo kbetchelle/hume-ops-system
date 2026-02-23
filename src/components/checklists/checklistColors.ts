@@ -13,27 +13,27 @@ export const TASK_TYPE_COLOR_MAP: Record<string, string> = {
 };
 
 export const COLOR_BORDER_MAP: Record<string, string> = {
-  red: 'border-l-add-crimson',
-  orange: 'border-l-add-amber',
+  red: 'border-l-add-red',
+  orange: 'border-l-add-orange',
   yellow: 'border-l-yellow-500',
   green: 'border-l-green-500',
-  blue: 'border-l-add-skyBlue',
+  blue: 'border-l-add-blue',
   purple: 'border-l-purple-500',
   gray: 'border-l-gray-500',
-  teal: 'border-l-add-olive',
-  pink: 'border-l-add-burntOrange',
+  teal: 'border-l-add-green',
+  pink: 'border-l-add-orange',
 };
 
 export const COLOR_BG_MAP: Record<string, string> = {
-  red: 'bg-add-crimson/5',
-  orange: 'bg-add-amber/5',
+  red: 'bg-add-red/5',
+  orange: 'bg-add-orange/5',
   yellow: 'bg-yellow-500/5',
   green: 'bg-green-500/5',
-  blue: 'bg-add-skyBlue/5',
+  blue: 'bg-add-blue/5',
   purple: 'bg-purple-500/5',
   gray: 'bg-gray-500/5',
-  teal: 'bg-add-olive/5',
-  pink: 'bg-add-burntOrange/5',
+  teal: 'bg-add-green/5',
+  pink: 'bg-add-orange/5',
 };
 
 export function getTaskColorClass(taskType: string, checkboxIndex?: number): string {

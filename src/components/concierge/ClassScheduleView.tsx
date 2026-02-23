@@ -252,7 +252,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                             </Badge>
                           )}
                           {isPast && !cls.is_cancelled && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded-none">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded-none border-none text-white" style={{ backgroundColor: add_color.blue }}>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Completed
                             </Badge>

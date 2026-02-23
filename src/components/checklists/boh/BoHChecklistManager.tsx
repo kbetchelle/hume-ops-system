@@ -25,6 +25,7 @@ import {
   BoHChecklistItem,
 } from '@/hooks/checklists/useBoHChecklists';
 import { useToast } from '@/hooks/use-toast';
+import { BulkAddItemsDialog } from '@/components/checklists/BulkAddItemsDialog';
 
 const TASK_TYPES = [
   { value: 'checkbox', label: 'Checkbox' },
@@ -54,6 +55,7 @@ export function BoHChecklistManager() {
   const [editingItem, setEditingItem] = useState<BoHChecklistItem | null>(null);
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
 
   const { data: items } = useBoHChecklistItems(expandedId || undefined);
   
@@ -176,6 +178,17 @@ export function BoHChecklistManager() {
         </Button>
       </div>
 
+      {expandedId && (
+        <BulkAddItemsDialog
+          open={isBulkDialogOpen}
+          onOpenChange={setIsBulkDialogOpen}
+          checklistId={expandedId}
+          currentItemCount={items?.length || 0}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          createItem={(data) => createItem.mutateAsync(data)}
+        />
+      )}
+
       <div className="space-y-6">
         {(() => {
           const roleGroups: Record<string, typeof checklists> = {};
@@ -237,10 +250,16 @@ export function BoHChecklistManager() {
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
                             <h3 className="text-sm font-medium">Checklist Items ({items?.length || 0})</h3>
-                            <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Item
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
+                                <Plus className="h-3 w-3 mr-1" />
+                                Bulk Add
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Item
+                              </Button>
+                            </div>
                           </div>
 
                           {(() => {

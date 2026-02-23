@@ -25,6 +25,7 @@ import {
   CafeChecklistItem,
 } from '@/hooks/checklists/useCafeChecklists';
 import { useToast } from '@/hooks/use-toast';
+import { BulkAddItemsDialog } from '@/components/checklists/BulkAddItemsDialog';
 
 const TASK_TYPES = [
   { value: 'checkbox', label: 'Checkbox' },
@@ -48,6 +49,7 @@ export function CafeChecklistManager() {
   const [editingItem, setEditingItem] = useState<CafeChecklistItem | null>(null);
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
 
   const { data: items } = useCafeChecklistItems(expandedId || undefined);
   
@@ -164,6 +166,17 @@ export function CafeChecklistManager() {
         </Button>
       </div>
 
+      {expandedId && (
+        <BulkAddItemsDialog
+          open={isBulkDialogOpen}
+          onOpenChange={setIsBulkDialogOpen}
+          checklistId={expandedId}
+          currentItemCount={items?.length || 0}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          createItem={(data) => createItem.mutateAsync(data)}
+        />
+      )}
+
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
           <Card key={checklist.id} className={`border p-[15px] ${!checklist.is_active ? 'opacity-60' : ''} ${checklist.is_weekend ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
@@ -194,10 +207,16 @@ export function CafeChecklistManager() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-medium">Checklist Items ({items?.length || 0})</h3>
-                    <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Item
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Bulk Add
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Item
+                      </Button>
+                    </div>
                   </div>
 
                   {(() => {

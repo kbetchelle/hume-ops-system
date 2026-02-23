@@ -17,21 +17,31 @@ interface SyncRow {
   interval_minutes: number | null;
 }
 
-function statusIcon(status: string | null, lastRun: string | null) {
+// Sync types that only need to run once per day
+const DAILY_SYNC_TYPES = new Set(["toast_sales", "sling_users"]);
+
+function getThresholds(syncType: string): { healthyHours: number; staleHours: number } {
+  if (DAILY_SYNC_TYPES.has(syncType)) return { healthyHours: 24, staleHours: 48 };
+  return { healthyHours: 1, staleHours: 6 };
+}
+
+function statusIcon(status: string | null, lastRun: string | null, syncType = "") {
   if (status === "running") return <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />;
   if (!lastRun) return <XCircle className="h-3 w-3 text-muted-foreground" />;
   const hours = (Date.now() - new Date(lastRun).getTime()) / (1000 * 60 * 60);
-  if (hours < 1) return <CheckCircle2 className="h-3 w-3 text-green-600" />;
-  if (hours < 6) return <AlertCircle className="h-3 w-3 text-amber-600" />;
+  const { healthyHours, staleHours } = getThresholds(syncType);
+  if (hours < healthyHours) return <CheckCircle2 className="h-3 w-3 text-green-600" />;
+  if (hours < staleHours) return <AlertCircle className="h-3 w-3 text-amber-600" />;
   return <XCircle className="h-3 w-3 text-red-600" />;
 }
 
-function statusLabel(status: string | null, lastRun: string | null): { label: string; color: string } {
+function statusLabel(status: string | null, lastRun: string | null, syncType = ""): { label: string; color: string } {
   if (status === "running") return { label: "Running", color: "text-muted-foreground" };
   if (!lastRun) return { label: "Never", color: "text-muted-foreground" };
   const hours = (Date.now() - new Date(lastRun).getTime()) / (1000 * 60 * 60);
-  if (hours < 1) return { label: "Healthy", color: "text-green-600" };
-  if (hours < 6) return { label: "Stale", color: "text-amber-600" };
+  const { healthyHours, staleHours } = getThresholds(syncType);
+  if (hours < healthyHours) return { label: "Healthy", color: "text-green-600" };
+  if (hours < staleHours) return { label: "Stale", color: "text-amber-600" };
   return { label: "Outdated", color: "text-red-600" };
 }
 
@@ -54,8 +64,9 @@ function overallStatus(rows: SyncRow[]): "healthy" | "stale" | "error" | "idle" 
     if (row.last_status === "running") continue;
     if (!row.last_run_at) { hasError = true; continue; }
     const hours = (Date.now() - new Date(row.last_run_at).getTime()) / (1000 * 60 * 60);
-    if (hours >= 6) hasError = true;
-    else if (hours >= 1) hasStale = true;
+    const { healthyHours, staleHours } = getThresholds(row.sync_type);
+    if (hours >= staleHours) hasError = true;
+    else if (hours >= healthyHours) hasStale = true;
   }
   if (hasError) return "error";
   if (hasStale) return "stale";
@@ -99,10 +110,10 @@ export function SyncStatusIndicator() {
       <HoverCardContent side="bottom" align="end" className="w-72 p-3 text-xs space-y-1.5">
         <div className="font-medium text-sm pb-1 border-b border-border mb-1.5 uppercase tracking-widest text-[11px]">Data Sources</div>
         {(rows ?? []).map((row) => {
-          const sl = statusLabel(row.last_status, row.last_run_at);
+          const sl = statusLabel(row.last_status, row.last_run_at, row.sync_type);
           return (
             <div key={row.sync_type} className="flex items-center gap-2">
-              {statusIcon(row.last_status, row.last_run_at)}
+              {statusIcon(row.last_status, row.last_run_at, row.sync_type)}
               <span className="flex-1 truncate">{row.display_name ?? row.sync_type}</span>
               <span className="text-muted-foreground text-[11px] shrink-0">{formatLastRun(row.last_run_at)}</span>
             </div>

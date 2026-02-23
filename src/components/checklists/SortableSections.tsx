@@ -21,6 +21,21 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { SortableChecklistItems, SortableItem } from '@/components/checklists/SortableChecklistItems';
+import { TASK_TYPE_COLOR_HEX } from '@/components/checklists/checklistColors';
+import { add_color } from '@/lib/constants';
+
+/** Get the dominant color hex for a group of items based on the most common task_type. */
+function getSectionColorHex(sectionItems: SortableItem[]): string {
+  if (!sectionItems.length) return add_color.blue;
+  // Count task types
+  const counts: Record<string, number> = {};
+  for (const item of sectionItems) {
+    const t = item.task_type || 'checkbox';
+    counts[t] = (counts[t] || 0) + 1;
+  }
+  const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  return TASK_TYPE_COLOR_HEX[dominant] || add_color.blue;
+}
 
 interface SortableSectionProps {
   sectionId: string;
@@ -32,6 +47,7 @@ interface SortableSectionProps {
   onDoubleClick: () => void;
   onEditCommit: () => void;
   onEditCancel: () => void;
+  sectionColor: string;
   children: React.ReactNode;
 }
 
@@ -45,6 +61,7 @@ function SortableSection({
   onDoubleClick,
   onEditCommit,
   onEditCancel,
+  sectionColor,
   children,
 }: SortableSectionProps) {
   const {
@@ -75,7 +92,7 @@ function SortableSection({
   return (
     <div ref={setNodeRef} style={style} className={`mt-3 first:mt-0 ${isDragging ? 'shadow-lg' : ''}`}>
       <Collapsible defaultOpen>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" style={{ borderLeftWidth: '4px', borderLeftStyle: 'solid', borderLeftColor: sectionColor, backgroundColor: `${sectionColor}0D`, borderRadius: '6px', paddingLeft: '4px' }}>
           <button
             className="touch-none cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted"
             {...attributes}
@@ -221,6 +238,7 @@ export function SortableSections({
             sectionId={group}
             label={group}
             itemCount={grouped[group].length}
+            sectionColor={getSectionColorHex(grouped[group])}
             isEditing={editingSection === group}
             editValue={editValue}
             onEditValueChange={setEditValue}

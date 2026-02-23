@@ -77,7 +77,7 @@ export function BoHChecklistItem({
   };
 
   // Use add_color palette for left border + tinted background
-  const colorStyle = getTaskColorStyle(item.task_type, checkboxIndex);
+  const colorStyle = getTaskColorStyle(item.task_type, checkboxIndex, item.time_hint);
   const isMobile = useIsMobile();
 
   // Header type

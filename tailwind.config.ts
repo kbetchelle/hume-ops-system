@@ -14,6 +14,13 @@ export default {
     'bg-add-green/10', 'bg-add-yellow/10', 'bg-add-purple/10', 'bg-add-blue/10', 'bg-add-red/10', 'bg-add-orange/10',
     // Notification system: borders (40% opacity)
     'border-add-green/40', 'border-add-yellow/40', 'border-add-purple/40', 'border-add-blue/40', 'border-add-red/40', 'border-add-orange/40',
+    // Checklist color borders & backgrounds
+    'border-l-add-red', 'border-l-add-orange', 'border-l-add-blue', 'border-l-add-green',
+    'bg-add-red/5', 'bg-add-orange/5', 'bg-add-blue/5', 'bg-add-green/5',
+    // Alert & badge borders
+    'border-add-red/50', 'border-add-orange/50', 'border-add-yellow', 'border-add-blue', 'border-add-red', 'border-add-orange',
+    // Walkthrough buttons
+    'bg-add-orange/10', 'bg-add-orange/20',
   ],
   theme: {
     container: {

@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SignaturePad } from '@/components/ui/SignaturePad';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
-import { getTaskColorClass } from '@/components/checklists/checklistColors';
+import { getTaskColorStyle } from '@/components/checklists/checklistColors';
 
 interface ConciergeChecklistItemProps {
   item: any;
@@ -76,7 +76,7 @@ export function ConciergeChecklistItem({
   };
 
   // Use standardized task-type-based color
-  const colorBorderClass = getTaskColorClass(item.task_type, checkboxIndex);
+  const colorStyle = getTaskColorStyle(item.task_type, checkboxIndex, item.time_hint);
 
   // Header type
   if (item.task_type === 'header') {
@@ -91,9 +91,10 @@ export function ConciergeChecklistItem({
   if (item.task_type === 'checkbox') {
     return (
       <div
-        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${colorBorderClass} ${
+        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${
           isCompleted ? 'bg-accent/30 border-primary' : ''
         }`}
+        style={colorStyle}
         onClick={() => handleToggle()}
       >
         <div
@@ -120,7 +121,7 @@ export function ConciergeChecklistItem({
   // Photo type
   if (item.task_type === 'photo') {
     return (
-      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
+      <div className="p-3 md:p-4 border rounded-lg space-y-3" style={colorStyle}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -184,7 +185,7 @@ export function ConciergeChecklistItem({
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className={`p-3 md:p-4 border rounded-lg space-y-3 ${colorBorderClass}`}>
+      <div className="p-3 md:p-4 border rounded-lg space-y-3" style={colorStyle}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -253,7 +254,7 @@ export function ConciergeChecklistItem({
   // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
+      <div className="p-3 border rounded-lg space-y-2" style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -284,7 +285,7 @@ export function ConciergeChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
+      <div className="p-3 border rounded-lg space-y-2" style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -321,7 +322,7 @@ export function ConciergeChecklistItem({
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     return (
-      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
+      <div className="p-3 border rounded-lg space-y-2" style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -348,7 +349,7 @@ export function ConciergeChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className={`p-3 border rounded-lg space-y-2 ${colorBorderClass}`}>
+      <div className="p-3 border rounded-lg space-y-2" style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[13px]">{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
@@ -368,7 +369,7 @@ export function ConciergeChecklistItem({
 
   // Default fallback
   return (
-    <div className={`p-3 border rounded-lg ${colorBorderClass}`}>
+    <div className="p-3 border rounded-lg" style={colorStyle}>
       <span>{taskLabel}</span>
       <p className="text-xs text-muted-foreground">Unsupported task type: {item.task_type}</p>
     </div>

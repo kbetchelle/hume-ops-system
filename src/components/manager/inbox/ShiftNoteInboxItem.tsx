@@ -38,6 +38,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
 
       {/* Content */}
       <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-foreground mb-1">From Concierge Shift Report</p>
         <div className="flex items-center gap-2 mb-1">
           <span
             className="text-[10px] font-bold leading-none shrink-0"
@@ -45,8 +46,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
           >
             {data.shiftType}
           </span>
-          <p className="text-sm font-bold text-foreground truncate">From Concierge Shift Report</p>
-          <span className="text-[10px] text-muted-foreground shrink-0 ml-auto">
+          <span className="text-[10px] text-muted-foreground">
             {differenceInDays(new Date(), parseISO(item.createdAt)) > 5
               ? format(parseISO(item.createdAt), "MMM. dd")
               : formatDistanceToNow(parseISO(item.createdAt), { addSuffix: true })}

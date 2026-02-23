@@ -9,14 +9,9 @@ export default function WhosWorkingPage() {
     <DashboardLayout title="Who's Working">
       <div className={isMobile ? "flex-1 flex flex-col min-h-0" : ""}>
         {!isMobile && (
-          <>
-            <h2 className="text-sm uppercase tracking-[0.15em] font-normal mb-6">
-              Who's Working Today
-            </h2>
-            <div className="max-w-2xl">
-              <WhosWorkingView />
-            </div>
-          </>
+          <div className="max-w-2xl">
+            <WhosWorkingView />
+          </div>
         )}
         {isMobile && <WhosWorkingView />}
       </div>

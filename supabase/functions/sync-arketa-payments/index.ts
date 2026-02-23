@@ -275,10 +275,27 @@ Deno.serve(async (req) => {
         if (items.length > 0) logger.info(`Purchases page ${pageCount}: ${items.length} records (total: ${allPurchases.length}, hasMore: ${!!nextCursor})`);
       } while (nextCursor);
 
+      // ── Client-side date filtering ──
+      // The Arketa /purchases API often ignores start_date/end_date and returns ALL records.
+      // Filter locally to only keep records whose created_at falls within the requested range.
+      const rangeStart = new Date(startDate! + 'T00:00:00.000Z').getTime();
+      const rangeEndExclusive = new Date(endDate! + 'T00:00:00.000Z');
+      rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
+      const rangeEndMs = rangeEndExclusive.getTime();
+
+      const filteredPurchases = allPurchases.filter(p => {
+        const raw = p.created_at ?? p.updated_at ?? p.updatedAt ?? p.start_date ?? p.startDate;
+        if (!raw) return false;
+        const ts = typeof raw === 'number' ? raw : new Date(raw as string).getTime();
+        return ts >= rangeStart && ts < rangeEndMs;
+      });
+
+      logger.info(`Date filter: ${allPurchases.length} total → ${filteredPurchases.length} in range [${startDate}, ${endDate}]`);
+
       const syncBatchId = body.sync_batch_id ?? crypto.randomUUID();
       const seen = new Set<string>();
       const stagingRows: Record<string, unknown>[] = [];
-      for (const p of allPurchases) {
+      for (const p of filteredPurchases) {
         const key = String(p.id ?? p.payment_id ?? '');
         if (!key || seen.has(key)) continue;
         seen.add(key);
@@ -303,7 +320,8 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           syncedCount: staged,
-          totalFetched: allPurchases.length,
+          totalFetched: filteredPurchases.length,
+          totalRawFetched: allPurchases.length,
           payments_staged: staged,
           hasMore: timedOut && !!nextCursor,
           backfill_cursor: timedOut ? nextCursor : null,

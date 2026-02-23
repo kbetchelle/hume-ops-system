@@ -68,7 +68,7 @@ function parseTimeBooked(raw: string): Date | null {
   return new Date(d.getTime() + offsetHours * 60 * 60 * 1000);
 }
 
-// Parse MM/DD/YYYY -> YYYY-MM-DD
+// Parse MM/DD/YYYY -> YYYY-MM-DD (fallback only)
 function parseClassDate(raw: string): string | null {
   if (!raw) return null;
   const parts = raw.split("/");
@@ -77,11 +77,29 @@ function parseClassDate(raw: string): string | null {
   return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
+// Extract YYYY-MM-DD in America/Los_Angeles from a UTC Date
+function dateToLAString(d: Date): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(d); // returns YYYY-MM-DD
+}
+
 // Parse "Feb 22, 2026, 10:00 AM PST" -> ISO timestamp
 function parseClassTime(raw: string): string | null {
   const d = parseTimeBooked(raw);
   if (!d) return null;
   return d.toISOString();
+}
+
+// Derive class_date from Class Time (preferred) or fall back to Class Date column
+function deriveClassDate(classTime: string, classDateRaw: string): string | null {
+  const d = parseTimeBooked(classTime);
+  if (d) return dateToLAString(d);
+  return parseClassDate(classDateRaw);
 }
 
 Deno.serve(async (req) => {
@@ -183,7 +201,7 @@ Deno.serve(async (req) => {
     }>();
 
     for (const row of uniqueRows) {
-      const cd = parseClassDate(row.classDate);
+      const cd = deriveClassDate(row.classTime, row.classDate);
       if (!row.classId || !cd) continue;
       const key = `${row.classId}|${cd}`;
       const existing = classMap.get(key);
@@ -240,7 +258,7 @@ Deno.serve(async (req) => {
     // --- 2. Insert reservations ---
     const reservationRecords = [];
     for (const row of uniqueRows) {
-      const cd = parseClassDate(row.classDate);
+      const cd = deriveClassDate(row.classTime, row.classDate);
       if (!row.clientId || !row.classId || !cd) continue;
 
       const tb = parseTimeBooked(row.timeBooked);

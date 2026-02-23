@@ -516,7 +516,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[12px]">
+            <Badge variant="outline" className="text-[12px] rounded-none border-none text-white" style={{ backgroundColor: '#f6821f' }}>
               {completedCount}/{totalCount} complete
             </Badge>
             {!isOnline && (

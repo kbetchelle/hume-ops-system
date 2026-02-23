@@ -453,7 +453,6 @@ function ItemDialog({
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <div className="flex items-center space-x-2"><Switch id="required" checked={formData.required} onCheckedChange={(checked) => setFormData({ ...formData, required: checked })} /><Label htmlFor="required">Required</Label></div>
               <div className="flex items-center space-x-2"><Switch id="is_high_priority" checked={formData.is_high_priority} onCheckedChange={(checked) => setFormData({ ...formData, is_high_priority: checked })} /><Label htmlFor="is_high_priority">High Priority</Label></div>
               <div className="flex items-center space-x-2"><Switch id="is_class_triggered" checked={formData.is_class_triggered} onCheckedChange={(checked) => setFormData({ ...formData, is_class_triggered: checked })} /><Label htmlFor="is_class_triggered">Class Triggered</Label></div>
             </div>

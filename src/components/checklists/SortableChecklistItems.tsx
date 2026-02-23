@@ -76,7 +76,6 @@ function SortableItemRow({ item, index, onEdit, onDelete, secondaryLabel }: Sort
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm">{item.task_description}</span>
-          {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
           {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
         </div>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">

@@ -133,12 +133,6 @@ export function MobileChecklistItem({
               </Badge>
             )}
             
-            {/* Required indicator */}
-            {item.required && (
-              <Badge variant="destructive" className="flex-shrink-0">
-                Required
-              </Badge>
-            )}
           </div>
 
           {/* Category badge */}

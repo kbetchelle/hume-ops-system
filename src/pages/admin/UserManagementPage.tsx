@@ -50,7 +50,7 @@ export default function UserManagementPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
-          <TabsList>
+          <TabsList className="w-full">
             <TabsTrigger value="users">
               Users & Roles
             </TabsTrigger>

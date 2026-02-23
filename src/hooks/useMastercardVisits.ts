@@ -50,7 +50,6 @@ export function useMastercardVisits(filters?: MastercardVisitsFilters) {
       const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
         filters: filtersList,
         order: [
-          { column: "status", ascending: true },
           { column: "visit_date", ascending: false },
           { column: "start_time", ascending: false },
         ],

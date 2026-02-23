@@ -246,9 +246,6 @@ export function WhosWorkingView() {
             <Users className="h-4 w-4" />
             Who's Working Today
           </CardTitle>
-          <Badge variant="outline" className="rounded-none text-[10px] uppercase tracking-widest">
-            {currentlyWorkingCount} on shift
-          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -34,27 +34,39 @@ export function BoHChecklistItem({
   const { t } = useLanguage();
   const toggleCompletion = useToggleBoHCompletion();
   const [textValue, setTextValue] = useState(completion?.note_text || '');
+  const [optimisticCompleted, setOptimisticCompleted] = useState<boolean | null>(null);
 
-  const isCompleted = !!completion?.completed_at;
+  const isCompleted = optimisticCompleted !== null ? optimisticCompleted : !!completion?.completed_at;
   const taskLabel = t(item.task_description, item.label_spanish);
 
   const handleToggle = async (value?: string, photoUrl?: string, signatureData?: string) => {
     if (!user) return;
 
-    await toggleCompletion.mutateAsync({
-      itemId: item.id,
-      checklistId,
-      completionDate,
-      shiftTime,
-      completedById: user.id,
-      completedBy: user.email || user.id,
-      isCompleted,
-      value,
-      photoUrl,
-      signatureData,
-    });
-  };
+    // Optimistic update for checkbox type
+    if (item.task_type === 'checkbox' && !value && !photoUrl && !signatureData) {
+      setOptimisticCompleted(!isCompleted);
+    }
 
+    try {
+      await toggleCompletion.mutateAsync({
+        itemId: item.id,
+        checklistId,
+        completionDate,
+        shiftTime,
+        completedById: user.id,
+        completedBy: user.email || user.id,
+        isCompleted: optimisticCompleted !== null ? optimisticCompleted : !!completion?.completed_at,
+        value,
+        photoUrl,
+        signatureData,
+      });
+    } catch {
+      // Revert optimistic update on error
+      setOptimisticCompleted(null);
+    } finally {
+      setOptimisticCompleted(null);
+    }
+  };
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 

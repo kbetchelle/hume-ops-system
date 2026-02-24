@@ -17,12 +17,12 @@ export function ConciergeHeader({ title = "Concierge" }: ConciergeHeaderProps) {
         </h1>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"
             className="h-[50px] w-auto cursor-pointer hover:opacity-70 transition-opacity my-[12px]"
             onClick={() => navigate("/dashboard")} />
-
         </div>
       </div>
     </header>);

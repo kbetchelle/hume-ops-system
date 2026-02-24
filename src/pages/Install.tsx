@@ -85,7 +85,7 @@ export default function Install() {
           <CardContent className="space-y-0 pt-0">
             <div className="flex items-center gap-2 pb-4 border-b border-border">
               <Monitor className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Android — Chrome</span>
+              <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">Android — Chrome</span>
             </div>
             <ol className="space-y-5 pt-5">
               <li className="flex gap-3">

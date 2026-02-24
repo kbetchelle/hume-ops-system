@@ -131,22 +131,6 @@ export function ResourcePagesTab({
         />
       )}
       
-      {/* Tag Filters */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center">Tags:</span>
-          {allTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="rounded-none text-xs cursor-pointer"
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {/* Empty State */}
       {filtered.length === 0 ? (

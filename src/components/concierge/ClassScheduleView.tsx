@@ -310,7 +310,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                             </Badge>
                           )}
                           {isPast && !cls.is_cancelled && (
-                            <Badge variant="secondary" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#009ddc', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                            <Badge variant="secondary" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#fcb827', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Completed
                             </Badge>

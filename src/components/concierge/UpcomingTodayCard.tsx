@@ -337,7 +337,7 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
                     className={`flex items-center gap-0 rounded-none px-3 py-2 transition-colors text-sm ${past ? 'opacity-50' : ''}`}
                     style={{
                       backgroundColor: past ? 'hsl(var(--muted))' : `${color}1A`,
-                      ...(past ? {} : { borderLeft: `4px solid ${color}`, borderBottom: `1.5px solid ${color}` }),
+                      ...(past ? {} : { borderLeft: `4px solid ${color}`, borderBottom: `1.5px solid ${color}40` }),
                     }}
                   >
                     <div className="flex-1 min-w-0">

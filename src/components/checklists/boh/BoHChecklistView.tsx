@@ -16,6 +16,11 @@ import { Calendar, ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
+interface BoHChecklistViewProps {
+  /** Optional content rendered inside the scrollable area before the checklist (e.g. alert banners). */
+  headerSlot?: React.ReactNode;
+}
+
 interface BoHChecklistWithItems {
   id: string;
   title: string;
@@ -27,15 +32,30 @@ interface BoHChecklistWithItems {
   boh_checklist_items: any[];
 }
 
-export function BoHChecklistView() {
+export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
   const { user } = useAuth();
   const { data: userRolesData } = useUserRoles(user?.id);
   const { activeRole } = useActiveRole();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const roles = userRolesData || [];
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const isWeekend = [0, 6].includes(new Date(selectedDate).getDay());
+  // Use PST date to avoid UTC day-boundary mismatch
+  const getPSTDate = () => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    return `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
+  };
+  const getPSTDayOfWeek = (dateStr: string) => {
+    // Parse as local PST date components to get correct day-of-week
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).getDay();
+  };
+  const [selectedDate, setSelectedDate] = useState(getPSTDate);
+  const isWeekend = [0, 6].includes(getPSTDayOfWeek(selectedDate));
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
 
   const bohRoles = ['floater', 'male_spa_attendant', 'female_spa_attendant'];
@@ -176,14 +196,8 @@ export function BoHChecklistView() {
     const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     return (
-      <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0">
-        {/* Progress bar */}
-        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shrink-0">
-          <div
-            className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-red-500 via-amber-500 to-green-500"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
+      <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0 !overflow-visible">
+        {headerSlot}
         {/* Date + Shift + Hide completed */}
         <div className="flex flex-wrap items-center gap-2 p-3 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 min-h-[44px]">
@@ -192,7 +206,7 @@ export function BoHChecklistView() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-base min-h-[44px]"
+              className="px-3 py-2 border rounded-none text-[13.25px] min-h-[44px]"
             />
           </div>
           <div className="flex gap-1 min-h-[44px] items-center">
@@ -219,7 +233,7 @@ export function BoHChecklistView() {
           </div>
         </div>
         {/* Sections + items */}
-        <div className="flex-1 min-h-0 overflow-auto scroll-smooth">
+        <div>
           {groupedEntries.map(([section, sectionItems]) => {
             const filteredItems = hideCompleted
               ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)
@@ -234,11 +248,11 @@ export function BoHChecklistView() {
                   <span>{section}</span>
                   <span className="text-muted-foreground font-normal">{sectionCompleted}/{sectionItems.length}</span>
                 </div>
-                <div className="divide-y">
+                <div>
                   {filteredItems.map((item: any) => (
                     <div
                       key={item.id}
-                      className="min-h-[48px] py-4 px-5 bg-card border-b last:border-b-0"
+                      className="min-h-[48px] p-0 bg-card"
                     >
                       <BoHChecklistItem
                         item={item}
@@ -299,7 +313,7 @@ export function BoHChecklistView() {
             </Button>
           </div>
         </div>
-        <Badge variant={completedCount === totalCount ? 'default' : 'secondary'}>
+        <Badge variant={completedCount === totalCount ? 'default' : 'secondary'} className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#f6821f', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
           {completedCount} / {totalCount} {t('Complete', 'Completo')}
         </Badge>
       </div>

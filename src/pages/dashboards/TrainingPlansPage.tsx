@@ -169,11 +169,11 @@ export default function TrainingPlansPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="member-plans">
-          <TabsList>
-            <TabsTrigger value="member-plans">
+          <TabsList className="w-full">
+            <TabsTrigger value="member-plans" className="flex-1 gap-2">
               Member Plans ({memberPlans.length})
             </TabsTrigger>
-            <TabsTrigger value="templates">
+            <TabsTrigger value="templates" className="flex-1 gap-2">
               Templates ({templatePlans.length})
             </TabsTrigger>
           </TabsList>

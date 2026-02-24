@@ -105,6 +105,7 @@ export type Database = {
           created_at: string
           feedback_text: string | null
           id: string
+          priority_rank: number | null
           rating: string
           template_guide_id: string | null
           user_id: string
@@ -116,6 +117,7 @@ export type Database = {
           created_at?: string
           feedback_text?: string | null
           id?: string
+          priority_rank?: number | null
           rating: string
           template_guide_id?: string | null
           user_id: string
@@ -127,6 +129,7 @@ export type Database = {
           created_at?: string
           feedback_text?: string | null
           id?: string
+          priority_rank?: number | null
           rating?: string
           template_guide_id?: string | null
           user_id?: string
@@ -357,6 +360,7 @@ export type Database = {
           location_name: string | null
           name: string
           raw_data: Json | null
+          reservation_type: string | null
           room_name: string | null
           start_time: string
           status: string | null
@@ -381,6 +385,7 @@ export type Database = {
           location_name?: string | null
           name: string
           raw_data?: Json | null
+          reservation_type?: string | null
           room_name?: string | null
           start_time: string
           status?: string | null
@@ -405,6 +410,7 @@ export type Database = {
           location_name?: string | null
           name?: string
           raw_data?: Json | null
+          reservation_type?: string | null
           room_name?: string | null
           start_time?: string
           status?: string | null
@@ -2872,10 +2878,12 @@ export type Database = {
           class_name: string | null
           created_at: string
           description: string | null
+          duration_minutes: number | null
           end_time: string | null
           id: string
           instructor: string | null
           max_capacity: number | null
+          reservation_type: string | null
           schedule_date: string
           start_time: string | null
           total_booked: number | null
@@ -2887,10 +2895,12 @@ export type Database = {
           class_name?: string | null
           created_at?: string
           description?: string | null
+          duration_minutes?: number | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
+          reservation_type?: string | null
           schedule_date: string
           start_time?: string | null
           total_booked?: number | null
@@ -2902,10 +2912,12 @@ export type Database = {
           class_name?: string | null
           created_at?: string
           description?: string | null
+          duration_minutes?: number | null
           end_time?: string | null
           id?: string
           instructor?: string | null
           max_capacity?: number | null
+          reservation_type?: string | null
           schedule_date?: string
           start_time?: string | null
           total_booked?: number | null
@@ -6154,6 +6166,7 @@ export type Database = {
           deactivated: boolean
           email: string
           full_name: string
+          must_change_password: boolean
           onboarding_completed: boolean
           primary_role: Database["public"]["Enums"]["app_role"]
           roles: Database["public"]["Enums"]["app_role"][]
@@ -6198,6 +6211,10 @@ export type Database = {
       admin_update_user_username: {
         Args: { _target_user_id: string; _username: string }
         Returns: undefined
+      }
+      classify_reservation_type: {
+        Args: { class_name: string }
+        Returns: string
       }
       cleanup_archived_lost_and_found: { Args: never; Returns: undefined }
       cleanup_archived_packages: { Args: never; Returns: undefined }
@@ -6319,6 +6336,10 @@ export type Database = {
         Returns: undefined
       }
       notify_unlinked_scheduled_sling_users: { Args: never; Returns: undefined }
+      predict_class_duration: {
+        Args: { p_class_name: string }
+        Returns: number
+      }
       process_scheduled_messages: { Args: never; Returns: undefined }
       refresh_daily_schedule: {
         Args: { p_schedule_date: string }

@@ -4,7 +4,6 @@ import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
 import { AppRole } from "@/types/roles";
 import { Loader2 } from "lucide-react";
 import { SyncProfileLanguage } from "@/components/shared/SyncProfileLanguage";
-import { ForcePasswordChangeDialog } from "@/components/auth/ForcePasswordChangeDialog";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,14 +18,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   const isLoading = authLoading || profileLoading || rolesLoading;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:14',message:'ProtectedRoute render',data:{pathname:location.pathname,hasUser:!!user,authLoading,profileLoading,rolesLoading,isLoading,hasProfile:!!profile,onboardingCompleted:profile?.onboarding_completed,hasRoles:!!roles,rolesCount:roles?.length||0,requiredRoles,userRoles:roles?.map(r=>r.role)||[]},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-  // #endregion
-
   if (isLoading) {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:21',message:'ProtectedRoute loading state',data:{pathname:location.pathname,authLoading,profileLoading,rolesLoading},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-    // #endregion
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -36,9 +28,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // Not authenticated (and not locked, and not session expired — overlay is shown by AuthProvider)
   if (!user && !isLocked && !sessionExpired) {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:30',message:'Redirecting unauthenticated user',data:{pathname:location.pathname},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-    // #endregion
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
@@ -61,9 +50,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // Authenticated but hasn't completed onboarding
   if (profile && !profile.onboarding_completed && location.pathname !== "/onboarding") {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:35',message:'Redirecting to onboarding',data:{pathname:location.pathname,userId:user.id},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-    // #endregion
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -89,28 +75,14 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     const userRoleValues = roles.map(r => r.role);
     const hasRequiredRole = requiredRoles.some(role => userRoleValues.includes(role));
     
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:44',message:'Role check',data:{pathname:location.pathname,requiredRoles,userRoles:userRoleValues,hasRequiredRole},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-    // #endregion
-    
     if (!hasRequiredRole) {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:45',message:'Unauthorized access attempt',data:{pathname:location.pathname,requiredRoles,userRoles:userRoleValues},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-      // #endregion
       return <Navigate to="/unauthorized" replace />;
     }
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7246/ingest/f7f9292b-067f-48f6-a474-d24d84c0689d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:50',message:'Access granted',data:{pathname:location.pathname,userId:user.id,hasRequiredRoles:!!requiredRoles},timestamp:Date.now(),hypothesisId:'H10'})}).catch(()=>{});
-  // #endregion
-
   return (
     <>
       <SyncProfileLanguage />
-      {profile?.must_change_password && (
-        <ForcePasswordChangeDialog userId={user.id} />
-      )}
       {children}
     </>
   );

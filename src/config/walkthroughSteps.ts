@@ -17,12 +17,15 @@ export interface WalkthroughStepConfig {
   targetSelector: string;
   arrowDirection: WalkthroughArrowDirection;
   text: string;
-  /** Spanish text for i18n; when provided, caller uses t(text, textEs). */
   textEs?: string;
-  /** When "multiple_roles", step is only included when user has more than one role */
   showWhenKey?: WalkthroughShowWhenKey;
+  /** Show a static replica of the user menu dropdown on this step */
+  showMenuPreview?: boolean;
+  /** Offset the arrow endpoint by {x, y} pixels from the target */
+  arrowEndOffset?: { x: number; y: number };
+  /** Show a colored border highlight around the target element */
+  highlightBorder?: string;
 }
-
 export interface WalkthroughContext {
   firstName: string;
   hasMultipleRoles: boolean;
@@ -53,6 +56,7 @@ const UNIVERSAL_BUG: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Send suggestions, issues, or compliments here.",
   textEs: "Envía sugerencias, incidencias o cumplidos aquí.",
+  arrowEndOffset: { x: 230, y: 140 },
 };
 
 // Manager (admin + manager) role-specific steps
@@ -71,6 +75,8 @@ const MANAGER_NOTIFICATION_CENTER: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Manage notification settings for your team here.",
   textEs: "Gestiona las notificaciones de tu equipo aquí.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const MANAGER_PACKAGE_TRACKING: WalkthroughStepConfig = {
@@ -79,6 +85,8 @@ const MANAGER_PACKAGE_TRACKING: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Help concierge by logging items put in the safe in here.",
   textEs: "Ayuda al conserje registrando aquí los objetos que guardas en la caja fuerte.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 // Concierge role-specific steps
@@ -88,6 +96,8 @@ const CONCIERGE_RESOURCES: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Search all resources here, or click to view quick links or resource pages.",
   textEs: "Busca todos los recursos aquí o haz clic para ver enlaces rápidos y páginas de recursos.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const CONCIERGE_PACKAGE_TRACKING: WalkthroughStepConfig = {
@@ -96,6 +106,8 @@ const CONCIERGE_PACKAGE_TRACKING: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Scan in packages, submit a photo of where they're kept, and edit a package if you move it.",
   textEs: "Escanea paquetes, envía una foto de dónde se guardan y edita un paquete si lo mueves.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const CONCIERGE_LOST_FOUND: WalkthroughStepConfig = {
@@ -104,6 +116,8 @@ const CONCIERGE_LOST_FOUND: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Only for high-value items. There's an 'In Safe?' tool so you can see what's currently in the safe.",
   textEs: "Solo para objetos de valor. La herramienta «¿En caja fuerte?» muestra qué hay ahora en la caja fuerte.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 // Cafe role-specific steps
@@ -124,7 +138,64 @@ const CAFE_PACKAGE_TRACKING: WalkthroughStepConfig = {
 };
 
 // ---------------------------------------------------------------------------
-// Role-specific step blocks (between user menu and bug)
+// Mobile-specific steps (target mobile UI elements)
+// ---------------------------------------------------------------------------
+
+const MOBILE_BOTTOM_NAV: WalkthroughStepConfig = {
+  id: "mobile-bottom-nav",
+  targetSelector: "[data-walkthrough=mobile-bottom-nav]",
+  arrowDirection: "bottom",
+  text: "Use the bottom tabs to navigate between your main pages.",
+  textEs: "Usa las pestañas inferiores para navegar entre tus páginas principales.",
+};
+
+const MOBILE_MORE_MENU: WalkthroughStepConfig = {
+  id: "mobile-more-menu",
+  targetSelector: "[data-walkthrough=mobile-more-tab]",
+  arrowDirection: "bottom",
+  text: "Tap 'More' for additional pages, settings, sign out, and bug reports.",
+  textEs: "Toca «Más» para páginas adicionales, ajustes, cerrar sesión y reportar problemas.",
+};
+
+const MOBILE_NOTIFICATION_BELL: WalkthroughStepConfig = {
+  id: "mobile-notification-bell",
+  targetSelector: "[data-walkthrough=mobile-notification-bell]",
+  arrowDirection: "top",
+  text: "Check your notifications here.",
+  textEs: "Consulta tus notificaciones aquí.",
+};
+
+const MOBILE_ROLE_CHIP: WalkthroughStepConfig = {
+  id: "mobile-role-chip",
+  targetSelector: "[data-walkthrough=mobile-role-chip]",
+  arrowDirection: "top",
+  text: "Switch between your roles using this dropdown.",
+  textEs: "Cambia entre tus roles usando este menú.",
+  showWhenKey: "multiple_roles",
+};
+
+// Mobile role-specific steps
+
+const MOBILE_MANAGER_STEPS: WalkthroughStepConfig[] = [
+  MOBILE_NOTIFICATION_BELL,
+  MOBILE_ROLE_CHIP,
+];
+
+const MOBILE_CONCIERGE_STEPS: WalkthroughStepConfig[] = [
+  MOBILE_ROLE_CHIP,
+];
+
+const MOBILE_CAFE_STEPS: WalkthroughStepConfig[] = [];
+
+function getMobileRoleSpecificSteps(role: AppRole): WalkthroughStepConfig[] {
+  if (role === "admin" || role === "manager") return MOBILE_MANAGER_STEPS;
+  if (role === "concierge") return MOBILE_CONCIERGE_STEPS;
+  if (role === "cafe") return MOBILE_CAFE_STEPS;
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Desktop/tablet role-specific step blocks
 // ---------------------------------------------------------------------------
 
 const MANAGER_STEPS: WalkthroughStepConfig[] = [
@@ -166,7 +237,33 @@ function includeStep(config: WalkthroughStepConfig, context: WalkthroughContext)
  */
 function getOrderedConfigs(role: AppRole, context: WalkthroughContext): WalkthroughStepConfig[] {
   const roleSteps = getRoleSpecificSteps(role).filter((s) => includeStep(s, context));
-  const middle: WalkthroughStepConfig[] = [UNIVERSAL_USER_MENU, ...roleSteps, UNIVERSAL_BUG];
+  const isManagerOrConcierge = role === "admin" || role === "manager" || role === "concierge";
+  const userMenu = isManagerOrConcierge
+    ? { ...UNIVERSAL_USER_MENU, showMenuPreview: true }
+    : UNIVERSAL_USER_MENU;
+  const bugStep = isManagerOrConcierge
+    ? { ...UNIVERSAL_BUG, showMenuPreview: true }
+    : UNIVERSAL_BUG;
+  const middle: WalkthroughStepConfig[] = [userMenu, ...roleSteps, bugStep];
+  const totalCount = middle.length;
+  const welcomeEn = WELCOME_EN.replace("{name}", context.firstName).replace("{n}", String(totalCount));
+  const welcomeEs = WELCOME_ES.replace("{name}", context.firstName).replace("{n}", String(totalCount));
+  const welcome: WalkthroughStepConfig = {
+    id: "welcome",
+    targetSelector: WELCOME_TARGET,
+    arrowDirection: "left",
+    text: welcomeEn,
+    textEs: welcomeEs,
+  };
+  return [welcome, ...middle];
+}
+
+/**
+ * Builds the full ordered list of mobile step configs for a role.
+ */
+function getMobileOrderedConfigs(role: AppRole, context: WalkthroughContext): WalkthroughStepConfig[] {
+  const roleSteps = getMobileRoleSpecificSteps(role).filter((s) => includeStep(s, context));
+  const middle: WalkthroughStepConfig[] = [MOBILE_BOTTOM_NAV, MOBILE_MORE_MENU, ...roleSteps];
   const totalCount = middle.length;
   const welcomeEn = WELCOME_EN.replace("{name}", context.firstName).replace("{n}", String(totalCount));
   const welcomeEs = WELCOME_ES.replace("{name}", context.firstName).replace("{n}", String(totalCount));
@@ -190,6 +287,27 @@ export function getWalkthroughStepsForRole(
   t: WalkthroughTranslator
 ): WalkthroughStep[] {
   const configs = getOrderedConfigs(role, context);
+  return configs.map(
+    (c): WalkthroughStep => ({
+      target: c.targetSelector,
+      arrowDirection: c.arrowDirection,
+      text: t(c.text, c.textEs ?? null),
+      ...(c.showMenuPreview ? { showMenuPreview: true } : {}),
+      ...(c.arrowEndOffset ? { arrowEndOffset: c.arrowEndOffset } : {}),
+      ...(c.highlightBorder ? { highlightBorder: c.highlightBorder } : {}),
+    })
+  );
+}
+
+/**
+ * Returns mobile-specific WalkthroughStep[] targeting bottom nav, more menu, etc.
+ */
+export function getMobileWalkthroughStepsForRole(
+  role: AppRole,
+  context: WalkthroughContext,
+  t: WalkthroughTranslator
+): WalkthroughStep[] {
+  const configs = getMobileOrderedConfigs(role, context);
   return configs.map(
     (c): WalkthroughStep => ({
       target: c.targetSelector,

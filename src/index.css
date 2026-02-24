@@ -209,3 +209,34 @@
 .concierge-mobile * {
   border-radius: 0 !important;
 }
+
+/* Prevent auto-scroll on tablet/mobile when virtual keyboard opens */
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+  }
+}
+
+/* Tablet: suppress all focus-driven scroll adjustments */
+@media (min-width: 768px) and (max-width: 1280px) {
+  * {
+    scroll-padding: 0 !important;
+  }
+}
+
+/* Keep focused inputs stable — prevent browser scroll-into-view jump */
+input:focus, textarea:focus, select:focus, [contenteditable="true"]:focus {
+  scroll-margin-top: 0;
+  scroll-margin-bottom: 0;
+}
+
+/* Tablet: prevent autoscroll when tabbing between inputs */
+@media (min-width: 768px) and (max-width: 1024px) {
+  html, body, #root {
+    overflow-anchor: none;
+  }
+
+  input:focus, textarea:focus, select:focus, [contenteditable="true"]:focus {
+    scroll-margin: 0;
+  }
+}

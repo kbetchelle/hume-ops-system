@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import type { MobileTabItem } from "@/components/mobile/mobile-nav-config";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 interface MobileBottomNavProps {
@@ -12,9 +13,11 @@ const TAB_HEIGHT = 64;
 const SAFE_BOTTOM = "env(safe-area-inset-bottom)";
 
 export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNavProps) {
+  const { t } = useLanguage();
 
   return (
     <nav
+      data-walkthrough="mobile-bottom-nav"
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-border backdrop-blur-lg bg-white/90 flex-shrink-0"
       style={{
         height: `calc(${TAB_HEIGHT}px + ${SAFE_BOTTOM} + 8px)`,
@@ -45,7 +48,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
                 {isActive && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
@@ -60,6 +63,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                 key={tab.id}
                 type="button"
                 onClick={onMoreClick}
+                data-walkthrough="mobile-more-tab"
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 min-w-0 min-h-[44px] gap-0.5 transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground"
@@ -69,7 +73,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   <tab.icon className="h-6 w-6" strokeWidth={1.5} />
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </button>
             );
@@ -95,7 +99,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
                 {isActive && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />

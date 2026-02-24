@@ -32,6 +32,8 @@ const SAMPLE_DATA: Record<NotificationType, { title: string; body: string }> = {
   package_arrived:          { title: 'Package arrived for member',        body: 'Package for Emily Johnson at the front desk.' },
   room_turnover:            { title: 'Room turnover: Treatment Room 3',   body: 'Room needs to be prepared for next appointment.' },
   tour_alert:               { title: 'Tour scheduled',                    body: 'Prospective member arriving at 11:30 AM for a tour.' },
+  mastercard_arrival:       { title: 'Mastercard client arriving',         body: 'Gold tier member arriving at 2:00 PM for concierge service.' },
+  roof_music_reset:         { title: 'Reset rooftop music',                body: 'Vinyasa Flow (Rooftop) has ended — please reset the rooftop music system.' },
 };
 
 /* ── Notification item (inbox-style) ── */

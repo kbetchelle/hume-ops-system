@@ -20,7 +20,7 @@ import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 import { useInAppNotifications } from "@/hooks/useInAppNotifications";
 import { useNeedsWalkthrough, useMarkWalkthroughCompleted } from "@/hooks/useWalkthroughState";
-import { getWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
+import { getWalkthroughStepsForRole, getMobileWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
 import { WalkthroughOverlay } from "@/components/walkthrough";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
@@ -82,6 +82,10 @@ const getNavItems = (role: AppRole | null, permissions: string[]): NavItem[] => 
   }
   // Cafe role: grouped nav is handled separately in SidebarNav, return empty here
   if (role === "cafe") {
+    return [];
+  }
+  // Concierge role: grouped nav is handled separately in SidebarNav, return empty here
+  if (role === "concierge") {
     return [];
   }
   const baseItems: NavItem[] = [{
@@ -236,6 +240,10 @@ const settingsGroups: SettingsGroup[] = [{
     url: "/dashboard/dev-updates",
     icon: Megaphone
   }, {
+    title: "AI Feedback",
+    url: "/dashboard/ai-feedback",
+    icon: MessageSquare
+  }, {
     title: "Notification Examples",
     url: "/dashboard/notification-examples",
     icon: Bell
@@ -366,6 +374,7 @@ function SidebarNav() {
   const navItems = getNavItems(effectiveRole, permissions);
   const isBohRole = effectiveRole !== null && BOH_ROLES.includes(effectiveRole);
   const isCafeRole = effectiveRole === "cafe";
+  const isConciergeRole = effectiveRole === "concierge";
   const isAdminManagerRole = effectiveRole === "admin" || effectiveRole === "manager";
 
   // Admin/Manager grouped nav items
@@ -396,6 +405,23 @@ function SidebarNav() {
     { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
   ];
 
+  // Concierge grouped nav items
+  const conciergeMainItems: NavItem[] = [
+    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Shift Report", url: "/dashboard/concierge", icon: FileText },
+  ];
+  const conciergeCommsItems: NavItem[] = [
+    { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
+    { title: "Announcements", url: "/dashboard/communications", icon: Bell },
+  ];
+  const conciergeRefItems: NavItem[] = [
+    { title: "Response Templates", url: "/dashboard/concierge?view=templates", icon: FileCode2 },
+    { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
+    { title: "Package Tracking", url: "/dashboard/package-tracking", icon: Package },
+    { title: "Lost & Found", url: "/dashboard/lost-and-found", icon: Package },
+    { title: "Who's Working", url: "/dashboard/whos-working", icon: Users },
+  ];
+
   // BoH grouped nav items
   const bohChecklistUrl =
     effectiveRole === "floater"
@@ -417,11 +443,11 @@ function SidebarNav() {
   ];
 
   // Show Settings (incl. Dev Tools) for admin/manager, or when on a Dev Tools/Settings path (those routes require admin/manager)
-  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/dev-updates", "/dashboard/notification-examples"].some((p) => location.pathname.startsWith(p));
+  const isOnSettingsOrDevToolsPath = ["/dashboard/sync-skipped-records", "/dashboard/api-syncing", "/dashboard/api-data-mapping", "/dashboard/data-patterns", "/dashboard/backfill", "/dashboard/user-management", "/dashboard/bug-reports", "/dashboard/testing", "/dashboard/dev-updates", "/dashboard/notification-examples", "/dashboard/ai-feedback"].some((p) => location.pathname.startsWith(p));
   const isAdminOrManager = effectiveRole === "admin" || effectiveRole === "manager" || isOnSettingsOrDevToolsPath;
 
   // Check if dev tools items are active
-  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/dev-updates") || location.pathname.startsWith("/dashboard/notification-examples");
+  const isDevToolsActive = location.pathname.startsWith("/dashboard/backfill") || location.pathname.startsWith("/dashboard/api-syncing") || location.pathname.startsWith("/dashboard/api-data-mapping") || location.pathname.startsWith("/dashboard/data-patterns") || location.pathname.startsWith("/dashboard/sync-skipped-records") || location.pathname.startsWith("/dashboard/bug-reports") || location.pathname.startsWith("/dashboard/testing") || location.pathname.startsWith("/dashboard/dev-updates") || location.pathname.startsWith("/dashboard/notification-examples") || location.pathname.startsWith("/dashboard/ai-feedback");
 
   const walkthroughIdByUrl: Record<string, string> = {
     "/dashboard/package-tracking": "package-tracking",
@@ -490,6 +516,12 @@ function SidebarNav() {
             {renderGroup("Main", cafeMainItems)}
             {renderGroup("Communications", cafeCommsItems)}
             {renderGroup("References", cafeRefItems)}
+          </>
+        ) : isConciergeRole ? (
+          <>
+            {renderGroup("Main", conciergeMainItems)}
+            {renderGroup("Communications", conciergeCommsItems)}
+            {renderGroup("References", conciergeRefItems)}
           </>
         ) : isAdminManagerRole ? (
           <>
@@ -660,34 +692,34 @@ function UserInfoDropdown({
   return <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("w-full justify-start gap-2 rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")} data-walkthrough="user-menu">
+          <Button variant="ghost" size="sm" className={cn("w-full justify-between rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")} data-walkthrough="user-menu">
             {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
-                Hi, {getFirstName(profile?.full_name)}
+                {t("greeting.hi")}, {getFirstName(profile?.full_name)}
               </span>}
-            {unreadCount > 0 && <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />}
+            
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">
+        <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-[101]" align="start" side="top">
           <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bell className="mr-2 h-3 w-3" />
-            {t("Notifications", "Notificaciones")}
+            {t("menu.notifications")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
-            Profile
+            {t("menu.profile")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
-            Account Settings
+            {t("menu.accountSettings")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bug className="mr-2 h-3 w-3" />
-            Report a Bug
+            {t("menu.reportBug")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSignOut} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <LogOut className="mr-2 h-3 w-3" />
-            Sign out
+            {t("menu.signOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -712,6 +744,7 @@ function DashboardHeader({ title }: { title: string }) {
 
         <div className="flex items-center gap-2">
           {isBOH && <LanguageSelector />}
+          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"
@@ -802,8 +835,9 @@ export function DashboardLayout({
     if (!needsWalkthrough || isBoh || activeRole === null) return [];
     const firstName = profile?.full_name?.split(" ")[0] ?? "User";
     const hasMultipleRoles = (roles?.length ?? availableRoles?.length ?? 0) > 1;
-    return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles }, t);
-  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length, t]);
+    const stepsFn = isMobile ? getMobileWalkthroughStepsForRole : getWalkthroughStepsForRole;
+    return stepsFn(activeRole, { firstName, hasMultipleRoles }, t);
+  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length, t, isMobile]);
 
   const showOverlay =
     needsWalkthrough &&
@@ -828,7 +862,7 @@ export function DashboardLayout({
           )}
           <GlobalOfflineBanner />
           <main
-            className="flex-1 min-h-0 overflow-auto p-4 pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]"
+            className="flex-1 flex flex-col min-h-0 overflow-auto p-4 pt-12 pb-[calc(64px+env(safe-area-inset-bottom))]"
           >
             {showBiometricPrompt && (
               <BiometricSetupPrompt

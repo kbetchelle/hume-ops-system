@@ -351,10 +351,8 @@ function SyncOverviewTable() {
 
   const handleRunNow = async (syncType: string) => {
     setRunningSyncType(syncType);
-    // Auto-expand the row being synced
     setExpandedRow(syncType);
     try {
-      // Arketa Classes + Reservations: invoke wrapper directly for reliable manual sync and clearer errors
       if (syncType === "arketa_classes") {
         await syncArketaClassesAndReservations.mutateAsync(undefined);
         refetch();

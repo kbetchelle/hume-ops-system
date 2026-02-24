@@ -20,9 +20,9 @@ function isGymCheckin(className: string | null): boolean {
   return (className ?? "").toLowerCase().trim() === "gym check in";
 }
 
-function isPrivateAppointment(className: string | null): boolean {
-  const n = (className ?? "").toLowerCase();
-  return n.includes("personal training") || n.includes("duo training");
+function isPrivateAppointment(reservationType: string | null): boolean {
+  const rt = (reservationType ?? "").toLowerCase();
+  return rt === "personal training" || rt === "private treatment";
 }
 
 function mergeTextFields(existing: { text?: string }[], newItems: { text?: string }[]): { text: string }[] {
@@ -32,12 +32,27 @@ function mergeTextFields(existing: { text?: string }[], newItems: { text?: strin
   return unique.map((text) => ({ text }));
 }
 
-const MEMBERSHIP_KEYWORDS = ["membership", "subscription", "monthly", "annual", "dues"];
+/** Check if normalized_category array contains "subscriptions". */
+function isSubscriptionPayment(normalizedCategory: string[] | null): boolean {
+  if (!normalizedCategory || !Array.isArray(normalizedCategory)) return false;
+  return normalizedCategory.some((c) => {
+    const lower = c.toLowerCase();
+    return lower === "subscription" || lower === "subscriptions";
+  });
+}
 
-function isMembershipPayment(offeringName: string[] | null): boolean {
-  if (!offeringName || !Array.isArray(offeringName)) return false;
-  const joined = offeringName.join(" ").toLowerCase();
-  return MEMBERSHIP_KEYWORDS.some((k) => joined.includes(k));
+/** Convert a UTC timestamp to a PST/PDT calendar date string (YYYY-MM-DD). */
+function toPacificDate(utcTimestamp: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(utcTimestamp));
+  const y = parts.find((p) => p.type === "year")!.value;
+  const m = parts.find((p) => p.type === "month")!.value;
+  const d = parts.find((p) => p.type === "day")!.value;
+  return `${y}-${m}-${d}`;
 }
 
 /** Fetch weather from Open-Meteo for a date (LA area). */
@@ -137,7 +152,7 @@ Deno.serve(async (req) => {
 
       const dataSources: Record<string, unknown> = {};
 
-      // 1) Arketa reservations
+      // 1) Arketa reservations + class reservation_type lookup
       const { data: resRows, error: resErr } = await supabase
         .from("arketa_reservations_history")
         .select("class_id, class_date, class_name, status, checked_in")
@@ -149,6 +164,20 @@ Deno.serve(async (req) => {
           JSON.stringify({ success: false, error: resErr.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Build reservation_type lookup from arketa_classes (calculated field)
+      const resClassIds = [...new Set((resRows ?? []).map((r) => r.class_id).filter(Boolean))] as string[];
+      const classReservationTypeMap: Record<string, string> = {};
+      if (resClassIds.length > 0) {
+        const { data: classTypeRows } = await supabase
+          .from("arketa_classes")
+          .select("external_id, reservation_type, name")
+          .in("external_id", resClassIds)
+          .eq("class_date", report_date);
+        for (const ct of classTypeRows ?? []) {
+          classReservationTypeMap[ct.external_id as string] = (ct.reservation_type as string) ?? "";
+        }
       }
 
       let totalGymCheckins = 0;
@@ -178,8 +207,11 @@ Deno.serve(async (req) => {
 
         if (!checkedIn) continue;
 
+        // Use calculated reservation_type from arketa_classes
+        const calcResType = classReservationTypeMap[r.class_id as string] ?? "";
+
         if (isGymCheckin(className)) totalGymCheckins++;
-        else if (isPrivateAppointment(className)) privateAppointments++;
+        else if (isPrivateAppointment(calcResType)) privateAppointments++;
         else totalClassCheckins++;
       }
 
@@ -193,34 +225,22 @@ Deno.serve(async (req) => {
         private: privateAppointments,
       };
 
-      // 2) Arketa payments (amount in cents -> dollars; use offering_name for membership vs other)
-      // Convert report_date (PST calendar day) to UTC range for querying
-      // PST = UTC-8, PDT = UTC-7. Use Intl to determine correct offset for the date.
-      const pstStart = new Date(new Date(`${report_date}T00:00:00-08:00`).toISOString());
-      const pstEnd = new Date(new Date(`${report_date}T23:59:59.999-08:00`).toISOString());
-      // Adjust for PDT if applicable (March-November)
-      const reportMonth = parseInt(report_date.slice(5, 7), 10);
-      const reportDay = parseInt(report_date.slice(8, 10), 10);
-      // Simple DST check: PDT is roughly Mar 9 - Nov 2 (2nd Sun Mar to 1st Sun Nov)
-      const isDST = reportMonth > 3 && reportMonth < 11 ||
-        (reportMonth === 3 && reportDay >= 9) ||
-        (reportMonth === 11 && reportDay < 2);
-      const utcStartStr = isDST
-        ? `${report_date}T07:00:00.000Z`
-        : `${report_date}T08:00:00.000Z`;
+      // 2) Arketa payments — query a wide UTC window, then filter by PST date in code
+      // Use a generous UTC window: report_date midnight-12h to report_date+1 midnight+12h
+      // to capture all records that could fall on this PST date
+      const wideStart = `${report_date}T00:00:00.000Z`;
       const nextDate = new Date(`${report_date}T12:00:00Z`);
       nextDate.setDate(nextDate.getDate() + 1);
       const nextDateStr = nextDate.toISOString().slice(0, 10);
-      const utcEndStr = isDST
-        ? `${nextDateStr}T07:00:00.000Z`
-        : `${nextDateStr}T08:00:00.000Z`;
+      const wideEnd = `${nextDateStr}T23:59:59.999Z`;
 
       const { data: payRows, error: payErr } = await supabase
         .from("arketa_payments")
-        .select("amount, offering_name, normalized_category, created_at_api")
-        .gte("created_at_api", utcStartStr)
-        .lt("created_at_api", utcEndStr)
-        .not("amount", "is", null);
+        .select("amount, transaction_fees, amount_refunded, normalized_category, created_at_api")
+        .gte("created_at_api", wideStart)
+        .lte("created_at_api", wideEnd)
+        .not("amount", "is", null)
+        .eq("status", "succeeded");
 
       if (payErr) {
         return new Response(
@@ -229,16 +249,27 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Filter to only records whose created_at_api falls on report_date in PST
+      const pstFilteredPayments = (payRows ?? []).filter((p) => {
+        if (!p.created_at_api) return false;
+        return toPacificDate(p.created_at_api as string) === report_date;
+      });
+
       let grossSalesMembership = 0;
       let grossSalesOther = 0;
-      for (const p of payRows ?? []) {
-        const cents = Number(p.amount ?? 0);
-        const dollars = cents / 100;
-        if (isMembershipPayment(p.offering_name as string[] | null)) grossSalesMembership += dollars;
-        else grossSalesOther += dollars;
+      for (const p of pstFilteredPayments) {
+        const amount = Number(p.amount ?? 0);
+        const fees = Number(p.transaction_fees ?? 0);
+        const refunded = Number(p.amount_refunded ?? 0);
+        const dollars = amount + fees - refunded;
+        if (isSubscriptionPayment(p.normalized_category as string[] | null)) {
+          grossSalesMembership += dollars;
+        } else {
+          grossSalesOther += dollars;
+        }
       }
       const grossSalesArketa = grossSalesMembership + grossSalesOther;
-      dataSources.arketa_payments = { count: payRows?.length ?? 0, total: grossSalesArketa };
+      dataSources.arketa_payments = { count: pstFilteredPayments.length, total: grossSalesArketa };
 
       // 3) Toast POS (net_sales + gross_sales per order, sum by business_date)
       const { data: toastRows, error: toastErr } = await supabase

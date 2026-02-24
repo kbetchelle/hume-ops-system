@@ -6,6 +6,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/** Today in America/Los_Angeles as YYYY-MM-DD */
+function todayPacific(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")!.value;
+  const m = parts.find((p) => p.type === "month")!.value;
+  const d = parts.find((p) => p.type === "day")!.value;
+  return `${y}-${m}-${d}`;
+}
+
+/** Generate array of YYYY-MM-DD strings from start for numDays */
+function dateRange(start: string, numDays: number): string[] {
+  const dates: string[] = [];
+  const d = new Date(start + "T00:00:00");
+  for (let i = 0; i < numDays; i++) {
+    dates.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,14 +43,11 @@ Deno.serve(async (req) => {
 
     const results: Record<string, unknown> = {};
 
-    // 1. Refresh daily_schedule for today and tomorrow
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // 1. Refresh daily_schedule for the full 8-day window (today through today+7) using Pacific time
+    const today = todayPacific();
+    const scheduleDates = dateRange(today, 8);
 
-    const formatDate = (d: Date) => d.toISOString().split("T")[0];
-
-    for (const date of [formatDate(today), formatDate(tomorrow)]) {
+    for (const date of scheduleDates) {
       const { data, error } = await supabase.rpc("refresh_daily_schedule", {
         p_schedule_date: date,
       });

@@ -204,15 +204,15 @@ export function ManagerQAPanel() {
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
           <div className="px-4">
-            <TabsList className="w-full rounded-none">
-              <TabsTrigger value="pending" className="flex-1 gap-2 rounded-none">
+            <TabsList className="w-full">
+              <TabsTrigger value="pending" className="flex-1 gap-2">
                 <Clock className="h-4 w-4" />
                 Pending
                 {pendingCount > 0 && (
-                  <Badge variant="secondary" className="rounded-none">{pendingCount}</Badge>
+                  <Badge variant="secondary">{pendingCount}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="answered" className="flex-1 gap-2 rounded-none">
+              <TabsTrigger value="answered" className="flex-1 gap-2">
                 <CheckCircle2 className="h-4 w-4" />
                 Answered
               </TabsTrigger>

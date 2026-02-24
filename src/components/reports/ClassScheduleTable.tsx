@@ -14,6 +14,7 @@ interface ClassScheduleTableProps {
 
 type ClassDetail = {
   time: string;
+  end_time?: string;
   name: string;
   instructor: string;
   signups: number;
@@ -43,7 +44,7 @@ export function ClassScheduleTable({ report }: ClassScheduleTableProps) {
       <TableBody>
         {sorted.map((row, i) => (
           <TableRow key={i}>
-            <TableCell>{row.time}</TableCell>
+            <TableCell>{row.time}{row.end_time ? ` – ${row.end_time}` : ""}</TableCell>
             <TableCell>{row.signups}</TableCell>
             <TableCell>{row.instructor ?? "—"}</TableCell>
             <TableCell>{row.name ?? "—"}</TableCell>

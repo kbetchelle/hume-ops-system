@@ -532,12 +532,12 @@ function AnnouncementCard({
                 <Badge className="bg-green-600 text-white border-green-600 text-[10px]">This Week</Badge>
               )}
               {isWeekly ? (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px]">
+                <Badge variant="secondary" className="text-white border-none text-[10px] rounded-none" style={{ backgroundColor: '#009ddc', padding: '2.25px 7.25px' }}>
                   <Calendar className="h-3 w-3 mr-1" />
                   Weekly Update
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-[10px] text-white border-none rounded-none" style={{ backgroundColor: '#f6821f', padding: '2.25px 7.25px' }}>
                   <Bell className="h-3 w-3 mr-1" />
                   Announcement
                 </Badge>
@@ -547,11 +547,9 @@ function AnnouncementCard({
                   <Clock className="h-3 w-3" />
                   Scheduled {format(new Date(announcement.scheduled_at!), "MMM d, h:mm a")}
                 </Badge>
-              ) : announcement.is_active ? (
-                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px]">Active</Badge>
-              ) : (
+              ) : !announcement.is_active ? (
                 <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
-              )}
+              ) : null}
             </div>
 
             <h3 className="font-medium truncate text-sm">{announcement.title}</h3>

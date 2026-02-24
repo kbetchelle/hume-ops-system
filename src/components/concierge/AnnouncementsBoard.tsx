@@ -78,6 +78,22 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
   const { data: userRoles } = useUserRoles(user?.id);
   const queryClient = useQueryClient();
   
+  // Fetch user's profile created_at to suppress unread state for pre-signup announcements
+  const { data: userCreatedAt } = useQuery({
+    queryKey: ['profile-created-at', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .single();
+      if (error) return null;
+      return data?.created_at ?? null;
+    },
+    enabled: !!user?.id,
+  });
+
   // When contextRole is set, filter only by that role (dashboard-aware); memoize so filteredAnnouncements useMemo stays stable
   const roles = useMemo(
     () => (contextRole ? [contextRole] : (userRoles?.map((r) => r.role) || [])),
@@ -174,15 +190,21 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
     markAsRead.mutate(announcementId);
   }, [readAnnouncements, markAsRead]);
 
-  const readSet = new Set(readAnnouncements || []);
+  // Helper: announcement is considered "read" if explicitly read OR created before user's first login
+  const isAnnouncementRead = useCallback((a: Announcement) => {
+    const readSet = new Set(readAnnouncements || []);
+    if (readSet.has(a.id)) return true;
+    if (userCreatedAt && new Date(a.created_at) < new Date(userCreatedAt)) return true;
+    return false;
+  }, [readAnnouncements, userCreatedAt]);
 
   const announcementsList = filteredAnnouncements
     .filter(a => a.announcement_type === 'announcement')
-    .map(a => ({ ...a, is_read: readSet.has(a.id) }));
+    .map(a => ({ ...a, is_read: isAnnouncementRead(a) }));
 
   const weeklyUpdates = filteredAnnouncements
     .filter(a => a.announcement_type === 'weekly_update')
-    .map(a => ({ ...a, is_read: readSet.has(a.id) }))
+    .map(a => ({ ...a, is_read: isAnnouncementRead(a) }))
     .sort((a, b) => {
       const dateA = a.week_start_date ? new Date(a.week_start_date) : new Date(a.created_at);
       const dateB = b.week_start_date ? new Date(b.week_start_date) : new Date(b.created_at);
@@ -217,8 +239,8 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
 
   const openAnnouncementSheet = useCallback((item: Announcement & { is_read?: boolean }) => {
     setSelectedForSheet(item);
-    if (!item.is_read) markAsRead.mutate(item.id);
-  }, [markAsRead]);
+    // Don't mark as read immediately on mobile — ReadSentinel in sheet handles scroll-depth
+  }, []);
 
   const priorityStyles: Record<string, string> = {
     urgent: 'border-destructive bg-destructive/5',
@@ -319,6 +341,9 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
                     commentCount={commentCounts?.[selectedForSheet.id] || 0}
                     className="mt-4 pt-4 border-t"
                   />
+                  {!selectedForSheet.is_read && (
+                    <ReadSentinel announcementId={selectedForSheet.id} onVisible={handleSentinelVisible} />
+                  )}
                 </>
               )}
             </div>
@@ -341,9 +366,10 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
         {isThisWeek && (
           <Badge className="bg-green-600 text-white border-green-600">This Week</Badge>
         )}
-        <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
+        <Badge variant="secondary" className="text-[10px] border-none rounded-none" style={{ backgroundColor: '#62bb47', color: 'white', paddingLeft: '6.25px', paddingRight: '6.25px', paddingTop: '2.25px', paddingBottom: '2.25px' }}>Weekly Update</Badge>
+        <div className="flex-1" />
         {item.week_start_date && (
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-[10px] border-none rounded-none" style={{ backgroundColor: '#7c3aed', color: 'white', paddingLeft: '6.25px', paddingRight: '6.25px', paddingTop: '2.25px', paddingBottom: '2.25px' }}>
             Week of {format(parseISO(item.week_start_date), 'MMM d, yyyy')}
           </Badge>
         )}

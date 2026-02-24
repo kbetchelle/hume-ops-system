@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, User, Settings, Bug, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMarkWalkthroughCompleted, useMarkWalkthroughSkipped } from "@/hooks/useWalkthroughState";
 import { useOptionalSidebar } from "@/components/ui/sidebar";
@@ -30,6 +30,12 @@ export interface WalkthroughStep {
   text: string;
   /** When false, this step is omitted from the walkthrough */
   showWhen?: () => boolean;
+  /** When true, show a static replica of the user menu dropdown */
+  showMenuPreview?: boolean;
+  /** Offset the arrow endpoint by {x, y} pixels from the target center */
+  arrowEndOffset?: { x: number; y: number };
+  /** Show a colored border highlight around the target element */
+  highlightBorder?: string;
 }
 
 /** Arrow colors cycle: orange, yellow, red, purple, blue, green (app brand add palette + purple) */
@@ -79,10 +85,11 @@ function getArrowPoints(
   direction: WalkthroughArrowDirection,
   targetRect: DOMRect,
   viewportWidth: number,
-  viewportHeight: number
+  viewportHeight: number,
+  endOffset?: { x: number; y: number }
 ): { start: { x: number; y: number }; end: { x: number; y: number } } {
   const margin = viewportWidth < BREAKPOINT_TABLET ? 100 : ARROW_MARGIN;
-  const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 60;
+  const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 80;
   const cx = targetRect.left + targetRect.width / 2;
   const cy = targetRect.top + targetRect.height / 2;
   let startX: number;
@@ -120,6 +127,10 @@ function getArrowPoints(
       endX = targetRect.left;
       endY = cy;
   }
+  if (endOffset) {
+    endX += endOffset.x;
+    endY += endOffset.y;
+  }
   return { start: { x: startX, y: startY }, end: { x: endX, y: endY } };
 }
 
@@ -150,7 +161,7 @@ function getStepTextPosition(
   const isTabletOrSmaller = viewportWidth < BREAKPOINT_TABLET;
   const isDesktop = viewportWidth >= BREAKPOINT_DESKTOP;
   const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
-  const minLeft = isTabletOrSmaller ? 16 : SIDEBAR_WIDTH + 60;
+  const minLeft = isTabletOrSmaller ? 16 : SIDEBAR_WIDTH + 80;
   const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
   const gap = isTabletOrSmaller ? STEP_TEXT_GAP + 8 : STEP_TEXT_GAP;
 
@@ -166,7 +177,7 @@ function getStepTextPosition(
   switch (direction) {
     case "left":
       return {
-        left: Math.min(targetRect.right + gap, maxLeft),
+        left: Math.max(minLeft, Math.min(targetRect.right + gap, maxLeft)),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
     case "right":
@@ -272,12 +283,16 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
-  // Programmatically open dropdown when step targets a dropdown trigger (user menu, role switcher)
-  const DROPDOWN_TARGET_SELECTORS = ["[data-walkthrough=user-menu]", "[data-walkthrough=role-switcher]"];
+  // Show static menu replica for steps with showMenuPreview flag
+  const showMenuPreview = currentStep?.showMenuPreview && targetRect;
+  // Bug step: has both showMenuPreview and arrowEndOffset
+  const isBugStep = !!(currentStep?.showMenuPreview && currentStep?.arrowEndOffset);
+
+  // Programmatically open dropdown when step targets role switcher only
   useEffect(() => {
     if (!currentStep) return;
     const target = typeof currentStep.target === "string" ? currentStep.target : null;
-    if (target && DROPDOWN_TARGET_SELECTORS.includes(target)) {
+    if (target && target === "[data-walkthrough=role-switcher]") {
       const el = document.querySelector(target) as HTMLElement | null;
       if (el) {
         const timeoutId = setTimeout(() => {
@@ -332,7 +347,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 768;
   const arrowPoints =
     currentStep && targetRect
-      ? getArrowPoints(currentStep.arrowDirection, targetRect, viewportWidth, viewportHeight)
+      ? getArrowPoints(currentStep.arrowDirection, targetRect, viewportWidth, viewportHeight, currentStep.arrowEndOffset)
       : null;
   const pathD = arrowPoints ? getArrowPathD(arrowPoints.start, arrowPoints.end) : "";
   const arrowColor = WALKTHROUGH_ARROW_COLORS[stepIndex % WALKTHROUGH_ARROW_COLORS.length];
@@ -358,7 +373,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
         <>
           {pathD && (
             <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
+              className="absolute inset-0 w-full h-full pointer-events-none z-[102]"
               style={{ "--walkthrough-path-length": pathLength } as React.CSSProperties}
               aria-hidden
             >
@@ -392,7 +407,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground max-w-[280px] md:max-w-[320px] whitespace-pre-line px-4 py-3 rounded border shadow-sm flex flex-col gap-[15px]"
+            className="absolute text-foreground max-w-[360px] md:max-w-[400px] min-w-[360px] min-h-[168px] whitespace-pre-line px-4 py-3 rounded-none border shadow-sm flex flex-col gap-[15px] items-center justify-center text-center"
             style={
               arrowPoints && targetRect
                 ? (() => {
@@ -406,21 +421,21 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                     return {
                       left: pos.left,
                       top: pos.top,
-                      backgroundColor: hexToRgba(arrowColor, 0.1),
-                      borderColor: arrowColor,
+                    backgroundColor: hexToRgba(arrowColor, 1),
+                    borderColor: arrowColor,
                     };
                   })()
                 : {
                     left: "50%",
                     top: "50%",
                     transform: "translate(-50%, -50%)",
-                    backgroundColor: hexToRgba(arrowColor, 0.1),
+                    backgroundColor: hexToRgba(arrowColor, 1),
                     borderColor: arrowColor,
                   }
             }
           >
             <div>
-              <p className="text-sm font-medium uppercase tracking-widest">
+              <p className="text-sm font-medium uppercase tracking-widest text-white">
                 {currentStep.text}
               </p>
             </div>
@@ -428,8 +443,89 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
         </>
       )}
 
+      {/* Highlight border around target for menu preview steps */}
+      {showMenuPreview && targetRect && (
+        <div
+          className="absolute z-[101] pointer-events-none"
+          style={{
+            left: targetRect.left - 4,
+            top: targetRect.top - 4,
+            width: targetRect.width + 8,
+            height: targetRect.height + 8,
+            border: "2px solid #fcb827",
+            borderRadius: 4,
+          }}
+          aria-hidden
+        />
+      )}
+
+      {/* Highlight border around target for steps with highlightBorder */}
+      {currentStep?.highlightBorder && targetRect && !showMenuPreview && (
+        <div
+          className="absolute z-[101] pointer-events-none"
+          style={{
+            left: targetRect.left - 4,
+            top: targetRect.top - 4,
+            width: targetRect.width + 8,
+            height: targetRect.height + 8,
+            border: `2px solid ${currentStep.highlightBorder}`,
+            borderRadius: 4,
+          }}
+          aria-hidden
+        />
+      )}
+
+      {/* Static menu replica for walkthrough */}
+      {showMenuPreview && targetRect && (
+        <div
+          className="absolute z-[101] w-56 border border-border bg-background shadow-md pointer-events-none"
+          style={{
+            left: targetRect.left,
+            top: targetRect.bottom + 8,
+          }}
+          aria-hidden
+        >
+          <div className="p-1 flex flex-col">
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <Bell className="h-3 w-3" />
+              {t("Notifications", "Notificaciones")}
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <User className="h-3 w-3" />
+              Profile
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <Settings className="h-3 w-3" />
+              Account Settings
+            </div>
+            <div className="my-1 h-px bg-border" />
+            <div
+              className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground relative"
+              style={isBugStep ? { outline: "2px solid #62bb47", outlineOffset: 2 } : undefined}
+            >
+              <Bug className="h-3 w-3" />
+              {t("Report a Bug", "Reportar un Bug")}
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <LogOut className="h-3 w-3" />
+              {t("Sign out", "Cerrar sesión")}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controls: progress dots, back, next, skip */}
-      <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4 px-4">
+      <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-3 px-4">
+        <Button
+          ref={skipButtonRef}
+          type="button"
+          variant="link"
+          className="text-add-orange hover:text-add-orange/80 uppercase text-[10px] tracking-widest p-0 h-auto no-underline hover:no-underline"
+          onClick={handleSkip}
+          aria-label={t("Skip walkthrough", "Omitir guía")}
+        >
+          {t("Skip", "Omitir")}
+        </Button>
         <div className="flex items-center gap-2">
           {filteredSteps.map((_, i) => (
             <button
@@ -452,7 +548,8 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             size="icon"
             onClick={handleBack}
             disabled={!canGoBack}
-            className="rounded-none h-9 w-9 border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20 hover:text-add-orange disabled:opacity-50"
+            className="rounded-none h-9 w-9 border-2 text-white hover:opacity-80 disabled:opacity-50"
+            style={{ backgroundColor: arrowColor, borderColor: arrowColor }}
             aria-label={t("Previous step", "Paso anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -460,21 +557,12 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           <Button
             type="button"
             variant="default"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 text-white hover:opacity-80"
+            style={{ backgroundColor: arrowColor, borderColor: arrowColor }}
             onClick={handleNext}
             aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >
             {isLastStep ? t("Done", "Listo") : t("Next", "Siguiente")}
-          </Button>
-          <Button
-            ref={skipButtonRef}
-            type="button"
-            variant="ghost"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20"
-            onClick={handleSkip}
-            aria-label={t("Skip walkthrough", "Omitir guía")}
-          >
-            {t("Skip", "Omitir")}
           </Button>
         </div>
       </div>

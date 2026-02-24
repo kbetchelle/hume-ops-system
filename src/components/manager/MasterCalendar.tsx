@@ -3,14 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import {
   format,
   parseISO,
-  startOfWeek,
-  endOfWeek,
   startOfDay,
   endOfDay,
   eachDayOfInterval,
+  addDays,
   isSameDay,
-  addWeeks,
-  subWeeks,
   isToday,
 } from "date-fns";
 import {
@@ -108,8 +105,8 @@ export function MasterCalendar() {
   const { startDate, endDate } = useMemo(() => {
     if (viewMode === "week") {
       return {
-        startDate: startOfWeek(currentDate, { weekStartsOn: 0 }),
-        endDate: endOfWeek(currentDate, { weekStartsOn: 0 }),
+        startDate: startOfDay(currentDate),
+        endDate: endOfDay(addDays(currentDate, 6)),
       };
     } else {
       return {
@@ -287,17 +284,17 @@ export function MasterCalendar() {
   // Navigation handlers
   const goToPrevious = () => {
     if (viewMode === "week") {
-      setCurrentDate(subWeeks(currentDate, 1));
+      setCurrentDate(addDays(currentDate, -7));
     } else {
-      setCurrentDate(new Date(currentDate.getTime() - 24 * 60 * 60 * 1000));
+      setCurrentDate(addDays(currentDate, -1));
     }
   };
 
   const goToNext = () => {
     if (viewMode === "week") {
-      setCurrentDate(addWeeks(currentDate, 1));
+      setCurrentDate(addDays(currentDate, 7));
     } else {
-      setCurrentDate(new Date(currentDate.getTime() + 24 * 60 * 60 * 1000));
+      setCurrentDate(addDays(currentDate, 1));
     }
   };
 
@@ -354,19 +351,22 @@ export function MasterCalendar() {
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Master Calendar
+            {viewMode === "week"
+              ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`
+              : format(currentDate, "EEEE, MMMM d, yyyy")}
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Week View</SelectItem>
-                <SelectItem value="day">Day View</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={goToPrevious}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday}>
+                Today
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToNext}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
             <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -385,27 +385,9 @@ export function MasterCalendar() {
             </Button>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goToPrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToToday}>
-              Today
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <h3 className="text-lg font-semibold">
-            {viewMode === "week"
-              ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`
-              : format(currentDate, "EEEE, MMMM d, yyyy")}
-          </h3>
-        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {daysToDisplay.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd");
             const dayEvents = eventsByDate[dateStr] || [];
@@ -414,7 +396,7 @@ export function MasterCalendar() {
             return (
               <div
                 key={dateStr}
-                className={`border rounded-lg p-3 min-h-[200px] ${
+                className={`border rounded-none p-3 min-h-[200px] ${
                   isTodayDate ? "bg-accent border-accent-foreground/20" : ""
                 }`}
               >
@@ -438,7 +420,7 @@ export function MasterCalendar() {
                     dayEvents.map((event) => (
                       <div
                         key={event.id}
-                        className={`p-2 rounded border text-xs ${event.color}`}
+                        className={`p-2 rounded-none border text-xs ${event.color}`}
                       >
                         <div className="flex items-start gap-1">
                           {event.icon}

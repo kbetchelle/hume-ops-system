@@ -11,20 +11,14 @@ export function StaffResourcesManager() {
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
       <Tabs defaultValue={defaultTab} className="w-full p-[10px] flex flex-col flex-1 min-h-0">
-        <TabsList className="bg-transparent border-b border-border rounded-none w-full justify-start gap-6 h-auto p-0">
-          <TabsTrigger
-            value="quick-links"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
-            <Link2 className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-xs">Quick Links</span>
+        <TabsList className="w-full">
+          <TabsTrigger value="quick-links" className="flex-1 gap-2">
+            <Link2 className="h-4 w-4" />
+            Quick Links
           </TabsTrigger>
-          <TabsTrigger
-            value="resource-pages"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent text-[10px] uppercase tracking-widest px-0 pb-3"
-          >
-            <FileText className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-xs">Resource Pages</span>
+          <TabsTrigger value="resource-pages" className="flex-1 gap-2">
+            <FileText className="h-4 w-4" />
+            Resource Pages
           </TabsTrigger>
         </TabsList>
         <TabsContent value="quick-links" className="pt-8 flex-1 min-h-0 overflow-auto">

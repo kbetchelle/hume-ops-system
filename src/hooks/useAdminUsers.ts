@@ -12,6 +12,7 @@ export interface AdminUser {
   created_at: string;
   roles: AppRole[];
   primary_role?: AppRole | null;
+  must_change_password?: boolean;
 }
 
 export function useAdminUsers() {

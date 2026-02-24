@@ -15,6 +15,7 @@ import {
   DoorOpen,
   MapPin,
   CreditCard,
+  Music,
 } from 'lucide-react';
 import type { NotificationType } from '@/hooks/useNotifications';
 import { add_color } from '@/lib/constants';
@@ -71,6 +72,7 @@ export const NOTIFICATION_FORMAT: Record<NotificationType, NotificationFormatCon
   room_turnover:            { icon: DoorOpen,      hex: add_color.green,  labelEn: 'Room Turnover',         labelEs: 'Rotación de Habitación' },
   tour_alert:               { icon: MapPin,        hex: add_color.blue,   labelEn: 'Tour Alert',            labelEs: 'Alerta de Tour' },
   mastercard_arrival:       { icon: CreditCard,    hex: '#f6821f',        labelEn: 'Mastercard Arrival',    labelEs: 'Llegada Mastercard' },
+  roof_music_reset:         { icon: Music,         hex: add_color.green,  labelEn: 'Roof Music Reset',      labelEs: 'Restablecer Música' },
 };
 
 export const FALLBACK_FORMAT: NotificationFormatConfig = {
@@ -116,6 +118,7 @@ export const ROLE_NOTIFICATION_TYPES: Record<AppRole, NotificationType[]> = {
   concierge: [
     'announcement', 'message', 'member_alert', 'class_turnover',
     'package_arrived', 'tour_alert', 'room_turnover', 'mastercard_arrival',
+    'mat_cleaning', 'roof_music_reset',
   ],
   trainer: [
     'announcement', 'message', 'class_turnover', 'mat_cleaning',

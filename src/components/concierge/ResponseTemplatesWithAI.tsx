@@ -886,9 +886,20 @@ export function ResponseTemplatesWithAI() {
     }
   };
 
-  const handleCopyAiOutput = () => {
-    navigator.clipboard.writeText(aiOutput);
-    toast.success("Copied to clipboard");
+  const handleCopyAiOutput = async () => {
+    try {
+      // Strip any potential HTML tags and copy as plain text only
+      const plainText = aiOutput.replace(/<[^>]*>/g, '');
+      const blob = new Blob([plainText], { type: 'text/plain' });
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/plain': blob })
+      ]);
+      toast.success("Copied to clipboard");
+    } catch {
+      // Fallback
+      navigator.clipboard.writeText(aiOutput.replace(/<[^>]*>/g, ''));
+      toast.success("Copied to clipboard");
+    }
   };
 
   const handleSubmitFeedback = async () => {
@@ -905,8 +916,17 @@ export function ResponseTemplatesWithAI() {
         template_guide_id: aiTemplateGuide !== "none" ? aiTemplateGuide : null,
       });
       if (error) throw error;
-      setFeedbackSubmitted(true);
-      toast.success("Feedback submitted");
+      if (feedbackRating === "negative") {
+        // Auto-regenerate on negative feedback
+        setFeedbackSubmitted(false);
+        setFeedbackRating(null);
+        setFeedbackText("");
+        toast.success("Feedback submitted — regenerating...");
+        handleAiGenerate();
+      } else {
+        setFeedbackSubmitted(true);
+        toast.success("Feedback submitted");
+      }
     } catch (err) {
       console.error("Feedback error:", err);
       toast.error("Failed to submit feedback");
@@ -1532,7 +1552,7 @@ export function ResponseTemplatesWithAI() {
               {aiOutput && (
                 <div className="border p-4 bg-primary/5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Badge className="rounded-none text-xs">
+                    <Badge className="rounded-none text-xs border-none" style={{ backgroundColor: '#e03a3c', color: 'white' }}>
                       <Sparkles className="h-3 w-3 mr-1" />
                       HUME Voice
                     </Badge>

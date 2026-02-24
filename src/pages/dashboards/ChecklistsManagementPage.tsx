@@ -11,35 +11,20 @@ export default function ChecklistsManagementPage() {
     <DashboardLayout title="Checklists">
       <div className="space-y-8">
         <Tabs defaultValue="concierge" className="w-full">
-          <TabsList className="border-b border-border w-full justify-start rounded-none bg-transparent p-0">
-            <TabsTrigger
-              value="concierge"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
-            >
+          <TabsList className="w-full">
+            <TabsTrigger value="concierge" className="flex-1 gap-2">
               Concierge
             </TabsTrigger>
-            <TabsTrigger
-              value="boh"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
-            >
+            <TabsTrigger value="boh" className="flex-1 gap-2">
               Back of House
             </TabsTrigger>
-            <TabsTrigger
-              value="cafe"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
-            >
+            <TabsTrigger value="cafe" className="flex-1 gap-2">
               Cafe
             </TabsTrigger>
-            <TabsTrigger
-              value="assign"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
-            >
+            <TabsTrigger value="assign" className="flex-1 gap-2">
               Assign Checklists
             </TabsTrigger>
-            <TabsTrigger
-              value="status"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4 py-2"
-            >
+            <TabsTrigger value="status" className="flex-1 gap-2">
               Completion Status
             </TabsTrigger>
           </TabsList>

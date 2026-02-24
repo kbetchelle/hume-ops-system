@@ -13,6 +13,7 @@ import { useAutoSubmitConcierge } from "@/hooks/useAutoSubmitConcierge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MobileChecklistItem, ChecklistItemData } from "@/components/checklists/MobileChecklistItem";
+import { add_color } from "@/lib/constants";
 
 import {
   saveCompletionOffline,
@@ -478,6 +479,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
     },
   });
 
+
   const isLoading = checklistLoading || itemsLoading || completionsLoading;
 
   const completedCount = completionMap.size;
@@ -506,7 +508,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
   };
 
   return (
-    <Card className={cn("w-full border-2 border-border shadow-md bg-card", variant === "compact" && "rounded-none")}>
+    <Card className={cn("w-full border-2 border-border shadow-none bg-card", variant === "compact" && "rounded-none")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -516,7 +518,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[12px]">
+            <Badge variant="outline" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#f6821f', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
               {completedCount}/{totalCount} complete
             </Badge>
             {!isOnline && (
@@ -544,7 +546,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
             )}
           </div>
         </div>
-        <Progress value={progressPercentage} className="h-2 mt-3" />
+        
       </CardHeader>
 
       <CardContent className="p-0">
@@ -598,7 +600,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
                         <span className="font-medium" style={{ fontSize: '13.5px' }}>{group.timeHint}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="destructive">
                           {group.completedCount}/{group.totalCount}
                         </Badge>
                       </div>

@@ -8,6 +8,7 @@ import { Users, AlertCircle, Package } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ConciergeSidebar, type ConciergeView } from "@/components/concierge/ConciergeSidebar";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ConciergeBottomNav } from "@/components/concierge/ConciergeBottomNav";
 import { ConciergeHeader } from "@/components/concierge/ConciergeHeader";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
@@ -37,6 +38,7 @@ import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 import { MastercardArrivalBanner } from "@/components/concierge/MastercardArrivalBanner";
+import { ChecklistAlertBanners } from "@/components/concierge/ChecklistAlertBanners";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { usePackageStats } from "@/hooks/usePackages";
@@ -59,6 +61,7 @@ function conciergeViewToTabId(view: ConciergeView): string {
 }
 
 export default function ConciergeDashboard() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<ConciergeView>("home");
   const [reportView, setReportView] = useState<"current" | "past">("current");
@@ -118,18 +121,18 @@ export default function ConciergeDashboard() {
   }, [queryClient, today]);
 
   const viewTitles: Record<ConciergeView, string> = {
-    home: "Home",
-    report: "Shift Report",
-    messages: "Messages",
-    announcements: "Announcements",
-    "whos-working": "Who's Working",
-    templates: "Response Templates",
-    resources: "Resources",
-    "resources-quick-links": "Quick Links",
-    "resources-pages": "Resource Pages",
-    "lost-found": "Lost & Found",
-    packages: "Package Tracker",
-    qa: "Q&A"
+    home: t("view.home"),
+    report: t("view.shiftReport"),
+    messages: t("view.messages"),
+    announcements: t("view.announcements"),
+    "whos-working": t("view.whosWorking"),
+    templates: t("view.responseTemplates"),
+    resources: t("view.resources"),
+    "resources-quick-links": t("view.quickLinks"),
+    "resources-pages": t("view.resourcePages"),
+    "lost-found": t("view.lostAndFound"),
+    packages: t("view.packageTracker"),
+    qa: t("view.qa"),
   };
 
   const renderContent = () => {
@@ -144,18 +147,20 @@ export default function ConciergeDashboard() {
             >
               <MastercardArrivalBanner />
               <EmbeddedChecklist variant="compact" />
+              <ChecklistAlertBanners />
               <UpcomingTodayCard maxItems={3} />
             </MobilePageWrapper>
           );
         }
         return (
-          <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-4" style={{ padding: '36px' }}>
             <MastercardArrivalBanner />
             <div className="flex flex-wrap gap-4">
-              <div className="flex-1 basis-[450px] min-w-[450px]" style={{ paddingTop: '25px' }}>
+              <div className="flex-1 basis-[450px] min-w-[450px]">
                 <EmbeddedChecklist />
               </div>
               <div className="flex-1 basis-[450px] min-w-[450px]">
+                <ChecklistAlertBanners />
                 <UpcomingTodayCard />
               </div>
             </div>
@@ -183,8 +188,8 @@ export default function ConciergeDashboard() {
             <div className="max-w-3xl mx-auto">
               <Tabs value={reportView} onValueChange={(v) => setReportView(v as "current" | "past")}>
                 <TabsList className="mb-4 rounded-none w-full sm:w-auto">
-                  <TabsTrigger value="current" className="rounded-none">Current shift</TabsTrigger>
-                  <TabsTrigger value="past" className="rounded-none">Past reports</TabsTrigger>
+                  <TabsTrigger value="current" className="rounded-none">{t("report.currentShift")}</TabsTrigger>
+                  <TabsTrigger value="past" className="rounded-none">{t("report.pastReports")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="current">
                   <Suspense fallback={<SkeletonLoader variant="form" />}>

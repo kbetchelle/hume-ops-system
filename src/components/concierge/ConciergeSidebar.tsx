@@ -1,23 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  Home,
-  FileText,
-  MessageSquare,
-  Megaphone,
-  Users,
-  FileCode,
-  FolderOpen,
-  PackageOpen,
-  Eye,
-  HelpCircle,
-  User,
-  Settings,
-  Bug,
-  LogOut,
-  ChevronRight,
-  Link2,
-  BookOpen,
-  type LucideIcon,
+  Home, FileText, MessageSquare, Megaphone, Users, FileCode, FolderOpen, PackageOpen, Eye,
+  HelpCircle, User, Settings, Bug, LogOut, ChevronRight, Link2, BookOpen, type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -25,46 +9,26 @@ import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserRoles";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 
 export type ConciergeView =
-  | "home"
-  | "report"
-  | "messages"
-  | "announcements"
-  | "templates"
-  | "resources"
-  | "resources-quick-links"
-  | "resources-pages"
-  | "lost-found"
-  | "whos-working"
-  | "packages"
-  | "qa";
+  | "home" | "report" | "messages" | "announcements" | "templates"
+  | "resources" | "resources-quick-links" | "resources-pages"
+  | "lost-found" | "whos-working" | "packages" | "qa";
 
 interface NavItem {
   id: ConciergeView;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   badge?: number;
   hasUnreadDot?: boolean;
@@ -72,7 +36,7 @@ interface NavItem {
 }
 
 interface NavSection {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 }
 
@@ -82,9 +46,9 @@ interface ConciergeSidebarProps {
   unreadCount?: number;
 }
 
-const RESOURCE_SUB_ITEMS: { id: ConciergeView; label: string; icon: LucideIcon }[] = [
-  { id: "resources-quick-links", label: "Quick Links", icon: Link2 },
-  { id: "resources-pages", label: "Resource Pages", icon: FileText },
+const RESOURCE_SUB_ITEMS: { id: ConciergeView; labelKey: string; icon: LucideIcon }[] = [
+  { id: "resources-quick-links", labelKey: "nav.quickLinks", icon: Link2 },
+  { id: "resources-pages", labelKey: "nav.resourcePages", icon: FileText },
 ];
 
 function ResourcesSubMenu({
@@ -94,17 +58,14 @@ function ResourcesSubMenu({
   activeView: ConciergeView;
   onViewChange: (view: ConciergeView) => void;
 }) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResourcesView = activeView.startsWith("resources");
 
-  // Auto-expand when on resources view, auto-collapse when not
   useEffect(() => {
-    if (isResourcesView) {
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
+    if (isResourcesView) setIsOpen(true);
+    else setIsOpen(false);
   }, [isResourcesView]);
 
   const handleMouseEnter = useCallback(() => {
@@ -112,20 +73,13 @@ function ResourcesSubMenu({
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    if (!isResourcesView) {
-      setIsOpen(false);
-    }
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+    if (!isResourcesView) setIsOpen(false);
   }, [isResourcesView]);
 
   const handleClick = useCallback(() => {
     setIsOpen((prev) => !prev);
-    if (!isResourcesView) {
-      onViewChange("resources");
-    }
+    if (!isResourcesView) onViewChange("resources");
   }, [isResourcesView, onViewChange]);
 
   return (
@@ -140,7 +94,7 @@ function ResourcesSubMenu({
           )}
         >
           <FolderOpen className="h-4 w-4 shrink-0" />
-          <span className="flex-1">Resources</span>
+          <span className="flex-1">{t("nav.resources")}</span>
           <ChevronRight className={cn("h-3 w-3 transition-transform", isOpen && "rotate-90")} />
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -160,7 +114,7 @@ function ResourcesSubMenu({
                   )}
                 >
                   <Icon className="h-3 w-3 shrink-0" />
-                  <span>{sub.label}</span>
+                  <span>{t(sub.labelKey)}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
@@ -171,15 +125,12 @@ function ResourcesSubMenu({
   );
 }
 
-export function ConciergeSidebar({
-  activeView,
-  onViewChange,
-  unreadCount = 0,
-}: ConciergeSidebarProps) {
+export function ConciergeSidebar({ activeView, onViewChange, unreadCount = 0 }: ConciergeSidebarProps) {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const { data: profile } = useUserProfile(user?.id);
   const { signOut } = useAuth();
+  const { t } = useLanguage();
   const [showBugReport, setShowBugReport] = useState(false);
   const { data: hasUnreadAnnouncements } = useUnreadAnnouncements();
 
@@ -195,31 +146,30 @@ export function ConciergeSidebar({
 
   const sections: NavSection[] = [
     {
-      title: "Main",
+      titleKey: "nav.main",
       items: [
-        { id: "home", label: "Home", icon: Home },
-        { id: "report", label: "Shift Report", icon: FileText },
+        { id: "home", labelKey: "nav.home", icon: Home },
+        { id: "report", labelKey: "nav.shiftReport", icon: FileText },
       ],
     },
     {
-      title: "Communications",
+      titleKey: "nav.communications",
       items: [
         {
           id: "messages",
-          label: "Messages",
+          labelKey: "nav.messages",
           icon: MessageSquare,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { id: "announcements", label: "Announcements", icon: Megaphone, badge: hasUnreadAnnouncements && hasUnreadAnnouncements > 0 ? Number(hasUnreadAnnouncements) : undefined },
+        { id: "announcements", labelKey: "nav.announcements", icon: Megaphone, badge: hasUnreadAnnouncements && hasUnreadAnnouncements > 0 ? Number(hasUnreadAnnouncements) : undefined },
       ],
     },
     {
-      title: "References",
+      titleKey: "nav.references",
       items: [
-        { id: "packages" as ConciergeView, label: "Package Tracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
-        { id: "lost-found", label: "Lost & Found", icon: Eye },
-        { id: "whos-working", label: "Who's Working", icon: Users },
-        
+        { id: "packages" as ConciergeView, labelKey: "nav.packageTracker", icon: PackageOpen, route: "/dashboard/package-tracking" },
+        { id: "lost-found", labelKey: "nav.lostAndFound", icon: Eye },
+        { id: "whos-working", labelKey: "nav.whosWorking", icon: Users },
       ],
     },
   ];
@@ -227,53 +177,32 @@ export function ConciergeSidebar({
   return (
     <Sidebar className="flex flex-col">
       <SidebarContent className="pt-4 flex-1">
-        {/* User greeting dropdown and role switcher at top */}
         <div className="px-3 pb-3 space-y-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full justify-start gap-2 h-8 px-2 rounded-none"
-              >
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 px-2 rounded-none">
                 <span className="text-[15px] uppercase tracking-widest truncate font-bold">
-                  Hi, {getFirstName(profile?.full_name)}
+                  {t("greeting.hi")}, {getFirstName(profile?.full_name)}
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              className="w-56 rounded-none border-border bg-background z-50" 
-              align="start" 
-              side="bottom"
-            >
-              <DropdownMenuItem 
-                onClick={() => navigate("/dashboard/profile")} 
-                className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
+            <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="bottom">
+              <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
                 <User className="mr-2 h-3 w-3" />
-                Profile
+                {t("menu.profile")}
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => navigate("/dashboard/settings")} 
-                className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
+              <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
                 <Settings className="mr-2 h-3 w-3" />
-                Settings
+                {t("menu.accountSettings")}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem 
-                onClick={() => setShowBugReport(true)} 
-                className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
+              <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
                 <Bug className="mr-2 h-3 w-3" />
-                Report a Bug
+                {t("menu.reportBug")}
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={handleSignOut} 
-                className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none"
-              >
+              <DropdownMenuItem onClick={handleSignOut} className="text-[13.5px] uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
                 <LogOut className="mr-2 h-3 w-3" />
-                Sign out
+                {t("menu.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -281,13 +210,13 @@ export function ConciergeSidebar({
           <RoleSwitcher />
         </div>
         {sections.map((section) => (
-          <SidebarGroup key={section.title}>
+          <SidebarGroup key={section.titleKey}>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3">
-              {section.title}
+              {t(section.titleKey)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.title === "References" && (
+                {section.titleKey === "nav.references" && (
                   <>
                     <SidebarMenuItem>
                       <SidebarMenuButton
@@ -299,7 +228,7 @@ export function ConciergeSidebar({
                         )}
                       >
                         <FileCode className="h-4 w-4 shrink-0" />
-                        <span>Response Templates</span>
+                        <span>{t("nav.responseTemplates")}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <ResourcesSubMenu activeView={activeView} onViewChange={onViewChange} />
@@ -308,16 +237,12 @@ export function ConciergeSidebar({
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeView === item.id;
-
                   return (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
                         onClick={() => {
-                          if (item.route) {
-                            navigate(item.route);
-                          } else {
-                            onViewChange(item.id);
-                          }
+                          if (item.route) navigate(item.route);
+                          else onViewChange(item.id);
                         }}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2 text-[12px] uppercase tracking-widest transition-colors",
@@ -326,7 +251,7 @@ export function ConciergeSidebar({
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span>{item.label}</span>
+                        <span>{t(item.labelKey)}</span>
                         {item.badge !== undefined && item.badge > 0 && (
                           <SidebarMenuBadge className={cn(
                             "ml-auto text-[10px] h-5 w-5 flex items-center justify-center p-0 rounded-none text-white",

@@ -1,14 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit, Trash, ChevronDown, ChevronUp, GripVertical, X } from 'lucide-react';
 import { getTaskColorClass } from '@/components/checklists/checklistColors';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SortableSections } from '@/components/checklists/SortableSections';
+
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -24,6 +25,7 @@ import {
   ConciergeChecklistItem,
 } from '@/hooks/checklists/useConciergeChecklists';
 import { useToast } from '@/hooks/use-toast';
+import { BulkAddItemsDialog } from '@/components/checklists/BulkAddItemsDialog';
 
 const TASK_TYPES = [
   { value: 'checkbox', label: 'Checkbox' },
@@ -47,6 +49,7 @@ export function ConciergeChecklistManager() {
   const [editingItem, setEditingItem] = useState<ConciergeChecklistItem | null>(null);
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
 
   const { data: items } = useConciergeChecklistItems(expandedId || undefined);
   
@@ -117,32 +120,83 @@ export function ConciergeChecklistManager() {
     }
   };
 
+  const handleReorder = useCallback(async (reorderedItems: { id: string; sort_order: number }[]) => {
+    try {
+      await Promise.all(
+        reorderedItems.map(({ id, sort_order }) =>
+          updateItem.mutateAsync({ id, checklistId: expandedId!, updates: { sort_order } })
+        )
+      );
+    } catch (error: any) {
+      toast({ title: 'Reorder failed', description: error.message, variant: 'destructive' });
+    }
+  }, [expandedId, updateItem, toast]);
+
+  const handleRenameSection = useCallback(async (oldName: string, newName: string) => {
+    if (!items || !expandedId) return;
+    const sectionItems = items.filter(i => (i.time_hint || 'Ungrouped') === oldName);
+    try {
+      await Promise.all(
+        sectionItems.map(item =>
+          updateItem.mutateAsync({ id: item.id, checklistId: expandedId, updates: { time_hint: newName } })
+        )
+      );
+      toast({ title: `Section renamed to "${newName}"` });
+    } catch (error: any) {
+      toast({ title: 'Rename failed', description: error.message, variant: 'destructive' });
+    }
+  }, [items, expandedId, updateItem, toast]);
+
   if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="space-y-4">
+      {/* Checklist Dialog - stable, outside dynamic content */}
+      <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
+        <ChecklistDialog
+          checklist={editingChecklist}
+          onSave={handleSaveChecklist}
+          onClose={() => {
+            setIsChecklistDialogOpen(false);
+            setEditingChecklist(null);
+          }}
+        />
+      </Dialog>
+
+      {/* Item Dialog - stable, outside dynamic content to prevent unmount on refetch */}
+      <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+        <ItemDialog
+          item={editingItem}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          onSave={handleSaveItem}
+          onClose={() => {
+            setIsItemDialogOpen(false);
+            setEditingItem(null);
+          }}
+        />
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <div>
           <h3 className="font-bold" style={{ fontSize: '20px' }}>Concierge Checklists</h3>
           <p className="text-sm text-muted-foreground">Manage checklists for concierge staff</p>
         </div>
-        <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingChecklist(null)} style={{ paddingLeft: '9px', paddingRight: '9px' }}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Checklist
-            </Button>
-          </DialogTrigger>
-          <ChecklistDialog
-            checklist={editingChecklist}
-            onSave={handleSaveChecklist}
-            onClose={() => {
-              setIsChecklistDialogOpen(false);
-              setEditingChecklist(null);
-            }}
-          />
-        </Dialog>
+        <Button onClick={() => { setEditingChecklist(null); setIsChecklistDialogOpen(true); }} style={{ paddingLeft: '9px', paddingRight: '9px' }}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Checklist
+        </Button>
       </div>
+
+      {expandedId && (
+        <BulkAddItemsDialog
+          open={isBulkDialogOpen}
+          onOpenChange={setIsBulkDialogOpen}
+          checklistId={expandedId}
+          currentItemCount={items?.length || 0}
+          existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
+          createItem={(data) => createItem.mutateAsync(data)}
+        />
+      )}
 
       <div className="grid gap-4">
         {checklists?.map((checklist) => (
@@ -201,91 +255,26 @@ export function ConciergeChecklistManager() {
                     <h3 className="text-sm font-medium">
                       ({items?.length || 0})
                     </h3>
-                    <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setEditingItem(null)}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <ItemDialog
-                        item={editingItem}
-                        existingTimeHints={[...new Set((items || []).map(i => i.time_hint).filter(Boolean) as string[])]}
-                        onSave={handleSaveItem}
-                        onClose={() => {
-                          setIsItemDialogOpen(false);
-                          setEditingItem(null);
-                        }}
-                      />
-                    </Dialog>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Bulk Add
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingItem(null); setIsItemDialogOpen(true); }}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Item
+                      </Button>
+                    </div>
                   </div>
 
-                  {(() => {
-                    const sorted = [...(items || [])].sort((a, b) => a.sort_order - b.sort_order);
-                    const grouped: Record<string, typeof sorted> = {};
-                    sorted.forEach((item) => {
-                      const group = item.time_hint || 'Ungrouped';
-                      if (!grouped[group]) grouped[group] = [];
-                      grouped[group].push(item);
-                    });
-                    return (
-                      <div>
-                        {Object.entries(grouped).map(([group, groupItems]) => (
-                          <Collapsible key={group} defaultOpen className="mt-3 first:mt-0">
-                            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                              <span className="font-semibold text-xs uppercase tracking-widest">{group}</span>
-                              <Badge variant="secondary" className="text-xs">{groupItems.length}</Badge>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="pl-1">
-                              {groupItems.map((item, idx) => {
-                                const colorClass = getTaskColorClass(item.task_type, idx);
-                                return (
-                                <div
-                                  key={item.id}
-                                  className={`flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors ${colorClass}`}
-                                >
-                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">{item.task_description}</span>
-                                      {item.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                                      {item.is_high_priority && <Badge variant="default" className="text-xs">High Priority</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                      <Badge variant="outline" className="text-xs">{item.task_type}</Badge>
-                                      {item.category && <span>• {item.category}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditingItem(item);
-                                        setIsItemDialogOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleDeleteItem(item.id)}
-                                    >
-                                      <Trash className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                );
-                              })}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  <SortableSections
+                    items={(items || []) as any}
+                    onEdit={(item) => { setEditingItem(item as ConciergeChecklistItem); setIsItemDialogOpen(true); }}
+                    onDelete={handleDeleteItem}
+                    onReorder={handleReorder}
+                    onRenameSection={handleRenameSection}
+                    secondaryField="category"
+                  />
                 </div>
               </CardContent>
             )}
@@ -314,6 +303,20 @@ function ChecklistDialog({
       is_active: true,
     }
   );
+
+  useEffect(() => {
+    if (checklist) {
+      setFormData(checklist);
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        shift_time: 'AM',
+        is_weekend: false,
+        is_active: true,
+      });
+    }
+  }, [checklist]);
 
   return (
     <DialogContent>
@@ -592,14 +595,6 @@ function ItemDialog({
             <div className="flex flex-col gap-3">
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="required"
-                  checked={formData.required}
-                  onCheckedChange={(checked) => setFormData({ ...formData, required: checked })}
-                />
-                <Label htmlFor="required">Required</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
                   id="is_high_priority"
                   checked={formData.is_high_priority}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_high_priority: checked })}
@@ -658,9 +653,10 @@ function MultipleChoiceConfig({
   const [newOption, setNewOption] = useState('');
 
   const addOption = () => {
-    const trimmed = newOption.trim();
-    if (trimmed && !options.includes(trimmed)) {
-      setMetadata({ options: [...options, trimmed] });
+    const parts = newOption.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const unique = parts.filter(p => !options.includes(p));
+    if (unique.length > 0) {
+      setMetadata({ options: [...options, ...unique] });
       setNewOption('');
     }
   };
@@ -693,7 +689,7 @@ function MultipleChoiceConfig({
           <Input
             value={newOption}
             onChange={(e) => setNewOption(e.target.value)}
-            placeholder="Add an option..."
+            placeholder="Add options (comma-separated)..."
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

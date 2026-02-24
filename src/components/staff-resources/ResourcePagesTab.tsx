@@ -131,22 +131,6 @@ export function ResourcePagesTab({
         />
       )}
       
-      {/* Tag Filters */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center">Tags:</span>
-          {allTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="rounded-none text-xs cursor-pointer"
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {/* Empty State */}
       {filtered.length === 0 ? (
@@ -168,7 +152,7 @@ export function ResourcePagesTab({
       ) : (
         /* Compact List */
         <div className="border border-border rounded-none">
-          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[11.75px] uppercase tracking-widest text-muted-foreground">
             <span className="w-4 shrink-0" />
             <span className="flex-1 min-w-0">Name</span>
             <span className="hidden md:block w-48 shrink-0">Tags</span>
@@ -212,14 +196,14 @@ export function ResourcePagesTab({
                       )
                     ))}
                     {page.page_type === 'pdf' && (
-                      <Badge variant="secondary" className="rounded-none text-[10px] ml-2">PDF</Badge>
+                      <Badge variant="secondary" className="rounded-none text-[10px] ml-2 border-none" style={{ backgroundColor: '#009ddc', color: '#ffffff', padding: '2.25px 6.25px' }}>PDF</Badge>
                     )}
                     {hasPendingFlag && <span className="ml-1"><UnderReviewBadge /></span>}
                   </span>
 
                   <div className="hidden md:flex items-center gap-1 shrink-0 w-48">
                     {page.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="rounded-none text-[10px]">
+                      <Badge key={tag} variant="outline" className="rounded-none text-[10px] border-none" style={{ backgroundColor: '#fcb827', color: '#ffffff', padding: '2.25px 6.25px' }}>
                         {tag}
                       </Badge>
                     ))}
@@ -230,7 +214,7 @@ export function ResourcePagesTab({
                     )}
                   </div>
 
-                  <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-24 text-right">
+                  <span className="hidden sm:block text-[11.5px] text-muted-foreground shrink-0 w-24 text-right">
                     {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
                   </span>
                 </div>

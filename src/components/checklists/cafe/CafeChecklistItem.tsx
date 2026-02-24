@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { useToggleCafeCompletion } from '@/hooks/checklists/useCafeChecklists';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { SignaturePad } from '@/components/ui/SignaturePad';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import { getTaskColorStyle } from '@/components/checklists/checklistColors';
+import { cn } from '@/lib/utils';
 import { add_color } from '@/lib/constants';
 
 interface CafeChecklistItemProps {
@@ -33,6 +35,7 @@ export function CafeChecklistItem({
   const { t } = useLanguage();
   const toggleCompletion = useToggleCafeCompletion();
   const [textValue, setTextValue] = useState(completion?.note_text || '');
+  const isMobile = useIsMobile();
 
   const isCompleted = !!completion?.completed_at;
   const taskLabel = t(item.task_description, item.label_spanish);
@@ -92,27 +95,34 @@ export function CafeChecklistItem({
   if (item.task_type === 'checkbox') {
     return (
       <div
-        className={`flex items-center gap-3 p-3 border hover:bg-accent/50 transition-colors cursor-pointer ${
-          isCompleted ? 'bg-accent/30 border-primary' : ''
-        }`}
+        className={cn(
+          'flex items-center gap-3 border hover:bg-accent/50 transition-colors cursor-pointer',
+          isCompleted && 'bg-accent/30 border-primary',
+          isMobile ? 'min-h-[48px] p-3 gap-4 active:scale-[0.98]' : 'p-3'
+        )}
         style={colorStyle}
         onClick={() => handleToggle()}
       >
         <div
-          className={`flex h-5 w-5 items-center justify-center rounded-none border-2 ${
-            isCompleted ? 'bg-primary border-primary' : 'border-muted-foreground'
-          }`}
+          className={cn(
+            'flex items-center justify-center rounded-none border-2 shrink-0',
+            isCompleted ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground',
+            isMobile ? 'h-7 w-7' : 'h-5 w-5'
+          )}
         >
-          {isCompleted && <Check className="h-4 w-4 text-primary-foreground" />}
+          {isCompleted && <Check className={cn(isMobile ? 'h-5 w-5' : 'h-4 w-4')} />}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className={`text-[13px] ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{taskLabel}</span>
-            {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={cn(
+              isCompleted && 'line-through text-muted-foreground',
+              isMobile ? 'text-[13.75px]' : 'text-[13px]'
+            )}>{taskLabel}</span>
+            
             {item.is_high_priority && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.orange }}>High Priority</Badge>}
           </div>
           {item.time_hint && (
-            <p className="text-xs text-muted-foreground mt-1">{item.time_hint}</p>
+            <p className={cn('text-muted-foreground mt-1', isMobile ? 'text-sm' : 'text-xs')}>{item.time_hint}</p>
           )}
         </div>
       </div>
@@ -122,7 +132,7 @@ export function CafeChecklistItem({
   // Photo type
   if (item.task_type === 'photo') {
     return (
-      <div className={`p-3 md:p-4 border space-y-3`} style={colorStyle}>
+      <div className={cn('border space-y-3', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={colorStyle}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -133,8 +143,8 @@ export function CafeChecklistItem({
         
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -186,7 +196,7 @@ export function CafeChecklistItem({
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className={`p-3 md:p-4 border space-y-3`} style={colorStyle}>
+      <div className={cn('border space-y-3', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={colorStyle}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -196,11 +206,11 @@ export function CafeChecklistItem({
         
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
-          <p className="text-xs text-muted-foreground">{item.time_hint}</p>
+          <p className={cn('text-muted-foreground', isMobile ? 'text-sm' : 'text-xs')}>{item.time_hint}</p>
         )}
         {completion?.signature_data ? (
           <div className="space-y-3">
@@ -255,10 +265,10 @@ export function CafeChecklistItem({
   // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className={`p-3 border space-y-2`} style={colorStyle}>
+      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -286,10 +296,10 @@ export function CafeChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className={`p-3 border space-y-2`} style={colorStyle}>
+      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -323,10 +333,10 @@ export function CafeChecklistItem({
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     return (
-      <div className={`p-3 border space-y-2`} style={colorStyle}>
+      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -350,10 +360,10 @@ export function CafeChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className={`p-3 border space-y-2`} style={colorStyle}>
+      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[13px]">{taskLabel}</span>
-          {item.required && <Badge className="text-xs rounded-none border-0 text-white" style={{ backgroundColor: add_color.red }}>Required</Badge>}
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
+          
         </div>
         {item.time_hint && (
           <p className="text-xs text-muted-foreground">{item.time_hint}</p>
@@ -370,8 +380,8 @@ export function CafeChecklistItem({
 
   // Default fallback
   return (
-    <div className={`p-3 border`} style={colorStyle}>
-      <span>{taskLabel}</span>
+    <div className={cn('border', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
+      <span className={cn(isMobile && 'text-[13.75px]')}>{taskLabel}</span>
       <p className="text-xs text-muted-foreground">Unsupported task type: {item.task_type}</p>
     </div>
   );

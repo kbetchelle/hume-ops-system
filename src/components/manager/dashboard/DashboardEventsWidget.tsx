@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { selectFrom } from "@/lib/dataApi";
 import { add_color } from "@/lib/constants";
 import { format, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 interface DailyScheduleClass {
   id: string;
@@ -19,7 +20,7 @@ interface DailyScheduleClass {
 }
 
 export function DashboardEventsWidget() {
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = formatInTimeZone(new Date(), "America/Los_Angeles", "yyyy-MM-dd");
 
   const { data: classes, isLoading } = useQuery({
     queryKey: ["dashboard-events-today", today],
@@ -37,11 +38,58 @@ export function DashboardEventsWidget() {
     refetchInterval: 120000, // 2 minutes
   });
 
-  const activeClasses = (classes ?? []).filter((c) => !c.canceled);
+  const activeClasses = (classes ?? []).filter((c) => !c.canceled && c.class_name && c.class_name !== "Unknown");
+
+  // Current PST time as HH:mm for comparison against stored PST timestamps
+  const nowPst = formatInTimeZone(new Date(), "America/Los_Angeles", "HH:mm");
+
+  const isPast = (cls: DailyScheduleClass) => {
+    if (!cls.end_time) return false;
+    try {
+      const endHHmm = formatInTimeZone(parseISO(cls.end_time), "UTC", "HH:mm");
+      return endHHmm <= nowPst;
+    } catch {
+      return false;
+    }
+  };
+
+  // Sort: upcoming first (by start_time asc), then past classes at bottom
+  const sortedClasses = [...activeClasses].sort((a, b) => {
+    const aPast = isPast(a);
+    const bPast = isPast(b);
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return a.start_time.localeCompare(b.start_time);
+  });
+
+  const getEventColor = (className: string) => {
+    const name = className.toLowerCase();
+    if (name.includes("personal training") || name.includes("pt session")) {
+      return add_color.green;
+    }
+    if (name.includes("private") || name.includes("appointment")) {
+      return add_color.blue;
+    }
+    if (
+      name.includes("pilates") ||
+      name.includes("yoga") ||
+      name.includes("barre") ||
+      name.includes("cycle") ||
+      name.includes("hiit") ||
+      name.includes("stretch") ||
+      name.includes("meditation") ||
+      name.includes("reformer") ||
+      name.includes("class")
+    ) {
+      return add_color.purple;
+    }
+    return add_color.orange;
+  };
 
   const formatTime = (iso: string) => {
     try {
-      return format(parseISO(iso), "h:mm a");
+      // Timestamps in daily_schedule are PST values stored with +00 offset,
+      // so we format in UTC to display the raw PST values as-is
+      return formatInTimeZone(parseISO(iso), "UTC", "h:mm a");
     } catch {
       return iso;
     }
@@ -74,35 +122,38 @@ export function DashboardEventsWidget() {
         </div>
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">
-          <div className="space-y-1">
-            {activeClasses.map((cls) => (
+           <div>
+              {sortedClasses.map((cls) => {
+                const color = getEventColor(cls.class_name);
+                const past = isPast(cls);
+                return (
               <div
                 key={cls.id}
-                className="flex items-center gap-3 rounded px-3 py-2 hover:bg-muted/50 transition-colors text-sm"
+                className={`flex items-center gap-0 rounded-none px-3 py-2 transition-colors text-sm ${past ? 'opacity-50' : ''}`}
+                style={{
+                  backgroundColor: past ? 'hsl(var(--muted))' : `${color}1A`,
+                  ...(past ? {} : { borderLeft: `4px solid ${color}`, borderBottom: `1.5px solid ${color}` }),
+                }}
               >
-                <div
-                  className="h-7 w-7 rounded-none flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: add_color.blue, color: "#fff" }}
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">
                     {cls.class_name}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatTime(cls.start_time)}
+                    {cls.end_time && ` – ${formatTime(cls.end_time)}`}
                     {cls.instructor && ` · ${cls.instructor}`}
                   </p>
                 </div>
                 {cls.max_capacity != null && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                  <div className="flex items-center gap-1 text-xs shrink-0 px-1.5 py-0.5 rounded-sm text-white" style={{ backgroundColor: '#009ddc' }}>
                     <Users className="h-3 w-3" />
                     {cls.total_booked ?? 0}/{cls.max_capacity}
                   </div>
                 )}
               </div>
-            ))}
+                );
+              })}
           </div>
         </ScrollArea>
       )}

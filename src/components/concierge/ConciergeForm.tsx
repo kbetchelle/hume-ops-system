@@ -462,6 +462,50 @@ export function ConciergeForm() {
     broadcastTyping(field as string);
   }
 
+  // Dedicated handler for AM/PM toggle that saves current draft first,
+  // resets form state, then loads the new shift's data.
+  const handleShiftToggle = useCallback(async (newShift: 'AM' | 'PM') => {
+    if (newShift === shiftType || isSubmitted) return;
+
+    // 1. Save current draft with the CURRENT shift type before switching
+    if (isDirty && !isSaving) {
+      setIsSaving(true);
+      try {
+        const draftData = {
+          report_date: reportDate,
+          shift_time: shiftType, // save with OLD shift type
+          form_data: formData as unknown as Record<string, unknown>,
+          last_updated_by: user?.email || null,
+          last_updated_by_session: sessionId,
+        };
+        if (isOnline) {
+          await supabase
+            .from('concierge_drafts')
+            .upsert(draftData as Database["public"]["Tables"]["concierge_drafts"]["Insert"], {
+              onConflict: 'report_date,shift_time',
+            });
+        }
+      } catch (err) {
+        logger.error('Failed to save before shift toggle:', err);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+
+    // 2. Reset form state so auto-save doesn't fire with stale data
+    setIsDirty(false);
+    setIsSubmitted(false);
+    setLastSaved(null);
+
+    // 3. Reset form to initial state with the new shift
+    setFormData({ ...INITIAL_FORM_DATA, reportDate, shiftTime: newShift, _sessionId: sessionId });
+    setStaffNameWasAutoPopulated(true); // allow auto-populate for new shift
+
+    // 4. Update the global shift
+    setShift(newShift);
+    // loadDraft will fire via the useEffect that watches shiftType
+  }, [shiftType, isSubmitted, isDirty, isSaving, reportDate, formData, user?.email, sessionId, isOnline, setShift]);
+
   // Array field handlers
   const addMemberFeedback = () => {
     updateFormField('memberFeedback', [...formData.memberFeedback, { id: crypto.randomUUID(), sentiment: 'neutral', text: '' }]);
@@ -539,34 +583,24 @@ export function ConciergeForm() {
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => {
-                  updateFormField('shiftTime', 'AM');
-                  setShift('AM');
-                  setStaffNameWasAutoPopulated(true);
-                }}
+                onClick={() => handleShiftToggle('AM')}
                 disabled={isSubmitted}
                 className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
                 shiftType === 'AM' ?
                 'border border-foreground' :
                 'border border-transparent hover:text-foreground/80'}`
                 }>
-
                 AM
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  updateFormField('shiftTime', 'PM');
-                  setShift('PM');
-                  setStaffNameWasAutoPopulated(true);
-                }}
+                onClick={() => handleShiftToggle('PM')}
                 disabled={isSubmitted}
                 className={`px-3 py-1.5 text-sm font-medium tracking-wider transition-colors ${
                 shiftType === 'PM' ?
                 'border border-foreground' :
                 'border border-transparent hover:text-foreground/80'}`
                 }>
-
                 PM
               </button>
             </div>

@@ -36,7 +36,7 @@ export default function Install() {
           <h2 className="text-lg font-medium tracking-wide">
             Add HUME Ops to your Home Screen
           </h2>
-          <p className="text-sm text-muted-foreground tracking-wide max-w-xs mx-auto">
+          <p className="text-[13.25px] text-muted-foreground tracking-wide max-w-xs mx-auto">
             Install for quick access, faster loading, and a full-screen experience — no app store needed.
           </p>
         </div>

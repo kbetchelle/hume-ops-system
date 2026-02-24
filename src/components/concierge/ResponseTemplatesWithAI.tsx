@@ -886,9 +886,20 @@ export function ResponseTemplatesWithAI() {
     }
   };
 
-  const handleCopyAiOutput = () => {
-    navigator.clipboard.writeText(aiOutput);
-    toast.success("Copied to clipboard");
+  const handleCopyAiOutput = async () => {
+    try {
+      // Strip any potential HTML tags and copy as plain text only
+      const plainText = aiOutput.replace(/<[^>]*>/g, '');
+      const blob = new Blob([plainText], { type: 'text/plain' });
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/plain': blob })
+      ]);
+      toast.success("Copied to clipboard");
+    } catch {
+      // Fallback
+      navigator.clipboard.writeText(aiOutput.replace(/<[^>]*>/g, ''));
+      toast.success("Copied to clipboard");
+    }
   };
 
   const handleSubmitFeedback = async () => {

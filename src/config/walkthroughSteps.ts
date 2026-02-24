@@ -83,6 +83,8 @@ const MANAGER_PACKAGE_TRACKING: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Help concierge by logging items put in the safe in here.",
   textEs: "Ayuda al conserje registrando aquí los objetos que guardas en la caja fuerte.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 // Concierge role-specific steps
@@ -100,6 +102,8 @@ const CONCIERGE_PACKAGE_TRACKING: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Scan in packages, submit a photo of where they're kept, and edit a package if you move it.",
   textEs: "Escanea paquetes, envía una foto de dónde se guardan y edita un paquete si lo mueves.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const CONCIERGE_LOST_FOUND: WalkthroughStepConfig = {

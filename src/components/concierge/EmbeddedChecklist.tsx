@@ -506,7 +506,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
   };
 
   return (
-    <Card className={cn("w-full border-t-0 border-r-0 border-l-2 border-b-2 border-border shadow-none bg-card", variant === "compact" && "rounded-none")}>
+    <Card className={cn("w-full border-2 border-border shadow-none bg-card", variant === "compact" && "rounded-none")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

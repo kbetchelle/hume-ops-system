@@ -432,7 +432,23 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
         </>
       )}
 
-      {/* Static menu replica for manager walkthrough */}
+      {/* Highlight border around target for menu preview steps */}
+      {showMenuPreview && targetRect && (
+        <div
+          className="absolute z-[101] pointer-events-none"
+          style={{
+            left: targetRect.left - 4,
+            top: targetRect.top - 4,
+            width: targetRect.width + 8,
+            height: targetRect.height + 8,
+            border: "2px solid #fcb827",
+            borderRadius: 4,
+          }}
+          aria-hidden
+        />
+      )}
+
+      {/* Static menu replica for walkthrough */}
       {showMenuPreview && targetRect && (
         <div
           className="absolute z-[101] w-56 border border-border bg-background shadow-md pointer-events-none"

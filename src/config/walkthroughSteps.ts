@@ -223,11 +223,11 @@ function includeStep(config: WalkthroughStepConfig, context: WalkthroughContext)
  */
 function getOrderedConfigs(role: AppRole, context: WalkthroughContext): WalkthroughStepConfig[] {
   const roleSteps = getRoleSpecificSteps(role).filter((s) => includeStep(s, context));
-  const isManager = role === "admin" || role === "manager";
-  const userMenu = isManager
+  const isManagerOrConcierge = role === "admin" || role === "manager" || role === "concierge";
+  const userMenu = isManagerOrConcierge
     ? { ...UNIVERSAL_USER_MENU, showMenuPreview: true }
     : UNIVERSAL_USER_MENU;
-  const bugStep = isManager
+  const bugStep = isManagerOrConcierge
     ? { ...UNIVERSAL_BUG, showMenuPreview: true }
     : UNIVERSAL_BUG;
   const middle: WalkthroughStepConfig[] = [userMenu, ...roleSteps, bugStep];

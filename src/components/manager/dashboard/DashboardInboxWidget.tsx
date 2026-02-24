@@ -94,7 +94,7 @@ export function DashboardInboxWidget() {
         </div>
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">
-          <div className="space-y-2">
+          <div>
             {displayItems.map((item) => {
               switch (item.data.type) {
                 case "qa":

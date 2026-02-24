@@ -18,9 +18,18 @@ export function useUnreadAnnouncements() {
 
       const now = new Date().toISOString();
 
+      // Fetch user profile created_at to suppress pre-signup announcements
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .single();
+
+      const userCreatedAt = profile?.created_at ? new Date(profile.created_at) : null;
+
       const { data: announcements, error: aErr } = await supabase
         .from('staff_announcements')
-        .select('id, target_departments, scheduled_at, expires_at')
+        .select('id, target_departments, scheduled_at, expires_at, created_at')
         .eq('is_active', true);
 
       if (aErr) throw aErr;
@@ -37,6 +46,8 @@ export function useUnreadAnnouncements() {
       const unreadCount = (announcements || []).filter((a) => {
         if (a.scheduled_at && new Date(a.scheduled_at) > new Date(now)) return false;
         if (a.expires_at && new Date(a.expires_at) < new Date(now)) return false;
+        // Announcements created before user's first login are not unread
+        if (userCreatedAt && new Date(a.created_at) < userCreatedAt) return false;
         if (a.target_departments && a.target_departments.length > 0) {
           if (!roles.some((role) => a.target_departments?.includes(role))) return false;
         }

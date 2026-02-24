@@ -256,7 +256,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
             <p className="text-xs text-muted-foreground">No classes scheduled for today.</p>
           ) : (
             <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-3">
+            <div className="space-y-0">
               {activeClasses.map((cls) => {
                 const booked = cls.booked_count || 0;
                 const capacity = cls.capacity || 0;
@@ -277,10 +277,13 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                 return (
                   <div
                     key={cls.id}
-                    className={`p-3 border rounded-none transition-colors ${
+                    className={`p-3 border-b border-border transition-colors ${
                       isPast ? "opacity-60" : ""
-                    } ${cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border"}`}
-                    style={!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : undefined}
+                    } ${cls.is_cancelled ? "border-l-4 border-l-destructive bg-destructive/5" : ""}`}
+                    style={{
+                      ...(!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : {}),
+                      ...(!isPast && !cls.is_cancelled ? { borderLeft: `4px solid ${add_color.blue}` } : {}),
+                    }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

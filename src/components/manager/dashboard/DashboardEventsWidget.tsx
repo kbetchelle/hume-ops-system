@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { selectFrom } from "@/lib/dataApi";
 import { add_color } from "@/lib/constants";
 import { format, parseISO } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 interface DailyScheduleClass {
   id: string;
@@ -63,9 +64,12 @@ export function DashboardEventsWidget() {
     return add_color.orange;
   };
 
+  const PST_TZ = "America/Los_Angeles";
+
   const formatTime = (iso: string) => {
     try {
-      return format(parseISO(iso), "h:mm a");
+      const pstDate = toZonedTime(parseISO(iso), PST_TZ);
+      return format(pstDate, "h:mm a");
     } catch {
       return iso;
     }

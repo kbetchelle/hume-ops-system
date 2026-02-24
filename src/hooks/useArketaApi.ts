@@ -118,7 +118,29 @@ export function useTodaysClasses(date?: string, filterClassesOnly = false) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as ArketaClass[];
+      const classes = data as ArketaClass[];
+
+      // Predict durations for classes missing them
+      const needsPrediction = [...new Set(
+        classes.filter(c => !c.duration_minutes).map(c => c.name)
+      )];
+      
+      if (needsPrediction.length > 0) {
+        const predictions = new Map<string, number>();
+        await Promise.all(
+          needsPrediction.map(async (name) => {
+            const { data: dur } = await supabase.rpc("predict_class_duration", { p_class_name: name });
+            if (dur) predictions.set(name, dur as number);
+          })
+        );
+        for (const cls of classes) {
+          if (!cls.duration_minutes && predictions.has(cls.name)) {
+            cls.duration_minutes = predictions.get(cls.name)!;
+          }
+        }
+      }
+
+      return classes;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

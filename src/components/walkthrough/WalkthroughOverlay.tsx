@@ -406,7 +406,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                     return {
                       left: pos.left,
                       top: pos.top,
-                    backgroundColor: hexToRgba(arrowColor, 0),
+                    backgroundColor: hexToRgba(arrowColor, 1),
                     borderColor: arrowColor,
                     };
                   })()
@@ -414,7 +414,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
                     left: "50%",
                     top: "50%",
                     transform: "translate(-50%, -50%)",
-                    backgroundColor: hexToRgba(arrowColor, 0),
+                    backgroundColor: hexToRgba(arrowColor, 1),
                     borderColor: arrowColor,
                   }
             }

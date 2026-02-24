@@ -183,13 +183,6 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
               const isExpanded = expandedClassId === cls.id;
               return (
                 <div key={cls.id} className="space-y-0">
-                    {isToday && activeClasses[0]?.id === cls.id &&
-                  <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-                        <div className="h-px flex-1 bg-primary/50" />
-                        <span>Now</span>
-                        <div className="h-px flex-1 bg-primary/50" />
-                      </div>
-                  }
                     <button
                     type="button"
                     onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}

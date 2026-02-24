@@ -392,7 +392,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </svg>
           )}
           <div
-            className="absolute text-foreground max-w-[280px] md:max-w-[320px] whitespace-pre-line px-4 py-3 rounded-none border shadow-sm flex flex-col gap-[15px]"
+            className="absolute text-foreground max-w-[360px] md:max-w-[400px] min-w-[360px] min-h-[168px] whitespace-pre-line px-4 py-3 rounded-none border shadow-sm flex flex-col gap-[15px] items-center justify-center text-center"
             style={
               arrowPoints && targetRect
                 ? (() => {

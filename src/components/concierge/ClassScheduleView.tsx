@@ -320,7 +320,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                               Completed
                             </Badge>
                           )}
-                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap font-bold">
                             {formatTime(cls.start_time)}
                             {getEndTime(cls.start_time, cls.duration_minutes) && ` – ${getEndTime(cls.start_time, cls.duration_minutes)}`}
                           </span>

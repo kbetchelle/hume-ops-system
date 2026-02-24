@@ -39,6 +39,30 @@ export function DashboardEventsWidget() {
 
   const activeClasses = (classes ?? []).filter((c) => !c.canceled && c.class_name && c.class_name !== "Unknown");
 
+  const getEventColor = (className: string) => {
+    const name = className.toLowerCase();
+    if (name.includes("personal training") || name.includes("pt session")) {
+      return add_color.green;
+    }
+    if (name.includes("private") || name.includes("appointment")) {
+      return add_color.blue;
+    }
+    if (
+      name.includes("pilates") ||
+      name.includes("yoga") ||
+      name.includes("barre") ||
+      name.includes("cycle") ||
+      name.includes("hiit") ||
+      name.includes("stretch") ||
+      name.includes("meditation") ||
+      name.includes("reformer") ||
+      name.includes("class")
+    ) {
+      return add_color.purple;
+    }
+    return add_color.orange;
+  };
+
   const formatTime = (iso: string) => {
     try {
       return format(parseISO(iso), "h:mm a");
@@ -75,10 +99,16 @@ export function DashboardEventsWidget() {
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">
           <div className="space-y-1">
-            {activeClasses.map((cls) => (
+              {activeClasses.map((cls) => {
+                const color = getEventColor(cls.class_name);
+                return (
               <div
                 key={cls.id}
-                className="flex items-center gap-0 rounded-none px-3 py-2 hover:bg-muted/50 transition-colors text-sm"
+                className="flex items-center gap-0 rounded-none px-3 py-2 transition-colors text-sm"
+                style={{
+                  backgroundColor: `${color}1A`,
+                  borderLeft: `4px solid ${color}`,
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">
@@ -96,7 +126,8 @@ export function DashboardEventsWidget() {
                   </div>
                 )}
               </div>
-            ))}
+                );
+              })}
           </div>
         </ScrollArea>
       )}

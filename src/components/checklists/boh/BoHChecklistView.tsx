@@ -206,7 +206,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-[13.25px] min-h-[44px]"
+              className="px-3 py-2 border rounded-none text-[13.25px] min-h-[44px]"
             />
           </div>
           <div className="flex gap-1 min-h-[44px] items-center">

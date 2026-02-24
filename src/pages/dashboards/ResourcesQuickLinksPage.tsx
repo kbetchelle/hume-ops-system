@@ -11,7 +11,7 @@ export default function ResourcesQuickLinksPage() {
 
   return (
     <DashboardLayout title="Quick Links">
-      <div className="p-4 md:p-8">
+      <div>
         <QuickLinksTab groups={groups} isLoading={isLoading} searchTerm="" />
       </div>
     </DashboardLayout>

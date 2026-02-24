@@ -203,7 +203,7 @@ export function ResourcePagesTab({
 
                   <div className="hidden md:flex items-center gap-1 shrink-0 w-48">
                     {page.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="rounded-none text-[10px] border-none" style={{ backgroundColor: '#fcb827', color: '#ffffff' }}>
+                      <Badge key={tag} variant="outline" className="rounded-none text-[10px] border-none" style={{ backgroundColor: '#fcb827', color: '#ffffff', padding: '2.25px 6.25px' }}>
                         {tag}
                       </Badge>
                     ))}

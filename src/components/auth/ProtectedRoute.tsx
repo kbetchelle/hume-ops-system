@@ -4,7 +4,6 @@ import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
 import { AppRole } from "@/types/roles";
 import { Loader2 } from "lucide-react";
 import { SyncProfileLanguage } from "@/components/shared/SyncProfileLanguage";
-import { ForcePasswordChangeDialog } from "@/components/auth/ForcePasswordChangeDialog";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -108,9 +107,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   return (
     <>
       <SyncProfileLanguage />
-      {profile?.must_change_password && (
-        <ForcePasswordChangeDialog userId={user.id} />
-      )}
       {children}
     </>
   );

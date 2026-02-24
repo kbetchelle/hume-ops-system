@@ -201,7 +201,33 @@ Deno.serve(async (req) => {
               body: cls.name,
               triggerSource,
               filterByWorking: trigger.filter_by_working ?? true,
-              type: eventType,
+              type: eventType === 'class_end_heated_room' ? 'mat_cleaning' : 'mat_cleaning',
+            });
+            if (result.skipped) summary.skipped.push(triggerSource);
+            else if (result.ok) summary.fired.push(triggerSource);
+          }
+        }
+      } else if (eventType === 'class_end_high_roof_music') {
+        // Roof music reset: fires 5 min AFTER high roof class ends
+        const relevant = classesToday.filter((c) => c.category === 'high_roof');
+        for (const cls of relevant) {
+          const endTime = new Date(cls.end_time).getTime();
+          const alertTime = endTime + 5 * 60 * 1000; // 5 min after class end
+          const diffMs = Math.abs(now.getTime() - alertTime);
+          if (diffMs <= window * 60 * 1000) {
+            const staffIds = await resolveStaffIds(supabase, trigger.target_department);
+            if (staffIds.length === 0) {
+              summary.errors.push(`roof_music_reset-${cls.id}: no staff for ${trigger.target_department}`);
+              continue;
+            }
+            const triggerSource = `roof_music_reset-${cls.id}-${today}`;
+            const result = await sendPush(supabaseUrl, serviceKey, {
+              staffIds,
+              title: trigger.message,
+              body: `${cls.name} has ended — please reset the rooftop music system.`,
+              triggerSource,
+              filterByWorking: trigger.filter_by_working ?? true,
+              type: 'roof_music_reset',
             });
             if (result.skipped) summary.skipped.push(triggerSource);
             else if (result.ok) summary.fired.push(triggerSource);
@@ -232,8 +258,37 @@ Deno.serve(async (req) => {
             else if (result.ok) summary.fired.push(triggerSource);
           }
         }
+      } else if (eventType === 'mastercard_arrival') {
+        // Fire 30 min before mastercard_visits.start_time
+        const { data: visits } = await supabase
+          .from('mastercard_visits')
+          .select('id, start_time, client_name, mastercard_tier')
+          .eq('visit_date', today)
+          .eq('status', 'scheduled');
+
+        const firingToleranceMs = 2 * 60 * 1000;
+        for (const visit of (visits || []) as Array<{ id: string; start_time: string; client_name: string | null; mastercard_tier: string | null }>) {
+          const visitStart = new Date(visit.start_time).getTime();
+          const alertTime = visitStart - window * 60 * 1000;
+          const nowMs = now.getTime();
+          if (nowMs >= alertTime - firingToleranceMs && nowMs <= alertTime + firingToleranceMs) {
+            const staffIds = await resolveStaffIds(supabase, trigger.target_department);
+            if (staffIds.length === 0) continue;
+            const triggerSource = `mastercard_arrival-${visit.id}-${today}`;
+            const tier = visit.mastercard_tier ? ` (${visit.mastercard_tier})` : '';
+            const result = await sendPush(supabaseUrl, serviceKey, {
+              staffIds,
+              title: trigger.message,
+              body: `${visit.client_name || 'Client'}${tier} arriving in ${window} minutes`,
+              triggerSource,
+              filterByWorking: trigger.filter_by_working ?? true,
+              type: 'mastercard_arrival',
+            });
+            if (result.skipped) summary.skipped.push(triggerSource);
+            else if (result.ok) summary.fired.push(triggerSource);
+          }
+        }
       } else if (eventType === 'tour_alert') {
-        // Use trigger's timing_window_minutes as "minutes before tour start" (e.g. 30 = alert 30 min before)
         const minutesBeforeTour = window;
         const { data: tours } = await supabase
           .from('scheduled_tours')
@@ -241,7 +296,6 @@ Deno.serve(async (req) => {
           .eq('tour_date', today)
           .eq('status', 'active');
 
-        // Firing tolerance: 2 min so cron (every 2 min) fires once near the alert time
         const tourFiringToleranceMs = 2 * 60 * 1000;
         for (const tour of (tours || []) as Array<{ id: string; start_time: string; guest_name: string | null }>) {
           const tourStart = new Date(tour.start_time).getTime();

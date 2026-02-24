@@ -744,6 +744,7 @@ function DashboardHeader({ title }: { title: string }) {
 
         <div className="flex items-center gap-2">
           {isBOH && <LanguageSelector />}
+          <NotificationBell />
           <img
             src={humeLogo}
             alt="Hume"

@@ -905,8 +905,17 @@ export function ResponseTemplatesWithAI() {
         template_guide_id: aiTemplateGuide !== "none" ? aiTemplateGuide : null,
       });
       if (error) throw error;
-      setFeedbackSubmitted(true);
-      toast.success("Feedback submitted");
+      if (feedbackRating === "negative") {
+        // Auto-regenerate on negative feedback
+        setFeedbackSubmitted(false);
+        setFeedbackRating(null);
+        setFeedbackText("");
+        toast.success("Feedback submitted — regenerating...");
+        handleAiGenerate();
+      } else {
+        setFeedbackSubmitted(true);
+        toast.success("Feedback submitted");
+      }
     } catch (err) {
       console.error("Feedback error:", err);
       toast.error("Failed to submit feedback");

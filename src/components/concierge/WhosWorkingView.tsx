@@ -288,12 +288,13 @@ export function WhosWorkingView() {
                         {person.user_name || "Unknown"}
                       </p>
                       <p className="text-[10px] text-muted-foreground">{person.position || "—"}</p>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span className="text-[10px]">
-                          {formatTimeRange(person.shift_start, person.shift_end)}
-                        </span>
-                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-muted-foreground shrink-0">
+                      <Clock className="h-3 w-3" />
+                      <span className="text-[10px]">
+                        {formatTimeRange(person.shift_start, person.shift_end)}
+                      </span>
                     </div>
 
                     {person.is_currently_working && (

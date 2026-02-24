@@ -434,7 +434,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           ref={skipButtonRef}
           type="button"
           variant="link"
-          className="text-white/70 hover:text-white uppercase text-[10px] tracking-widest p-0 h-auto no-underline hover:no-underline"
+          className="text-add-orange hover:text-add-orange/80 uppercase text-[10px] tracking-widest p-0 h-auto no-underline hover:no-underline"
           onClick={handleSkip}
           aria-label={t("Skip walkthrough", "Omitir guía")}
         >

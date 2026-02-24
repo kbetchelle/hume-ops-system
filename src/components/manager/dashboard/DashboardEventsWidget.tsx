@@ -111,6 +111,7 @@ export function DashboardEventsWidget() {
                 style={{
                   backgroundColor: `${color}1A`,
                   borderLeft: `4px solid ${color}`,
+                  borderBottom: `1.5px solid ${color}`,
                 }}
               >
                 <div className="flex-1 min-w-0">

@@ -343,7 +343,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
         )}
         <Badge variant="secondary" className="bg-blue-100 text-blue-700">Weekly Update</Badge>
         {item.week_start_date && (
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-[10px] border-none rounded-none" style={{ backgroundColor: '#f6821f', color: 'white', paddingLeft: '6.25px', paddingRight: '6.25px', paddingTop: '2.25px', paddingBottom: '2.25px' }}>
             Week of {format(parseISO(item.week_start_date), 'MMM d, yyyy')}
           </Badge>
         )}

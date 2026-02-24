@@ -598,7 +598,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
                         <span className="font-medium" style={{ fontSize: '13.5px' }}>{group.timeHint}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="destructive">
                           {group.completedCount}/{group.totalCount}
                         </Badge>
                       </div>

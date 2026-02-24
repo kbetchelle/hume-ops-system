@@ -140,13 +140,18 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
       return h * 60 + m; // minutes since midnight PST
     })();
 
+    const getClassEndMin = (startTime: string, durationMinutes: number | null) => {
+      const match = startTime.match(/(\d{2}):(\d{2})/);
+      if (!match) return 0;
+      return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + (durationMinutes || 50);
+    };
     const isClassPast = (startTime: string, durationMinutes: number | null) => {
       if (!isToday) return false;
-      const match = startTime.match(/(\d{2}):(\d{2})/);
-      if (!match) return false;
-      const startMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-      const endMin = startMin + (durationMinutes || 50);
-      return pstNow >= endMin;
+      return pstNow >= getClassEndMin(startTime, durationMinutes);
+    };
+    const isClassMuted = (startTime: string, durationMinutes: number | null) => {
+      if (!isToday) return false;
+      return pstNow >= getClassEndMin(startTime, durationMinutes) + 5;
     };
     return (
       <div className="flex flex-col min-h-0">
@@ -176,10 +181,15 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
           <p className="p-4 text-sm text-muted-foreground">No classes scheduled for this day.</p> :
 
           <div className="space-y-0 pb-6">
-              {activeClasses.map((cls) => {
+              {(() => {
+                const upcoming = activeClasses.filter((c) => !isClassPast(c.start_time, c.duration_minutes));
+                const past = activeClasses.filter((c) => isClassPast(c.start_time, c.duration_minutes));
+                return [...upcoming, ...past];
+              })().map((cls) => {
               const booked = cls.booked_count || 0;
               const capacity = cls.capacity || 0;
               const isPast = isClassPast(cls.start_time, cls.duration_minutes);
+              const isMuted = isClassMuted(cls.start_time, cls.duration_minutes);
               const isExpanded = expandedClassId === cls.id;
               return (
                 <div key={cls.id} className="space-y-0">
@@ -189,10 +199,11 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                     className={cn(
                       "w-full text-left p-4 rounded-none border shadow-sm transition-all duration-200 min-h-[44px]",
                       isPast && "opacity-60",
+                      isMuted && "opacity-40",
                       cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border"
                     )}
                     style={{
-                      ...(!cls.is_cancelled ? { backgroundColor: `${getClassTypeColor(cls.name)}1A`, borderLeft: `4px solid ${getClassTypeColor(cls.name)}` } : {})
+                      ...(!cls.is_cancelled ? { backgroundColor: `${getClassTypeColor(cls.name)}1A`, ...(!isMuted ? { borderLeft: `4px solid ${getClassTypeColor(cls.name)}` } : {}) } : {})
                     }}>
 
                       <div className="flex flex-col gap-1">

@@ -120,7 +120,7 @@ export function BoHChecklistItem({
             {item.is_high_priority && <Badge variant="default" className="text-xs">{t('High Priority', 'Alta Prioridad')}</Badge>}
           </div>
           {item.time_hint && (
-            <p className={cn('text-muted-foreground mt-1', isMobile ? 'text-sm' : 'text-xs')}>{item.time_hint}</p>
+            <p className={cn('text-muted-foreground mt-1', isMobile ? 'text-[12.5px]' : 'text-xs')}>{item.time_hint}</p>
           )}
         </div>
       </div>

@@ -1,14 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Sparkles, Music } from "lucide-react";
+import { X, Sparkles, Music, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { add_color } from "@/lib/constants";
 
 const ALERT_CONFIG: Record<string, { icon: typeof Sparkles; color: string; label: string }> = {
   mat_cleaning: { icon: Sparkles, color: add_color.red, label: 'MAT CLEANING' },
   roof_music_reset: { icon: Music, color: add_color.yellow, label: 'MUSIC RESET' },
+  class_turnover: { icon: RefreshCw, color: add_color.blue, label: 'CLASS TURNOVER' },
 };
 
-export function ChecklistAlertBanners() {
+const DEFAULT_TYPES = ['mat_cleaning', 'roof_music_reset'];
+
+interface ChecklistAlertBannersProps {
+  /** Which notification types to display. Defaults to mat_cleaning + roof_music_reset. */
+  types?: string[];
+}
+
+export function ChecklistAlertBanners({ types = DEFAULT_TYPES }: ChecklistAlertBannersProps) {
   const queryClient = useQueryClient();
 
   const { data: userId } = useQuery({
@@ -21,14 +29,14 @@ export function ChecklistAlertBanners() {
   });
 
   const { data: alerts } = useQuery({
-    queryKey: ['checklist-alerts', userId],
+    queryKey: ['checklist-alerts', userId, types],
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
         .from('staff_notifications')
         .select('*')
         .eq('user_id', userId)
-        .in('type', ['mat_cleaning', 'roof_music_reset'])
+        .in('type', types)
         .is('dismissed_at', null)
         .eq('is_read', false)
         .order('created_at', { ascending: false })

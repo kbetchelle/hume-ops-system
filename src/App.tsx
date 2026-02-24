@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 // Public pages
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
+import Install from "./pages/Install";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -137,6 +138,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/install" element={<Install />} />
 
             {/* Auth flow routes */}
             <Route

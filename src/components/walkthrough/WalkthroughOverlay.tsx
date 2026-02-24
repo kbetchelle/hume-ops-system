@@ -438,7 +438,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           className="absolute z-[101] w-56 border border-border bg-background shadow-md pointer-events-none"
           style={{
             left: targetRect.left,
-            top: targetRect.top - 220,
+            top: targetRect.bottom + 8,
           }}
           aria-hidden
         >

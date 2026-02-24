@@ -195,21 +195,25 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                       ...(!cls.is_cancelled ? { backgroundColor: `${getClassTypeColor(cls.name)}1A`, borderLeft: `4px solid ${getClassTypeColor(cls.name)}` } : {})
                     }}>
 
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium text-muted-foreground shrink-0">
-                          {formatTime(cls.start_time)}{getEndTime(cls.start_time, cls.duration_minutes) ? ` – ${getEndTime(cls.start_time, cls.duration_minutes)}` : ""}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-base font-medium truncate">{cls.name}</p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
-                            {[cls.instructor_name, cls.room_name].filter(Boolean).join(" · ") || "—"}
-                          </p>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-medium truncate">{cls.name}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {[cls.instructor_name, cls.room_name].filter(Boolean).join(" · ") || "—"}
+                            </p>
+                          </div>
+                          {(cls.is_cancelled || isPast && !cls.is_cancelled) &&
+                            <Badge variant={cls.is_cancelled ? "destructive" : "secondary"} className="text-[10px] shrink-0 rounded-none border-none text-white" style={cls.is_cancelled ? {} : { backgroundColor: '#009ddc', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                              {cls.is_cancelled ? "Cancelled" : "Done"}
+                            </Badge>
+                          }
                         </div>
-                        {(cls.is_cancelled || isPast && !cls.is_cancelled) &&
-                      <Badge variant={cls.is_cancelled ? "destructive" : "secondary"} className="text-[10px] shrink-0 rounded-none border-none text-white" style={cls.is_cancelled ? {} : { backgroundColor: '#009ddc', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
-                            {cls.is_cancelled ? "Cancelled" : "Done"}
-                          </Badge>
-                      }
+                        <div className="flex justify-end">
+                          <span className="text-[13.25px] font-medium text-muted-foreground">
+                            {formatTime(cls.start_time)}{getEndTime(cls.start_time, cls.duration_minutes) ? ` – ${getEndTime(cls.start_time, cls.duration_minutes)}` : ""}
+                          </span>
+                        </div>
                       </div>
                       {isExpanded &&
                     <div className="mt-3 pt-3 border-t space-y-2 text-sm text-muted-foreground">

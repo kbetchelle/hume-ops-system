@@ -283,8 +283,10 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
-  // Show static menu replica for steps with showMenuPreview flag (manager only)
+  // Show static menu replica for steps with showMenuPreview flag
   const showMenuPreview = currentStep?.showMenuPreview && targetRect;
+  // Bug step: has both showMenuPreview and arrowEndOffset
+  const isBugStep = !!(currentStep?.showMenuPreview && currentStep?.arrowEndOffset);
 
   // Programmatically open dropdown when step targets role switcher only
   useEffect(() => {
@@ -371,7 +373,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
         <>
           {pathD && (
             <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
+              className="absolute inset-0 w-full h-full pointer-events-none z-[102]"
               style={{ "--walkthrough-path-length": pathLength } as React.CSSProperties}
               aria-hidden
             >
@@ -497,7 +499,10 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
               Account Settings
             </div>
             <div className="my-1 h-px bg-border" />
-            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+            <div
+              className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground relative"
+              style={isBugStep ? { outline: "2px solid #62bb47", outlineOffset: 2 } : undefined}
+            >
               <Bug className="h-3 w-3" />
               {t("Report a Bug", "Reportar un Bug")}
             </div>

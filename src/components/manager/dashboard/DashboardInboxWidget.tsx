@@ -5,8 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   useManagementInbox,
-  useMarkInboxRead,
-} from "@/hooks/useManagementInbox";
+  useMarkInboxRead } from
+"@/hooks/useManagementInbox";
 import { useResolveResourceFlag } from "@/hooks/useResourceFlags";
 import { QAInboxItem } from "../inbox/QAInboxItem";
 import { FlagInboxItem } from "../inbox/FlagInboxItem";
@@ -61,80 +61,80 @@ export function DashboardInboxWidget() {
     [markRead]
   );
 
-  const questionData = selectedQuestion
-    ? (selectedQuestion.data as QAInboxData)
-    : null;
+  const questionData = selectedQuestion ?
+  selectedQuestion.data as QAInboxData :
+  null;
 
   return (
-    <div className="border border-border rounded-lg p-4 flex flex-col min-h-[320px]">
+    <div className="border border-border rounded-lg p-4 flex flex-col min-h-[320px] px-[20px] py-[25px]">
       <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
         <h3 className="text-sm font-semibold uppercase tracking-widest flex items-center gap-2 w-full">
           <InboxIcon className="h-4 w-4" />
           Notes for Management
-          {unreadCount > 0 && (
-            <span
-              className="inline-block text-[10px] font-medium text-center leading-[26px] rounded-sm ml-auto"
-              style={{ backgroundColor: "#009ddc", color: "#fff", width: "26px", height: "26px" }}
-            >
+          {unreadCount > 0 &&
+          <span
+            className="inline-block text-[10px] font-medium text-center leading-[26px] rounded-sm ml-auto"
+            style={{ backgroundColor: "#009ddc", color: "#fff", width: "26px", height: "26px" }}>
+
               {unreadCount}
             </span>
-          )}
+          }
         </h3>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2 flex-1">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      ) : displayItems.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+      {isLoading ?
+      <div className="space-y-2 flex-1">
+          {Array.from({ length: 4 }).map((_, i) =>
+        <Skeleton key={i} className="h-16 w-full" />
+        )}
+        </div> :
+      displayItems.length === 0 ?
+      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           No items in inbox
-        </div>
-      ) : (
-        <ScrollArea className="flex-1 max-h-[400px]">
+        </div> :
+
+      <ScrollArea className="flex-1 max-h-[400px]">
           <div>
             {displayItems.map((item) => {
-              switch (item.data.type) {
-                case "qa":
-                  return <QAInboxItem key={item.id} item={item} onAnswer={handleAnswer} onMarkRead={handleMarkRead} />;
-                case "flag":
-                  return <FlagInboxItem key={item.id} item={item} onResolve={handleResolve} onMarkRead={handleMarkRead} />;
-                case "shift_note":
-                  return <ShiftNoteInboxItem key={item.id} item={item} onMarkRead={handleMarkRead} />;
-                case "sick_day":
-                  return <SickDayInboxItem key={item.id} item={item} onReview={handleSickDayReview} onMarkRead={handleMarkRead} />;
-              }
-            })}
+            switch (item.data.type) {
+              case "qa":
+                return <QAInboxItem key={item.id} item={item} onAnswer={handleAnswer} onMarkRead={handleMarkRead} />;
+              case "flag":
+                return <FlagInboxItem key={item.id} item={item} onResolve={handleResolve} onMarkRead={handleMarkRead} />;
+              case "shift_note":
+                return <ShiftNoteInboxItem key={item.id} item={item} onMarkRead={handleMarkRead} />;
+              case "sick_day":
+                return <SickDayInboxItem key={item.id} item={item} onReview={handleSickDayReview} onMarkRead={handleMarkRead} />;
+            }
+          })}
           </div>
         </ScrollArea>
-      )}
+      }
 
 
       <AnswerQuestionDialog
         open={answerDialogOpen}
         onOpenChange={setAnswerDialogOpen}
         question={
-          selectedQuestion && questionData
-            ? {
-                id: selectedQuestion.id,
-                question: questionData.question,
-                context: questionData.context,
-                askedByName: questionData.askedByName,
-                askedById: questionData.askedById,
-                createdAt: selectedQuestion.createdAt,
-              }
-            : null
-        }
-      />
+        selectedQuestion && questionData ?
+        {
+          id: selectedQuestion.id,
+          question: questionData.question,
+          context: questionData.context,
+          askedByName: questionData.askedByName,
+          askedById: questionData.askedById,
+          createdAt: selectedQuestion.createdAt
+        } :
+        null
+        } />
+
 
       <SickDayReviewDialog
         open={sickDayDialogOpen}
         onOpenChange={setSickDayDialogOpen}
         request={selectedSickDay}
-        action={sickDayAction}
-      />
-    </div>
-  );
+        action={sickDayAction} />
+
+    </div>);
+
 }

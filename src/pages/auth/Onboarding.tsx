@@ -112,10 +112,26 @@ export default function Onboarding() {
 
     setIsSubmitting(true);
     try {
+      // Save language preference
       await updateProfile.mutateAsync({
         userId: user.id,
         preferred_language: selectedLanguage,
       });
+
+      // Mark onboarding as complete so ProtectedRoute stops redirecting here
+      const { error: onboardingError } = await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("user_id", user.id);
+
+      if (onboardingError) {
+        console.error("Failed to mark onboarding complete:", onboardingError);
+        toast.error("Failed to complete setup. Please try again.");
+        return;
+      }
+
+      // Invalidate profile cache so ProtectedRoute sees the updated flag
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
 
       const isAutoApproved = profile?.approval_status === "auto_approved";
       const isPending = profile?.approval_status === "pending";

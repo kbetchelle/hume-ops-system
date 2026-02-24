@@ -32,7 +32,7 @@ export default function Install() {
       <div className="px-4 py-8 max-w-lg mx-auto space-y-8">
         {/* Hero */}
         <div className="text-center space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center border border-border">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center border border-foreground/30">
             <Smartphone className="h-8 w-8 text-foreground" />
           </div>
           <h2 className="text-lg font-normal tracking-wide">
@@ -52,7 +52,7 @@ export default function Install() {
             </div>
             <ol className="space-y-5 pt-5">
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">1</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">1</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Tap the Share button</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -61,7 +61,7 @@ export default function Install() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">2</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">2</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Scroll down and tap "Add to Home Screen"</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -70,7 +70,7 @@ export default function Install() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">3</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">3</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Tap "Add" to confirm</p>
                   <p className="text-xs text-muted-foreground">
@@ -91,7 +91,7 @@ export default function Install() {
             </div>
             <ol className="space-y-5 pt-5">
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">1</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">1</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Tap the menu button</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -100,7 +100,7 @@ export default function Install() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">2</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">2</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Tap "Install app" or "Add to Home screen"</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -109,7 +109,7 @@ export default function Install() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-xs font-medium">3</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-foreground/30 text-xs font-medium">3</span>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">Tap "Install" to confirm</p>
                   <p className="text-xs text-muted-foreground">

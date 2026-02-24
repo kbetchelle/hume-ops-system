@@ -186,7 +186,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                     type="button"
                     onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}
                     className={cn(
-                      "w-full text-left p-4 rounded-xl border shadow-sm transition-all duration-200 min-h-[44px]",
+                      "w-full text-left p-4 rounded-none border shadow-sm transition-all duration-200 min-h-[44px]",
                       isPast && "opacity-60",
                       cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border bg-card"
                     )}>

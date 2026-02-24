@@ -103,7 +103,7 @@ export function BoHChecklistItem({
       >
         <div
           className={cn(
-            'flex items-center justify-center rounded border-2 shrink-0',
+            'flex items-center justify-center rounded-none border-2 shrink-0',
             isCompleted ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground',
             isMobile ? 'h-7 w-7' : 'h-5 w-5'
           )}

@@ -125,7 +125,7 @@ export function DashboardEventsWidget() {
                   </p>
                 </div>
                 {cls.max_capacity != null && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                  <div className="flex items-center gap-1 text-xs shrink-0 px-1.5 py-0.5 rounded-sm text-white" style={{ backgroundColor: '#009ddc' }}>
                     <Users className="h-3 w-3" />
                     {cls.total_booked ?? 0}/{cls.max_capacity}
                   </div>

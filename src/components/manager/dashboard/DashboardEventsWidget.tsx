@@ -67,8 +67,8 @@ export function DashboardEventsWidget() {
   const formatTime = (iso: string) => {
     try {
       // Timestamps in daily_schedule are PST values stored with +00 offset,
-      // so we parse and format directly without timezone conversion
-      return format(parseISO(iso), "h:mm a");
+      // so we format in UTC to display the raw PST values as-is
+      return formatInTimeZone(parseISO(iso), "UTC", "h:mm a");
     } catch {
       return iso;
     }

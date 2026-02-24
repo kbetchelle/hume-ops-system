@@ -37,6 +37,7 @@ import { ClassScheduleView } from "@/components/concierge/ClassScheduleView";
 import { EmbeddedChecklist } from "@/components/concierge/EmbeddedChecklist";
 import { UpcomingTodayCard } from "@/components/concierge/UpcomingTodayCard";
 import { MastercardArrivalBanner } from "@/components/concierge/MastercardArrivalBanner";
+import { ChecklistAlertBanners } from "@/components/concierge/ChecklistAlertBanners";
 import { useUnreadAnnouncements } from "@/hooks/useUnreadAnnouncements";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { usePackageStats } from "@/hooks/usePackages";
@@ -144,6 +145,7 @@ export default function ConciergeDashboard() {
             >
               <MastercardArrivalBanner />
               <EmbeddedChecklist variant="compact" />
+              <ChecklistAlertBanners />
               <UpcomingTodayCard maxItems={3} />
             </MobilePageWrapper>
           );
@@ -156,6 +158,7 @@ export default function ConciergeDashboard() {
                 <EmbeddedChecklist />
               </div>
               <div className="flex-1 basis-[450px] min-w-[450px]">
+                <ChecklistAlertBanners />
                 <UpcomingTodayCard />
               </div>
             </div>

@@ -179,7 +179,13 @@ export default function Onboarding() {
 
         <CardContent className="space-y-8">
           {step === "password" ? (
-            <div className="space-y-4 max-w-sm mx-auto">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePasswordNext();
+              }}
+              className="space-y-4 max-w-sm mx-auto"
+            >
               <div className="space-y-2">
                 <Label htmlFor="onboard-new-password" className="text-[10px] uppercase tracking-widest">
                   New Password
@@ -197,7 +203,8 @@ export default function Onboarding() {
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 -m-2"
+                    tabIndex={-1}
                   >
                     {showNewPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
@@ -219,7 +226,8 @@ export default function Onboarding() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 -m-2"
+                    tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
@@ -231,7 +239,7 @@ export default function Onboarding() {
               <p className="text-[10px] text-muted-foreground tracking-wide uppercase">
                 Your password was set by an administrator. Please create your own password to continue.
               </p>
-            </div>
+            </form>
           ) : step === "profile" ? (
             <div className="space-y-4 max-w-sm mx-auto">
               <div className="space-y-2">
@@ -298,8 +306,13 @@ export default function Onboarding() {
 
           {step === "password" ? (
             <Button
-              className="ml-auto"
-              onClick={handlePasswordNext}
+              type="submit"
+              form={undefined}
+              className="ml-auto min-h-[44px] min-w-[120px] touch-manipulation"
+              onClick={(e) => {
+                e.preventDefault();
+                handlePasswordNext();
+              }}
               disabled={passwordLoading || !newPassword || !confirmPassword}
             >
               {passwordLoading ? (
@@ -313,6 +326,8 @@ export default function Onboarding() {
             </Button>
           ) : step === "profile" ? (
             <Button
+              type="button"
+              className="min-h-[44px] min-w-[120px] touch-manipulation"
               onClick={handleProfileNext}
               disabled={updateProfile.isPending}
             >
@@ -327,7 +342,8 @@ export default function Onboarding() {
             </Button>
           ) : (
             <Button
-              className="ml-auto"
+              type="button"
+              className="ml-auto min-h-[44px] min-w-[120px] touch-manipulation"
               onClick={handleLanguageComplete}
               disabled={updateProfile.isPending || isSubmitting}
             >

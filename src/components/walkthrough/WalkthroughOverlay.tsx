@@ -84,7 +84,7 @@ function getArrowPoints(
   viewportHeight: number
 ): { start: { x: number; y: number }; end: { x: number; y: number } } {
   const margin = viewportWidth < BREAKPOINT_TABLET ? 100 : ARROW_MARGIN;
-  const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 60;
+  const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 80;
   const cx = targetRect.left + targetRect.width / 2;
   const cy = targetRect.top + targetRect.height / 2;
   let startX: number;
@@ -168,7 +168,7 @@ function getStepTextPosition(
   switch (direction) {
     case "left":
       return {
-        left: Math.min(targetRect.right + gap, maxLeft),
+        left: Math.max(minLeft, Math.min(targetRect.right + gap, maxLeft)),
         top: Math.max(16, Math.min(targetRect.top, maxTop)),
       };
     case "right":

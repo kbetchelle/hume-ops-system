@@ -429,7 +429,17 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
       )}
 
       {/* Controls: progress dots, back, next, skip */}
-      <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4 px-4">
+      <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-3 px-4">
+        <Button
+          ref={skipButtonRef}
+          type="button"
+          variant="link"
+          className="text-white/70 hover:text-white uppercase text-[10px] tracking-widest p-0 h-auto no-underline hover:no-underline"
+          onClick={handleSkip}
+          aria-label={t("Skip walkthrough", "Omitir guía")}
+        >
+          {t("Skip", "Omitir")}
+        </Button>
         <div className="flex items-center gap-2">
           {filteredSteps.map((_, i) => (
             <button
@@ -465,16 +475,6 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >
             {isLastStep ? t("Done", "Listo") : t("Next", "Siguiente")}
-          </Button>
-          <Button
-            ref={skipButtonRef}
-            type="button"
-            variant="ghost"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange text-white hover:bg-add-orange/80"
-            onClick={handleSkip}
-            aria-label={t("Skip walkthrough", "Omitir guía")}
-          >
-            {t("Skip", "Omitir")}
           </Button>
         </div>
       </div>

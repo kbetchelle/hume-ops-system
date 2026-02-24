@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
-import { useUpdateProfile, getRoleDashboardPath, useUserProfile, useSlingRoles } from "@/hooks/useUserRoles";
+import { useUpdateProfile, getRoleDashboardPath, useUserProfile, useUserRoles, getPrimaryRole } from "@/hooks/useUserRoles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
   const updateProfile = useUpdateProfile();
   const { data: profile } = useUserProfile(user?.id);
-  const { data: slingRoles = [], isLoading: slingRolesLoading } = useSlingRoles(profile?.sling_id);
+  const { data: userRoles = [], isLoading: rolesLoading } = useUserRoles(user?.id);
 
   // Always start on password step
   const [step, setStep] = useState<Step>("password");
@@ -133,16 +133,20 @@ export default function Onboarding() {
       // Invalidate profile cache so ProtectedRoute sees the updated flag
       queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
 
-      const isAutoApproved = profile?.approval_status === "auto_approved";
       const isPending = profile?.approval_status === "pending";
 
       if (isPending) {
         toast.success("Setup complete - pending manager approval");
         navigate("/pending-approval");
-      } else if (isAutoApproved && !slingRolesLoading && slingRoles.length > 0) {
-        const primaryRole = slingRoles[0];
+      } else if (userRoles.length > 0) {
+        // User has assigned roles — navigate to their primary role dashboard.
+        // The walkthrough overlay will auto-show in DashboardLayout for
+        // non-BOH roles; BOH roles skip straight to their dashboard.
+        const primaryRole = profile?.primary_role && userRoles.some(r => r.role === profile.primary_role)
+          ? profile.primary_role
+          : getPrimaryRole(userRoles);
         toast.success("Setup complete");
-        navigate(getRoleDashboardPath(primaryRole));
+        navigate(primaryRole ? getRoleDashboardPath(primaryRole) : "/dashboard");
       } else {
         toast.success("Setup complete");
         navigate("/pending-approval");

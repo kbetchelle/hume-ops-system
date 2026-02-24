@@ -6335,6 +6335,10 @@ export type Database = {
         Returns: undefined
       }
       notify_unlinked_scheduled_sling_users: { Args: never; Returns: undefined }
+      predict_class_duration: {
+        Args: { p_class_name: string }
+        Returns: number
+      }
       process_scheduled_messages: { Args: never; Returns: undefined }
       refresh_daily_schedule: {
         Args: { p_schedule_date: string }

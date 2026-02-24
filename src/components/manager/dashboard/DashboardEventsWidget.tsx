@@ -80,12 +80,6 @@ export function DashboardEventsWidget() {
                 key={cls.id}
                 className="flex items-center gap-3 rounded-none px-3 py-2 hover:bg-muted/50 transition-colors text-sm"
               >
-                <div
-                  className="h-7 w-7 rounded-none flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: add_color.blue, color: "#fff" }}
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">
                     {cls.class_name}

@@ -696,7 +696,7 @@ function UserInfoDropdown({
             {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
                 Hi, {getFirstName(profile?.full_name)}
               </span>}
-            {unreadCount > 0 && <span className="flex items-center gap-0.5"><Bell className="h-3.5 w-3.5" style={{ color: '#e03a3c' }} /><span className="text-[11px] font-bold" style={{ color: '#e03a3c' }}>{unreadCount}</span></span>}
+            
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-50" align="start" side="top">

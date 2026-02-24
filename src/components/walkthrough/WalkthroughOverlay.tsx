@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, User, Settings, Bug, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMarkWalkthroughCompleted, useMarkWalkthroughSkipped } from "@/hooks/useWalkthroughState";
 import { useOptionalSidebar } from "@/components/ui/sidebar";
@@ -272,12 +272,17 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
-  // Programmatically open dropdown when step targets a dropdown trigger (user menu, role switcher)
-  const DROPDOWN_TARGET_SELECTORS = ["[data-walkthrough=user-menu]", "[data-walkthrough=role-switcher]"];
+  // Show static menu replica for user-menu steps instead of opening real dropdown
+  const isUserMenuStep =
+    currentStep &&
+    typeof currentStep.target === "string" &&
+    currentStep.target === "[data-walkthrough=user-menu]";
+
+  // Programmatically open dropdown when step targets role switcher only
   useEffect(() => {
     if (!currentStep) return;
     const target = typeof currentStep.target === "string" ? currentStep.target : null;
-    if (target && DROPDOWN_TARGET_SELECTORS.includes(target)) {
+    if (target && target === "[data-walkthrough=role-switcher]") {
       const el = document.querySelector(target) as HTMLElement | null;
       if (el) {
         const timeoutId = setTimeout(() => {

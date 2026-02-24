@@ -303,7 +303,12 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{cls.name}</span>
+                          <span className="text-sm font-medium">
+                            {cls.name}
+                            {cls.room_name && (
+                              <span className="text-muted-foreground font-normal"> ({cls.room_name})</span>
+                            )}
+                          </span>
                           {cls.is_cancelled && (
                             <Badge variant="destructive" className="text-[10px] px-1.5 py-0 rounded-none">
                               Cancelled
@@ -340,11 +345,6 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                             </span>
                           </div>
                           
-                          {cls.room_name && (
-                            <p className="text-[10px] text-muted-foreground">
-                              {cls.room_name}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>

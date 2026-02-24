@@ -3,14 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import {
   format,
   parseISO,
-  startOfWeek,
-  endOfWeek,
   startOfDay,
   endOfDay,
   eachDayOfInterval,
+  addDays,
   isSameDay,
-  addWeeks,
-  subWeeks,
   isToday,
 } from "date-fns";
 import {
@@ -108,8 +105,8 @@ export function MasterCalendar() {
   const { startDate, endDate } = useMemo(() => {
     if (viewMode === "week") {
       return {
-        startDate: startOfWeek(currentDate, { weekStartsOn: 0 }),
-        endDate: endOfWeek(currentDate, { weekStartsOn: 0 }),
+        startDate: startOfDay(currentDate),
+        endDate: endOfDay(addDays(currentDate, 6)),
       };
     } else {
       return {
@@ -287,17 +284,17 @@ export function MasterCalendar() {
   // Navigation handlers
   const goToPrevious = () => {
     if (viewMode === "week") {
-      setCurrentDate(subWeeks(currentDate, 1));
+      setCurrentDate(addDays(currentDate, -7));
     } else {
-      setCurrentDate(new Date(currentDate.getTime() - 24 * 60 * 60 * 1000));
+      setCurrentDate(addDays(currentDate, -1));
     }
   };
 
   const goToNext = () => {
     if (viewMode === "week") {
-      setCurrentDate(addWeeks(currentDate, 1));
+      setCurrentDate(addDays(currentDate, 7));
     } else {
-      setCurrentDate(new Date(currentDate.getTime() + 24 * 60 * 60 * 1000));
+      setCurrentDate(addDays(currentDate, 1));
     }
   };
 

@@ -57,6 +57,6 @@ export function useUnreadAnnouncements() {
       return unreadCount;
     },
     enabled: !!user?.id,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
   });
 }

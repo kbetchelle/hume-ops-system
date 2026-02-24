@@ -149,7 +149,7 @@ export default function ConciergeDashboard() {
           );
         }
         return (
-          <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-4" style={{ padding: '36px' }}>
             <MastercardArrivalBanner />
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 basis-[450px] min-w-[450px]" style={{ paddingTop: '25px' }}>

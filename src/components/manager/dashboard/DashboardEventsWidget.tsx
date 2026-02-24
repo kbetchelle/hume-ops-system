@@ -40,6 +40,27 @@ export function DashboardEventsWidget() {
 
   const activeClasses = (classes ?? []).filter((c) => !c.canceled && c.class_name && c.class_name !== "Unknown");
 
+  // Current PST time as HH:mm for comparison against stored PST timestamps
+  const nowPst = formatInTimeZone(new Date(), "America/Los_Angeles", "HH:mm");
+
+  const isPast = (cls: DailyScheduleClass) => {
+    if (!cls.end_time) return false;
+    try {
+      const endHHmm = formatInTimeZone(parseISO(cls.end_time), "UTC", "HH:mm");
+      return endHHmm <= nowPst;
+    } catch {
+      return false;
+    }
+  };
+
+  // Sort: upcoming first (by start_time asc), then past classes at bottom
+  const sortedClasses = [...activeClasses].sort((a, b) => {
+    const aPast = isPast(a);
+    const bPast = isPast(b);
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return a.start_time.localeCompare(b.start_time);
+  });
+
   const getEventColor = (className: string) => {
     const name = className.toLowerCase();
     if (name.includes("personal training") || name.includes("pt session")) {
@@ -102,16 +123,16 @@ export function DashboardEventsWidget() {
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">
            <div>
-              {activeClasses.map((cls) => {
+              {sortedClasses.map((cls) => {
                 const color = getEventColor(cls.class_name);
+                const past = isPast(cls);
                 return (
               <div
                 key={cls.id}
-                className="flex items-center gap-0 rounded-none px-3 py-2 transition-colors text-sm"
+                className={`flex items-center gap-0 rounded-none px-3 py-2 transition-colors text-sm ${past ? 'opacity-50' : ''}`}
                 style={{
-                  backgroundColor: `${color}1A`,
-                  borderLeft: `4px solid ${color}`,
-                  borderBottom: `1.5px solid ${color}`,
+                  backgroundColor: past ? 'hsl(var(--muted))' : `${color}1A`,
+                  ...(past ? {} : { borderLeft: `4px solid ${color}`, borderBottom: `1.5px solid ${color}` }),
                 }}
               >
                 <div className="flex-1 min-w-0">

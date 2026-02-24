@@ -268,55 +268,43 @@ export function WhosWorkingView() {
             No staff scheduled for today
           </p>
         ) : (
-          POSITION_ORDER.map((position) => {
-            const positionStaff = groupedStaff[position];
-            if (!positionStaff || positionStaff.length === 0) return null;
-
-            return (
-              <div key={position} className="space-y-2">
-                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {position}
-                </h4>
-                <div className="space-y-2">
-                  {positionStaff.map((person) => {
-                    const posColor = POSITION_COLOR[position] || add_color.yellow;
-                    return (
-                    <div
-                      key={person.id}
-                      className="flex items-center gap-3 p-3 border transition-colors duration-200"
-                      style={{
-                        backgroundColor: `${posColor}1A`,
-                        borderColor: posColor,
-                      }}
-                    >
-
-
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-normal truncate">
-                          {person.user_name || "Unknown"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">{person.position || position}</p>
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-[10px]">
-                            {formatTimeRange(person.shift_start, person.shift_end)}
-                          </span>
-                        </div>
+          <div className="space-y-2">
+            {staffWithStatus
+              .sort((a, b) => new Date(a.shift_start).getTime() - new Date(b.shift_start).getTime())
+              .map((person) => {
+                const normalizedPos = normalizePosition(person.position);
+                const posColor = POSITION_COLOR[normalizedPos] || add_color.yellow;
+                return (
+                  <div
+                    key={person.id}
+                    className="flex items-center gap-3 p-3 border transition-colors duration-200"
+                    style={{
+                      backgroundColor: `${posColor}1A`,
+                      borderColor: posColor,
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-normal truncate">
+                        {person.user_name || "Unknown"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">{person.position || "—"}</p>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span className="text-[10px]">
+                          {formatTimeRange(person.shift_start, person.shift_end)}
+                        </span>
                       </div>
-
-                      {person.is_currently_working && (
-                        <Badge className="rounded-none text-[10px] uppercase tracking-widest text-white border-none" style={{ backgroundColor: '#7c3aed' }}>
-                          On Shift
-                        </Badge>
-                      )}
                     </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
+
+                    {person.is_currently_working && (
+                      <Badge className="rounded-none text-[10px] uppercase tracking-widest text-white border-none" style={{ backgroundColor: '#7c3aed' }}>
+                        On Shift
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
         )}
       </CardContent>
     </Card>

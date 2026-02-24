@@ -15,8 +15,8 @@ import { logApiCall } from '../_shared/apiLogger.ts';
  * Retry: up to 8 retries with jittered exponential backoff (3s base, 60s cap).
  */
 
-const PAGE_LIMIT = 25;
-const MAX_PAGES = 30; // Cap at 30 pages (~750 records) per invocation to avoid timeout
+const PAGE_LIMIT = 100; // Use max page size for efficiency
+const SYNC_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
 const UPSERT_BATCH = 100;
 const MAX_RETRIES = 8;
 const BASE_DELAY_MS = 3000;
@@ -372,7 +372,13 @@ Deno.serve(async (req) => {
     let hasMore = true;
     let totalAttempts = 0;
 
-    while (hasMore && pageCount < MAX_PAGES) {
+    while (hasMore) {
+      // Wall-clock timeout guard: stop fetching before gateway kills us
+      if (Date.now() - startTime > SYNC_TIMEOUT_MS) {
+        logger.warn(`Timeout guard hit after ${pageCount} pages (${allRecords.length} records). Cursor saved for resume.`);
+        break;
+      }
+
       let url = `${baseUrl}?limit=${PAGE_LIMIT}`;
       if (cursor) url += `&start_after=${cursor}`;
 

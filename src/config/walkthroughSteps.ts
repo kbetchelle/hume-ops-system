@@ -23,6 +23,8 @@ export interface WalkthroughStepConfig {
   showMenuPreview?: boolean;
   /** Offset the arrow endpoint by {x, y} pixels from the target */
   arrowEndOffset?: { x: number; y: number };
+  /** Show a colored border highlight around the target element */
+  highlightBorder?: string;
 }
 export interface WalkthroughContext {
   firstName: string;
@@ -106,6 +108,8 @@ const CONCIERGE_LOST_FOUND: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Only for high-value items. There's an 'In Safe?' tool so you can see what's currently in the safe.",
   textEs: "Solo para objetos de valor. La herramienta «¿En caja fuerte?» muestra qué hay ahora en la caja fuerte.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 // Cafe role-specific steps
@@ -282,6 +286,7 @@ export function getWalkthroughStepsForRole(
       text: t(c.text, c.textEs ?? null),
       ...(c.showMenuPreview ? { showMenuPreview: true } : {}),
       ...(c.arrowEndOffset ? { arrowEndOffset: c.arrowEndOffset } : {}),
+      ...(c.highlightBorder ? { highlightBorder: c.highlightBorder } : {}),
     })
   );
 }

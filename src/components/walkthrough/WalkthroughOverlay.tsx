@@ -34,6 +34,8 @@ export interface WalkthroughStep {
   showMenuPreview?: boolean;
   /** Offset the arrow endpoint by {x, y} pixels from the target center */
   arrowEndOffset?: { x: number; y: number };
+  /** Show a colored border highlight around the target element */
+  highlightBorder?: string;
 }
 
 /** Arrow colors cycle: orange, yellow, red, purple, blue, green (app brand add palette + purple) */
@@ -449,6 +451,22 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             width: targetRect.width + 8,
             height: targetRect.height + 8,
             border: "2px solid #fcb827",
+            borderRadius: 4,
+          }}
+          aria-hidden
+        />
+      )}
+
+      {/* Highlight border around target for steps with highlightBorder */}
+      {currentStep?.highlightBorder && targetRect && !showMenuPreview && (
+        <div
+          className="absolute z-[101] pointer-events-none"
+          style={{
+            left: targetRect.left - 4,
+            top: targetRect.top - 4,
+            width: targetRect.width + 8,
+            height: targetRect.height + 8,
+            border: `2px solid ${currentStep.highlightBorder}`,
             borderRadius: 4,
           }}
           aria-hidden

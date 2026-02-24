@@ -36,7 +36,7 @@ export default function ResourcesPagesPage() {
 
   return (
     <DashboardLayout title="Resource Pages">
-      <div className="p-4 md:p-8">
+      <div>
         <ResourcePagesTab 
           pages={pages} 
           isLoading={isLoading} 

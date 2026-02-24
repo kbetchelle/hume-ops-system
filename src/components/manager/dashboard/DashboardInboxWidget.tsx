@@ -68,7 +68,7 @@ export function DashboardInboxWidget() {
   return (
     <div className="border border-border rounded-lg p-4 flex flex-col min-h-[320px]">
       <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-widest flex items-center gap-2">
+        <h3 className="text-sm font-semibold uppercase tracking-widest flex items-center gap-2 w-full">
           <InboxIcon className="h-4 w-4" />
           Notes for Management
           {unreadCount > 0 && (

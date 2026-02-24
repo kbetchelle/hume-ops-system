@@ -13,14 +13,14 @@ import { useTodaysClasses, useSyncArketaClasses } from "@/hooks/useArketaApi";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-export function ClassScheduleView({ filterClassesOnly = false }: { filterClassesOnly?: boolean } = {}) {
+export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesOnly?: boolean;} = {}) {
   // Use PST date for "today"
   const today = (() => {
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Los_Angeles",
       year: "numeric",
       month: "2-digit",
-      day: "2-digit",
+      day: "2-digit"
     }).formatToParts(new Date());
     const y = parts.find((p) => p.type === "year")!.value;
     const m = parts.find((p) => p.type === "month")!.value;
@@ -62,7 +62,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
 
   const getCapacityColor = (booked: number, capacity: number) => {
     if (capacity === 0) return "bg-muted";
-    const percentage = (booked / capacity) * 100;
+    const percentage = booked / capacity * 100;
     if (percentage >= 90) return "bg-destructive";
     if (percentage >= 70) return "bg-yellow-500";
     return "bg-primary";
@@ -79,13 +79,13 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
+            {[1, 2, 3].map((i) =>
+            <Skeleton key={i} className="h-20 w-full" />
+            )}
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   if (error) {
@@ -105,16 +105,16 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
             variant="outline"
             size="sm"
             className="mt-2"
-            onClick={() => refetch()}
-          >
+            onClick={() => refetch()}>
+
             Retry
           </Button>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
-  const activeClasses = classes?.filter(c => !c.is_cancelled) || [];
+  const activeClasses = classes?.filter((c) => !c.is_cancelled) || [];
   const totalBooked = activeClasses.reduce((sum, c) => sum + (c.booked_count || 0), 0);
   const totalCapacity = activeClasses.reduce((sum, c) => sum + (c.capacity || 0), 0);
 
@@ -125,10 +125,10 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
     const pstNow = (() => {
       const parts = new Intl.DateTimeFormat("en-GB", {
         timeZone: "America/Los_Angeles",
-        hour: "2-digit", minute: "2-digit", hour12: false,
+        hour: "2-digit", minute: "2-digit", hour12: false
       }).formatToParts(now);
-      const h = parseInt(parts.find(p => p.type === "hour")!.value, 10);
-      const m = parseInt(parts.find(p => p.type === "minute")!.value, 10);
+      const h = parseInt(parts.find((p) => p.type === "hour")!.value, 10);
+      const m = parseInt(parts.find((p) => p.type === "minute")!.value, 10);
       return h * 60 + m; // minutes since midnight PST
     })();
 
@@ -147,8 +147,8 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
             variant="ghost"
             size="icon"
             className="h-10 w-10 shrink-0"
-            onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}
-          >
+            onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}>
+
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <span className="text-base font-medium min-w-[120px] text-center">
@@ -158,39 +158,39 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
             variant="ghost"
             size="icon"
             className="h-10 w-10 shrink-0"
-            onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}
-          >
+            onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd"))}>
+
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
         <div className="flex-1 min-h-0 overflow-auto scroll-smooth relative">
-          {activeClasses.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No classes scheduled for this day.</p>
-          ) : (
-            <div className="space-y-2 p-3 pb-6">
+          {activeClasses.length === 0 ?
+          <p className="p-4 text-sm text-muted-foreground">No classes scheduled for this day.</p> :
+
+          <div className="space-y-2 p-3 pb-6">
               {activeClasses.map((cls) => {
-                const booked = cls.booked_count || 0;
-                const capacity = cls.capacity || 0;
-                const isPast = isClassPast(cls.start_time, cls.duration_minutes);
-                const isExpanded = expandedClassId === cls.id;
-                return (
-                  <div key={cls.id} className="space-y-0">
-                    {isToday && activeClasses[0]?.id === cls.id && (
-                      <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+              const booked = cls.booked_count || 0;
+              const capacity = cls.capacity || 0;
+              const isPast = isClassPast(cls.start_time, cls.duration_minutes);
+              const isExpanded = expandedClassId === cls.id;
+              return (
+                <div key={cls.id} className="space-y-0">
+                    {isToday && activeClasses[0]?.id === cls.id &&
+                  <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
                         <div className="h-px flex-1 bg-primary/50" />
                         <span>Now</span>
                         <div className="h-px flex-1 bg-primary/50" />
                       </div>
-                    )}
+                  }
                     <button
-                      type="button"
-                      onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}
-                      className={cn(
-                        "w-full text-left p-4 rounded-xl border shadow-sm transition-all duration-200 min-h-[44px]",
-                        isPast && "opacity-60",
-                        cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border bg-card"
-                      )}
-                    >
+                    type="button"
+                    onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}
+                    className={cn(
+                      "w-full text-left p-4 rounded-xl border shadow-sm transition-all duration-200 min-h-[44px]",
+                      isPast && "opacity-60",
+                      cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border bg-card"
+                    )}>
+
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium text-muted-foreground shrink-0">
                           {formatTime(cls.start_time)}{getEndTime(cls.start_time, cls.duration_minutes) ? ` – ${getEndTime(cls.start_time, cls.duration_minutes)}` : ""}
@@ -201,35 +201,35 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                             {[cls.instructor_name, cls.room_name].filter(Boolean).join(" · ") || "—"}
                           </p>
                         </div>
-                        {(cls.is_cancelled || (isPast && !cls.is_cancelled)) && (
-                          <Badge variant={cls.is_cancelled ? "destructive" : "secondary"} className="text-[10px] shrink-0 rounded-none border-none text-white" style={cls.is_cancelled ? {} : { backgroundColor: '#009ddc', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                        {(cls.is_cancelled || isPast && !cls.is_cancelled) &&
+                      <Badge variant={cls.is_cancelled ? "destructive" : "secondary"} className="text-[10px] shrink-0 rounded-none border-none text-white" style={cls.is_cancelled ? {} : { backgroundColor: '#009ddc', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                             {cls.is_cancelled ? "Cancelled" : "Done"}
                           </Badge>
-                        )}
+                      }
                       </div>
-                      {isExpanded && (
-                        <div className="mt-3 pt-3 border-t space-y-2 text-sm text-muted-foreground">
+                      {isExpanded &&
+                    <div className="mt-3 pt-3 border-t space-y-2 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
                             <span>{booked} / {capacity} enrolled</span>
                           </div>
-                          {cls.duration_minutes && (
-                            <div className="flex items-center gap-2">
+                          {cls.duration_minutes &&
+                      <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4" />
                               <span>{cls.duration_minutes} min</span>
                             </div>
-                          )}
+                      }
                         </div>
-                      )}
+                    }
                     </button>
-                  </div>
-                );
-              })}
+                  </div>);
+
+            })}
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -245,82 +245,82 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
           size="sm"
           onClick={handleSync}
           disabled={syncClasses.isPending}
-          className="h-7 px-2"
-        >
+          className="h-7 px-2">
+
           <RefreshCw className={`h-3 w-3 ${syncClasses.isPending ? "animate-spin" : ""}`} />
         </Button>
       </CardHeader>
         <CardContent className="flex-1 min-h-0 flex flex-col">
-          {activeClasses.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No classes scheduled for today.</p>
-          ) : (
-            <ScrollArea className="flex-1 pr-2">
+          {activeClasses.length === 0 ?
+        <p className="text-xs text-muted-foreground">No classes scheduled for today.</p> :
+
+        <ScrollArea className="flex-1 pr-2">
             <div className="space-y-0">
               {(() => {
-                const pstNowMin = (() => {
-                  const parts = new Intl.DateTimeFormat("en-GB", {
-                    timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false,
-                  }).formatToParts(new Date());
-                  return parseInt(parts.find(p => p.type === "hour")!.value, 10) * 60
-                    + parseInt(parts.find(p => p.type === "minute")!.value, 10);
-                })();
-                const getEndMin = (cls: typeof activeClasses[0]) => {
-                  const match = cls.start_time.match(/(\d{2}):(\d{2})/);
-                  if (!match) return 0;
-                  return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + (cls.duration_minutes || 50);
-                };
-                const upcoming = activeClasses.filter(c => pstNowMin < getEndMin(c));
-                const completed = activeClasses.filter(c => pstNowMin >= getEndMin(c)).reverse();
-                return [...upcoming, ...completed];
-              })().map((cls) => {
-                const booked = cls.booked_count || 0;
-                const capacity = cls.capacity || 0;
-                const percentage = capacity > 0 ? (booked / capacity) * 100 : 0;
-                const isPast = (() => {
-                  const match = cls.start_time.match(/(\d{2}):(\d{2})/);
-                  if (!match) return false;
-                  const startMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-                  const endMin = startMin + (cls.duration_minutes || 50);
-                  const nowParts = new Intl.DateTimeFormat("en-GB", {
-                    timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false,
-                  }).formatToParts(new Date());
-                  const nowMin = parseInt(nowParts.find(p => p.type === "hour")!.value, 10) * 60
-                    + parseInt(nowParts.find(p => p.type === "minute")!.value, 10);
-                  return nowMin >= endMin;
-                })();
+              const pstNowMin = (() => {
+                const parts = new Intl.DateTimeFormat("en-GB", {
+                  timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false
+                }).formatToParts(new Date());
+                return parseInt(parts.find((p) => p.type === "hour")!.value, 10) * 60 +
+                parseInt(parts.find((p) => p.type === "minute")!.value, 10);
+              })();
+              const getEndMin = (cls: typeof activeClasses[0]) => {
+                const match = cls.start_time.match(/(\d{2}):(\d{2})/);
+                if (!match) return 0;
+                return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + (cls.duration_minutes || 50);
+              };
+              const upcoming = activeClasses.filter((c) => pstNowMin < getEndMin(c));
+              const completed = activeClasses.filter((c) => pstNowMin >= getEndMin(c)).reverse();
+              return [...upcoming, ...completed];
+            })().map((cls) => {
+              const booked = cls.booked_count || 0;
+              const capacity = cls.capacity || 0;
+              const percentage = capacity > 0 ? booked / capacity * 100 : 0;
+              const isPast = (() => {
+                const match = cls.start_time.match(/(\d{2}):(\d{2})/);
+                if (!match) return false;
+                const startMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+                const endMin = startMin + (cls.duration_minutes || 50);
+                const nowParts = new Intl.DateTimeFormat("en-GB", {
+                  timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false
+                }).formatToParts(new Date());
+                const nowMin = parseInt(nowParts.find((p) => p.type === "hour")!.value, 10) * 60 +
+                parseInt(nowParts.find((p) => p.type === "minute")!.value, 10);
+                return nowMin >= endMin;
+              })();
 
-                return (
-                  <div
-                    key={cls.id}
-                    className={`p-3 border-b border-border transition-colors ${
-                      isPast ? "opacity-60" : ""
-                    } ${cls.is_cancelled ? "border-l-4 border-l-destructive bg-destructive/5" : ""}`}
-                    style={{
-                      ...(!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : {}),
-                      ...(!isPast && !cls.is_cancelled ? { borderLeft: `4px solid ${add_color.blue}` } : {}),
-                    }}
-                  >
+              return (
+                <div
+                  key={cls.id}
+                  className={`p-3 border-b border-border transition-colors ${
+                  isPast ? "opacity-60" : ""} ${
+                  cls.is_cancelled ? "border-l-4 border-l-destructive bg-destructive/5" : ""}`}
+                  style={{
+                    ...(!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : {}),
+                    ...(!isPast && !cls.is_cancelled ? { borderLeft: `4px solid ${add_color.blue}` } : {})
+                  }}>
+
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">
                             {cls.name}
-                            {cls.room_name && (
-                              <span className="text-muted-foreground font-normal"> ({cls.room_name})</span>
-                            )}
+                            {cls.room_name &&
+                          <span className="text-muted-foreground font-normal"> ({cls.room_name})</span>
+                          }
                           </span>
-                          {cls.is_cancelled && (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 rounded-none">
+                          {cls.is_cancelled &&
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 rounded-none">
                               Cancelled
                             </Badge>
-                          )}
-                          {isPast && !cls.is_cancelled && (
-                            <Badge variant="secondary" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#fcb827', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                        }
+                          {isPast && !cls.is_cancelled &&
+                        <Badge variant="secondary" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#fcb827', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Completed
                             </Badge>
-                          )}
-                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap font-bold">
+                        }
+                          <span className="ml-auto text-xs whitespace-nowrap font-bold text-secondary-foreground">
                             {formatTime(cls.start_time)}
                             {getEndTime(cls.start_time, cls.duration_minutes) && ` – ${getEndTime(cls.start_time, cls.duration_minutes)}`}
                           </span>
@@ -328,17 +328,17 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                         
                         <div className="mt-2 space-y-1.5">
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            {cls.instructor_name && (
-                              <span className="flex items-center gap-1">
+                            {cls.instructor_name &&
+                          <span className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
                                 {cls.instructor_name}
                               </span>
-                            )}
-                            {cls.waitlist_count > 0 && (
-                              <span className="ml-auto text-xs text-black">
+                          }
+                            {cls.waitlist_count > 0 &&
+                          <span className="ml-auto text-xs text-black">
                                 +{cls.waitlist_count} waitlist
                               </span>
-                            )}
+                          }
                             <span className={`${cls.waitlist_count > 0 ? '' : 'ml-auto '}text-xs font-bold text-black`}>
                               {booked}{capacity ? `/${capacity}` : ''}
                             </span>
@@ -347,13 +347,13 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  </div>);
+
+            })}
             </div>
           </ScrollArea>
-        )}
+        }
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 }

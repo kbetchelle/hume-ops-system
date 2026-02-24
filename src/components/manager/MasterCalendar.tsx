@@ -367,15 +367,6 @@ export function MasterCalendar() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Week View</SelectItem>
-                <SelectItem value="day">Day View</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
               <SelectTrigger className="w-32">
                 <SelectValue />

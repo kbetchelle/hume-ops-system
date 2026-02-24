@@ -28,7 +28,7 @@ export function ShiftNoteInboxItem({ item, onMarkRead }: ShiftNoteInboxItemProps
   return (
     <div
       role="article"
-      className={cn("flex gap-3 p-4 border transition-colors hover:bg-muted/50 cursor-pointer")}
+      className={cn("flex gap-0 p-4 border transition-colors hover:bg-muted/50 cursor-pointer")}
       style={{
         backgroundColor: `${HEX}1A`,
         ...(!item.isRead ? tintBorderStyle(HEX) : undefined),

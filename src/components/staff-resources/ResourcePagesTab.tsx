@@ -214,7 +214,7 @@ export function ResourcePagesTab({
                     )}
                   </div>
 
-                  <span className="hidden sm:block text-[10px] text-muted-foreground shrink-0 w-24 text-right">
+                  <span className="hidden sm:block text-[11.5px] text-muted-foreground shrink-0 w-24 text-right">
                     {page.updated_at && format(new Date(page.updated_at), "MMM d, yyyy")}
                   </span>
                 </div>

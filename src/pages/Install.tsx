@@ -33,7 +33,7 @@ export default function Install() {
         {/* Hero */}
         <div className="text-center space-y-3">
           <img src="/icons/app-icon.png" alt="HUME" className="h-16 w-16 mx-auto" />
-          <h2 className="text-lg font-normal tracking-wide">
+          <h2 className="text-lg font-medium tracking-wide">
             Add HUME Ops to your Home Screen
           </h2>
           <p className="text-sm text-muted-foreground tracking-wide max-w-xs mx-auto">

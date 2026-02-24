@@ -694,7 +694,7 @@ function UserInfoDropdown({
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className={cn("w-full justify-between rounded-none relative", collapsed ? "h-8 w-8 p-0 justify-center" : "h-8 px-2")} data-walkthrough="user-menu">
             {!collapsed && <span className="text-[15px] uppercase tracking-widest truncate font-bold">
-                Hi, {getFirstName(profile?.full_name)}
+                {t("greeting.hi")}, {getFirstName(profile?.full_name)}
               </span>}
             
           </Button>
@@ -702,24 +702,24 @@ function UserInfoDropdown({
         <DropdownMenuContent className="w-56 rounded-none border-border bg-background z-[101]" align="start" side="top">
           <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bell className="mr-2 h-3 w-3" />
-            {t("Notifications", "Notificaciones")}
+            {t("menu.notifications")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <User className="mr-2 h-3 w-3" />
-            Profile
+            {t("menu.profile")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Settings className="mr-2 h-3 w-3" />
-            Account Settings
+            {t("menu.accountSettings")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem onClick={() => setShowBugReport(true)} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <Bug className="mr-2 h-3 w-3" />
-            Report a Bug
+            {t("menu.reportBug")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSignOut} className="text-xs uppercase tracking-widest cursor-pointer hover:bg-secondary rounded-none">
             <LogOut className="mr-2 h-3 w-3" />
-            Sign out
+            {t("menu.signOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

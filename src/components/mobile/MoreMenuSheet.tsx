@@ -3,6 +3,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import type { MoreMenuItem } from "@/components/mobile/mobile-nav-config";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 interface MoreMenuSheetProps {
@@ -22,6 +23,7 @@ function DragHandle() {
 }
 
 export function MoreMenuSheet({ open, onOpenChange, items, onItemSelect }: MoreMenuSheetProps) {
+  const { t } = useLanguage();
   const handleSelect = (item: MoreMenuItem) => {
     onItemSelect(item);
     onOpenChange(false);
@@ -52,7 +54,7 @@ export function MoreMenuSheet({ open, onOpenChange, items, onItemSelect }: MoreM
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                  <span className="flex-1 truncate">{item.label}</span>
+                  <span className="flex-1 truncate">{t(item.labelKey)}</span>
                   {item.badge != null && item.badge > 0 && (
                     <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
                       {item.badge > 99 ? "99+" : item.badge}

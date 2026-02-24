@@ -1,5 +1,6 @@
 import { Home, FileText, MessageSquare, Wrench } from "lucide-react";
 import type { ConciergeView } from "./ConciergeSidebar";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ConciergeBottomNavProps {
   activeView: ConciergeView;
@@ -8,27 +9,26 @@ interface ConciergeBottomNavProps {
   unreadMessageCount?: number;
 }
 
-const tabs = [
-  { id: "home" as const, label: "Home", icon: Home },
-  { id: "report" as const, label: "Report", icon: FileText },
-  { id: "messages" as const, label: "Comms", icon: MessageSquare },
-  { id: "templates" as const, label: "Tools", icon: Wrench },
-];
-
 export function ConciergeBottomNav({
   activeView,
   onViewChange,
   hasUnreadAnnouncements = false,
   unreadMessageCount = 0,
 }: ConciergeBottomNavProps) {
-  // Map the activeView to the closest tab
+  const { t } = useLanguage();
+
+  const tabs = [
+    { id: "home" as const, labelKey: "mobile.home", icon: Home },
+    { id: "report" as const, labelKey: "mobile.report", icon: FileText },
+    { id: "messages" as const, labelKey: "nav.messages", icon: MessageSquare },
+    { id: "templates" as const, labelKey: "mobile.tools", icon: Wrench },
+  ];
+
   const getActiveTab = () => {
     if (tabs.some((t) => t.id === activeView)) return activeView;
     if (["announcements"].includes(activeView)) return "messages";
     if (
-      ["whos-working", "resources", "resources-quick-links", "resources-pages", "knowledge-base", "lost-found", "packages", "qa"].includes(
-        activeView
-      )
+      ["whos-working", "resources", "resources-quick-links", "resources-pages", "knowledge-base", "lost-found", "packages", "qa"].includes(activeView)
     )
       return "templates";
     return "home";
@@ -36,7 +36,6 @@ export function ConciergeBottomNav({
 
   const activeTab = getActiveTab();
 
-  // Show dot on Comms tab if there are unread announcements or unread messages
   const showDotOnTab = (tabId: string) => {
     if (tabId === "messages" && (hasUnreadAnnouncements || unreadMessageCount > 0)) return true;
     return false;
@@ -67,7 +66,7 @@ export function ConciergeBottomNav({
                   <span className="absolute -top-0.5 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse" />
                 )}
               </div>
-              <span>{tab.label}</span>
+              <span>{t(tab.labelKey)}</span>
             </button>
           );
         })}

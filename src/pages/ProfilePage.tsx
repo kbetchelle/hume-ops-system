@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ROLES } from "@/types/roles";
 import { User, Settings, Calendar, Mail, Shield, Globe, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { SickDayRequestDialog } from "@/components/profile/SickDayRequestDialog";
 import { SickDayRequestHistory } from "@/components/profile/SickDayRequestHistory";
 
@@ -129,7 +130,7 @@ export default function ProfilePage() {
                     <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="uppercase tracking-widest text-muted-foreground text-xs">
-                        Email
+                        {t("profile.email")}
                       </p>
                       <p className="text-sm">{user?.email}</p>
                     </div>
@@ -140,7 +141,7 @@ export default function ProfilePage() {
                     <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="uppercase tracking-widest text-muted-foreground text-sm">
-                        Roles
+                        {t("profile.roles")}
                       </p>
                       <p className="text-sm">
                         {(roles || []).
@@ -150,7 +151,7 @@ export default function ProfilePage() {
                         );
                         return roleInfo?.label || r.role;
                       }).
-                      join(", ") || "No roles assigned"}
+                      join(", ") || t("profile.noRolesAssigned")}
                       </p>
                     </div>
                   </div>
@@ -160,7 +161,7 @@ export default function ProfilePage() {
                     <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="uppercase tracking-widest text-muted-foreground text-sm">
-                        Preferred Language
+                        {t("profile.preferredLanguage")}
                       </p>
                       <p className="text-sm">
                         {getLanguageLabel(profile?.preferred_language)}
@@ -174,7 +175,7 @@ export default function ProfilePage() {
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="uppercase tracking-widest text-muted-foreground text-sm">
-                        Account Created
+                        {t("profile.accountCreated")}
                       </p>
                       <p className="text-sm">
                         {profile?.created_at ?

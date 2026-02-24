@@ -22,7 +22,7 @@ export default function CafeDashboard() {
   });
 
   return (
-    <DashboardLayout title="Cafe Dashboard">
+    <DashboardLayout title={t("page.cafeDashboard")}>
       <div className="space-y-6">
 
         {/* Today's Checklist */}

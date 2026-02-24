@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import type { MobileTabItem } from "@/components/mobile/mobile-nav-config";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 interface MobileBottomNavProps {
@@ -12,6 +13,7 @@ const TAB_HEIGHT = 64;
 const SAFE_BOTTOM = "env(safe-area-inset-bottom)";
 
 export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNavProps) {
+  const { t } = useLanguage();
 
   return (
     <nav
@@ -46,7 +48,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
                 {isActive && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
@@ -71,7 +73,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   <tab.icon className="h-6 w-6" strokeWidth={1.5} />
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </button>
             );
@@ -97,7 +99,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest truncate w-full text-center">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
                 {isActive && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />

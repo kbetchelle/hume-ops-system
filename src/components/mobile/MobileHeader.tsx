@@ -69,7 +69,7 @@ export function MobileHeader({ title, roleChipClassName }: MobileHeaderProps) {
 
         {/* Right: notification bell + role chip */}
         <div className="flex-1 flex items-center justify-end gap-0 shrink-0">
-          <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <div className="min-w-[44px] min-h-[44px] flex items-center justify-center" data-walkthrough="mobile-notification-bell">
             <NotificationBell />
           </div>
           {availableRoles.length > 1 && currentViewRole && (
@@ -79,6 +79,7 @@ export function MobileHeader({ title, roleChipClassName }: MobileHeaderProps) {
                   variant="secondary"
                   size="sm"
                   className={cn("rounded-none text-[10px] font-normal h-7 px-2 gap-0.5 shrink-0", roleChipClassName)}
+                  data-walkthrough="mobile-role-chip"
                 >
                   <span className="truncate max-w-[80px]">{getRoleLabel(currentViewRole)}</span>
                   <ChevronDown className="h-3 w-3 shrink-0" />

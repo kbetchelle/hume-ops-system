@@ -15,6 +15,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
 
   return (
     <nav
+      data-walkthrough="mobile-bottom-nav"
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-border backdrop-blur-lg bg-white/90 flex-shrink-0"
       style={{
         height: `calc(${TAB_HEIGHT}px + ${SAFE_BOTTOM} + 8px)`,
@@ -60,6 +61,7 @@ export function MobileBottomNav({ tabs, activeId, onMoreClick }: MobileBottomNav
                 key={tab.id}
                 type="button"
                 onClick={onMoreClick}
+                data-walkthrough="mobile-more-tab"
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 min-w-0 min-h-[44px] gap-0.5 transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground"

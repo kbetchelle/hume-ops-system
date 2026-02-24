@@ -124,7 +124,64 @@ const CAFE_PACKAGE_TRACKING: WalkthroughStepConfig = {
 };
 
 // ---------------------------------------------------------------------------
-// Role-specific step blocks (between user menu and bug)
+// Mobile-specific steps (target mobile UI elements)
+// ---------------------------------------------------------------------------
+
+const MOBILE_BOTTOM_NAV: WalkthroughStepConfig = {
+  id: "mobile-bottom-nav",
+  targetSelector: "[data-walkthrough=mobile-bottom-nav]",
+  arrowDirection: "bottom",
+  text: "Use the bottom tabs to navigate between your main pages.",
+  textEs: "Usa las pestañas inferiores para navegar entre tus páginas principales.",
+};
+
+const MOBILE_MORE_MENU: WalkthroughStepConfig = {
+  id: "mobile-more-menu",
+  targetSelector: "[data-walkthrough=mobile-more-tab]",
+  arrowDirection: "bottom",
+  text: "Tap 'More' for additional pages, settings, sign out, and bug reports.",
+  textEs: "Toca «Más» para páginas adicionales, ajustes, cerrar sesión y reportar problemas.",
+};
+
+const MOBILE_NOTIFICATION_BELL: WalkthroughStepConfig = {
+  id: "mobile-notification-bell",
+  targetSelector: "[data-walkthrough=mobile-notification-bell]",
+  arrowDirection: "top",
+  text: "Check your notifications here.",
+  textEs: "Consulta tus notificaciones aquí.",
+};
+
+const MOBILE_ROLE_CHIP: WalkthroughStepConfig = {
+  id: "mobile-role-chip",
+  targetSelector: "[data-walkthrough=mobile-role-chip]",
+  arrowDirection: "top",
+  text: "Switch between your roles using this dropdown.",
+  textEs: "Cambia entre tus roles usando este menú.",
+  showWhenKey: "multiple_roles",
+};
+
+// Mobile role-specific steps
+
+const MOBILE_MANAGER_STEPS: WalkthroughStepConfig[] = [
+  MOBILE_NOTIFICATION_BELL,
+  MOBILE_ROLE_CHIP,
+];
+
+const MOBILE_CONCIERGE_STEPS: WalkthroughStepConfig[] = [
+  MOBILE_ROLE_CHIP,
+];
+
+const MOBILE_CAFE_STEPS: WalkthroughStepConfig[] = [];
+
+function getMobileRoleSpecificSteps(role: AppRole): WalkthroughStepConfig[] {
+  if (role === "admin" || role === "manager") return MOBILE_MANAGER_STEPS;
+  if (role === "concierge") return MOBILE_CONCIERGE_STEPS;
+  if (role === "cafe") return MOBILE_CAFE_STEPS;
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Desktop/tablet role-specific step blocks
 // ---------------------------------------------------------------------------
 
 const MANAGER_STEPS: WalkthroughStepConfig[] = [
@@ -181,6 +238,25 @@ function getOrderedConfigs(role: AppRole, context: WalkthroughContext): Walkthro
 }
 
 /**
+ * Builds the full ordered list of mobile step configs for a role.
+ */
+function getMobileOrderedConfigs(role: AppRole, context: WalkthroughContext): WalkthroughStepConfig[] {
+  const roleSteps = getMobileRoleSpecificSteps(role).filter((s) => includeStep(s, context));
+  const middle: WalkthroughStepConfig[] = [MOBILE_BOTTOM_NAV, MOBILE_MORE_MENU, ...roleSteps];
+  const totalCount = middle.length;
+  const welcomeEn = WELCOME_EN.replace("{name}", context.firstName).replace("{n}", String(totalCount));
+  const welcomeEs = WELCOME_ES.replace("{name}", context.firstName).replace("{n}", String(totalCount));
+  const welcome: WalkthroughStepConfig = {
+    id: "welcome",
+    targetSelector: WELCOME_TARGET,
+    arrowDirection: "left",
+    text: welcomeEn,
+    textEs: welcomeEs,
+  };
+  return [welcome, ...middle];
+}
+
+/**
  * Returns WalkthroughStep[] for the overlay with translated text.
  * Welcome step uses a dummy selector so the overlay renders it centered with no arrow.
  */
@@ -190,6 +266,24 @@ export function getWalkthroughStepsForRole(
   t: WalkthroughTranslator
 ): WalkthroughStep[] {
   const configs = getOrderedConfigs(role, context);
+  return configs.map(
+    (c): WalkthroughStep => ({
+      target: c.targetSelector,
+      arrowDirection: c.arrowDirection,
+      text: t(c.text, c.textEs ?? null),
+    })
+  );
+}
+
+/**
+ * Returns mobile-specific WalkthroughStep[] targeting bottom nav, more menu, etc.
+ */
+export function getMobileWalkthroughStepsForRole(
+  role: AppRole,
+  context: WalkthroughContext,
+  t: WalkthroughTranslator
+): WalkthroughStep[] {
+  const configs = getMobileOrderedConfigs(role, context);
   return configs.map(
     (c): WalkthroughStep => ({
       target: c.targetSelector,

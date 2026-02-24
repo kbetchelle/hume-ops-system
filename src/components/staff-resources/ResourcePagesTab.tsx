@@ -196,7 +196,7 @@ export function ResourcePagesTab({
                       )
                     ))}
                     {page.page_type === 'pdf' && (
-                      <Badge variant="secondary" className="rounded-none text-[10px] ml-2 border-none" style={{ backgroundColor: '#009ddc', color: '#ffffff' }}>PDF</Badge>
+                      <Badge variant="secondary" className="rounded-none text-[10px] ml-2 border-none" style={{ backgroundColor: '#009ddc', color: '#ffffff', padding: '2.25px 6.25px' }}>PDF</Badge>
                     )}
                     {hasPendingFlag && <span className="ml-1"><UnderReviewBadge /></span>}
                   </span>

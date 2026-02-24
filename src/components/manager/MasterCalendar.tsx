@@ -351,10 +351,22 @@ export function MasterCalendar() {
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Master Calendar
+            {viewMode === "week"
+              ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`
+              : format(currentDate, "EEEE, MMMM d, yyyy")}
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={goToPrevious}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday}>
+                Today
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToNext}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -381,24 +393,6 @@ export function MasterCalendar() {
               Export
             </Button>
           </div>
-        </div>
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goToPrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToToday}>
-              Today
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <h3 className="text-lg font-semibold">
-            {viewMode === "week"
-              ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`
-              : format(currentDate, "EEEE, MMMM d, yyyy")}
-          </h3>
         </div>
       </CardHeader>
       <CardContent>

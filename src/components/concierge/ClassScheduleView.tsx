@@ -312,14 +312,13 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                                 {cls.instructor_name}
                               </span>
                             )}
+                            <span className="ml-auto text-xs font-bold text-black">
+                              {booked}{capacity ? `/${capacity}` : ''}
+                            </span>
                           </div>
                           
                           {/* Capacity bar */}
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-1 rounded-none border-none text-white" style={{ backgroundColor: add_color.blue }}>
-                              <Users className="h-3 w-3" />
-                              {booked}{capacity ? `/${capacity}` : ''}
-                            </Badge>
                             <div className="flex-1">
                               <Progress 
                                 value={percentage} 

@@ -72,6 +72,7 @@ export default function ProfilePage() {
   const { data: startDate, isLoading: startDateLoading } = useHumeStartDate(
     profile?.sling_id
   );
+  const { t } = useLanguage();
   const [sickDayDialogOpen, setSickDayDialogOpen] = useState(false);
 
   const isLoading = profileLoading || rolesLoading;

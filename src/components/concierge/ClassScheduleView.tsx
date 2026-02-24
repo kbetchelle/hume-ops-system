@@ -40,7 +40,6 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
   };
 
   const formatTime = (dateString: string) => {
-    // start_time stores PST local times with a +00 offset, so parse without TZ conversion
     const match = dateString.match(/(\d{2}):(\d{2})/);
     if (!match) return dateString;
     const hours = parseInt(match[1], 10);
@@ -48,6 +47,17 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
     const period = hours >= 12 ? "PM" : "AM";
     const h = hours % 12 || 12;
     return `${h}:${minutes} ${period}`;
+  };
+
+  const getEndTime = (startTime: string, durationMinutes: number | null) => {
+    if (!durationMinutes) return null;
+    const match = startTime.match(/(\d{2}):(\d{2})/);
+    if (!match) return null;
+    const totalMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + durationMinutes;
+    const h = Math.floor(totalMin / 60) % 24;
+    const m = String(totalMin % 60).padStart(2, "0");
+    const period = h >= 12 ? "PM" : "AM";
+    return `${h % 12 || 12}:${m} ${period}`;
   };
 
   const getCapacityColor = (booked: number, capacity: number) => {
@@ -163,8 +173,8 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium text-muted-foreground shrink-0 w-16">
-                          {formatTime(cls.start_time)}
+                        <span className="text-sm font-medium text-muted-foreground shrink-0">
+                          {formatTime(cls.start_time)}{getEndTime(cls.start_time, cls.duration_minutes) ? ` – ${getEndTime(cls.start_time, cls.duration_minutes)}` : ""}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-base font-medium truncate">{cls.name}</p>
@@ -262,9 +272,9 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                         <div className="mt-2 space-y-1.5">
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                             <Clock className="h-3 w-3" />
                               {formatTime(cls.start_time)}
-                              {cls.duration_minutes && ` (${cls.duration_minutes}m)`}
+                              {getEndTime(cls.start_time, cls.duration_minutes) && ` – ${getEndTime(cls.start_time, cls.duration_minutes)}`}
                             </span>
                             {cls.instructor_name && (
                               <span className="flex items-center gap-1">

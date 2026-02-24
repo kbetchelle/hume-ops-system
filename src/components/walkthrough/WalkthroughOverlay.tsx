@@ -420,7 +420,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             }
           >
             <div>
-              <p className="text-sm font-medium uppercase tracking-widest">
+              <p className="text-sm font-medium uppercase tracking-widest text-white">
                 {currentStep.text}
               </p>
             </div>

@@ -98,7 +98,7 @@ export function DashboardEventsWidget() {
         </div>
       ) : (
         <ScrollArea className="flex-1 max-h-[400px]">
-          <div className="space-y-1">
+           <div>
               {activeClasses.map((cls) => {
                 const color = getEventColor(cls.class_name);
                 return (
@@ -116,6 +116,7 @@ export function DashboardEventsWidget() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatTime(cls.start_time)}
+                    {cls.end_time && ` – ${formatTime(cls.end_time)}`}
                     {cls.instructor && ` · ${cls.instructor}`}
                   </p>
                 </div>

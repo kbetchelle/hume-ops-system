@@ -452,7 +452,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             size="icon"
             onClick={handleBack}
             disabled={!canGoBack}
-            className="rounded-none h-9 w-9 border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20 hover:text-add-orange disabled:opacity-50"
+            className="rounded-none h-9 w-9 border-2 border-add-orange bg-transparent text-white hover:bg-add-orange/20 hover:text-white disabled:opacity-50"
             aria-label={t("Previous step", "Paso anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -460,7 +460,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           <Button
             type="button"
             variant="default"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-transparent text-white hover:bg-add-orange/20"
             onClick={handleNext}
             aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >
@@ -470,7 +470,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             ref={skipButtonRef}
             type="button"
             variant="ghost"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange/10 text-add-orange hover:bg-add-orange/20"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-transparent text-white hover:bg-add-orange/20"
             onClick={handleSkip}
             aria-label={t("Skip walkthrough", "Omitir guía")}
           >

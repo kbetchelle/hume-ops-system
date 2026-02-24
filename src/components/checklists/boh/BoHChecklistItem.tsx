@@ -332,7 +332,7 @@ export function BoHChecklistItem({
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     const choicesEs: Record<string, string> = { Mon: 'Lun', Tue: 'Mar', Wed: 'Mié', Thu: 'Jue', Fri: 'Vie', Sat: 'Sáb', Sun: 'Dom', 'N/A': 'N/A' };
     return (
-      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
+      <div className={cn('space-y-2', isMobile ? 'min-h-[48px]' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}

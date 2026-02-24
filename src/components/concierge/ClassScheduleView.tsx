@@ -332,7 +332,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                               </span>
                             )}
                             {cls.waitlist_count > 0 && (
-                              <span className="ml-auto text-xs font-bold text-black">
+                              <span className="ml-auto text-xs text-black">
                                 +{cls.waitlist_count} waitlist
                               </span>
                             )}

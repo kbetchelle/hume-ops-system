@@ -1,12 +1,13 @@
 import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore } from "date-fns";
-import { Calendar, Clock, Users, Dumbbell, MapPin, CreditCard } from "lucide-react";
+import { Calendar, Clock, Users, Dumbbell, MapPin, CreditCard, User, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { selectFrom } from "@/lib/dataApi";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
+import { add_color } from "@/lib/constants";
 
 interface DailyScheduleClass {
   id: string;
@@ -60,6 +61,7 @@ interface UnifiedEvent {
   icon: React.ReactNode;
   sortTime: Date;
   color: string;
+  canceled?: boolean;
 }
 
 const PM_BOUNDARY_HOUR = 13.5; // 1:30 PM as decimal hours
@@ -71,7 +73,19 @@ interface UpcomingTodayCardProps {
 
 export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   const { currentShift } = useCurrentShift();
-  const today = format(new Date(), "yyyy-MM-dd");
+  // Use PST date to match daily_schedule refresh (which uses PST)
+  const today = (() => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")!.value;
+    const m = parts.find((p) => p.type === "month")!.value;
+    const d = parts.find((p) => p.type === "day")!.value;
+    return `${y}-${m}-${d}`;
+  })();
   const now = new Date();
 
   // Fetch tours
@@ -157,20 +171,21 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
       .filter((c) => filterByShift(c.start_time))
       .map((c) => {
         const startTime = parseISO(c.start_time);
+        const capacityStr = c.total_booked !== null && c.max_capacity !== null
+          ? `${c.total_booked}/${c.max_capacity}`
+          : undefined;
         return {
           id: c.id,
           type: "class" as const,
-          title: c.canceled ? `${c.class_name || "Unnamed Class"} (Canceled)` : (c.class_name || "Unnamed Class"),
+          title: c.canceled ? `${c.class_name || "Unnamed Class"}` : (c.class_name || "Unnamed Class"),
           subtitle: c.instructor || undefined,
           time: format(startTime, "h:mm a"),
           endTime: c.end_time ? format(parseISO(c.end_time), "h:mm a") : undefined,
-          details:
-            c.total_booked !== null && c.max_capacity !== null
-              ? `${c.total_booked}/${c.max_capacity} signed up`
-              : undefined,
+          details: capacityStr,
           icon: <Dumbbell className="h-4 w-4" />,
           sortTime: startTime,
           color: "text-green-500",
+          canceled: c.canceled || false,
         };
       });
 
@@ -263,6 +278,67 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
             const isPast = isBefore(event.sortTime, now);
             const isNext = event.id === nextEvent?.id;
 
+            // Class events get ClassScheduleView-style formatting
+            if (event.type === "class") {
+              return (
+                <div
+                  key={event.id}
+                  className={`p-3 border-b border-border transition-colors ${
+                    isPast ? "opacity-60" : ""
+                  } ${event.canceled ? "border-l-4 border-l-destructive bg-destructive/5" : ""}`}
+                  style={{
+                    ...(!event.canceled ? { backgroundColor: `${add_color.blue}1A` } : {}),
+                    ...(!isPast && !event.canceled ? { borderLeft: `4px solid ${add_color.blue}` } : {}),
+                  }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{event.title}</span>
+                        {event.canceled && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 rounded-none">
+                            Cancelled
+                          </Badge>
+                        )}
+                        {isPast && !event.canceled && (
+                          <Badge variant="secondary" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: '#fcb827', paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Completed
+                          </Badge>
+                        )}
+                        {isNext && !event.canceled && (
+                          <Badge variant="default" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: add_color.blue, paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
+                            Next Up
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2 space-y-1.5">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {event.time}
+                            {event.endTime && ` – ${event.endTime}`}
+                          </span>
+                          {event.subtitle && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {event.subtitle}
+                            </span>
+                          )}
+                          {event.details && (
+                            <span className="ml-auto text-xs font-bold text-black">
+                              {event.details}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Non-class events keep original card formatting
             return (
               <div
                 key={event.id}

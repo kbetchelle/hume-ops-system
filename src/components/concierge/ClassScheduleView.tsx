@@ -320,15 +320,14 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                               Completed
                             </Badge>
                           )}
+                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+                            {formatTime(cls.start_time)}
+                            {getEndTime(cls.start_time, cls.duration_minutes) && ` – ${getEndTime(cls.start_time, cls.duration_minutes)}`}
+                          </span>
                         </div>
                         
                         <div className="mt-2 space-y-1.5">
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                             <Clock className="h-3 w-3" />
-                              {formatTime(cls.start_time)}
-                              {getEndTime(cls.start_time, cls.duration_minutes) && ` – ${getEndTime(cls.start_time, cls.duration_minutes)}`}
-                            </span>
                             {cls.instructor_name && (
                               <span className="flex items-center gap-1">
                                 <User className="h-3 w-3" />

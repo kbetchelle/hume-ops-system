@@ -298,9 +298,13 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                     <Badge variant="destructive" className="text-[8px]">
                       Deactivated
                     </Badge>
-                  ) : user.onboarding_completed ? (
+                  ) : user.onboarding_completed && !user.must_change_password ? (
                     <Badge variant="secondary" className="text-[8px]">
                       Active
+                    </Badge>
+                  ) : user.onboarding_completed && user.must_change_password ? (
+                    <Badge variant="outline" className="text-[8px]">
+                      Password Reset
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[8px]">

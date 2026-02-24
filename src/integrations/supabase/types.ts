@@ -6166,6 +6166,7 @@ export type Database = {
           deactivated: boolean
           email: string
           full_name: string
+          must_change_password: boolean
           onboarding_completed: boolean
           primary_role: Database["public"]["Enums"]["app_role"]
           roles: Database["public"]["Enums"]["app_role"][]

@@ -121,6 +121,25 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
   if (isMobile) {
     const isToday = selectedDate === today;
     const now = new Date();
+    // Current PST time as HH:MM for comparison against stored PST times
+    const pstNow = (() => {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Los_Angeles",
+        hour: "2-digit", minute: "2-digit", hour12: false,
+      }).formatToParts(now);
+      const h = parseInt(parts.find(p => p.type === "hour")!.value, 10);
+      const m = parseInt(parts.find(p => p.type === "minute")!.value, 10);
+      return h * 60 + m; // minutes since midnight PST
+    })();
+
+    const isClassPast = (startTime: string, durationMinutes: number | null) => {
+      if (!isToday) return false;
+      const match = startTime.match(/(\d{2}):(\d{2})/);
+      if (!match) return false;
+      const startMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+      const endMin = startMin + (durationMinutes || 50);
+      return pstNow >= endMin;
+    };
     return (
       <div className="flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-2 p-3 border-b bg-background shrink-0">
@@ -152,7 +171,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
               {activeClasses.map((cls) => {
                 const booked = cls.booked_count || 0;
                 const capacity = cls.capacity || 0;
-                const isPast = new Date(cls.start_time) < now;
+                const isPast = isClassPast(cls.start_time, cls.duration_minutes);
                 const isExpanded = expandedClassId === cls.id;
                 return (
                   <div key={cls.id} className="space-y-0">
@@ -242,7 +261,18 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                 const booked = cls.booked_count || 0;
                 const capacity = cls.capacity || 0;
                 const percentage = capacity > 0 ? (booked / capacity) * 100 : 0;
-                const isPast = new Date(cls.start_time) < new Date();
+                const isPast = (() => {
+                  const match = cls.start_time.match(/(\d{2}):(\d{2})/);
+                  if (!match) return false;
+                  const startMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+                  const endMin = startMin + (cls.duration_minutes || 50);
+                  const nowParts = new Intl.DateTimeFormat("en-GB", {
+                    timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false,
+                  }).formatToParts(new Date());
+                  const nowMin = parseInt(nowParts.find(p => p.type === "hour")!.value, 10) * 60
+                    + parseInt(nowParts.find(p => p.type === "minute")!.value, 10);
+                  return nowMin >= endMin;
+                })();
 
                 return (
                   <div

@@ -462,7 +462,8 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             size="icon"
             onClick={handleBack}
             disabled={!canGoBack}
-            className="rounded-none h-9 w-9 border-2 border-add-orange bg-add-orange text-white hover:bg-add-orange/80 hover:text-white disabled:opacity-50"
+            className="rounded-none h-9 w-9 border-2 text-white hover:opacity-80 disabled:opacity-50"
+            style={{ backgroundColor: arrowColor, borderColor: arrowColor }}
             aria-label={t("Previous step", "Paso anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -470,7 +471,8 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
           <Button
             type="button"
             variant="default"
-            className="rounded-none uppercase text-[10px] tracking-widest border-2 border-add-orange bg-add-orange text-white hover:bg-add-orange/80"
+            className="rounded-none uppercase text-[10px] tracking-widest border-2 text-white hover:opacity-80"
+            style={{ backgroundColor: arrowColor, borderColor: arrowColor }}
             onClick={handleNext}
             aria-label={isLastStep ? t("Finish walkthrough", "Terminar guía") : t("Next step", "Siguiente paso")}
           >

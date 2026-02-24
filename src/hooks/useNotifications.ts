@@ -18,7 +18,8 @@ export type NotificationType =
   | 'package_arrived'
   | 'room_turnover'
   | 'tour_alert'
-  | 'mastercard_arrival';
+  | 'mastercard_arrival'
+  | 'roof_music_reset';
 
 interface SendNotificationParams {
   userId: string;

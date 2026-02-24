@@ -22,6 +22,7 @@ export function getNotificationRoute(
       : '/dashboard/my-packages',
     room_turnover: '/dashboard',
     tour_alert: '/dashboard',
+    roof_music_reset: '/dashboard/concierge',
   };
 
   return routes[type] || '/dashboard/notifications';

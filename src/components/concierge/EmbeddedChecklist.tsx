@@ -544,7 +544,7 @@ export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProp
             )}
           </div>
         </div>
-        <Progress value={progressPercentage} className="h-2 mt-3" />
+        
       </CardHeader>
 
       <CardContent className="p-0">

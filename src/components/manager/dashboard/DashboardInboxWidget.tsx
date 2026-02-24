@@ -111,13 +111,6 @@ export function DashboardInboxWidget() {
         </ScrollArea>
       )}
 
-      {items.length > MAX_ITEMS && (
-        <div className="pt-2 border-t border-border mt-2 text-center">
-          <span className="text-xs text-muted-foreground">
-            Showing {MAX_ITEMS} of {items.length} items
-          </span>
-        </div>
-      )}
 
       <AnswerQuestionDialog
         open={answerDialogOpen}

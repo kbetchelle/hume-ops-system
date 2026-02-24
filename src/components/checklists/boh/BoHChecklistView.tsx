@@ -198,13 +198,6 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
     return (
       <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0 !overflow-visible">
         {headerSlot}
-        {/* Progress bar */}
-        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shrink-0">
-          <div
-            className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-red-500 via-amber-500 to-green-500"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
         {/* Date + Shift + Hide completed */}
         <div className="flex flex-wrap items-center gap-2 p-3 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 min-h-[44px]">

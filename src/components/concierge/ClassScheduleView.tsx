@@ -13,6 +13,14 @@ import { useTodaysClasses, useSyncArketaClasses } from "@/hooks/useArketaApi";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
+const getClassTypeColor = (name: string): string => {
+  const lower = name.toLowerCase();
+  if (lower.includes('heated')) return '#009ddc';
+  if (lower.includes('reformer')) return '#e03a3c';
+  if (lower.includes('high roof') || lower.includes('highroof')) return '#e03a3c';
+  return '#009ddc'; // default
+};
+
 export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesOnly?: boolean;} = {}) {
   // Use PST date for "today"
   const today = (() => {
@@ -188,8 +196,11 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                     className={cn(
                       "w-full text-left p-4 rounded-none border shadow-sm transition-all duration-200 min-h-[44px]",
                       isPast && "opacity-60",
-                      cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border bg-card"
-                    )}>
+                      cls.is_cancelled ? "border-destructive bg-destructive/5" : "border-border"
+                    )}
+                    style={{
+                      ...(!cls.is_cancelled ? { backgroundColor: `${getClassTypeColor(cls.name)}1A`, borderLeft: `4px solid ${getClassTypeColor(cls.name)}` } : {})
+                    }}>
 
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium text-muted-foreground shrink-0">
@@ -296,8 +307,8 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                   isPast ? "opacity-60" : ""} ${
                   cls.is_cancelled ? "border-l-4 border-l-destructive bg-destructive/5" : ""}`}
                   style={{
-                    ...(!cls.is_cancelled ? { backgroundColor: `${add_color.blue}1A` } : {}),
-                    ...(!isPast && !cls.is_cancelled ? { borderLeft: `4px solid ${add_color.blue}` } : {})
+                    ...(!cls.is_cancelled ? { backgroundColor: `${getClassTypeColor(cls.name)}1A` } : {}),
+                    ...(!isPast && !cls.is_cancelled ? { borderLeft: `4px solid ${getClassTypeColor(cls.name)}` } : {})
                   }}>
 
                     <div className="flex items-start justify-between">

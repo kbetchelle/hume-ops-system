@@ -255,11 +255,11 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
                   <span>{section}</span>
                   <span className="text-muted-foreground font-normal">{sectionCompleted}/{sectionItems.length}</span>
                 </div>
-                <div className="divide-y">
+                <div>
                   {filteredItems.map((item: any) => (
                     <div
                       key={item.id}
-                      className="min-h-[48px] py-4 px-5 bg-card border-b last:border-b-0"
+                      className="min-h-[48px] py-4 px-5 bg-card"
                     >
                       <BoHChecklistItem
                         item={item}

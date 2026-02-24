@@ -324,6 +324,7 @@ export const BOH_WALKTHROUGH_ROLES: AppRole[] = [
   "female_spa_attendant",
   "male_spa_attendant",
   "floater",
+  "cafe",
 ];
 
 export function isBohWalkthroughRole(role: AppRole | null): boolean {

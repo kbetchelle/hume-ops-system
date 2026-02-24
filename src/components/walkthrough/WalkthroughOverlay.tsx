@@ -32,6 +32,8 @@ export interface WalkthroughStep {
   showWhen?: () => boolean;
   /** When true, show a static replica of the user menu dropdown */
   showMenuPreview?: boolean;
+  /** Offset the arrow endpoint by {x, y} pixels from the target center */
+  arrowEndOffset?: { x: number; y: number };
 }
 
 /** Arrow colors cycle: orange, yellow, red, purple, blue, green (app brand add palette + purple) */
@@ -81,7 +83,8 @@ function getArrowPoints(
   direction: WalkthroughArrowDirection,
   targetRect: DOMRect,
   viewportWidth: number,
-  viewportHeight: number
+  viewportHeight: number,
+  endOffset?: { x: number; y: number }
 ): { start: { x: number; y: number }; end: { x: number; y: number } } {
   const margin = viewportWidth < BREAKPOINT_TABLET ? 100 : ARROW_MARGIN;
   const sidebarMin = viewportWidth < BREAKPOINT_TABLET ? 20 : SIDEBAR_WIDTH + 80;
@@ -121,6 +124,10 @@ function getArrowPoints(
       startY = cy;
       endX = targetRect.left;
       endY = cy;
+  }
+  if (endOffset) {
+    endX += endOffset.x;
+    endY += endOffset.y;
   }
   return { start: { x: startX, y: startY }, end: { x: endX, y: endY } };
 }
@@ -336,7 +343,7 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 768;
   const arrowPoints =
     currentStep && targetRect
-      ? getArrowPoints(currentStep.arrowDirection, targetRect, viewportWidth, viewportHeight)
+      ? getArrowPoints(currentStep.arrowDirection, targetRect, viewportWidth, viewportHeight, currentStep.arrowEndOffset)
       : null;
   const pathD = arrowPoints ? getArrowPathD(arrowPoints.start, arrowPoints.end) : "";
   const arrowColor = WALKTHROUGH_ARROW_COLORS[stepIndex % WALKTHROUGH_ARROW_COLORS.length];

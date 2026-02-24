@@ -21,8 +21,9 @@ export interface WalkthroughStepConfig {
   showWhenKey?: WalkthroughShowWhenKey;
   /** Show a static replica of the user menu dropdown on this step */
   showMenuPreview?: boolean;
+  /** Offset the arrow endpoint by {x, y} pixels from the target */
+  arrowEndOffset?: { x: number; y: number };
 }
-
 export interface WalkthroughContext {
   firstName: string;
   hasMultipleRoles: boolean;
@@ -53,6 +54,7 @@ const UNIVERSAL_BUG: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Send suggestions, issues, or compliments here.",
   textEs: "Envía sugerencias, incidencias o cumplidos aquí.",
+  arrowEndOffset: { x: 230, y: 140 },
 };
 
 // Manager (admin + manager) role-specific steps
@@ -279,6 +281,7 @@ export function getWalkthroughStepsForRole(
       arrowDirection: c.arrowDirection,
       text: t(c.text, c.textEs ?? null),
       ...(c.showMenuPreview ? { showMenuPreview: true } : {}),
+      ...(c.arrowEndOffset ? { arrowEndOffset: c.arrowEndOffset } : {}),
     })
   );
 }

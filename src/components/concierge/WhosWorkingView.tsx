@@ -141,10 +141,10 @@ export function WhosWorkingView() {
           ? [slingUser.first_name, slingUser.last_name].filter(Boolean).join(' ') 
           : shift.user_name || 'Unknown';
 
-        // Use shift.position (scheduled role) for display
-        const positionLabel = shift.position || (slingUser?.positions?.length 
+        // Use sling_users.positions for role display, fallback to shift.position
+        const positionLabel = slingUser?.positions?.length 
           ? slingUser.positions.join(', ') 
-          : null);
+          : shift.position || null;
 
         return {
           id: shift.id,

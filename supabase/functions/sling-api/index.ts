@@ -371,9 +371,21 @@ Deno.serve(async (req) => {
 
         console.log(`[Sling API] Syncing shifts for ${startDate} to ${endDate}...`);
         
-        // Fetch roster from Sling API with retry
-        const roster = await getRoster(SLING_AUTH_TOKEN, SLING_ORG_ID, startDate, endDate);
-        console.log(`[Sling API] Fetched ${roster.length} shifts from Sling`);
+        // Fetch roster and groups in parallel
+        const [roster, groups] = await Promise.all([
+          getRoster(SLING_AUTH_TOKEN, SLING_ORG_ID, startDate, endDate),
+          getGroups(SLING_AUTH_TOKEN, SLING_ORG_ID),
+        ]);
+        console.log(`[Sling API] Fetched ${roster.length} shifts and ${groups.length} groups from Sling`);
+
+        // Build position ID → name map from groups
+        const positionNameMap = new Map<number, string>();
+        for (const group of groups) {
+          if (group.id && group.name) {
+            positionNameMap.set(group.id, group.name);
+          }
+        }
+        console.log(`[Sling API] Mapped ${positionNameMap.size} position names`);
 
         // Pre-fetch sling_users for name lookup
         const userIds = [...new Set(roster.map(s => s.user?.id).filter(Boolean))];
@@ -413,7 +425,7 @@ Deno.serve(async (req) => {
               sling_shift_id: numericShiftId,
               external_id: rawShiftId,
               user_name: userName,
-              position: shift.position?.name || null,
+              position: shift.position?.name || (shift.position?.id ? positionNameMap.get(shift.position.id) : null) || null,
               shift_start: shift.dtstart,
               shift_end: shift.dtend,
               status: shift.status || 'scheduled',
@@ -445,7 +457,7 @@ Deno.serve(async (req) => {
               externalId: rawShiftId,
               userId: slingUserId,
               userName,
-              position: shift.position?.name,
+              position: shift.position?.name || (shift.position?.id ? positionNameMap.get(shift.position.id) : null),
               shiftStart: shift.dtstart,
               shiftEnd: shift.dtend,
             });

@@ -37,7 +37,7 @@ export function DashboardEventsWidget() {
     refetchInterval: 120000, // 2 minutes
   });
 
-  const activeClasses = (classes ?? []).filter((c) => !c.canceled);
+  const activeClasses = (classes ?? []).filter((c) => !c.canceled && c.class_name && c.class_name !== "Unknown");
 
   const formatTime = (iso: string) => {
     try {

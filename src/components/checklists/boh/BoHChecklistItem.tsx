@@ -164,7 +164,7 @@ export function BoHChecklistItem({
             <img 
               src={completion.photo_url} 
               alt={t('Completion photo', 'Foto de finalización')}
-              className="max-w-full sm:max-w-xs rounded-lg border"
+              className="max-w-full sm:max-w-xs rounded-none border"
             />
             <div className="flex gap-2">
               <Button 
@@ -225,7 +225,7 @@ export function BoHChecklistItem({
         {completion?.signature_data ? (
           <div className="space-y-3">
             {isImageSignature ? (
-              <div className="p-2 border rounded-lg bg-white inline-block">
+              <div className="p-2 border rounded-none bg-white inline-block">
                 <img
                   src={completion.signature_data}
                   alt={t('Signature', 'Firma')}
@@ -233,7 +233,7 @@ export function BoHChecklistItem({
                 />
               </div>
             ) : (
-              <div className="p-3 border rounded-lg bg-muted/50">
+              <div className="p-3 border rounded-none bg-muted/50">
                 <p className="font-signature text-2xl">{completion.signature_data}</p>
               </div>
             )}

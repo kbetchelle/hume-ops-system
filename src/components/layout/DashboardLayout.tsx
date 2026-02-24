@@ -20,7 +20,7 @@ import { LogOut, User, Settings, ChevronDown, ChevronRight, Users, ClipboardList
 import { useUnreadInboxCount } from "@/hooks/useManagementInbox";
 import { useInAppNotifications } from "@/hooks/useInAppNotifications";
 import { useNeedsWalkthrough, useMarkWalkthroughCompleted } from "@/hooks/useWalkthroughState";
-import { getWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
+import { getWalkthroughStepsForRole, getMobileWalkthroughStepsForRole, isBohWalkthroughRole } from "@/config/walkthroughSteps";
 import { WalkthroughOverlay } from "@/components/walkthrough";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
@@ -835,8 +835,9 @@ export function DashboardLayout({
     if (!needsWalkthrough || isBoh || activeRole === null) return [];
     const firstName = profile?.full_name?.split(" ")[0] ?? "User";
     const hasMultipleRoles = (roles?.length ?? availableRoles?.length ?? 0) > 1;
-    return getWalkthroughStepsForRole(activeRole, { firstName, hasMultipleRoles }, t);
-  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length, t]);
+    const stepsFn = isMobile ? getMobileWalkthroughStepsForRole : getWalkthroughStepsForRole;
+    return stepsFn(activeRole, { firstName, hasMultipleRoles }, t);
+  }, [needsWalkthrough, isBoh, activeRole, profile?.full_name, roles?.length, availableRoles?.length, t, isMobile]);
 
   const showOverlay =
     needsWalkthrough &&

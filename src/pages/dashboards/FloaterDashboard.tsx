@@ -11,8 +11,10 @@ export default function FloaterDashboard() {
   return (
     <DashboardLayout title={isMobile ? getRoleLabel("floater") : "Checklist"}>
       <div className="space-y-2">
-        <ChecklistAlertBanners types={['class_turnover', 'mat_cleaning']} />
-        <BoHChecklistView />
+        {!isMobile && <ChecklistAlertBanners types={['class_turnover', 'mat_cleaning']} />}
+        <BoHChecklistView
+          headerSlot={isMobile ? <ChecklistAlertBanners types={['class_turnover', 'mat_cleaning']} /> : undefined}
+        />
       </div>
     </DashboardLayout>
   );

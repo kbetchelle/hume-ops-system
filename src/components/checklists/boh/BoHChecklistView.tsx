@@ -16,6 +16,11 @@ import { Calendar, ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
+interface BoHChecklistViewProps {
+  /** Optional content rendered inside the scrollable area before the checklist (e.g. alert banners). */
+  headerSlot?: React.ReactNode;
+}
+
 interface BoHChecklistWithItems {
   id: string;
   title: string;
@@ -27,7 +32,7 @@ interface BoHChecklistWithItems {
   boh_checklist_items: any[];
 }
 
-export function BoHChecklistView() {
+export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
   const { user } = useAuth();
   const { data: userRolesData } = useUserRoles(user?.id);
   const { activeRole } = useActiveRole();
@@ -192,6 +197,7 @@ export function BoHChecklistView() {
 
     return (
       <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0">
+        {headerSlot}
         {/* Progress bar */}
         <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shrink-0">
           <div

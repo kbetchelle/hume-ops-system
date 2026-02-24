@@ -73,8 +73,8 @@ export function DashboardInboxWidget() {
           Notes for Management
           {unreadCount > 0 && (
             <span
-              className="inline-block text-[10px] font-medium text-center leading-[30px] rounded-sm"
-              style={{ backgroundColor: add_color.red, color: "#fff", width: "30px", height: "30px" }}
+              className="inline-block text-[10px] font-medium text-center leading-[28px] rounded-sm"
+              style={{ backgroundColor: add_color.red, color: "#fff", width: "28px", height: "28px" }}
             >
               {unreadCount}
             </span>

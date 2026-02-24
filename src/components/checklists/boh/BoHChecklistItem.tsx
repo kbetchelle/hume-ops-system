@@ -96,7 +96,7 @@ export function BoHChecklistItem({
         className={cn(
           'flex items-center gap-3 border rounded-none hover:bg-accent/50 transition-all duration-200 cursor-pointer active:scale-[0.98]',
           isCompleted && 'bg-accent/30 border-primary opacity-90',
-          isMobile ? 'min-h-[48px] py-4 px-5 gap-4' : 'p-3'
+          isMobile ? 'min-h-[48px] p-0 gap-4' : 'p-3'
         )}
         style={colorStyle}
         onClick={() => handleToggle()}
@@ -114,7 +114,7 @@ export function BoHChecklistItem({
           <div className="flex items-center gap-2 flex-wrap">
             <span className={cn(
               isCompleted && 'line-through text-muted-foreground',
-              isMobile ? 'text-base' : 'text-[13px]'
+              isMobile ? 'text-[13.75px]' : 'text-[13px]'
             )}>{taskLabel}</span>
             
             {item.is_high_priority && <Badge variant="default" className="text-xs">{t('High Priority', 'Alta Prioridad')}</Badge>}
@@ -130,7 +130,7 @@ export function BoHChecklistItem({
   // Photo type
   if (item.task_type === 'photo') {
     return (
-      <div className={cn('border rounded-none space-y-3', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3 md:p-4')} style={colorStyle}>
+      <div className={cn('border rounded-none space-y-3', isMobile ? 'min-h-[48px] p-0' : 'p-3 md:p-4')} style={colorStyle}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -141,7 +141,7 @@ export function BoHChecklistItem({
         
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5 flex-shrink-0" />
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
         </div>
         {item.time_hint && (
@@ -194,7 +194,7 @@ export function BoHChecklistItem({
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className={cn('border rounded-none space-y-3', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3 md:p-4')} style={colorStyle}>
+      <div className={cn('border rounded-none space-y-3', isMobile ? 'min-h-[48px] p-0' : 'p-3 md:p-4')} style={colorStyle}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -204,7 +204,7 @@ export function BoHChecklistItem({
         
         <div className="flex items-center gap-2">
           <PenTool className="h-5 w-5 flex-shrink-0" />
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
         </div>
         {item.time_hint && (
@@ -263,9 +263,9 @@ export function BoHChecklistItem({
   // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
+      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] p-0' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
         </div>
         {item.time_hint && (
@@ -294,9 +294,9 @@ export function BoHChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
+      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] p-0' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
         </div>
         {item.time_hint && (
@@ -332,9 +332,9 @@ export function BoHChecklistItem({
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     const choicesEs: Record<string, string> = { Mon: 'Lun', Tue: 'Mar', Wed: 'Mié', Thu: 'Jue', Fri: 'Vie', Sat: 'Sáb', Sun: 'Dom', 'N/A': 'N/A' };
     return (
-      <div className={cn('space-y-2', isMobile ? 'min-h-[48px]' : 'p-3')} style={colorStyle}>
+      <div className={cn('space-y-2', isMobile ? 'min-h-[48px] p-0' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
@@ -359,9 +359,9 @@ export function BoHChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
+      <div className={cn('border rounded-none space-y-2', isMobile ? 'min-h-[48px] p-0' : 'p-3')} style={colorStyle}>
         <div className="flex items-center gap-2">
-          <span className={cn('font-medium', isMobile ? 'text-base' : 'text-[13px]')}>{taskLabel}</span>
+          <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           {item.required && <Badge variant="destructive" className="text-xs">{t('Required', 'Obligatorio')}</Badge>}
         </div>
         {item.time_hint && (
@@ -379,8 +379,8 @@ export function BoHChecklistItem({
 
   // Default fallback
   return (
-    <div className={cn('border rounded-none', isMobile ? 'min-h-[48px] py-4 px-5' : 'p-3')} style={colorStyle}>
-      <span className={cn(isMobile && 'text-base')}>{taskLabel}</span>
+    <div className={cn('border rounded-none', isMobile ? 'min-h-[48px] p-0' : 'p-3')} style={colorStyle}>
+      <span className={cn(isMobile && 'text-[13.75px]')}>{taskLabel}</span>
       <p className="text-xs text-muted-foreground">{t('Unsupported task type', 'Tipo de tarea no soportado')}: {item.task_type}</p>
     </div>
   );

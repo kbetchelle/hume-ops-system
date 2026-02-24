@@ -78,7 +78,7 @@ export function DashboardEventsWidget() {
             {activeClasses.map((cls) => (
               <div
                 key={cls.id}
-                className="flex items-center gap-3 rounded px-3 py-2 hover:bg-muted/50 transition-colors text-sm"
+                className="flex items-center gap-3 rounded-none px-3 py-2 hover:bg-muted/50 transition-colors text-sm"
               >
                 <div
                   className="h-7 w-7 rounded-none flex items-center justify-center shrink-0"

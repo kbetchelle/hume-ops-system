@@ -396,7 +396,7 @@ export function MasterCalendar() {
             return (
               <div
                 key={dateStr}
-                className={`border rounded-lg p-3 min-h-[200px] ${
+                className={`border rounded-none p-3 min-h-[200px] ${
                   isTodayDate ? "bg-accent border-accent-foreground/20" : ""
                 }`}
               >
@@ -420,7 +420,7 @@ export function MasterCalendar() {
                     dayEvents.map((event) => (
                       <div
                         key={event.id}
-                        className={`p-2 rounded border text-xs ${event.color}`}
+                        className={`p-2 rounded-none border text-xs ${event.color}`}
                       >
                         <div className="flex items-start gap-1">
                           {event.icon}

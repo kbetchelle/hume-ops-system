@@ -1541,7 +1541,7 @@ export function ResponseTemplatesWithAI() {
               {aiOutput && (
                 <div className="border p-4 bg-primary/5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Badge className="rounded-none text-xs">
+                    <Badge className="rounded-none text-xs border-none" style={{ backgroundColor: '#e03a3c', color: 'white' }}>
                       <Sparkles className="h-3 w-3 mr-1" />
                       HUME Voice
                     </Badge>

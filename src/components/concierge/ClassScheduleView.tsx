@@ -257,7 +257,23 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
           ) : (
             <ScrollArea className="flex-1 pr-2">
             <div className="space-y-0">
-              {activeClasses.map((cls) => {
+              {(() => {
+                const pstNowMin = (() => {
+                  const parts = new Intl.DateTimeFormat("en-GB", {
+                    timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false,
+                  }).formatToParts(new Date());
+                  return parseInt(parts.find(p => p.type === "hour")!.value, 10) * 60
+                    + parseInt(parts.find(p => p.type === "minute")!.value, 10);
+                })();
+                const getEndMin = (cls: typeof activeClasses[0]) => {
+                  const match = cls.start_time.match(/(\d{2}):(\d{2})/);
+                  if (!match) return 0;
+                  return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + (cls.duration_minutes || 50);
+                };
+                const upcoming = activeClasses.filter(c => pstNowMin < getEndMin(c));
+                const completed = activeClasses.filter(c => pstNowMin >= getEndMin(c)).reverse();
+                return [...upcoming, ...completed];
+              })().map((cls) => {
                 const booked = cls.booked_count || 0;
                 const capacity = cls.capacity || 0;
                 const percentage = capacity > 0 ? (booked / capacity) * 100 : 0;

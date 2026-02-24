@@ -152,7 +152,7 @@ function getStepTextPosition(
   const isTabletOrSmaller = viewportWidth < BREAKPOINT_TABLET;
   const isDesktop = viewportWidth >= BREAKPOINT_DESKTOP;
   const maxTop = viewportHeight - BOTTOM_SAFE_HEIGHT - STEP_TEXT_EST_HEIGHT;
-  const minLeft = isTabletOrSmaller ? 16 : SIDEBAR_WIDTH + 60;
+  const minLeft = isTabletOrSmaller ? 16 : SIDEBAR_WIDTH + 80;
   const maxLeft = viewportWidth - STEP_TEXT_MAX_WIDTH - 16;
   const gap = isTabletOrSmaller ? STEP_TEXT_GAP + 8 : STEP_TEXT_GAP;
 

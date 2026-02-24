@@ -99,6 +99,8 @@ export default function Onboarding() {
 
   const isAutoApproved = profile?.approval_status === "auto_approved";
   const isPending = profile?.approval_status === "pending";
+  // Pre-approved users with Sling roles skip the roles step entirely
+  const isPreApprovedWithRoles = isAutoApproved && !slingRolesLoading && slingRoles.length > 0;
 
   const toggleRole = (role: AppRole) => {
     setSelectedRoles(prev => 
@@ -138,6 +140,23 @@ export default function Onboarding() {
         userId: user.id,
         preferred_language: selectedLanguage,
       });
+
+      // Pre-approved users: assign Sling roles and complete onboarding immediately
+      if (isPreApprovedWithRoles) {
+        setIsSubmitting(true);
+        try {
+          await assignRoles.mutateAsync({ userId: user.id, roles: slingRoles });
+          toast.success("Setup complete");
+          const primaryRole = slingRoles[0];
+          navigate(getRoleDashboardPath(primaryRole));
+        } catch {
+          toast.error("Failed to assign roles");
+        } finally {
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
       setStep("roles");
     } catch (error) {
       toast.error("Failed to save language preference");
@@ -187,7 +206,9 @@ export default function Onboarding() {
                 ? "Tell us about yourself"
                 : step === "language"
                   ? "Choose your language"
-                  : "Select your role(s)"}
+                  : isPreApprovedWithRoles
+                    ? "Almost done"
+                    : "Select your role(s)"}
           </CardDescription>
 
           {/* Step indicator */}
@@ -233,17 +254,21 @@ export default function Onboarding() {
             >
               2
             </div>
-            <div className="w-8 h-px bg-border" />
-            <div
-              className={cn(
-                "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
-                step === "roles"
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-transparent text-muted-foreground"
-              )}
-            >
-              3
-            </div>
+            {!isPreApprovedWithRoles && (
+              <>
+                <div className="w-8 h-px bg-border" />
+                <div
+                  className={cn(
+                    "w-8 h-8 border flex items-center justify-center text-[10px] uppercase tracking-widest transition-colors",
+                    step === "roles"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-transparent text-muted-foreground"
+                  )}
+                >
+                  3
+                </div>
+              </>
+            )}
           </div>
         </CardHeader>
 
@@ -455,15 +480,15 @@ export default function Onboarding() {
             <Button
               className="ml-auto"
               onClick={handleLanguageNext}
-              disabled={updateProfile.isPending}
+              disabled={updateProfile.isPending || isSubmitting}
             >
-              {updateProfile.isPending ? (
+              {updateProfile.isPending || isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Saving
+                  {isSubmitting ? "Setting up" : "Saving"}
                 </>
               ) : (
-                "Continue"
+                isPreApprovedWithRoles ? "Complete Setup" : "Continue"
               )}
             </Button>
           ) : (

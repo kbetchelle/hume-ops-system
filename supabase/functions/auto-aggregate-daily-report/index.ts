@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
 
       const { data: payRows, error: payErr } = await supabase
         .from("arketa_payments")
-        .select("amount, transaction_fees, normalized_category, created_at_api")
+        .select("amount, transaction_fees, amount_refunded, normalized_category, created_at_api")
         .gte("created_at_api", wideStart)
         .lte("created_at_api", wideEnd)
         .not("amount", "is", null)
@@ -260,7 +260,8 @@ Deno.serve(async (req) => {
       for (const p of pstFilteredPayments) {
         const amount = Number(p.amount ?? 0);
         const fees = Number(p.transaction_fees ?? 0);
-        const dollars = amount + fees;
+        const refunded = Number(p.amount_refunded ?? 0);
+        const dollars = amount + fees - refunded;
         if (isSubscriptionPayment(p.normalized_category as string[] | null)) {
           grossSalesMembership += dollars;
         } else {

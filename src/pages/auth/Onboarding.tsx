@@ -41,11 +41,15 @@ export default function Onboarding() {
   const handlePasswordNext = async () => {
     setPasswordError(null);
     if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+      const msg = "Password must be at least 6 characters";
+      setPasswordError(msg);
+      toast.error(msg);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords don't match");
+      const msg = "Passwords don't match";
+      setPasswordError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -54,17 +58,28 @@ export default function Onboarding() {
       const { error: pwError } = await updatePassword(newPassword);
       if (pwError) {
         setPasswordError(pwError.message);
+        toast.error(pwError.message || "Failed to update password");
         return;
       }
       // Clear must_change_password flag
       if (user?.id) {
-        await supabase.from("profiles").update({ must_change_password: false }).eq("user_id", user.id);
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ must_change_password: false })
+          .eq("user_id", user.id);
+        if (profileError) {
+          console.error("Failed to clear must_change_password flag:", profileError);
+          // Non-blocking: continue to next step even if flag update fails
+        }
         queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
       }
       toast.success("Password updated successfully");
       setStep("profile");
-    } catch {
-      setPasswordError("An unexpected error occurred");
+    } catch (err) {
+      console.error("Password update error:", err);
+      const msg = "An unexpected error occurred. Please try again.";
+      setPasswordError(msg);
+      toast.error(msg);
     } finally {
       setPasswordLoading(false);
     }
@@ -234,7 +249,7 @@ export default function Onboarding() {
                 </div>
               </div>
               {passwordError && (
-                <p className="text-[10px] text-destructive tracking-wide">{passwordError}</p>
+                <p className="text-xs text-destructive font-medium tracking-wide">{passwordError}</p>
               )}
               <p className="text-[10px] text-muted-foreground tracking-wide uppercase">
                 Your password was set by an administrator. Please create your own password to continue.
@@ -306,13 +321,9 @@ export default function Onboarding() {
 
           {step === "password" ? (
             <Button
-              type="submit"
-              form={undefined}
+              type="button"
               className="ml-auto min-h-[44px] min-w-[120px] touch-manipulation"
-              onClick={(e) => {
-                e.preventDefault();
-                handlePasswordNext();
-              }}
+              onClick={() => handlePasswordNext()}
               disabled={passwordLoading || !newPassword || !confirmPassword}
             >
               {passwordLoading ? (

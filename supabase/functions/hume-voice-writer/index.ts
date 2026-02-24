@@ -50,10 +50,10 @@ I hope this email finds you well, Per our policy, As per, Please be advised, Kin
 - Greeting: First name only. No honorifics. Example: "Hi Alex,"
 - Paragraphs: Short, breathable, visually calm.
 - Bullets: Allowed for clarity—max 3–5 bullets.
-- Signature: Name, then "HUME Concierge" on a new line.
+- Signature: MANDATORY — every message must end with exactly: "Best,\n[Your Name] & The Team at HUME". Use the concierge's first name if provided in context, otherwise use "[Your Name]" as a placeholder. Never omit this sign-off. Never use any other closing format.
 
 ## Closings to Use
-Warmly, | With care, | See you soon, | Looking forward to having you in, | Always here if you need anything, | Let us know what works best, | Happy to help anytime, | Take care, | Until next time, | The HUME Concierge Team
+Always use "Best," as the closing word. Do not use other closings like Warmly, With care, See you soon, etc. The full sign-off is always: "Best,\n[Name] & The Team at HUME"
 
 ## Never Do
 - Never start with "I hope this email finds you well."

@@ -152,7 +152,7 @@ export function ResourcePagesTab({
       ) : (
         /* Compact List */
         <div className="border border-border rounded-none">
-          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 text-[11.75px] uppercase tracking-widest text-muted-foreground">
             <span className="w-4 shrink-0" />
             <span className="flex-1 min-w-0">Name</span>
             <span className="hidden md:block w-48 shrink-0">Tags</span>

@@ -339,7 +339,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
                                 +{cls.waitlist_count} waitlist
                               </span>
                           }
-                            <span className={`${cls.waitlist_count > 0 ? '' : 'ml-auto '}text-xs font-bold text-black`}>
+                            <span className={`${cls.waitlist_count > 0 ? '' : 'ml-auto '}text-xs font-bold text-muted-foreground`}>
                               {booked}{capacity ? `/${capacity}` : ''}
                             </span>
                           </div>

@@ -196,7 +196,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
     const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     return (
-      <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0">
+      <MobilePageWrapper onRefresh={handleRefresh} className="flex flex-col min-h-0 !overflow-visible">
         {headerSlot}
         {/* Progress bar */}
         <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shrink-0">
@@ -240,7 +240,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
           </div>
         </div>
         {/* Sections + items */}
-        <div className="flex-1 min-h-0 overflow-auto scroll-smooth">
+        <div>
           {groupedEntries.map(([section, sectionItems]) => {
             const filteredItems = hideCompleted
               ? sectionItems.filter((i: any) => !completionMap.get(i.id)?.completed_at)

@@ -32,9 +32,7 @@ export default function Install() {
       <div className="px-4 py-8 max-w-lg mx-auto space-y-8">
         {/* Hero */}
         <div className="text-center space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center border border-foreground/30">
-            <Smartphone className="h-8 w-8 text-foreground" />
-          </div>
+          <img src="/icons/app-icon.png" alt="HUME" className="h-16 w-16 mx-auto" />
           <h2 className="text-lg font-normal tracking-wide">
             Add HUME Ops to your Home Screen
           </h2>

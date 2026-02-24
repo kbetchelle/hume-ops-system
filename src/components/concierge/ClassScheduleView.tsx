@@ -175,7 +175,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
           {activeClasses.length === 0 ?
           <p className="p-4 text-sm text-muted-foreground">No classes scheduled for this day.</p> :
 
-          <div className="space-y-2 p-3 pb-6">
+          <div className="space-y-0 pb-6">
               {activeClasses.map((cls) => {
               const booked = cls.booked_count || 0;
               const capacity = cls.capacity || 0;

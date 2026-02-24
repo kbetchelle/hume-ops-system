@@ -306,7 +306,7 @@ export function WhosWorkingView() {
                       </div>
 
                       {person.is_currently_working && (
-                        <Badge className="rounded-none text-[10px] uppercase tracking-widest bg-primary text-primary-foreground">
+                        <Badge className="rounded-none text-[10px] uppercase tracking-widest text-white border-none" style={{ backgroundColor: '#7c3aed' }}>
                           On Shift
                         </Badge>
                       )}

@@ -75,6 +75,8 @@ const MANAGER_NOTIFICATION_CENTER: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Manage notification settings for your team here.",
   textEs: "Gestiona las notificaciones de tu equipo aquí.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const MANAGER_PACKAGE_TRACKING: WalkthroughStepConfig = {
@@ -94,6 +96,8 @@ const CONCIERGE_RESOURCES: WalkthroughStepConfig = {
   arrowDirection: "left",
   text: "Search all resources here, or click to view quick links or resource pages.",
   textEs: "Busca todos los recursos aquí o haz clic para ver enlaces rápidos y páginas de recursos.",
+  arrowEndOffset: { x: 230, y: 0 },
+  highlightBorder: "#009ddc",
 };
 
 const CONCIERGE_PACKAGE_TRACKING: WalkthroughStepConfig = {

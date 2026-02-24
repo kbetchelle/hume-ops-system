@@ -386,6 +386,7 @@ export default function Onboarding() {
                     <Checkbox
                       checked={selectedRoles.includes(role.value)}
                       onCheckedChange={() => toggleRole(role.value)}
+                      onClick={(e) => e.stopPropagation()}
                       className="mt-0.5"
                     />
                     <div className="flex-1 min-w-0">

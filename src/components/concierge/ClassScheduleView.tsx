@@ -236,8 +236,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
     <Card className="border border-border rounded-none flex-1 flex flex-col min-h-0">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-sm font-normal tracking-wide flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+          <CardTitle className="text-sm font-normal tracking-wide">
             Today's Classes
           </CardTitle>
         </div>

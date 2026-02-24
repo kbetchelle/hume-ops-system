@@ -30,6 +30,8 @@ export interface WalkthroughStep {
   text: string;
   /** When false, this step is omitted from the walkthrough */
   showWhen?: () => boolean;
+  /** When true, show a static replica of the user menu dropdown */
+  showMenuPreview?: boolean;
 }
 
 /** Arrow colors cycle: orange, yellow, red, purple, blue, green (app brand add palette + purple) */
@@ -272,11 +274,8 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
     }
   }, [currentStep, targetRect]);
 
-  // Show static menu replica for user-menu steps instead of opening real dropdown
-  const isUserMenuStep =
-    currentStep &&
-    typeof currentStep.target === "string" &&
-    currentStep.target === "[data-walkthrough=user-menu]";
+  // Show static menu replica for steps with showMenuPreview flag (manager only)
+  const showMenuPreview = currentStep?.showMenuPreview && targetRect;
 
   // Programmatically open dropdown when step targets role switcher only
   useEffect(() => {
@@ -431,6 +430,42 @@ export function WalkthroughOverlay({ steps: rawSteps, onClose }: WalkthroughOver
             </div>
           </div>
         </>
+      )}
+
+      {/* Static menu replica for manager walkthrough */}
+      {showMenuPreview && targetRect && (
+        <div
+          className="absolute z-[101] w-56 border border-border bg-background shadow-md pointer-events-none"
+          style={{
+            left: targetRect.left,
+            top: targetRect.top - 220,
+          }}
+          aria-hidden
+        >
+          <div className="p-1 flex flex-col">
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <Bell className="h-3 w-3" />
+              {t("Notifications", "Notificaciones")}
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <User className="h-3 w-3" />
+              Profile
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <Settings className="h-3 w-3" />
+              Account Settings
+            </div>
+            <div className="my-1 h-px bg-border" />
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <Bug className="h-3 w-3" />
+              {t("Report a Bug", "Reportar un Bug")}
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs uppercase tracking-widest text-foreground">
+              <LogOut className="h-3 w-3" />
+              {t("Sign out", "Cerrar sesión")}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Controls: progress dots, back, next, skip */}

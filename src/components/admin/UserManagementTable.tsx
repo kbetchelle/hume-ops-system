@@ -219,7 +219,13 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                 Primary role
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
-                Status
+                Account
+              </TableHead>
+              <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
+                Onboarding
+              </TableHead>
+              <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
+                Walkthrough
               </TableHead>
               <TableHead className="text-[10px] uppercase tracking-widest font-normal text-foreground">
                 Joined
@@ -293,19 +299,46 @@ export function UserManagementTable({ users, currentUserId }: UserManagementTabl
                     </Select>
                   )}
                 </TableCell>
+                {/* Account Status */}
                 <TableCell>
                   {user.deactivated ? (
                     <Badge variant="destructive" className="text-[8px]">
                       Deactivated
                     </Badge>
-                  ) : user.onboarding_completed && !user.must_change_password ? (
+                  ) : (
                     <Badge variant="secondary" className="text-[8px]">
                       Active
                     </Badge>
-                  ) : user.onboarding_completed && user.must_change_password ? (
+                  )}
+                </TableCell>
+                {/* Onboarding Status */}
+                <TableCell>
+                  {!user.onboarding_completed ? (
+                    <Badge variant="outline" className="text-[8px]">
+                      Not Started
+                    </Badge>
+                  ) : user.must_change_password ? (
                     <Badge variant="outline" className="text-[8px]">
                       Password Reset
                     </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[8px]">
+                      Complete
+                    </Badge>
+                  )}
+                </TableCell>
+                {/* Walkthrough Status */}
+                <TableCell>
+                  {user.walkthrough_completed_at ? (
+                    <Badge variant="secondary" className="text-[8px]">
+                      Completed
+                    </Badge>
+                  ) : user.walkthrough_skipped_at ? (
+                    <Badge variant="outline" className="text-[8px]">
+                      Skipped
+                    </Badge>
+                  ) : !user.onboarding_completed ? (
+                    <span className="text-[10px] text-muted-foreground">—</span>
                   ) : (
                     <Badge variant="outline" className="text-[8px]">
                       Pending

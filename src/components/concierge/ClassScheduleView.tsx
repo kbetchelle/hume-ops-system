@@ -317,21 +317,14 @@ export function ClassScheduleView({ filterClassesOnly = false }: { filterClasses
                             </span>
                           </div>
                           
-                          {/* Capacity bar */}
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <Progress 
-                                value={percentage} 
-                                className="h-1.5"
-                              />
-                            </div>
-                            {cls.waitlist_count > 0 && (
+                          {cls.waitlist_count > 0 && (
+                            <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-[10px] rounded-none border-none text-white" style={{ backgroundColor: add_color.orange, paddingTop: '2.25px', paddingBottom: '2.25px', paddingLeft: '6.75px', paddingRight: '6.75px' }}>
                                 <AlertCircle className="h-3 w-3 mr-1" />
                                 {cls.waitlist_count} waitlist
                               </Badge>
-                            )}
-                          </div>
+                            </div>
+                          )}
                           
                           {cls.room_name && (
                             <p className="text-[10px] text-muted-foreground">

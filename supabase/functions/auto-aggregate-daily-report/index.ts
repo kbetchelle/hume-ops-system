@@ -152,74 +152,33 @@ Deno.serve(async (req) => {
 
       const dataSources: Record<string, unknown> = {};
 
-      // 1) Arketa reservations + class reservation_type lookup
-      const { data: resRows, error: resErr } = await supabase
-        .from("arketa_reservations_history")
-        .select("class_id, class_date, class_name, status, checked_in")
-        .eq("class_date", report_date)
-        .not("class_date", "is", null);
+      // 1) Arketa reservations — use server-side RPC to bypass 1000-row limit
+      //    and classify via classify_reservation_type() even when arketa_classes is missing
+      const { data: aggData, error: aggErr } = await supabase
+        .rpc("aggregate_reservation_counts", { p_date: report_date });
 
-      if (resErr) {
+      if (aggErr) {
         return new Response(
-          JSON.stringify({ success: false, error: resErr.message }),
+          JSON.stringify({ success: false, error: aggErr.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Build reservation_type lookup from arketa_classes (calculated field)
-      const resClassIds = [...new Set((resRows ?? []).map((r) => r.class_id).filter(Boolean))] as string[];
-      const classReservationTypeMap: Record<string, string> = {};
-      if (resClassIds.length > 0) {
-        const { data: classTypeRows } = await supabase
-          .from("arketa_classes")
-          .select("external_id, reservation_type, name")
-          .in("external_id", resClassIds)
-          .eq("class_date", report_date);
-        for (const ct of classTypeRows ?? []) {
-          classReservationTypeMap[ct.external_id as string] = (ct.reservation_type as string) ?? "";
-        }
-      }
-
-      let totalGymCheckins = 0;
-      let totalClassCheckins = 0;
-      let privateAppointments = 0;
-      const totalReservations = (resRows ?? []).length;
-      let totalCancellations = 0;
-      let totalNoShows = 0;
-      let totalWaitlisted = 0;
-      let checkedInCount = 0;
-
-      const classCounts: Record<string, { name: string; signups: number; waitlist: number }> = {};
-
-      for (const r of resRows ?? []) {
-        const className = (r.class_name as string) ?? "";
-        const status = (r.status as string) ?? "";
-        const checkedIn = r.checked_in === true;
-        if (status === "cancelled") totalCancellations++;
-        else if (status === "no_show") totalNoShows++;
-        else if (status === "waitlisted") totalWaitlisted++;
-        if (checkedIn) checkedInCount++;
-
-        const key = `${r.class_id ?? ""}-${className}`;
-        if (!classCounts[key]) classCounts[key] = { name: className, signups: 0, waitlist: 0 };
-        if (status === "waitlisted") classCounts[key].waitlist++;
-        else classCounts[key].signups++;
-
-        if (!checkedIn) continue;
-
-        // Use calculated reservation_type from arketa_classes
-        const calcResType = classReservationTypeMap[r.class_id as string] ?? "";
-
-        if (isGymCheckin(className)) totalGymCheckins++;
-        else if (isPrivateAppointment(calcResType)) privateAppointments++;
-        else totalClassCheckins++;
-      }
+      const agg = aggData?.[0] ?? aggData ?? {};
+      const totalGymCheckins = Number(agg.total_gym_checkins ?? 0);
+      const totalClassCheckins = Number(agg.total_class_checkins ?? 0);
+      const privateAppointments = Number(agg.private_appointments ?? 0);
+      const totalReservations = Number(agg.total_reservations ?? 0);
+      const totalCancellations = Number(agg.total_cancellations ?? 0);
+      const totalNoShows = Number(agg.total_no_shows ?? 0);
+      const totalWaitlisted = Number(agg.total_waitlisted ?? 0);
+      const checkedInCount = Number(agg.checked_in_count ?? 0);
 
       const attendanceRate =
         totalReservations > 0 ? Math.round((checkedInCount / totalReservations) * 10000) / 100 : null;
 
       dataSources.arketa_reservations = {
-        count: resRows?.length ?? 0,
+        count: totalReservations,
         gym: totalGymCheckins,
         class: totalClassCheckins,
         private: privateAppointments,
@@ -404,12 +363,28 @@ Deno.serve(async (req) => {
       dataSources.daily_report_history = { am: !!amShift, pm: !!pmShift };
 
       // 7) Class schedule – pull from arketa_classes directly for the PST business day
-      //    (class_date is already PST-derived during sync, so eq match is correct)
-      //    We query arketa_classes for all classes on this date, then overlay reservation counts.
-      const { data: allClassRows } = await supabase
-        .from("arketa_classes")
-        .select("external_id, name, start_time, instructor_name, reservation_type, is_cancelled")
-        .eq("class_date", report_date);
+      //    Also fetch per-class signup/waitlist counts from reservations_history (server-side)
+      const [{ data: allClassRows }, { data: classCountRows }] = await Promise.all([
+        supabase
+          .from("arketa_classes")
+          .select("external_id, name, start_time, instructor_name, reservation_type, is_cancelled")
+          .eq("class_date", report_date),
+        supabase
+          .from("arketa_reservations_history")
+          .select("class_id, class_name, status")
+          .eq("class_date", report_date),
+      ]);
+
+      // Build per-class counts from reservation rows
+      const classCounts: Record<string, { name: string; signups: number; waitlist: number }> = {};
+      for (const r of classCountRows ?? []) {
+        const className = (r.class_name as string) ?? "";
+        const status = (r.status as string) ?? "";
+        const key = `${r.class_id ?? ""}-${className}`;
+        if (!classCounts[key]) classCounts[key] = { name: className, signups: 0, waitlist: 0 };
+        if (status === "waitlisted") classCounts[key].waitlist++;
+        else classCounts[key].signups++;
+      }
 
       const classDetails: { time: string; name: string; instructor: string; signups: number; waitlist: number; reservation_type?: string }[] = [];
 

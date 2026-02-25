@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Calendar, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { getPSTToday } from '@/lib/dateUtils';
 
 interface CafeChecklistWithItems {
   id: string;
@@ -23,7 +24,7 @@ interface CafeChecklistWithItems {
 
 export function CafeChecklistView() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getPSTToday);
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
 
   // Fetch ALL active cafe checklists regardless of day/shift

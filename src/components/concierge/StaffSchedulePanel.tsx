@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTodaysSchedule, useSyncSlingShifts } from "@/hooks/useSlingApi";
+import { getPSTToday } from "@/lib/dateUtils";
 
 export function StaffSchedulePanel() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getPSTToday();
   const { data, isLoading, error, refetch } = useTodaysSchedule(today);
   const syncShifts = useSyncSlingShifts();
   const formatTime = (dateString: string) => {

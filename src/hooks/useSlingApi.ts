@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getPSTToday } from "@/lib/dateUtils";
 
 export interface ShiftScheduleItem {
   slingUserId: number;
@@ -182,7 +183,7 @@ export function useSlingUsers() {
 
 // Get staff shifts from database
 export function useStaffShifts(date?: string) {
-  const targetDate = date || new Date().toISOString().split("T")[0];
+  const targetDate = date || getPSTToday();
   
   return useQuery({
     queryKey: ["staffShifts", targetDate],

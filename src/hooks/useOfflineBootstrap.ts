@@ -8,6 +8,7 @@ import {
   clearStaleBootstrapEntries,
 } from "@/lib/offlineBootstrapDb";
 import type { AppRole } from "@/types/roles";
+import { getPSTToday, isWeekendDate } from "@/lib/dateUtils";
 
 const BOOTSTRAP_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 const BOH_ROLES: AppRole[] = ["female_spa_attendant", "male_spa_attendant", "floater"];
@@ -18,13 +19,7 @@ export interface OfflineBootstrapConfig {
 }
 
 function getToday(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function isWeekend(date: string): boolean {
-  const d = new Date(date + "T12:00:00Z");
-  const day = d.getUTCDay();
-  return day === 0 || day === 6;
+  return getPSTToday();
 }
 
 export function useOfflineBootstrap(config: OfflineBootstrapConfig | null) {
@@ -85,7 +80,7 @@ async function bootstrapBOH(
   config: OfflineBootstrapConfig,
   today: string
 ): Promise<void> {
-  const weekend = isWeekend(today);
+  const weekend = isWeekendDate(today);
   const roleType =
     config.role === "floater"
       ? "floater"
@@ -134,7 +129,7 @@ async function bootstrapConcierge(
   config: OfflineBootstrapConfig,
   today: string
 ): Promise<void> {
-  const weekend = isWeekend(today);
+  const weekend = isWeekendDate(today);
 
   console.log("[OfflineBootstrap] Fetching Concierge checklist");
   const { data: checklists, error: listErr } = await supabase

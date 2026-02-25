@@ -22,10 +22,22 @@ type ClassDetail = {
   reservation_type?: string;
 };
 
+/** Parse "h:mm AM/PM" into minutes since midnight for chronological sorting. */
+function timeToMinutes(t: string): number {
+  const match = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === "AM" && hours === 12) hours = 0;
+  if (period === "PM" && hours !== 12) hours += 12;
+  return hours * 60 + minutes;
+}
+
 export function ClassScheduleTable({ report }: ClassScheduleTableProps) {
   const details = (report?.class_details as ClassDetail[] | null) ?? [];
   const classesOnly = details.filter((d) => d.reservation_type === "Classes" || !d.reservation_type);
-  const sorted = [...classesOnly].sort((a, b) => a.time.localeCompare(b.time));
+  const sorted = [...classesOnly].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
   if (sorted.length === 0) {
     return (

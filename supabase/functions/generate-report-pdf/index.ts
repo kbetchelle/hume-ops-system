@@ -47,7 +47,7 @@ type ReportRow = {
   cancellation_notes: string | null;
   other_notes: string | null;
   cafe_notes: string | null;
-  class_details: { time: string; name: string; instructor: string; signups: number; waitlist: number }[] | null;
+  class_details: { time: string; name: string; instructor: string; signups: number; waitlist: number; reservation_type?: string }[] | null;
 };
 
 type PaymentRow = {
@@ -332,7 +332,7 @@ function addClassSchedulePage(doc: jsPDF, report: ReportRow, dateStr: string) {
   doc.setFontSize(10);
   doc.text("CLASS SCHEDULE", 0.5 + 0.1, 0.92);
 
-  const details = report.class_details ?? [];
+  const details = (report.class_details ?? []).filter((d) => d.reservation_type === "Classes" || !d.reservation_type);
   if (details.length === 0) {
     doc.setTextColor(0, 0, 0);
     doc.text("No class data for this date.", 0.5, 1.3);

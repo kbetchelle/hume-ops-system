@@ -405,12 +405,12 @@ Deno.serve(async (req) => {
 
       // 7) Class schedule (from arketa_reservations_history + arketa_classes for time/instructor)
       const classIds = [...new Set((resRows ?? []).map((r) => r.class_id).filter(Boolean))] as string[];
-      const classDetails: { time: string; name: string; instructor: string; signups: number; waitlist: number }[] = [];
+      const classDetails: { time: string; name: string; instructor: string; signups: number; waitlist: number; reservation_type?: string }[] = [];
 
       if (classIds.length > 0) {
         const { data: classRows } = await supabase
           .from("arketa_classes")
-          .select("external_id, name, start_time, instructor_name")
+          .select("external_id, name, start_time, instructor_name, reservation_type")
           .in("external_id", classIds)
           .eq("class_date", report_date);
 
@@ -427,6 +427,7 @@ Deno.serve(async (req) => {
             instructor: (row.instructor_name as string) ?? "",
             signups: counts.signups,
             waitlist: counts.waitlist,
+            reservation_type: (row.reservation_type as string) ?? undefined,
           });
         }
         classDetails.sort((a, b) => a.time.localeCompare(b.time));

@@ -6214,6 +6214,19 @@ export type Database = {
         Args: { _target_user_id: string; _username: string }
         Returns: undefined
       }
+      aggregate_reservation_counts: {
+        Args: { p_date: string }
+        Returns: {
+          checked_in_count: number
+          private_appointments: number
+          total_cancellations: number
+          total_class_checkins: number
+          total_gym_checkins: number
+          total_no_shows: number
+          total_reservations: number
+          total_waitlisted: number
+        }[]
+      }
       classify_reservation_type: {
         Args: { class_name: string }
         Returns: string

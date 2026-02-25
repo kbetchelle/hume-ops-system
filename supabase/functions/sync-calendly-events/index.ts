@@ -316,12 +316,25 @@ Deno.serve(async (req) => {
       throw stagingError;
     }
 
-    let targetInserted = 0;
+    let targetUpserted = 0;
+    let targetNewInserts = 0;
     let targetFailed = 0;
+
+    // Get existing calendly_event_ids to distinguish inserts from updates
+    const existingIds = new Set<string>();
+    const { data: existingTours } = await supabase
+      .from('scheduled_tours')
+      .select('calendly_event_id')
+      .in('calendly_event_id', (stagingRecords || []).map((s: Record<string, unknown>) => s.calendly_event_id as string));
+    
+    for (const tour of existingTours || []) {
+      existingIds.add(tour.calendly_event_id);
+    }
 
     for (const staging of stagingRecords || []) {
       try {
         const targetRecord = transformStagingToTarget(staging as Record<string, unknown>);
+        const isNew = !existingIds.has(staging.calendly_event_id as string);
 
         const { result } = await withRetry(
           async () => {
@@ -344,7 +357,8 @@ Deno.serve(async (req) => {
           logger.error(`Failed to upsert target tour ${staging.calendly_event_id}`, result.error);
           targetFailed++;
         } else {
-          targetInserted++;
+          targetUpserted++;
+          if (isNew) targetNewInserts++;
         }
       } catch (error) {
         logger.error(`Error transforming tour ${staging.calendly_event_id}`, error);
@@ -352,7 +366,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    logger.info(`Target complete: ${targetInserted} upserted, ${targetFailed} failed`);
+    logger.info(`Target complete: ${targetUpserted} upserted (${targetNewInserts} new), ${targetFailed} failed`);
 
     // Clear staging table after successful transformation
     if (targetFailed === 0) {
@@ -368,7 +382,7 @@ Deno.serve(async (req) => {
       completedAt: new Date().toISOString(),
       durationMs,
       recordsFetched: allEvents.length,
-      recordsSynced: targetInserted,
+      recordsSynced: targetNewInserts,
       recordsFailed: targetFailed,
       retryCount: Math.max(0, totalAttempts - 1),
     });
@@ -380,7 +394,7 @@ Deno.serve(async (req) => {
       syncSuccess: targetFailed === 0,
       durationMs,
       recordsProcessed: allEvents.length,
-      recordsInserted: targetInserted,
+      recordsInserted: targetNewInserts,
       responseStatus: 200,
       triggeredBy: 'scheduled',
     });
@@ -393,7 +407,7 @@ Deno.serve(async (req) => {
         last_sync_at: new Date().toISOString(),
         last_sync_success: targetFailed === 0,
         last_records_processed: allEvents.length,
-        last_records_inserted: targetInserted,
+        last_records_inserted: targetNewInserts,
       }, { onConflict: 'api_name' });
 
     return new Response(
@@ -401,7 +415,8 @@ Deno.serve(async (req) => {
         success: true,
         eventsFetched: allEvents.length,
         stagingInserted,
-        targetInserted,
+        targetInserted: targetNewInserts,
+        targetUpdated: targetUpserted - targetNewInserts,
         failedCount: targetFailed,
         apiAttempts: totalAttempts,
       }),

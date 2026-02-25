@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { addMinutes, isAfter } from 'date-fns';
+import { getPSTDayOfWeek, getPSTHour, getPSTMinute } from '@/lib/dateUtils';
 
 // BoH (Back of House) shift end times - same as Concierge
 const SHIFT_END_TIMES = {
@@ -23,8 +24,7 @@ export function useAutoSubmitBoH(
     if (isSubmitted) return;
 
     const checkAutoSubmit = () => {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
+      const dayOfWeek = getPSTDayOfWeek();
       
       let dayType: 'weekday' | 'saturday' | 'sunday' = 'weekday';
       if (dayOfWeek === 0) dayType = 'sunday';
@@ -33,6 +33,7 @@ export function useAutoSubmitBoH(
       const shiftEnd = SHIFT_END_TIMES[dayType][shiftType as 'AM' | 'PM'];
       if (!shiftEnd) return;
       
+      const now = new Date();
       const shiftEndTime = new Date();
       shiftEndTime.setHours(shiftEnd.hour, shiftEnd.minute, 0, 0);
       

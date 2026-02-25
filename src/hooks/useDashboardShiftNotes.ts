@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { format, subDays } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 
 export interface DashboardShiftNote {
   id: string;
@@ -16,8 +17,9 @@ export interface DashboardShiftNote {
 
 export function useDashboardShiftNotes() {
   const { user } = useAuthContext();
-  const today = format(new Date(), "yyyy-MM-dd");
-  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+  const today = getPSTToday();
+  const [y, m, d] = today.split("-").map(Number);
+  const yesterday = format(new Date(y, m - 1, d - 1), "yyyy-MM-dd");
 
   // Concierge shift reports with management notes (today + yesterday)
   const { data: conciergeData, isLoading: conciergeLoading } = useQuery({

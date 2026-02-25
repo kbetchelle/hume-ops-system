@@ -1,5 +1,5 @@
 // Type definitions for Concierge Shift Report System
-
+import { getPSTToday, getPSTHour } from "@/lib/dateUtils";
 export interface FutureNoteEntry {
   id?: string;
   targetDate: string; // YYYY-MM-DD
@@ -128,8 +128,8 @@ export interface BroadcastMessage {
 }
 
 export const INITIAL_FORM_DATA: FormDataType = {
-  reportDate: new Date().toISOString().split('T')[0],
-  shiftTime: new Date().getHours() < 14 ? 'AM' : 'PM',
+  reportDate: getPSTToday(),
+  shiftTime: getPSTHour() < 14 ? 'AM' : 'PM',
   staffName: '',
   futureNotes: [{ id: crypto.randomUUID(), targetDate: '', targetShift: 'AM' as const, note: '' }],
   memberFeedback: [{ id: crypto.randomUUID(), sentiment: 'neutral' as const, text: '' }],

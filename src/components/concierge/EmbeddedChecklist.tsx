@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { getPSTToday, getPSTHour, isWeekendDate } from "@/lib/dateUtils";
 import { CheckSquare, ChevronDown, ChevronRight, Clock, Wifi, WifiOff, Cloud } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -136,9 +137,9 @@ interface EmbeddedChecklistProps {
 export function EmbeddedChecklist({ variant = "default" }: EmbeddedChecklistProps = {}) {
   const { currentShift } = useCurrentShift();
   const queryClient = useQueryClient();
-  const today = format(new Date(), "yyyy-MM-dd");
-  const currentHour = new Date().getHours();
-  const isWeekend = [0, 6].includes(new Date().getDay());
+  const today = getPSTToday();
+  const currentHour = getPSTHour();
+  const isWeekend = isWeekendDate(today);
   const [compactExpanded, setCompactExpanded] = useState(false);
   
   // Get the specific checklist based on time of day

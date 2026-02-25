@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { format } from 'date-fns';
+import { getPSTToday } from '@/lib/dateUtils';
 import { FileText, Plus, Trash2, Send, Save, CheckCircle2, Clock, History, Cloud, RefreshCw, Upload, X, List } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -295,7 +296,7 @@ export function ConciergeForm() {
 
         if (slingUser) {
           // 2. Find today's shift for this specific user
-          const today = new Date().toISOString().split('T')[0];
+          const today = getPSTToday();
           const { data: shift } = await supabase.
           from('staff_shifts').
           select('shift_start, position').

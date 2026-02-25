@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { add_color } from '@/lib/constants';
+import { getPSTToday, getPSTHour, getPSTMinute, isWeekendDate } from '@/lib/dateUtils';
 
 interface ConciergeChecklistWithItems {
   id: string;
@@ -61,16 +62,17 @@ function matchChecklistToSlot(checklist: ConciergeChecklistWithItems, slot: stri
 export function ConciergeChecklistView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getPSTToday);
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
   // Local override: when user clicks the blurred overlay, we show items without changing localStorage
   const [localShowAll, setLocalShowAll] = useState(false);
-  const isWeekend = [0, 6].includes(new Date(selectedDate + 'T00:00:00').getDay());
+  const isWeekend = isWeekendDate(selectedDate);
 
-  const now = new Date();
+  const pstHour = getPSTHour();
+  const pstMinute = getPSTMinute();
   const currentSlot = isWeekend
-    ? getWeekendChecklistSlot(now.getHours(), now.getMinutes())
-    : getWeekdayChecklistSlot(now.getHours(), now.getMinutes());
+    ? getWeekendChecklistSlot(pstHour, pstMinute)
+    : getWeekdayChecklistSlot(pstHour, pstMinute);
   const [activeSlot, setActiveSlot] = useState(currentSlot);
 
   // Fetch ALL active concierge checklists for the day type

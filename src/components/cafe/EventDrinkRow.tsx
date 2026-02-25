@@ -37,6 +37,7 @@ import {
   getEmailThreadSignedUrl,
 } from "@/hooks/useEventDrinks";
 import { toast } from "sonner";
+import { getPSTToday } from "@/lib/dateUtils";
 
 interface EventDrinkRowProps {
   drink: EventDrink;
@@ -54,7 +55,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
+  return getPSTToday();
 }
 
 function firstLine(text: string | null): string {

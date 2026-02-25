@@ -19,11 +19,13 @@ type ClassDetail = {
   instructor: string;
   signups: number;
   waitlist: number;
+  reservation_type?: string;
 };
 
 export function ClassScheduleTable({ report }: ClassScheduleTableProps) {
   const details = (report?.class_details as ClassDetail[] | null) ?? [];
-  const sorted = [...details].sort((a, b) => a.time.localeCompare(b.time));
+  const classesOnly = details.filter((d) => d.reservation_type === "Classes" || !d.reservation_type);
+  const sorted = [...classesOnly].sort((a, b) => a.time.localeCompare(b.time));
 
   if (sorted.length === 0) {
     return (

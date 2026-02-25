@@ -13,6 +13,8 @@ export interface AdminUser {
   roles: AppRole[];
   primary_role?: AppRole | null;
   must_change_password?: boolean;
+  walkthrough_completed_at?: string | null;
+  walkthrough_skipped_at?: string | null;
 }
 
 export function useAdminUsers() {

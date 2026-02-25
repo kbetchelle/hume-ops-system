@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
-import { useUpdateProfile, getRoleDashboardPath, useUserProfile, useSlingRoles } from "@/hooks/useUserRoles";
+import { useUpdateProfile, getRoleDashboardPath, useUserProfile, useUserRoles, getPrimaryRole } from "@/hooks/useUserRoles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
   const updateProfile = useUpdateProfile();
   const { data: profile } = useUserProfile(user?.id);
-  const { data: slingRoles = [], isLoading: slingRolesLoading } = useSlingRoles(profile?.sling_id);
+  const { data: userRoles = [], isLoading: rolesLoading } = useUserRoles(user?.id);
 
   // Always start on password step
   const [step, setStep] = useState<Step>("password");
@@ -41,11 +41,15 @@ export default function Onboarding() {
   const handlePasswordNext = async () => {
     setPasswordError(null);
     if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+      const msg = "Password must be at least 6 characters";
+      setPasswordError(msg);
+      toast.error(msg);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords don't match");
+      const msg = "Passwords don't match";
+      setPasswordError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -54,17 +58,28 @@ export default function Onboarding() {
       const { error: pwError } = await updatePassword(newPassword);
       if (pwError) {
         setPasswordError(pwError.message);
+        toast.error(pwError.message || "Failed to update password");
         return;
       }
       // Clear must_change_password flag
       if (user?.id) {
-        await supabase.from("profiles").update({ must_change_password: false }).eq("user_id", user.id);
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ must_change_password: false })
+          .eq("user_id", user.id);
+        if (profileError) {
+          console.error("Failed to clear must_change_password flag:", profileError);
+          // Non-blocking: continue to next step even if flag update fails
+        }
         queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
       }
       toast.success("Password updated successfully");
       setStep("profile");
-    } catch {
-      setPasswordError("An unexpected error occurred");
+    } catch (err) {
+      console.error("Password update error:", err);
+      const msg = "An unexpected error occurred. Please try again.";
+      setPasswordError(msg);
+      toast.error(msg);
     } finally {
       setPasswordLoading(false);
     }
@@ -97,21 +112,41 @@ export default function Onboarding() {
 
     setIsSubmitting(true);
     try {
+      // Save language preference
       await updateProfile.mutateAsync({
         userId: user.id,
         preferred_language: selectedLanguage,
       });
 
-      const isAutoApproved = profile?.approval_status === "auto_approved";
+      // Mark onboarding as complete so ProtectedRoute stops redirecting here
+      const { error: onboardingError } = await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("user_id", user.id);
+
+      if (onboardingError) {
+        console.error("Failed to mark onboarding complete:", onboardingError);
+        toast.error("Failed to complete setup. Please try again.");
+        return;
+      }
+
+      // Invalidate profile cache so ProtectedRoute sees the updated flag
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+
       const isPending = profile?.approval_status === "pending";
 
       if (isPending) {
         toast.success("Setup complete - pending manager approval");
         navigate("/pending-approval");
-      } else if (isAutoApproved && !slingRolesLoading && slingRoles.length > 0) {
-        const primaryRole = slingRoles[0];
+      } else if (userRoles.length > 0) {
+        // User has assigned roles — navigate to their primary role dashboard.
+        // The walkthrough overlay will auto-show in DashboardLayout for
+        // non-BOH roles; BOH roles skip straight to their dashboard.
+        const primaryRole = profile?.primary_role && userRoles.some(r => r.role === profile.primary_role)
+          ? profile.primary_role
+          : getPrimaryRole(userRoles);
         toast.success("Setup complete");
-        navigate(getRoleDashboardPath(primaryRole));
+        navigate(primaryRole ? getRoleDashboardPath(primaryRole) : "/dashboard");
       } else {
         toast.success("Setup complete");
         navigate("/pending-approval");
@@ -234,7 +269,7 @@ export default function Onboarding() {
                 </div>
               </div>
               {passwordError && (
-                <p className="text-[10px] text-destructive tracking-wide">{passwordError}</p>
+                <p className="text-xs text-destructive font-medium tracking-wide">{passwordError}</p>
               )}
               <p className="text-[10px] text-muted-foreground tracking-wide uppercase">
                 Your password was set by an administrator. Please create your own password to continue.
@@ -306,13 +341,9 @@ export default function Onboarding() {
 
           {step === "password" ? (
             <Button
-              type="submit"
-              form={undefined}
+              type="button"
               className="ml-auto min-h-[44px] min-w-[120px] touch-manipulation"
-              onClick={(e) => {
-                e.preventDefault();
-                handlePasswordNext();
-              }}
+              onClick={() => handlePasswordNext()}
               disabled={passwordLoading || !newPassword || !confirmPassword}
             >
               {passwordLoading ? (

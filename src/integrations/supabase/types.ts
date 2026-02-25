@@ -6172,6 +6172,8 @@ export type Database = {
           roles: Database["public"]["Enums"]["app_role"][]
           user_id: string
           username: string
+          walkthrough_completed_at: string
+          walkthrough_skipped_at: string
         }[]
       }
       admin_get_users_with_sling_info: {

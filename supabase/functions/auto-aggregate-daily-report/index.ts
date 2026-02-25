@@ -403,35 +403,37 @@ Deno.serve(async (req) => {
 
       dataSources.daily_report_history = { am: !!amShift, pm: !!pmShift };
 
-      // 7) Class schedule (from arketa_reservations_history + arketa_classes for time/instructor)
-      const classIds = [...new Set((resRows ?? []).map((r) => r.class_id).filter(Boolean))] as string[];
+      // 7) Class schedule – pull from arketa_classes directly for the PST business day
+      //    (class_date is already PST-derived during sync, so eq match is correct)
+      //    We query arketa_classes for all classes on this date, then overlay reservation counts.
+      const { data: allClassRows } = await supabase
+        .from("arketa_classes")
+        .select("external_id, name, start_time, instructor_name, reservation_type, is_cancelled")
+        .eq("class_date", report_date);
+
       const classDetails: { time: string; name: string; instructor: string; signups: number; waitlist: number; reservation_type?: string }[] = [];
 
-      if (classIds.length > 0) {
-        const { data: classRows } = await supabase
-          .from("arketa_classes")
-          .select("external_id, name, start_time, instructor_name, reservation_type")
-          .in("external_id", classIds)
-          .eq("class_date", report_date);
-
-        for (const row of classRows ?? []) {
-          const cid = row.external_id as string;
-          const name = (row.name as string) ?? "";
-          const key = Object.keys(classCounts).find((k) => k.startsWith(`${cid}-`)) ?? "";
-          const counts = classCounts[key] ?? { name, signups: 0, waitlist: 0 };
-          const startTime = row.start_time as string | null;
-          const timeStr = startTime ? new Date(startTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
-          classDetails.push({
-            time: timeStr,
-            name: counts.name || name,
-            instructor: (row.instructor_name as string) ?? "",
-            signups: counts.signups,
-            waitlist: counts.waitlist,
-            reservation_type: (row.reservation_type as string) ?? undefined,
-          });
-        }
-        classDetails.sort((a, b) => a.time.localeCompare(b.time));
+      for (const row of (allClassRows ?? [])) {
+        if (row.is_cancelled) continue;
+        const cid = row.external_id as string;
+        const name = (row.name as string) ?? "";
+        const key = Object.keys(classCounts).find((k) => k.startsWith(`${cid}-`)) ?? "";
+        const counts = classCounts[key] ?? { name, signups: 0, waitlist: 0 };
+        const startTime = row.start_time as string | null;
+        // start_time is PST stored with +00 offset – format in UTC to preserve the raw PST value
+        const timeStr = startTime
+          ? new Date(startTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })
+          : "";
+        classDetails.push({
+          time: timeStr,
+          name: counts.name || name,
+          instructor: (row.instructor_name as string) ?? "",
+          signups: counts.signups,
+          waitlist: counts.waitlist,
+          reservation_type: (row.reservation_type as string) ?? undefined,
+        });
       }
+      classDetails.sort((a, b) => a.time.localeCompare(b.time));
 
       const totalSales = grossSalesArketa + cafeNetSales;
 

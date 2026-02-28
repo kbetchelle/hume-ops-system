@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { getPSTToday } from '@/lib/dateUtils';
 import { FileText, Save, Send, Clock, CheckCircle2 } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -44,7 +45,7 @@ export function ConciergeShiftReport() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = getPSTToday();
 
   const [formData, setFormData] = useState<ShiftReportFormData>(defaultFormData);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);

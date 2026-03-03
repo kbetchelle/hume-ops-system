@@ -23,7 +23,10 @@
       "Bash(xargs:*)",
       "Bash(git pull:*)",
       "Bash(grep:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(brew upgrade:*)",
+      "Bash(wc:*)",
+      "Bash(npm run typecheck:*)"
     ]
   }
 }

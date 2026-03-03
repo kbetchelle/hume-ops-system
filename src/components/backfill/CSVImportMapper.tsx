@@ -43,6 +43,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Minimum CSV columns required to successfully import each table type.
+// These are checked at table-selection time to give early feedback.
+const REQUIRED_CSV_COLUMNS: Record<string, string[]> = {
+  arketa_reservations: ["reservation_id", "member_id"],
+  arketa_subscriptions: ["subscription_id", "member_id"],
+  arketa_payments: ["payment_id", "member_id"],
+  staff_shifts: ["shift_id", "staff_id"],
+};
+
 // Available tables for import (Arketa: reservations, subscriptions, payments only; Sling: shifts)
 const AVAILABLE_TABLES = [
   { value: "arketa_reservations", label: "Arketa Reservations", uniqueKey: "reservation_id", csvUniqueKey: "reservation_id" },
@@ -259,11 +268,23 @@ export function CSVImportMapper() {
     setIsCreatingNewTable(false);
     setSelectedTable(tableName);
 
+    // Validate required columns are present in the uploaded CSV
+    const requiredCols = REQUIRED_CSV_COLUMNS[tableName] ?? [];
+    const normalizedHeaders = csvHeaders.map(normalizeColumnName);
+    const missingCols = requiredCols.filter(col => !normalizedHeaders.includes(col));
+    if (missingCols.length > 0) {
+      toast({
+        title: "Missing required columns",
+        description: `This file is missing: ${missingCols.join(", ")}. The import will likely fail without them.`,
+        variant: "destructive",
+      });
+    }
+
     // Auto-suggest unique key based on table config and available CSV columns
     const tableConfig = AVAILABLE_TABLES.find(t => t.value === tableName);
     if (tableConfig && tableConfig.csvUniqueKey) {
       // Check if the suggested CSV unique key column exists in the CSV headers
-      const suggestedKey = csvHeaders.find(h => 
+      const suggestedKey = csvHeaders.find(h =>
         normalizeColumnName(h) === normalizeColumnName(tableConfig.csvUniqueKey!)
       );
       if (suggestedKey) {

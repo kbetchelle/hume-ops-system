@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Returns the count of unread messages for the current user.
@@ -12,7 +13,7 @@ export function useUnreadMessageCount() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['unread-message-count', user?.id],
+    queryKey: queryKeys.unread.messages(user?.id ?? ''),
     queryFn: async () => {
       if (!user?.id) return 0;
 
@@ -26,6 +27,9 @@ export function useUnreadMessageCount() {
     },
     enabled: !!user?.id,
     // Realtime subscription (below) handles live updates; no polling needed.
+    // staleTime prevents redundant re-fetches on navigation — the subscription
+    // invalidates the cache whenever the count actually changes.
+    staleTime: 5 * 60_000,
   });
 
   // Subscribe to realtime updates
@@ -42,7 +46,7 @@ export function useUnreadMessageCount() {
           table: 'staff_messages',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.unread.messages(user.id) });
         }
       )
       .subscribe();
@@ -58,7 +62,7 @@ export function useUnreadMessageCount() {
           filter: `staff_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.unread.messages(user.id) });
         }
       )
       .subscribe();

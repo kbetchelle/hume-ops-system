@@ -37,7 +37,7 @@ import { OfflineBanner } from './OfflineBanner';
 import { ScheduledToursDisplay } from './ScheduledToursDisplay';
 import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import type { FormDataType, ConciergeDraft, CelebratoryEventType, CancelPauseReason } from '@/types/concierge-form';
-import { INITIAL_FORM_DATA, hasMeaningfulContent } from '@/types/concierge-form';
+import { INITIAL_FORM_DATA, hasMeaningfulContent, FormDataSchema } from '@/types/concierge-form';
 import type { Database } from '@/integrations/supabase/types';
 import { createLogger } from '@/lib/logger';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -193,14 +193,23 @@ export function ConciergeForm() {
       eq('shift_time', shiftType).
       maybeSingle();
       if (draft) {
-        const loadedFormData = draft.form_data as unknown as FormDataType;
-        const shift = loadedFormData.shiftTime;
-        setFormData({
-          ...loadedFormData,
-          cafeNotes: (loadedFormData as {cafeNotes?: string;}).cafeNotes ?? '',
-          shiftTime: normalizeShiftType(shift),
-          _sessionId: sessionId
-        });
+        const result = FormDataSchema.safeParse(draft.form_data);
+        if (result.success) {
+          setFormData({
+            ...INITIAL_FORM_DATA,
+            ...result.data,
+            cafeNotes: result.data.cafeNotes ?? '',
+            shiftTime: normalizeShiftType(result.data.shiftTime ?? shiftType),
+            _sessionId: sessionId,
+          });
+        } else {
+          logger.warn('Draft data failed schema validation — starting fresh:', result.error);
+          toast({
+            title: 'Draft could not be restored',
+            description: 'Some saved data may be incompatible. Starting with a fresh form.',
+            variant: 'destructive',
+          });
+        }
         setLocalVersion(draft.version);
         setLastSaved(new Date(draft.updated_at));
       } else {
@@ -370,13 +379,21 @@ export function ConciergeForm() {
 
   // Supabase Realtime subscription for database changes
   useEffect(() => {
+    const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(reportDate) ? reportDate : null;
+    const safeShift = (['AM', 'PM'] as const).includes(shiftType as 'AM' | 'PM') ? shiftType : null;
+
+    if (!safeDate || !safeShift) {
+      logger.error('Invalid reportDate or shiftType — skipping realtime subscription', { reportDate, shiftType });
+      return;
+    }
+
     const channel = (supabase as any).
-    channel(`draft-${reportDate}-${shiftType}`).
+    channel(`draft-${safeDate}-${safeShift}`).
     on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'concierge_drafts',
-      filter: `report_date=eq.${reportDate},shift_time=eq.${shiftType}`
+      filter: `report_date=eq.${safeDate},shift_time=eq.${safeShift}`
     }, handleDatabaseChange).
     subscribe();
 

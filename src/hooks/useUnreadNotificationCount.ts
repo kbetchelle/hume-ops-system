@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Returns the count of unread, non-dismissed notifications for the current user.
@@ -12,7 +13,7 @@ export function useUnreadNotificationCount() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['unread-notification-count', user?.id],
+    queryKey: queryKeys.unread.notifications(user?.id ?? ''),
     queryFn: async () => {
       if (!user?.id) return 0;
 
@@ -28,6 +29,9 @@ export function useUnreadNotificationCount() {
     },
     enabled: !!user?.id,
     // Realtime subscription (below) handles live updates; no polling needed.
+    // staleTime prevents redundant re-fetches on navigation — the subscription
+    // invalidates the cache whenever the count actually changes.
+    staleTime: 5 * 60_000,
   });
 
   // Subscribe to realtime INSERT events for instant badge updates
@@ -45,8 +49,8 @@ export function useUnreadNotificationCount() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
-          queryClient.invalidateQueries({ queryKey: ['staff-notifications'] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.unread.notifications(user.id) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all() });
           queryClient.invalidateQueries({ queryKey: ['notification-center'] });
         }
       )

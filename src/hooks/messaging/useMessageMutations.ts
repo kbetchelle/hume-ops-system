@@ -71,6 +71,7 @@ export function useSendMessage() {
       scheduledAt?: string;
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
+      if (content.length > 5000) throw new Error('Message exceeds maximum length of 5,000 characters');
 
       const senderName =
         user.user_metadata?.full_name || user.email || 'Unknown';

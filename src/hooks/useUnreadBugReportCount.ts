@@ -47,6 +47,9 @@ export function useUnreadBugReportCount() {
     },
     enabled: !!user?.id && !prefsLoading,
     refetchInterval: 30000,
+    // Match staleTime to refetch interval so data isn't considered stale
+    // between polls; realtime subscription also triggers immediate invalidation.
+    staleTime: 30_000,
   });
 
   // Subscribe to realtime changes on bug_reports for auto-refresh

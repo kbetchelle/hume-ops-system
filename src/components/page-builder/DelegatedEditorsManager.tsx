@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { Loader2, Search, UserPlus, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -125,14 +126,24 @@ export function DelegatedEditorsManager({
 
   const handleAddEditor = async (userId: string) => {
     if (!pageId) return;
-    await addEditorMutation.mutateAsync({ pageId, userId });
-    setSearchOpen(false);
-    setSearchTerm("");
+    try {
+      await addEditorMutation.mutateAsync({ pageId, userId });
+      setSearchOpen(false);
+      setSearchTerm("");
+    } catch (error) {
+      toast.error("Failed to add editor. Please try again.");
+      console.error("Add editor error:", error);
+    }
   };
 
   const handleRemoveEditor = async (userId: string) => {
     if (!pageId) return;
-    await removeEditorMutation.mutateAsync({ pageId, userId });
+    try {
+      await removeEditorMutation.mutateAsync({ pageId, userId });
+    } catch (error) {
+      toast.error("Failed to remove editor. Please try again.");
+      console.error("Remove editor error:", error);
+    }
   };
 
   return (

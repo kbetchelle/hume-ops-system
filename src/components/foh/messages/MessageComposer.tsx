@@ -298,9 +298,13 @@ export function MessageComposer({
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Type your message..."
                 rows={10}
+                maxLength={5000}
                 className="rounded-none"
                 disabled={isPending}
               />
+              <p className={`text-[10px] text-right ${content.length > 4500 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                {content.length.toLocaleString()} / 5,000
+              </p>
             </div>
 
             {/* Save as group prompt (when sending to 2+ recipients) */}

@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { ReactNode, useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/AuthProvider";
 import { useUserProfile, useUserRoles } from "@/hooks/useUserRoles";
@@ -340,7 +340,7 @@ function ResourcesNavItem({ item, collapsed }: { item: NavItem; collapsed: boole
   );
 }
 
-function SidebarNav() {
+const SidebarNav = memo(function SidebarNav() {
   const location = useLocation();
   const {
     state
@@ -653,8 +653,9 @@ function SidebarNav() {
       
       {/* Bottom spacer removed - greeting and role switcher moved to top */}
     </Sidebar>;
-}
-function UserInfoDropdown({
+});
+
+const UserInfoDropdown = memo(function UserInfoDropdown({
   collapsed = false
 }: {
   collapsed?: boolean;
@@ -725,8 +726,9 @@ function UserInfoDropdown({
       </DropdownMenu>
       <BugReportDialog open={showBugReport} onOpenChange={setShowBugReport} />
     </>;
-}
-function DashboardHeader({ title }: { title: string }) {
+});
+
+const DashboardHeader = memo(function DashboardHeader({ title }: { title: string }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeRole } = useActiveRole();
@@ -755,7 +757,8 @@ function DashboardHeader({ title }: { title: string }) {
       </div>
     </header>
   );
-}
+});
+
 function getEffectiveRoleFromPath(path: string, activeRole: AppRole | null): AppRole | null {
   if (path.startsWith("/dashboard/admin")) return "admin";
   if (path.startsWith("/dashboard/manager")) return "manager";

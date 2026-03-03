@@ -1,5 +1,89 @@
 // Type definitions for Concierge Shift Report System
+import { z } from 'zod';
 import { getPSTToday, getPSTHour } from "@/lib/dateUtils";
+
+// ---------------------------------------------------------------------------
+// Zod schemas — used to safely validate draft data loaded from the database
+// ---------------------------------------------------------------------------
+
+const FutureNoteSchema = z.object({
+  id: z.string().optional(),
+  targetDate: z.string(),
+  targetShift: z.enum(['AM', 'PM']),
+  note: z.string(),
+});
+
+const MemberFeedbackSchema = z.object({
+  id: z.string().optional(),
+  sentiment: z.enum(['positive', 'negative', 'neutral']),
+  text: z.string(),
+});
+
+const CancelRequestSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  email: z.string().optional(),
+  membershipType: z.string().optional(),
+  requestType: z.enum(['cancel', 'pause', 'hold']),
+  endDate: z.string().optional(),
+  reason: z.enum(['moving', 'commute', 'financial', 'travel', 'illness', 'other']).optional(),
+  otherReasonText: z.string().optional(),
+  paidPause: z.boolean().optional(),
+  pauseStartDate: z.string().optional(),
+  pauseEndDate: z.string().optional(),
+});
+
+const CelebratoryEventSchema = z.object({
+  id: z.string().optional(),
+  memberName: z.string(),
+  eventType: z.enum([
+    'new_baby', 'new_job', 'new_house', 'marriage_engagement',
+    'personal_accomplishment', 'birthday', 'anniversary',
+    'wedding', 'promotion', 'other',
+  ]),
+  date: z.string().optional(),
+  timing: z.string().optional(),
+  accomplishmentDetails: z.string().optional(),
+});
+
+const TourSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  followupCompleted: z.boolean(),
+});
+
+const FacilityIssueSchema = z.object({
+  id: z.string().optional(),
+  description: z.string(),
+  photoUrl: z.string().nullable(),
+});
+
+const SystemIssueSchema = z.object({
+  id: z.string().optional(),
+  issueType: z.enum(['arketa', 'jolt', 'database', 'question', '']),
+  description: z.string(),
+  photoUrl: z.string().nullable(),
+});
+
+export const FormDataSchema = z.object({
+  reportDate: z.string().optional(),
+  shiftTime: z.enum(['AM', 'PM']).optional(),
+  staffName: z.string().optional(),
+  futureNotes: z.array(FutureNoteSchema).optional(),
+  memberFeedback: z.array(MemberFeedbackSchema).optional(),
+  membershipCancelRequests: z.array(CancelRequestSchema).optional(),
+  celebratoryEvents: z.array(CelebratoryEventSchema).optional(),
+  tours: z.array(TourSchema).optional(),
+  facilityIssues: z.array(FacilityIssueSchema).optional(),
+  systemIssues: z.array(SystemIssueSchema).optional(),
+  busiestAreas: z.string().optional(),
+  managementNotes: z.string().optional(),
+  cafeNotes: z.string().optional(),
+  celebratoryEventsNA: z.boolean().optional(),
+  systemIssuesNA: z.boolean().optional(),
+  futureShiftNotesNA: z.boolean().optional(),
+  _sessionId: z.string().optional(),
+});
 export interface FutureNoteEntry {
   id?: string;
   targetDate: string; // YYYY-MM-DD

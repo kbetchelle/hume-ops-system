@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { usePendingApprovals, useApproveAccount, useRejectAccount } from "@/hooks/useAccountApproval";
 import { AppRole, PendingApproval, ROLES } from "@/types/roles";
 import { cn } from "@/lib/utils";
@@ -58,26 +59,36 @@ export function AccountApprovalsSection() {
   const handleApprove = async () => {
     if (!selectedApproval || selectedRoles.length === 0) return;
 
-    await approveAccount.mutateAsync({
-      userId: selectedApproval.user_id,
-      approvedRoles: selectedRoles,
-      notes: approvalNotes || undefined,
-    });
-
-    setApproveDialogOpen(false);
-    setSelectedApproval(null);
+    try {
+      await approveAccount.mutateAsync({
+        userId: selectedApproval.user_id,
+        approvedRoles: selectedRoles,
+        notes: approvalNotes || undefined,
+      });
+      toast.success("Account approved successfully");
+      setApproveDialogOpen(false);
+      setSelectedApproval(null);
+    } catch (error) {
+      console.error("Failed to approve account:", error);
+      toast.error("Failed to approve account. Please try again.");
+    }
   };
 
   const handleReject = async () => {
     if (!selectedApproval || !rejectionReason.trim()) return;
 
-    await rejectAccount.mutateAsync({
-      userId: selectedApproval.user_id,
-      reason: rejectionReason.trim(),
-    });
-
-    setRejectDialogOpen(false);
-    setSelectedApproval(null);
+    try {
+      await rejectAccount.mutateAsync({
+        userId: selectedApproval.user_id,
+        reason: rejectionReason.trim(),
+      });
+      toast.success("Account rejected");
+      setRejectDialogOpen(false);
+      setSelectedApproval(null);
+    } catch (error) {
+      console.error("Failed to reject account:", error);
+      toast.error("Failed to reject account. Please try again.");
+    }
   };
 
   const toggleRole = (role: AppRole) => {

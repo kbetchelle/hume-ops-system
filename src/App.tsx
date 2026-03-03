@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 // Public pages
 import NotFound from "./pages/NotFound";
@@ -563,13 +564,15 @@ const App = () => (
               path="/dashboard/notification-center"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center h-screen">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  }>
-                    <NotificationControlCenterPage />
-                  </Suspense>
+                  <ErrorBoundary>
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-screen">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    }>
+                      <NotificationControlCenterPage />
+                    </Suspense>
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -592,13 +595,15 @@ const App = () => (
               path="/dashboard/staff-resources/pages/new"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center h-screen">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  }>
-                    <ResourcePageEditorPage />
-                  </Suspense>
+                  <ErrorBoundary>
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-screen">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    }>
+                      <ResourcePageEditorPage />
+                    </Suspense>
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -606,13 +611,15 @@ const App = () => (
               path="/dashboard/staff-resources/pages/:pageId/edit"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center h-screen">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  }>
-                    <ResourcePageEditorPage />
-                  </Suspense>
+                  <ErrorBoundary>
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-screen">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    }>
+                      <ResourcePageEditorPage />
+                    </Suspense>
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />

@@ -2,6 +2,7 @@ import { useState, createContext, useContext, ReactNode, useEffect } from "react
 import { AppRole, UserRole, ROLES } from "@/types/roles";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles, getPrimaryRole, getRoleDashboardPath } from "@/hooks/useUserRoles";
+import { getStorageItem, setStorageItem } from "@/lib/storage";
 
 interface ActiveRoleContextType {
   activeRole: AppRole | null;
@@ -23,7 +24,7 @@ export function ActiveRoleProvider({ children }: { children: ReactNode }) {
   // Initialize active role from localStorage or primary role
   useEffect(() => {
     if (userRoles && userRoles.length > 0) {
-      const storedRole = localStorage.getItem(`activeRole_${user?.id}`);
+      const storedRole = getStorageItem(`activeRole_${user?.id}`);
 
       if (storedRole && userRoles.some(r => r.role === storedRole)) {
         setActiveRoleState(storedRole as AppRole);
@@ -38,7 +39,7 @@ export function ActiveRoleProvider({ children }: { children: ReactNode }) {
 
   const setActiveRole = (role: AppRole) => {
     if (user?.id) {
-      localStorage.setItem(`activeRole_${user.id}`, role);
+      setStorageItem(`activeRole_${user.id}`, role);
     }
     setActiveRoleState(role);
   };

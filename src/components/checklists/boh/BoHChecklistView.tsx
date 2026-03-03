@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getStorageBool, setStorageBool } from '@/lib/storage';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useActiveRole } from '@/hooks/useActiveRole';
@@ -56,7 +57,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
   };
   const [selectedDate, setSelectedDate] = useState(getPSTDate);
   const isWeekend = [0, 6].includes(getPSTDayOfWeek(selectedDate));
-  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
+  const [hideCompleted, setHideCompleted] = useState(() => getStorageBool('checklist-hide-completed', false));
 
   const bohRoles = ['floater', 'male_spa_attendant', 'female_spa_attendant'];
   const userBoHRole = (activeRole && bohRoles.includes(activeRole))
@@ -229,7 +230,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
           </div>
           <div className="flex items-center gap-2 min-h-[44px] ml-auto">
             <Label htmlFor="hide-completed-boh-mobile" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">{t('Hide completed', 'Ocultar completados')}</Label>
-            <Switch id="hide-completed-boh-mobile" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
+            <Switch id="hide-completed-boh-mobile" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); setStorageBool('checklist-hide-completed', v); }} />
           </div>
         </div>
         {/* Sections + items */}
@@ -329,7 +330,7 @@ export function BoHChecklistView({ headerSlot }: BoHChecklistViewProps = {}) {
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="hide-completed-boh" className="text-xs text-muted-foreground cursor-pointer">{t('Hide completed', 'Ocultar completados')}</Label>
-              <Switch id="hide-completed-boh" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
+              <Switch id="hide-completed-boh" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); setStorageBool('checklist-hide-completed', v); }} />
             </div>
           </div>
         </CardHeader>

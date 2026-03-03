@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getStorageBool, setStorageBool } from '@/lib/storage';
 import { useAuth } from '@/hooks/useAuth';
 import { ConciergeChecklistItem } from './ConciergeChecklistItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -63,7 +64,7 @@ export function ConciergeChecklistView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(getPSTToday);
-  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
+  const [hideCompleted, setHideCompleted] = useState(() => getStorageBool('checklist-hide-completed', false));
   // Local override: when user clicks the blurred overlay, we show items without changing localStorage
   const [localShowAll, setLocalShowAll] = useState(false);
   const isWeekend = isWeekendDate(selectedDate);
@@ -278,7 +279,7 @@ export function ConciergeChecklistView() {
                 checked={hideCompleted}
                 onCheckedChange={(v) => {
                   setHideCompleted(v);
-                  localStorage.setItem('checklist-hide-completed', String(v));
+                  setStorageBool('checklist-hide-completed', v);
                   setLocalShowAll(false);
                 }}
               />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getStorageBool, setStorageBool } from '@/lib/storage';
 import { useAuth } from '@/hooks/useAuth';
 import type { CafeChecklistItem } from '@/hooks/checklists/useCafeChecklists';
 import { CafeChecklistItem as CafeChecklistItemComponent } from './CafeChecklistItem';
@@ -25,7 +26,7 @@ interface CafeChecklistWithItems {
 export function CafeChecklistView() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(getPSTToday);
-  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('checklist-hide-completed') === 'true');
+  const [hideCompleted, setHideCompleted] = useState(() => getStorageBool('checklist-hide-completed', false));
 
   // Fetch ALL active cafe checklists regardless of day/shift
   const { data: checklists, isLoading } = useQuery({
@@ -130,7 +131,7 @@ export function CafeChecklistView() {
                   </Badge>
                   <div className="flex items-center gap-2">
                     <Label htmlFor="hide-completed-cafe" className="text-xs text-muted-foreground cursor-pointer">Hide completed</Label>
-                    <Switch id="hide-completed-cafe" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); localStorage.setItem('checklist-hide-completed', String(v)); }} />
+                    <Switch id="hide-completed-cafe" checked={hideCompleted} onCheckedChange={(v) => { setHideCompleted(v); setStorageBool('checklist-hide-completed', v); }} />
                   </div>
                 </div>
               </div>

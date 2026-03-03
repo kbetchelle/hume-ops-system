@@ -161,6 +161,8 @@ export function PackageDetailsDialog({
                       <img
                         src={packageData.location_photo_url}
                         alt="Package location"
+                        loading="lazy"
+                        decoding="async"
                         className="rounded-lg max-w-md cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setShowFullImage(packageData.location_photo_url)}
                       />
@@ -273,6 +275,8 @@ export function PackageDetailsDialog({
                                   <img
                                     src={history.location_photo_url}
                                     alt={`Location: ${history.location}`}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="rounded-lg max-w-xs cursor-pointer hover:opacity-90 transition-opacity mt-2"
                                     onClick={() => setShowFullImage(history.location_photo_url)}
                                   />
@@ -311,6 +315,8 @@ export function PackageDetailsDialog({
             <img
               src={showFullImage}
               alt="Full size location"
+              loading="lazy"
+              decoding="async"
               className="w-full rounded-lg"
             />
           )}

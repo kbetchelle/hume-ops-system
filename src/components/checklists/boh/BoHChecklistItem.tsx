@@ -161,9 +161,11 @@ export function BoHChecklistItem({
         )}
         {completion?.photo_url ? (
           <div className="space-y-3">
-            <img 
-              src={completion.photo_url} 
+            <img
+              src={completion.photo_url}
               alt={t('Completion photo', 'Foto de finalización')}
+              loading="lazy"
+              decoding="async"
               className="max-w-full sm:max-w-xs rounded-none border"
             />
             <div className="flex gap-2">

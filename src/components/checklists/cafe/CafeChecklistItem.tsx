@@ -151,9 +151,11 @@ export function CafeChecklistItem({
         )}
         {completion?.photo_url ? (
           <div className="space-y-3">
-            <img 
-              src={completion.photo_url} 
-              alt="Completion photo" 
+            <img
+              src={completion.photo_url}
+              alt="Completion photo"
+              loading="lazy"
+              decoding="async"
               className="max-w-full sm:max-w-xs rounded-lg border"
             />
             <div className="flex gap-2">

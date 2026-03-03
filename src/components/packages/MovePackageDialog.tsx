@@ -132,7 +132,7 @@ export function MovePackageDialog({
                 </>
               ) : (
                 <div className="space-y-2">
-                  <img src={photoUrl} alt="New location" className="w-full rounded-lg" />
+                  <img src={photoUrl} alt="New location" loading="lazy" decoding="async" className="w-full rounded-lg" />
                   <Button
                     variant="outline"
                     onClick={() => setShowPhotoUpload(true)}

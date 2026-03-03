@@ -332,7 +332,7 @@ export function AddPackageDialog({ isOpen, onClose }: AddPackageDialogProps) {
                 <>
                   <div className="space-y-2">
                     <Label>Location Photo</Label>
-                    <img src={photoUrl} alt="Package location" className="w-full rounded-lg" />
+                    <img src={photoUrl} alt="Package location" loading="lazy" decoding="async" className="w-full rounded-lg" />
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setShowPhotoUpload(true)} className="flex-1">

@@ -489,7 +489,7 @@ export function LostAndFoundTab() {
     <div className="space-y-4 py-2">
       {selectedItem.photo_url && (
         <div className={cn("w-full rounded-lg overflow-hidden bg-muted", isMobile ? "max-h-[280px] min-h-[200px]" : "max-h-64")}>
-          <img src={selectedItem.photo_url} alt={selectedItem.description} className="w-full h-full object-contain" />
+          <img src={selectedItem.photo_url} alt={selectedItem.description} loading="lazy" decoding="async" className="w-full h-full object-contain" />
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -583,7 +583,7 @@ export function LostAndFoundTab() {
                     >
                       <div className="flex gap-3">
                         {item.photo_url ? (
-                          <img src={item.photo_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                          <img src={item.photo_url} alt={item.description} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover shrink-0" />
                         ) : (
                           <div className="w-16 h-16 rounded-lg bg-muted shrink-0 flex items-center justify-center">
                             <span className="text-muted-foreground text-xs">No photo</span>
@@ -944,6 +944,8 @@ export function LostAndFoundTab() {
                   <img
                 src={selectedItem.photo_url}
                 alt={selectedItem.description}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-contain" />
 
                 </div>

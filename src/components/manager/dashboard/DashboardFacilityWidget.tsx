@@ -109,6 +109,8 @@ export function DashboardFacilityWidget() {
               <img
                 src={issue.photo_url}
                 alt="Issue photo"
+                loading="lazy"
+                decoding="async"
                 className="h-10 w-10 rounded object-cover shrink-0" />
 
               }

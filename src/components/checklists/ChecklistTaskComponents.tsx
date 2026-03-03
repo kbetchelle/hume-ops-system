@@ -144,6 +144,8 @@ export function PhotoTask({
           <img
             src={completionValue}
             alt="Task photo"
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         </div>

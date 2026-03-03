@@ -112,6 +112,8 @@ export function MyPackagesView() {
               <img
                 src={pkg.location_photo_url}
                 alt="Package location"
+                loading="lazy"
+                decoding="async"
                 className="rounded-lg w-full max-w-sm cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setSelectedImageUrl(pkg.location_photo_url)}
               />
@@ -231,6 +233,8 @@ export function MyPackagesView() {
             <img
               src={selectedImageUrl}
               alt="Package location full view"
+              loading="lazy"
+              decoding="async"
               className="w-full rounded-lg"
             />
           )}

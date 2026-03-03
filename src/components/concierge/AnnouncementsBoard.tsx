@@ -334,7 +334,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedForSheet.content) }}
                   />
                   {selectedForSheet.photo_url && (
-                    <img src={selectedForSheet.photo_url} alt="" className="mt-4 max-h-48 w-full object-cover rounded-lg border" />
+                    <img src={selectedForSheet.photo_url} alt="Announcement attachment" loading="lazy" decoding="async" className="mt-4 max-h-48 w-full object-cover rounded-lg border" />
                   )}
                   <AnnouncementComments
                     announcementId={selectedForSheet.id}
@@ -384,7 +384,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
       />
       {item.photo_url && (
-        <img src={item.photo_url} alt="Update attachment" className="mt-4 max-h-48 object-cover border" />
+        <img src={item.photo_url} alt="Update attachment" loading="lazy" decoding="async" className="mt-4 max-h-48 object-cover border" />
       )}
       <Separator className="my-4" />
       <div className="text-[10px] text-muted-foreground">
@@ -422,7 +422,7 @@ export function AnnouncementsBoard({ contextRole }: AnnouncementsBoardProps) {
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
       />
       {item.photo_url && (
-        <img src={item.photo_url} alt="Attachment" className="mt-3 max-h-48 object-cover border" />
+        <img src={item.photo_url} alt="Attachment" loading="lazy" decoding="async" className="mt-3 max-h-48 object-cover border" />
       )}
       <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
         <Clock className="h-3 w-3" />

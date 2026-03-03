@@ -27,7 +27,10 @@ export function ForcePasswordChangeDialog({ userId }: ForcePasswordChangeDialogP
   const [error, setError] = useState<string | null>(null);
 
   const validate = (): string | null => {
-    if (newPassword.length < 6) return "Password must be at least 6 characters";
+    if (newPassword.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(newPassword)) return "Password must contain an uppercase letter";
+    if (!/[a-z]/.test(newPassword)) return "Password must contain a lowercase letter";
+    if (!/[0-9]/.test(newPassword)) return "Password must contain a number";
     if (newPassword !== confirmPassword) return "Passwords don't match";
     return null;
   };

@@ -338,6 +338,8 @@ function CreateEditDialog({ open, onOpenChange, editingAnnouncement }: CreateDia
                 <img
                   src={photoUrl}
                   alt="Attachment"
+                  loading="lazy"
+                  decoding="async"
                   className="max-h-32 object-cover border"
                 />
                 <Button
@@ -562,7 +564,7 @@ function AnnouncementCard({
             />
 
             {announcement.photo_url && expanded && (
-              <img src={announcement.photo_url} alt="Attachment" className="max-h-48 object-cover border mt-2" />
+              <img src={announcement.photo_url} alt="Attachment" loading="lazy" decoding="async" className="max-h-48 object-cover border mt-2" />
             )}
 
             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
@@ -585,7 +587,12 @@ function AnnouncementCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div
+            role="group"
+            aria-label="Announcement actions"
+            className="flex items-center gap-1 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
               variant="ghost"
               size="icon"

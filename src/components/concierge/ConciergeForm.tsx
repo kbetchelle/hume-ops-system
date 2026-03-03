@@ -96,6 +96,7 @@ export function ConciergeForm() {
   const staffNameInputRef = useRef<HTMLInputElement>(null);
   const localVersionRef = useRef(localVersion);
   const isDirtyRef = useRef(isDirty);
+  const saveVersionRef = useRef(0); // Track save operation versions to prevent race conditions
   const isMobile = useIsMobile();
   const [sectionJumpOpen, setSectionJumpOpen] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -217,7 +218,11 @@ export function ConciergeForm() {
 
   const saveDraft = useCallback(async () => {
     if (isSaving || isSubmitted) return;
+
+    // Increment save version to track this save operation
+    const currentSaveVersion = ++saveVersionRef.current;
     setIsSaving(true);
+
     try {
       const draftData = {
         report_date: reportDate,
@@ -235,13 +240,20 @@ export function ConciergeForm() {
         select().
         single();
         if (error) throw error;
-        setLocalVersion(data.version);
-        setLastSaved(new Date());
-        setIsDirty(false);
-        await broadcastUpdate(formData);
-        await broadcastSaved();
+
+        // Only update state if this is still the latest save operation
+        // This prevents out-of-order completions from overwriting newer data
+        if (currentSaveVersion === saveVersionRef.current) {
+          setLocalVersion(data.version);
+          setLastSaved(new Date());
+          setIsDirty(false);
+          await broadcastUpdate(formData);
+          await broadcastSaved();
+        }
       } else {
-        setIsDirty(false);
+        if (currentSaveVersion === saveVersionRef.current) {
+          setIsDirty(false);
+        }
       }
     } catch (error) {
       logger.error('Failed to save draft:', error);
@@ -251,7 +263,10 @@ export function ConciergeForm() {
         variant: 'destructive'
       });
     } finally {
-      setIsSaving(false);
+      // Only clear isSaving if this is still the latest save
+      if (currentSaveVersion === saveVersionRef.current) {
+        setIsSaving(false);
+      }
     }
   }, [reportDate, shiftType, formData, user?.email, sessionId, isOnline, isSaving, isSubmitted, broadcastUpdate, broadcastSaved, toast]);
 
@@ -550,6 +565,12 @@ export function ConciergeForm() {
 
   return (
     <>
+      {/* ARIA live region for save status - announced to screen readers */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {isSaving && 'Saving your changes...'}
+        {!isSaving && lastSaved && 'Changes saved successfully'}
+      </div>
+
       {/* Offline banner */}
       {!isOnline && <OfflineBanner queueSize={queueSize} onRetry={processQueue} />}
       

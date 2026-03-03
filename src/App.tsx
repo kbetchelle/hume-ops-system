@@ -12,12 +12,12 @@ import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
-// Public pages
+// Public pages (static - needed immediately)
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import Install from "./pages/Install";
 
-// Auth pages
+// Auth pages (static - needed for login flow)
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Onboarding from "./pages/auth/Onboarding";
@@ -26,66 +26,84 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import PendingApprovalPage from "./pages/auth/PendingApprovalPage";
 import AccountDisabledPage from "./pages/auth/AccountDisabledPage";
 
-// Dashboard pages
+// Dashboard redirect (static - lightweight)
 import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/dashboards/AdminDashboard";
-import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
-import ConciergeDashboard from "./pages/dashboards/ConciergeDashboard";
-import TrainerDashboard from "./pages/dashboards/TrainerDashboard";
-import MaleSpaDashboard from "./pages/dashboards/MaleSpaDashboard";
-import FemaleSpaDashboard from "./pages/dashboards/FemaleSpaDashboard";
-import FloaterDashboard from "./pages/dashboards/FloaterDashboard";
-import CafeDashboard from "./pages/dashboards/CafeDashboard";
-import EventDrinksPage from "./pages/dashboards/EventDrinksPage";
-import MembersPage from "./pages/dashboards/MembersPage";
+
+// Public plan page (static - public route)
+import PublicPlanPage from "./pages/PublicPlanPage";
+
+// ============================================================================
+// LAZY-LOADED PAGES - Code splitting for optimal bundle size
+// ============================================================================
+
+// Dashboard pages
+const AdminDashboard = lazy(() => import("./pages/dashboards/AdminDashboard"));
+const ManagerDashboard = lazy(() => import("./pages/dashboards/ManagerDashboard"));
+const ConciergeDashboard = lazy(() => import("./pages/dashboards/ConciergeDashboard"));
+const TrainerDashboard = lazy(() => import("./pages/dashboards/TrainerDashboard"));
+const MaleSpaDashboard = lazy(() => import("./pages/dashboards/MaleSpaDashboard"));
+const FemaleSpaDashboard = lazy(() => import("./pages/dashboards/FemaleSpaDashboard"));
+const FloaterDashboard = lazy(() => import("./pages/dashboards/FloaterDashboard"));
+const CafeDashboard = lazy(() => import("./pages/dashboards/CafeDashboard"));
+const EventDrinksPage = lazy(() => import("./pages/dashboards/EventDrinksPage"));
+const MembersPage = lazy(() => import("./pages/dashboards/MembersPage"));
 
 // Member sub-pages
-import AllClientsPage from "./pages/members/AllClientsPage";
-import GuestsPage from "./pages/members/GuestsPage";
-import ApplicationSubmittedPage from "./pages/members/ApplicationSubmittedPage";
-import WaitlistPage from "./pages/members/WaitlistPage";
-import OnboardingMembersPage from "./pages/members/OnboardingPage";
-import SubscriptionActivePage from "./pages/members/SubscriptionActivePage";
-import SubscriptionPastDuePage from "./pages/members/SubscriptionPastDuePage";
-import TemporaryMembershipsPage from "./pages/members/TemporaryMembershipsPage";
-import PausesPage from "./pages/members/PausesPage";
-import CancellationsPage from "./pages/members/CancellationsPage";
-import MastercardPage from "./pages/members/MastercardPage";
-import ChecklistsManagementPage from "./pages/dashboards/ChecklistsManagementPage";
-import MyChecklistsPage from "./pages/dashboards/MyChecklistsPage";
-import CommunicationsPage from "./pages/dashboards/CommunicationsPage";
-import MessagesPage from "./pages/dashboards/MessagesPage";
-import MemberCommunicationsHub from "./components/communications/MemberCommunicationsHub";
-import ReportsPage from "./pages/dashboards/ReportsPage";
-import TrainingPlansPage from "./pages/dashboards/TrainingPlansPage";
-import PublicPlanPage from "./pages/PublicPlanPage";
-import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
-import SlingUserManagement from "./pages/admin/SlingUserManagement";
+const AllClientsPage = lazy(() => import("./pages/members/AllClientsPage"));
+const GuestsPage = lazy(() => import("./pages/members/GuestsPage"));
+const ApplicationSubmittedPage = lazy(() => import("./pages/members/ApplicationSubmittedPage"));
+const WaitlistPage = lazy(() => import("./pages/members/WaitlistPage"));
+const OnboardingMembersPage = lazy(() => import("./pages/members/OnboardingPage"));
+const SubscriptionActivePage = lazy(() => import("./pages/members/SubscriptionActivePage"));
+const SubscriptionPastDuePage = lazy(() => import("./pages/members/SubscriptionPastDuePage"));
+const TemporaryMembershipsPage = lazy(() => import("./pages/members/TemporaryMembershipsPage"));
+const PausesPage = lazy(() => import("./pages/members/PausesPage"));
+const CancellationsPage = lazy(() => import("./pages/members/CancellationsPage"));
+const MastercardPage = lazy(() => import("./pages/members/MastercardPage"));
 
-import BackfillManagerPage from "./pages/admin/BackfillManagerPage";
-import StaffAnnouncementsPage from "./pages/admin/StaffAnnouncementsPage";
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import ApiSyncingPage from "./pages/admin/ApiSyncingPage";
-import ApiDataMappingPage from "./pages/admin/ApiDataMappingPage";
-import DataPatternsPage from "./pages/admin/DataPatternsPage";
-import SyncSkippedRecordsPage from "./pages/admin/SyncSkippedRecordsPage";
-import BugReportsPage from "./pages/admin/BugReportsPage";
-import DevTestingPage from "./pages/admin/DevTestingPage";
-import DevUpdatesPage from "./pages/admin/DevUpdatesPage";
-import NotificationExamplesPage from "./pages/admin/NotificationExamplesPage";
-import AIFeedbackPage from "./pages/admin/AIFeedbackPage";
-import ProfilePage from "./pages/ProfilePage";
-import AccountSettingsPage from "./pages/AccountSettingsPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import MasterCalendarPage from "./pages/manager/MasterCalendarPage";
-import StaffQAPage from "./pages/manager/StaffQAPage";
+// Dashboard feature pages
+const ChecklistsManagementPage = lazy(() => import("./pages/dashboards/ChecklistsManagementPage"));
+const MyChecklistsPage = lazy(() => import("./pages/dashboards/MyChecklistsPage"));
+const CommunicationsPage = lazy(() => import("./pages/dashboards/CommunicationsPage"));
+const MessagesPage = lazy(() => import("./pages/dashboards/MessagesPage"));
+const MemberCommunicationsHub = lazy(() => import("./components/communications/MemberCommunicationsHub"));
+const ReportsPage = lazy(() => import("./pages/dashboards/ReportsPage"));
+const TrainingPlansPage = lazy(() => import("./pages/dashboards/TrainingPlansPage"));
+const AnalyticsDashboard = lazy(() => import("./pages/dashboards/AnalyticsDashboard"));
 
-import StaffResourcesPage from "./pages/manager/StaffResourcesPage";
-import { ResourcePageReadingPage } from "./pages/ResourcePageReadingPage";
-import StaffResourcesViewPage from "./pages/dashboards/StaffResourcesViewPage";
+// Admin pages
+const SlingUserManagement = lazy(() => import("./pages/admin/SlingUserManagement"));
+const BackfillManagerPage = lazy(() => import("./pages/admin/BackfillManagerPage"));
+const StaffAnnouncementsPage = lazy(() => import("./pages/admin/StaffAnnouncementsPage"));
+const UserManagementPage = lazy(() => import("./pages/admin/UserManagementPage"));
+const ApiSyncingPage = lazy(() => import("./pages/admin/ApiSyncingPage"));
+const ApiDataMappingPage = lazy(() => import("./pages/admin/ApiDataMappingPage"));
+const DataPatternsPage = lazy(() => import("./pages/admin/DataPatternsPage"));
+const SyncSkippedRecordsPage = lazy(() => import("./pages/admin/SyncSkippedRecordsPage"));
+const BugReportsPage = lazy(() => import("./pages/admin/BugReportsPage"));
+const DevTestingPage = lazy(() => import("./pages/admin/DevTestingPage"));
+const DevUpdatesPage = lazy(() => import("./pages/admin/DevUpdatesPage"));
+const NotificationExamplesPage = lazy(() => import("./pages/admin/NotificationExamplesPage"));
+const AIFeedbackPage = lazy(() => import("./pages/admin/AIFeedbackPage"));
 
-// Lazy load the page editor (contains large TipTap bundle)
-const ResourcePageEditorPage = lazy(() => 
+// User pages
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const AccountSettingsPage = lazy(() => import("./pages/AccountSettingsPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+
+// Manager pages
+const MasterCalendarPage = lazy(() => import("./pages/manager/MasterCalendarPage"));
+const StaffQAPage = lazy(() => import("./pages/manager/StaffQAPage"));
+const StaffResourcesPage = lazy(() => import("./pages/manager/StaffResourcesPage"));
+
+// Resource pages
+const ResourcePageReadingPage = lazy(() =>
+  import("./pages/ResourcePageReadingPage").then(module => ({
+    default: module.ResourcePageReadingPage
+  }))
+);
+const StaffResourcesViewPage = lazy(() => import("./pages/dashboards/StaffResourcesViewPage"));
+const ResourcePageEditorPage = lazy(() =>
   import("./pages/ResourcePageEditorPage").then(module => ({
     default: module.ResourcePageEditorPage
   }))
@@ -95,17 +113,35 @@ const NotificationControlCenterPage = lazy(() =>
     default: module.default
   }))
 );
-import ResourcesQuickLinksPage from "./pages/dashboards/ResourcesQuickLinksPage";
-import ResourcesPagesPage from "./pages/dashboards/ResourcesPagesPage";
-import ResourcesPoliciesPage from "./pages/dashboards/ResourcesPoliciesPage";
-import LostAndFoundPage from "./pages/dashboards/LostAndFoundPage";
-import ClassSchedulePage from "./pages/dashboards/ClassSchedulePage";
-import AnnouncementsPage from "./pages/dashboards/AnnouncementsPage";
-import DocumentsPage from "./pages/dashboards/DocumentsPage";
-import WhosWorkingPage from "./pages/dashboards/WhosWorkingPage";
-import PackageTrackingPage from "./pages/dashboards/PackageTrackingPage";
-import MyPackagesPage from "./pages/dashboards/MyPackagesPage";
-import BoHNotesPage from "./pages/dashboards/BoHNotesPage";
+const ResourcesQuickLinksPage = lazy(() => import("./pages/dashboards/ResourcesQuickLinksPage"));
+const ResourcesPagesPage = lazy(() => import("./pages/dashboards/ResourcesPagesPage"));
+const ResourcesPoliciesPage = lazy(() => import("./pages/dashboards/ResourcesPoliciesPage"));
+
+// Other feature pages
+const LostAndFoundPage = lazy(() => import("./pages/dashboards/LostAndFoundPage"));
+const ClassSchedulePage = lazy(() => import("./pages/dashboards/ClassSchedulePage"));
+const AnnouncementsPage = lazy(() => import("./pages/dashboards/AnnouncementsPage"));
+const DocumentsPage = lazy(() => import("./pages/dashboards/DocumentsPage"));
+const WhosWorkingPage = lazy(() => import("./pages/dashboards/WhosWorkingPage"));
+const PackageTrackingPage = lazy(() => import("./pages/dashboards/PackageTrackingPage"));
+const MyPackagesPage = lazy(() => import("./pages/dashboards/MyPackagesPage"));
+const BoHNotesPage = lazy(() => import("./pages/dashboards/BoHNotesPage"));
+
+// Reusable loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+);
+
+// Wrapper for lazy-loaded pages with Suspense and ErrorBoundary
+const LazyPage = ({ children }: { children: React.ReactNode }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<PageLoader />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -184,7 +220,7 @@ const App = () => (
               path="/dashboard/admin"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <AdminDashboard />
+                  <LazyPage><AdminDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -192,7 +228,7 @@ const App = () => (
               path="/dashboard/manager"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ManagerDashboard />
+                  <LazyPage><ManagerDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -200,7 +236,7 @@ const App = () => (
               path="/dashboard/concierge"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge"]}>
-                  <ConciergeDashboard />
+                  <LazyPage><ConciergeDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -208,7 +244,7 @@ const App = () => (
               path="/dashboard/trainer"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <TrainerDashboard />
+                  <LazyPage><TrainerDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -220,7 +256,7 @@ const App = () => (
               path="/dashboard/spa/female"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant"]}>
-                  <FemaleSpaDashboard />
+                  <LazyPage><FemaleSpaDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -228,7 +264,7 @@ const App = () => (
               path="/dashboard/spa/male"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant"]}>
-                  <MaleSpaDashboard />
+                  <LazyPage><MaleSpaDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -236,7 +272,7 @@ const App = () => (
               path="/dashboard/floater"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "floater"]}>
-                  <FloaterDashboard />
+                  <LazyPage><FloaterDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -244,7 +280,7 @@ const App = () => (
               path="/dashboard/cafe"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "cafe"]}>
-                  <CafeDashboard />
+                  <LazyPage><CafeDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -252,7 +288,7 @@ const App = () => (
               path="/dashboard/cafe/event-drinks"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "cafe"]}>
-                  <EventDrinksPage />
+                  <LazyPage><EventDrinksPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -272,7 +308,7 @@ const App = () => (
               path="/dashboard/members/all-clients"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <AllClientsPage />
+                  <LazyPage><AllClientsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -280,7 +316,7 @@ const App = () => (
               path="/dashboard/members/guests"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <GuestsPage />
+                  <LazyPage><GuestsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -288,7 +324,7 @@ const App = () => (
               path="/dashboard/members/application-submitted"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <ApplicationSubmittedPage />
+                  <LazyPage><ApplicationSubmittedPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -296,7 +332,7 @@ const App = () => (
               path="/dashboard/members/waitlist"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <WaitlistPage />
+                  <LazyPage><WaitlistPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -304,7 +340,7 @@ const App = () => (
               path="/dashboard/members/onboarding"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <OnboardingMembersPage />
+                  <LazyPage><OnboardingMembersPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -312,7 +348,7 @@ const App = () => (
               path="/dashboard/members/subscription-active"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <SubscriptionActivePage />
+                  <LazyPage><SubscriptionActivePage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -320,7 +356,7 @@ const App = () => (
               path="/dashboard/members/subscription-past-due"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <SubscriptionPastDuePage />
+                  <LazyPage><SubscriptionPastDuePage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -328,7 +364,7 @@ const App = () => (
               path="/dashboard/members/temporary-memberships"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <TemporaryMembershipsPage />
+                  <LazyPage><TemporaryMembershipsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -336,7 +372,7 @@ const App = () => (
               path="/dashboard/members/pauses"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <PausesPage />
+                  <LazyPage><PausesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -344,7 +380,7 @@ const App = () => (
               path="/dashboard/members/cancellations"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <CancellationsPage />
+                  <LazyPage><CancellationsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -352,7 +388,7 @@ const App = () => (
               path="/dashboard/members/mastercard"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <MastercardPage />
+                  <LazyPage><MastercardPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -362,7 +398,7 @@ const App = () => (
               path="/dashboard/checklists"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ChecklistsManagementPage />
+                  <LazyPage><ChecklistsManagementPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -372,7 +408,7 @@ const App = () => (
               path="/dashboard/my-checklists"
               element={
                 <ProtectedRoute requiredRoles={["concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
-                  <MyChecklistsPage />
+                  <LazyPage><MyChecklistsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -382,7 +418,7 @@ const App = () => (
               path="/dashboard/communications"
               element={
                 <ProtectedRoute>
-                  <CommunicationsPage />
+                  <LazyPage><CommunicationsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -392,7 +428,7 @@ const App = () => (
               path="/dashboard/messages"
               element={
                 <ProtectedRoute>
-                  <MessagesPage />
+                  <LazyPage><MessagesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -402,7 +438,7 @@ const App = () => (
               path="/dashboard/member-communications"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "trainer"]}>
-                  <MemberCommunicationsHub />
+                  <LazyPage><MemberCommunicationsHub /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -412,7 +448,7 @@ const App = () => (
               path="/dashboard/lost-and-found"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <LostAndFoundPage />
+                  <LazyPage><LostAndFoundPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -422,7 +458,7 @@ const App = () => (
               path="/dashboard/class-schedule"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
-                  <ClassSchedulePage />
+                  <LazyPage><ClassSchedulePage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -432,7 +468,7 @@ const App = () => (
               path="/dashboard/announcements"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <AnnouncementsPage />
+                  <LazyPage><AnnouncementsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -442,7 +478,7 @@ const App = () => (
               path="/dashboard/documents"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
-                  <DocumentsPage />
+                  <LazyPage><DocumentsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -453,7 +489,7 @@ const App = () => (
               path="/dashboard/boh-notes"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <BoHNotesPage />
+                  <LazyPage><BoHNotesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -463,7 +499,7 @@ const App = () => (
               path="/dashboard/whos-working"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater"]}>
-                  <WhosWorkingPage />
+                  <LazyPage><WhosWorkingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -473,7 +509,7 @@ const App = () => (
               path="/dashboard/package-tracking"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "cafe"]}>
-                  <PackageTrackingPage />
+                  <LazyPage><PackageTrackingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -483,7 +519,7 @@ const App = () => (
               path="/dashboard/my-packages"
               element={
                 <ProtectedRoute>
-                  <MyPackagesPage />
+                  <LazyPage><MyPackagesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -493,7 +529,7 @@ const App = () => (
               path="/dashboard/reports"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ReportsPage />
+                  <LazyPage><ReportsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -511,7 +547,7 @@ const App = () => (
               path="/dashboard/training-plans"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "trainer"]}>
-                  <TrainingPlansPage />
+                  <LazyPage><TrainingPlansPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -524,7 +560,7 @@ const App = () => (
               path="/dashboard/analytics"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <AnalyticsDashboard />
+                  <LazyPage><AnalyticsDashboard /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -534,7 +570,7 @@ const App = () => (
               path="/dashboard/master-calendar"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <MasterCalendarPage />
+                  <LazyPage><MasterCalendarPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -544,17 +580,17 @@ const App = () => (
               path="/dashboard/staff-announcements"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <StaffAnnouncementsPage />
+                  <LazyPage><StaffAnnouncementsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
 
-            {/* Staff Q&A / Management Inbox for Managers — redirects to dashboard */}
+            {/* Staff Q&A / Management Inbox for Managers */}
             <Route
               path="/dashboard/staff-qa"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <StaffQAPage />
+                  <LazyPage><StaffQAPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -564,28 +600,17 @@ const App = () => (
               path="/dashboard/notification-center"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ErrorBoundary>
-                    <Suspense fallback={
-                      <div className="flex items-center justify-center h-screen">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      </div>
-                    }>
-                      <NotificationControlCenterPage />
-                    </Suspense>
-                  </ErrorBoundary>
+                  <LazyPage><NotificationControlCenterPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
-
-
-
 
             {/* Staff Resources for Managers */}
             <Route
               path="/dashboard/staff-resources"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <StaffResourcesPage />
+                  <LazyPage><StaffResourcesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -595,15 +620,7 @@ const App = () => (
               path="/dashboard/staff-resources/pages/new"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ErrorBoundary>
-                    <Suspense fallback={
-                      <div className="flex items-center justify-center h-screen">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      </div>
-                    }>
-                      <ResourcePageEditorPage />
-                    </Suspense>
-                  </ErrorBoundary>
+                  <LazyPage><ResourcePageEditorPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -611,15 +628,7 @@ const App = () => (
               path="/dashboard/staff-resources/pages/:pageId/edit"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ErrorBoundary>
-                    <Suspense fallback={
-                      <div className="flex items-center justify-center h-screen">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      </div>
-                    }>
-                      <ResourcePageEditorPage />
-                    </Suspense>
-                  </ErrorBoundary>
+                  <LazyPage><ResourcePageEditorPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -629,7 +638,7 @@ const App = () => (
               path="/dashboard/resources"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <StaffResourcesViewPage />
+                  <LazyPage><StaffResourcesViewPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -637,7 +646,7 @@ const App = () => (
               path="/dashboard/resources/quick-links"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <ResourcesQuickLinksPage />
+                  <LazyPage><ResourcesQuickLinksPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -645,7 +654,7 @@ const App = () => (
               path="/dashboard/resources/pages"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <ResourcesPagesPage />
+                  <LazyPage><ResourcesPagesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -653,7 +662,7 @@ const App = () => (
               path="/dashboard/resources/pages/:pageId"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe", "trainer"]}>
-                  <ResourcePageReadingPage />
+                  <LazyPage><ResourcePageReadingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -661,7 +670,7 @@ const App = () => (
               path="/dashboard/resources/policies"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager", "concierge", "female_spa_attendant", "male_spa_attendant", "floater", "cafe"]}>
-                  <ResourcesPoliciesPage />
+                  <LazyPage><ResourcesPoliciesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -671,18 +680,17 @@ const App = () => (
               path="/dashboard/sling-users"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <SlingUserManagement />
+                  <LazyPage><SlingUserManagement /></LazyPage>
                 </ProtectedRoute>
               }
             />
-
 
             {/* API Data Mapping for Admins */}
             <Route
               path="/dashboard/api-data-mapping"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <ApiDataMappingPage />
+                  <LazyPage><ApiDataMappingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -692,7 +700,7 @@ const App = () => (
               path="/dashboard/data-patterns"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <DataPatternsPage />
+                  <LazyPage><DataPatternsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -702,7 +710,7 @@ const App = () => (
               path="/dashboard/backfill"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <BackfillManagerPage />
+                  <LazyPage><BackfillManagerPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -712,7 +720,7 @@ const App = () => (
               path="/dashboard/user-management"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <UserManagementPage />
+                  <LazyPage><UserManagementPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -722,7 +730,7 @@ const App = () => (
               path="/dashboard/api-syncing"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <ApiSyncingPage />
+                  <LazyPage><ApiSyncingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -732,7 +740,7 @@ const App = () => (
               path="/dashboard/sync-skipped-records"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <SyncSkippedRecordsPage />
+                  <LazyPage><SyncSkippedRecordsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -742,7 +750,7 @@ const App = () => (
               path="/dashboard/bug-reports"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <BugReportsPage />
+                  <LazyPage><BugReportsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -752,7 +760,7 @@ const App = () => (
               path="/dashboard/testing"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <DevTestingPage />
+                  <LazyPage><DevTestingPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -762,7 +770,7 @@ const App = () => (
               path="/dashboard/ai-feedback"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <AIFeedbackPage />
+                  <LazyPage><AIFeedbackPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -772,7 +780,7 @@ const App = () => (
               path="/dashboard/notification-examples"
               element={
                 <ProtectedRoute requiredRoles={["admin", "manager"]}>
-                  <NotificationExamplesPage />
+                  <LazyPage><NotificationExamplesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -782,7 +790,7 @@ const App = () => (
               path="/dashboard/dev-updates"
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
-                  <DevUpdatesPage />
+                  <LazyPage><DevUpdatesPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -792,7 +800,7 @@ const App = () => (
               path="/dashboard/profile"
               element={
                 <ProtectedRoute>
-                  <ProfilePage />
+                  <LazyPage><ProfilePage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -802,7 +810,7 @@ const App = () => (
               path="/dashboard/settings"
               element={
                 <ProtectedRoute>
-                  <AccountSettingsPage />
+                  <LazyPage><AccountSettingsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />
@@ -815,7 +823,7 @@ const App = () => (
               path="/dashboard/notifications"
               element={
                 <ProtectedRoute>
-                  <NotificationsPage />
+                  <LazyPage><NotificationsPage /></LazyPage>
                 </ProtectedRoute>
               }
             />

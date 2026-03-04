@@ -195,11 +195,33 @@ export function ConciergeForm() {
       if (draft) {
         const result = FormDataSchema.safeParse(draft.form_data);
         if (result.success) {
+          const p = result.data;
           setFormData({
             ...INITIAL_FORM_DATA,
-            ...result.data,
-            cafeNotes: result.data.cafeNotes ?? '',
-            shiftTime: normalizeShiftType(result.data.shiftTime ?? shiftType),
+            ...p,
+            futureNotes: (p.futureNotes ?? []).map(n => ({
+              ...n, targetDate: n.targetDate ?? '', targetShift: n.targetShift ?? 'AM', note: n.note ?? '',
+            })),
+            memberFeedback: (p.memberFeedback ?? []).map(f => ({
+              ...f, sentiment: f.sentiment ?? 'neutral', text: f.text ?? '',
+            })),
+            membershipCancelRequests: (p.membershipCancelRequests ?? []).map(c => ({
+              ...c, name: c.name ?? '', requestType: c.requestType ?? 'cancel',
+            })),
+            celebratoryEvents: (p.celebratoryEvents ?? []).map(e => ({
+              ...e, memberName: e.memberName ?? '', eventType: e.eventType ?? 'other',
+            })),
+            tours: (p.tours ?? []).map(t => ({
+              ...t, name: t.name ?? '', followupCompleted: t.followupCompleted ?? false,
+            })),
+            facilityIssues: (p.facilityIssues ?? []).map(f => ({
+              ...f, description: f.description ?? '', photoUrl: f.photoUrl ?? null,
+            })),
+            systemIssues: (p.systemIssues ?? []).map(s => ({
+              ...s, issueType: s.issueType ?? '', description: s.description ?? '', photoUrl: s.photoUrl ?? null,
+            })),
+            cafeNotes: p.cafeNotes ?? '',
+            shiftTime: normalizeShiftType(p.shiftTime ?? shiftType),
             _sessionId: sessionId,
           });
         } else {

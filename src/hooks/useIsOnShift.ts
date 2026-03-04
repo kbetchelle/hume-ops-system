@@ -1,12 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getPSTToday, getPSTHour, getPSTMinute } from '@/lib/dateUtils';
 
 /**
  * Checks if the current user is on a Sling shift right now.
  * Step 1: Look up the user's sling_user_id via the sling_users table.
  * Step 2: Check staff_shifts for a current shift.
  * Returns false if the user has no Sling link.
+ *
+ * Sling shift times are stored as PST values with +00 offset (pseudo-UTC),
+ * so we compare using the current PST time formatted as an ISO string to
+ * avoid the browser's local timezone shifting the comparison.
  */
 export function useIsOnShift() {
   const { user } = useAuth();
@@ -27,14 +32,18 @@ export function useIsOnShift() {
       if (!slingUser) return false;
 
       // Step 2: Check if there's a current shift
-      const now = new Date().toISOString();
+      // Build a PST "now" timestamp with +00 offset to match stored format
+      const today = getPSTToday();
+      const h = String(getPSTHour()).padStart(2, '0');
+      const m = String(getPSTMinute()).padStart(2, '0');
+      const nowPseudoUtc = `${today}T${h}:${m}:00+00`;
 
       const { data: shift, error: shiftError } = await supabase
         .from('staff_shifts')
         .select('id')
         .eq('sling_user_id', slingUser.sling_user_id)
-        .lte('shift_start', now)
-        .gte('shift_end', now)
+        .lte('shift_start', nowPseudoUtc)
+        .gte('shift_end', nowPseudoUtc)
         .limit(1)
         .maybeSingle();
 
@@ -42,7 +51,7 @@ export function useIsOnShift() {
       return !!shift;
     },
     enabled: !!user?.id,
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
 }

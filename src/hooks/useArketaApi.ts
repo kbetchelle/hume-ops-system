@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 
 export interface ArketaClass {
   id: string;
@@ -166,7 +167,7 @@ export function useClassReservations(classId: string) {
 
 // Fetch today's reservations
 export function useTodaysReservations(date?: string) {
-  const targetDate = date || format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || getPSTToday();
   
   return useQuery({
     queryKey: ["arketaReservationsToday", targetDate],
@@ -210,7 +211,7 @@ export function useTodaysReservations(date?: string) {
 
 // Fetch payments for today
 export function useTodaysPayments(date?: string) {
-  const targetDate = date || format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || getPSTToday();
   
   return useQuery({
     queryKey: ["arketaPayments", targetDate],
@@ -448,7 +449,7 @@ export function useSyncArketaInstructors() {
 
 // Get class schedule breakdown for shift reports
 export function useClassScheduleBreakdown(date?: string) {
-  const targetDate = date || format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || getPSTToday();
   
   return useQuery({
     queryKey: ["arketaClassBreakdown", targetDate],

@@ -11,11 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { getPSTToday } from "@/lib/dateUtils";
 
 type RoleType = 'concierge' | 'boh' | 'cafe';
 
 export function ChecklistCompletionViewer() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const [y, m, d] = getPSTToday().split("-").map(Number);
+    return new Date(y, m - 1, d);
+  });
   const [selectedRole, setSelectedRole] = useState<RoleType>('concierge');
   const [shiftTime, setShiftTime] = useState<'AM' | 'PM'>('AM');
 

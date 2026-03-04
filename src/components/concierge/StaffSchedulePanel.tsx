@@ -12,8 +12,14 @@ export function StaffSchedulePanel() {
   const today = getPSTToday();
   const { data, isLoading, error, refetch } = useTodaysSchedule(today);
   const syncShifts = useSyncSlingShifts();
+  // Shift times are PST values stored with +00 offset — format in UTC to preserve raw PST
   const formatTime = (dateString: string) => {
-    return format(new Date(dateString), "h:mm a");
+    try {
+      const { formatInTimeZone } = require("date-fns-tz");
+      return formatInTimeZone(new Date(dateString), "UTC", "h:mm a");
+    } catch {
+      return format(new Date(dateString), "h:mm a");
+    }
   };
 
   const handleSync = async () => {

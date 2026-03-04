@@ -14,9 +14,13 @@ import { CalendarIcon } from "lucide-react";
 import { useReport } from "@/hooks/useReports";
 import { DailyReportView, DailyReportsHistory } from "@/components/reports";
 import { cn } from "@/lib/utils";
+import { getPSTToday } from "@/lib/dateUtils";
 
 export default function DailyReportsPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const [y, m, d] = getPSTToday().split("-").map(Number);
+    return new Date(y, m - 1, d);
+  });
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const { data: report, isLoading } = useReport(dateStr);

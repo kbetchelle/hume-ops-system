@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { selectFrom } from "@/lib/dataApi";
+import { getPSTToday } from "@/lib/dateUtils";
 
 interface MastercardArrival {
   id: string;
@@ -11,7 +12,7 @@ interface MastercardArrival {
 }
 
 export function useUpcomingMastercardArrivals() {
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = getPSTToday();
 
   const { data: visits } = useQuery({
     queryKey: ["mastercard-arrivals", today],

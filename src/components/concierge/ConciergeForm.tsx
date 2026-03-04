@@ -195,11 +195,23 @@ export function ConciergeForm() {
       if (draft) {
         const result = FormDataSchema.safeParse(draft.form_data);
         if (result.success) {
+          const parsed = result.data;
           setFormData({
             ...INITIAL_FORM_DATA,
-            ...result.data,
-            cafeNotes: result.data.cafeNotes ?? '',
-            shiftTime: normalizeShiftType(result.data.shiftTime ?? shiftType),
+            ...parsed,
+            futureNotes: (parsed.futureNotes ?? []).map(n => ({
+              id: n.id,
+              targetDate: n.targetDate ?? '',
+              targetShift: n.targetShift ?? 'AM',
+              note: n.note ?? '',
+            })),
+            memberFeedback: (parsed.memberFeedback ?? []).map(f => ({
+              id: f.id,
+              sentiment: f.sentiment ?? 'neutral',
+              text: f.text ?? '',
+            })),
+            cafeNotes: parsed.cafeNotes ?? '',
+            shiftTime: normalizeShiftType(parsed.shiftTime ?? shiftType),
             _sessionId: sessionId,
           });
         } else {

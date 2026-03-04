@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Clock, MapPin, User, Users, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ export function StaffSchedulePanel() {
   // Shift times are PST values stored with +00 offset — format in UTC to preserve raw PST
   const formatTime = (dateString: string) => {
     try {
-      const { formatInTimeZone } = require("date-fns-tz");
       return formatInTimeZone(new Date(dateString), "UTC", "h:mm a");
     } catch {
       return format(new Date(dateString), "h:mm a");

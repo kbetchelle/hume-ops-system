@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, addDays, subDays } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export default function ReportExportsPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"single" | "weekly">("single");
-  const [previewDate, setPreviewDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [previewDate, setPreviewDate] = useState(getPSTToday());
 
   const singleDateStr = format(singleDate, "yyyy-MM-dd");
   const startStr = format(weekStart, "yyyy-MM-dd");

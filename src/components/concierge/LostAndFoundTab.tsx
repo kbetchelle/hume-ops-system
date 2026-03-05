@@ -35,6 +35,7 @@ import {
 import { Search, Plus, MapPin, Calendar, User, ImagePlus, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,7 +118,7 @@ export function LostAndFoundTab() {
     description: "",
     location_found: "",
     notes: "",
-    date_found: format(new Date(), "yyyy-MM-dd"),
+    date_found: getPSTToday(),
     photo_url: "" as string | null,
     object_category: "" as LostAndFoundCategory | "",
     member_requested: false,
@@ -139,7 +140,7 @@ export function LostAndFoundTab() {
     description: "",
     member_name: "",
     member_contact: "",
-    date_inquired: format(new Date(), "yyyy-MM-dd"),
+    date_inquired: getPSTToday(),
     notes: ""
   });
 
@@ -195,7 +196,7 @@ export function LostAndFoundTab() {
         description: "",
         member_name: "",
         member_contact: "",
-        date_inquired: format(new Date(), "yyyy-MM-dd"),
+        date_inquired: getPSTToday(),
         notes: ""
       });
       fetchRequests();
@@ -359,7 +360,7 @@ export function LostAndFoundTab() {
         description: "",
         location_found: "",
         notes: "",
-        date_found: format(new Date(), "yyyy-MM-dd"),
+        date_found: getPSTToday(),
         photo_url: null,
         object_category: "",
         member_requested: false,
@@ -380,7 +381,7 @@ export function LostAndFoundTab() {
       {
         status: "claimed",
         claimed_by: claimantName,
-        claimed_date: format(new Date(), "yyyy-MM-dd"),
+        claimed_date: getPSTToday(),
         archived_at: new Date().toISOString()
       },
       [eq("id", selectedItem.id)]
@@ -435,7 +436,7 @@ export function LostAndFoundTab() {
     for (const id of selectedIds) {
       const { error } = await updateTable(
         "lost_and_found",
-        { status: "claimed", claimed_by: "Bulk claim", claimed_date: format(new Date(), "yyyy-MM-dd"), archived_at: new Date().toISOString() },
+        { status: "claimed", claimed_by: "Bulk claim", claimed_date: getPSTToday(), archived_at: new Date().toISOString() },
         [eq("id", id)]
       );
       if (!error) successCount++;

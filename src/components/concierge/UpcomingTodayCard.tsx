@@ -153,8 +153,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
 
   const filterByShift = useCallback((startTime: string): boolean => {
     try {
-      const eventDate = parseISO(startTime);
-      const eventHour = eventDate.getHours() + eventDate.getMinutes() / 60;
+      // Timestamps are fake-UTC (PST stored with +00), so format in UTC to get raw PST hours
+      const hh = parseInt(formatInTimeZone(parseISO(startTime), "UTC", "H"), 10);
+      const mm = parseInt(formatInTimeZone(parseISO(startTime), "UTC", "m"), 10);
+      const eventHour = hh + mm / 60;
       if (currentShift === "AM") return eventHour < PM_BOUNDARY_HOUR;
       return eventHour >= PM_BOUNDARY_HOUR;
     } catch {
@@ -197,8 +199,8 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
           type: "tour" as const,
           title: t.guest_name || "Guest Tour",
           subtitle: t.event_type || "Tour",
-          time: format(startTime, "h:mm a"),
-          endTime: t.end_time ? format(parseISO(t.end_time), "h:mm a") : undefined,
+          time: formatInTimeZone(startTime, "UTC", "h:mm a"),
+          endTime: t.end_time ? formatInTimeZone(parseISO(t.end_time), "UTC", "h:mm a") : undefined,
           details: t.guest_email || undefined,
           icon: <Users className="h-4 w-4" />,
           sortTime: startTime,
@@ -215,8 +217,8 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
           type: "mastercard" as const,
           title: m.client_name || "Mastercard Client",
           subtitle: m.mastercard_tier || "Mastercard",
-          time: format(startTime, "h:mm a"),
-          endTime: m.end_time ? format(parseISO(m.end_time), "h:mm a") : undefined,
+          time: formatInTimeZone(startTime, "UTC", "h:mm a"),
+          endTime: m.end_time ? formatInTimeZone(parseISO(m.end_time), "UTC", "h:mm a") : undefined,
           details: m.visit_purpose || undefined,
           icon: <CreditCard className="h-4 w-4" />,
           sortTime: startTime,

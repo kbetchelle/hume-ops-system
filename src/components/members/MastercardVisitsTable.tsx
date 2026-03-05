@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import type { MastercardVisit } from "@/hooks/useMastercardVisits";
 
 const STATUS_ORDER: MastercardVisitStatus[] = ["scheduled", "completed", "cancelled", "no_show"];
@@ -63,9 +64,9 @@ function VisitRow({ visit }: { visit: MastercardVisit }) {
         )}
       </TableCell>
       <TableCell className="text-muted-foreground">
-        {format(parseISO(visit.visit_date), "MMM d, yyyy")}
+        {formatInTimeZone(parseISO(visit.visit_date), "UTC", "MMM d, yyyy")}
         {" · "}
-        {format(parseISO(visit.start_time), "h:mm a")}
+        {formatInTimeZone(parseISO(visit.start_time), "UTC", "h:mm a")}
       </TableCell>
       <TableCell>{visit.number_of_guests ?? 0}</TableCell>
       <TableCell className="text-muted-foreground">

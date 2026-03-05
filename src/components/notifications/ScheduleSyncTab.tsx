@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
+import { getPSTToday } from '@/lib/dateUtils';
 import { RefreshCw, Pencil, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +65,7 @@ interface DailyScheduleRow {
 type SyncLogEntry = { type: 'created' | 'updated' | 'info'; message: string };
 
 function todayLocal(): string {
-  return format(new Date(), 'yyyy-MM-dd');
+  return getPSTToday();
 }
 
 export function ScheduleSyncTab() {

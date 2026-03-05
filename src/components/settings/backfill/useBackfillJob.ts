@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { SyncProgress, SyncResult, BackfillJobType } from "./types";
 
@@ -27,7 +28,7 @@ function getDataType(jobType: BackfillJobType): string {
 export function useBackfillJob(jobType: BackfillJobType) {
   const queryClient = useQueryClient();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = getPSTToday();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [isRange, setIsRange] = useState(false);

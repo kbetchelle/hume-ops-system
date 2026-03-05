@@ -120,6 +120,36 @@ export default function SyncSkippedRecordsPage() {
 
   const { data: apiNames, isLoading: namesLoading } = useSyncSkippedRecordsApiNames({ refetchInterval: pollInterval });
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [isCreatingClasses, setIsCreatingClasses] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleCreateMissingClasses = async () => {
+    setIsCreatingClasses(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-classes-from-skipped", {
+        body: { api_name: activeTab === "all" ? undefined : activeTab },
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; created: number; apiCreated: number; stubCreated: number; skippedCleaned: number; error?: string };
+
+      if (result.success) {
+        toast.success(
+          `Created ${result.created} classes (${result.apiCreated} from API, ${result.stubCreated} stubs). Cleaned ${result.skippedCleaned} skipped records. Reservations re-synced & schedule refreshed.`
+        );
+        // Invalidate all related queries
+        queryClient.invalidateQueries({ queryKey: ["apiSyncSkippedRecords"] });
+        queryClient.invalidateQueries({ queryKey: ["apiSyncSkippedRecordsApiNames"] });
+      } else {
+        toast.error(result.error || "Failed to create classes");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create missing classes");
+    } finally {
+      setIsCreatingClasses(false);
+    }
+  };
 
   return (
     <DashboardLayout title="Sync Skipped Records">
@@ -133,13 +163,24 @@ export default function SyncSkippedRecordsPage() {
               Records logged when a sync runs and finds items without a matching reference (e.g. reservation without class_id). Updates when backfill, cron, or manual sync runs.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span
-              className={`inline-block h-2 w-2 rounded-full ${
-                isSyncRunning ? "bg-green-500 animate-pulse" : "bg-muted-foreground/40"
-              }`}
-            />
-            {isSyncRunning ? "Live — syncs active (1 min)" : "Idle (5 min)"}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={handleCreateMissingClasses}
+              disabled={isCreatingClasses}
+            >
+              {isCreatingClasses ? "Creating…" : "Create Missing Classes & Re-sync"}
+            </Button>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  isSyncRunning ? "bg-green-500 animate-pulse" : "bg-muted-foreground/40"
+                }`}
+              />
+              {isSyncRunning ? "Live — syncs active (1 min)" : "Idle (5 min)"}
+            </div>
           </div>
         </div>
 

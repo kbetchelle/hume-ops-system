@@ -86,6 +86,172 @@ function getSyncConfig(jobType: JobType) {
 }
 
 /**
+ * Range-based backfill for arketa_payments.
+ *
+ * Instead of iterating day-by-day, sends the full updated_at date range
+ * to sync-arketa-payments and lets it paginate with cursor-based resumption.
+ * This matches the API's updated_at_min/max server-side filtering.
+ */
+async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>) {
+  const startDate = job.start_date;
+  const endDate = job.end_date;
+
+  // Check for cancellation
+  const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
+  if (currentJob?.status === "cancelled") {
+    return new Response(JSON.stringify({ success: true, cancelled: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Resume cursor from previous batch if any
+  const backfillCursor: string | undefined = job.batch_cursor ?? undefined;
+  const batchesCompleted = job.total_batches_completed || 0;
+  console.log(`[payments-backfill] Range ${startDate} → ${endDate}, cursor=${backfillCursor ?? 'none'}, batch=${batchesCompleted + 1}`);
+
+  await supabase.from("backfill_jobs").update({
+    processing_date: `${startDate} → ${endDate}`,
+    sync_phase: "fetching",
+  }).eq("id", jobId);
+
+  // Count existing records before sync (using created_at_api for the range)
+  const { count: existingBefore } = await supabase
+    .from("arketa_payments")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at_api", `${startDate}T00:00:00.000Z`)
+    .lt("created_at_api", `${nextDayUtc(endDate)}T00:00:00.000Z`);
+  const existingCount = existingBefore || 0;
+
+  // Call sync-arketa-payments with the full date range
+  let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; totalRawFetched?: number; hasMore?: boolean; backfill_cursor?: string; error?: string } = {
+    success: false, error: 'Not executed',
+  };
+
+  try {
+    const syncBody = {
+      start_date: startDate,
+      end_date: endDate,
+      triggeredBy: "backfill-job",
+      backfill_cursor: backfillCursor,
+    };
+
+    const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-arketa-payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify(syncBody),
+    });
+    const syncData = await syncResponse.json();
+
+    if (!syncResponse.ok) {
+      syncResult = { success: false, error: syncData.error || `Sync returned ${syncResponse.status}` };
+    } else {
+      syncResult = {
+        success: syncData?.success !== false,
+        syncedCount: syncData?.syncedCount ?? syncData?.payments_staged ?? 0,
+        totalFetched: syncData?.totalFetched ?? 0,
+        totalRawFetched: syncData?.totalRawFetched ?? undefined,
+        hasMore: syncData?.hasMore ?? false,
+        backfill_cursor: syncData?.backfill_cursor ?? null,
+        error: syncData?.error,
+      };
+    }
+  } catch (err) {
+    syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  // Transfer staging → production
+  if (syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
+    await supabase.from("backfill_jobs").update({ sync_phase: "transferring" }).eq("id", jobId);
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ api: "arketa_payments", clear_staging: true }),
+      });
+    } catch (err) {
+      console.error("Failed to trigger sync-from-staging:", err);
+    }
+  }
+
+  // Count records after sync
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const { count: afterCount } = await supabase
+    .from("arketa_payments")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at_api", `${startDate}T00:00:00.000Z`)
+    .lt("created_at_api", `${nextDayUtc(endDate)}T00:00:00.000Z`);
+  const newRecords = Math.max(0, (afterCount || 0) - existingCount);
+
+  const totalRecords = (job.total_records || 0) + (syncResult.syncedCount ?? 0);
+  const totalNewRecords = (job.total_new_records || 0) + newRecords;
+  const newBatchesCompleted = batchesCompleted + 1;
+  const cumulativeInserted = (job.cumulative_inserted || 0) + newRecords;
+  const cumulativeUpdated = (job.cumulative_updated || 0) + Math.max(0, (syncResult.syncedCount ?? 0) - newRecords);
+
+  // Build result entry
+  const results: SyncResult[] = [...(job.results || [])];
+  results.push({
+    date: `${startDate} → ${endDate}`,
+    existingBefore: existingCount,
+    newRecords,
+    recordCount: syncResult.syncedCount ?? 0,
+    success: syncResult.success,
+    error: syncResult.error,
+    ...(syncResult.totalRawFetched != null ? { totalRawFetched: syncResult.totalRawFetched, filteredCount: syncResult.totalFetched } : {}),
+  });
+
+  // Check if more pages remain (cursor-based resumption)
+  const hasMorePages = syncResult.hasMore && !!syncResult.backfill_cursor;
+
+  if (hasMorePages) {
+    // Save cursor and schedule next batch
+    await supabase.from("backfill_jobs").update({
+      total_records: totalRecords,
+      total_new_records: totalNewRecords,
+      total_batches_completed: newBatchesCompleted,
+      batch_cursor: syncResult.backfill_cursor,
+      cumulative_inserted: cumulativeInserted,
+      cumulative_updated: cumulativeUpdated,
+      results,
+      sync_phase: "cooldown",
+    }).eq("id", jobId);
+
+    console.log(`[payments-backfill] Batch ${newBatchesCompleted}: ${syncResult.syncedCount} staged, ${newRecords} new. More pages remain. Waiting ${BATCH_BREAK_MS / 1000}s...`);
+    await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+
+    fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ jobId }),
+    }).catch(err => console.error("Failed to trigger next batch:", err));
+
+    return new Response(JSON.stringify({
+      success: true, completed: false, batchesCompleted: newBatchesCompleted,
+      hasMore: true, nextCursor: syncResult.backfill_cursor,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  // All done
+  await supabase.from("backfill_jobs").update({
+    status: "completed",
+    completed_at: new Date().toISOString(),
+    processing_date: null,
+    batch_cursor: null,
+    total_records: totalRecords,
+    total_new_records: totalNewRecords,
+    total_batches_completed: newBatchesCompleted,
+    cumulative_inserted: cumulativeInserted,
+    cumulative_updated: cumulativeUpdated,
+    results,
+    sync_phase: "idle",
+  }).eq("id", jobId);
+
+  return new Response(JSON.stringify({
+    success: true, completed: true, totalRecords, totalNewRecords, batchesCompleted: newBatchesCompleted,
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+/**
  * Cursor-based backfill for arketa_classes (and classes+reservations).
  * 
  * Large date ranges cause Arketa API 500 errors, so we split into 8-day chunks
@@ -375,6 +541,11 @@ Deno.serve(async (req) => {
     const config = getSyncConfig(jobType);
 
     await supabase.from("backfill_jobs").update({ status: "running", started_at: job.started_at || new Date().toISOString() }).eq("id", jobId);
+
+    // ── Arketa Payments: range-based backfill ──
+    if (jobType === "arketa_payments") {
+      return await handlePaymentsBackfill(supabase, job, jobId, corsHeaders);
+    }
 
     // ── Arketa Classes (and Classes+Reservations): cursor-based backfill ──
     if (jobType === "arketa_classes" || jobType === "arketa_classes_and_reservations") {

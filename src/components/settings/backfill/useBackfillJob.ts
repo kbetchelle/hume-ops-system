@@ -111,7 +111,10 @@ export function useBackfillJob(jobType: BackfillJobType) {
   const totalNewRecords: number = activeJob?.total_new_records || 0;
 
   const handleSync = useCallback(async () => {
-    const dates = isRange ? eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) }) : [parseISO(startDate)];
+    // Payments always use range mode (full updated_at range fetch)
+    const effectiveIsRange = jobType === "arketa_payments" ? true : isRange;
+    const effectiveEndDate = effectiveIsRange ? endDate : startDate;
+    const dates = effectiveIsRange ? eachDayOfInterval({ start: parseISO(startDate), end: parseISO(effectiveEndDate) }) : [parseISO(startDate)];
     try {
       const { data: user } = await supabase.auth.getUser();
       const { data: job, error: createError } = await supabase
@@ -122,7 +125,7 @@ export function useBackfillJob(jobType: BackfillJobType) {
           job_type: jobType,
           status: "pending",
           start_date: startDate,
-          end_date: isRange ? endDate : startDate,
+          end_date: effectiveEndDate,
           total_days: dates.length,
           days_processed: 0,
           records_processed: 0,

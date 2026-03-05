@@ -261,9 +261,20 @@ Deno.serve(async (req) => {
     const seenKeys = new Set<string>();
     const stagingRows: Record<string, unknown>[] = [];
 
+    const skippedRows: { api_name: string; record_id: string; reason: string; secondary_id?: string; details?: Record<string, unknown> }[] = [];
+
     for (const cls of filteredClasses) {
       const startTimeVal = cls.start_time ?? cls.startTime;
-      if (!startTimeVal) continue;
+      if (!startTimeVal) {
+        skippedRows.push({
+          api_name: 'arketa_classes',
+          record_id: String(cls.id ?? 'unknown'),
+          reason: 'missing_start_time',
+          secondary_id: cls.name ?? cls.class_name ?? null,
+          details: { class_date: cls.date ?? cls.class_date ?? null, raw_keys: Object.keys(cls) },
+        });
+        continue;
+      }
 
       const name = cls.name ?? cls.class_name ?? 'Unknown Class';
       const instructorName = cls.instructor_name ??

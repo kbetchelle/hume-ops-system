@@ -25,6 +25,8 @@ interface SyncClassesRequest {
   /** Cursor-based backfill: start pagination from this cursor value */
   start_after_id?: string;
   triggeredBy?: string;
+  /** When true, skip logging to api_logs (caller will handle it) */
+  skipLogging?: boolean;
 }
 
 const MAX_PAGES = 30;
@@ -62,6 +64,7 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as SyncClassesRequest;
     const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
     const triggeredBy = body.triggeredBy ?? 'manual';
+    const skipLogging = body.skipLogging === true;
 
     // Date range (default -7 to +30 days)
     const today = new Date();

@@ -267,6 +267,24 @@ function SyncDetailPanel({ syncType, isRunning }: { syncType: string; isRunning:
 
   return (
     <div className="bg-muted/20 border-t border-border px-6 py-4 space-y-4">
+      {/* Table Mapping */}
+      <div>
+        <h4 className="text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+          <FileText className="h-3 w-3" />
+          Table Mapping
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-background border border-border rounded-sm px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Staging Table</div>
+            <div className="text-xs font-mono mt-0.5">{config.stagingTable || "—"}</div>
+          </div>
+          <div className="bg-background border border-border rounded-sm px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Target Table</div>
+            <div className="text-xs font-mono mt-0.5">{config.targetTable}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Parameters */}
       <div>
         <h4 className="text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -400,8 +418,6 @@ function SyncOverviewTable() {
             <TableHead className="font-medium">Last Sync</TableHead>
             <TableHead className="font-medium">Sync Interval</TableHead>
             <TableHead className="font-medium">Next Sync</TableHead>
-            <TableHead className="font-medium">Staging Table</TableHead>
-            <TableHead className="font-medium">Target Table</TableHead>
             <TableHead className="font-medium">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -477,20 +493,6 @@ function SyncOverviewTable() {
                   <TableCell className="text-sm">
                     {sync.interval_minutes === 0 ? "—" : formatNextSync(sync.next_run_at, sync.interval_minutes)}
                   </TableCell>
-                  <TableCell>
-                    {config.stagingTable ? (
-                      <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                        {config.stagingTable}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
-                      {config.targetTable}
-                    </Badge>
-                  </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="outline"
@@ -515,7 +517,7 @@ function SyncOverviewTable() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow key={`${sync.id}-detail`}>
-                    <TableCell colSpan={9} className="p-0">
+                    <TableCell colSpan={7} className="p-0">
                       <SyncDetailPanel syncType={sync.sync_type} isRunning={isThisRunning} />
                     </TableCell>
                   </TableRow>

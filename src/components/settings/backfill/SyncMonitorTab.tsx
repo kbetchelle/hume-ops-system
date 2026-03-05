@@ -39,12 +39,14 @@ function hasFailedSyncs(job: BackfillJobRow): boolean {
 
 function getDisplayStatus(job: BackfillJobRow): string {
   if (job.status === "completed" && hasFailedSyncs(job)) return "failed";
+  if (job.status === "completed" && (job.total_records ?? 0) === 0 && (job.total_new_records ?? 0) === 0) return "no data";
   return job.status;
 }
 
 function statusVariant(status: string): "default" | "destructive" | "outline" | "secondary" {
   switch (status) {
     case "completed": return "default";
+    case "no data": return "secondary";
     case "failed":
     case "cancelled": return "destructive";
     case "running":

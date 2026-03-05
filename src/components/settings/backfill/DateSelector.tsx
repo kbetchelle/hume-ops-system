@@ -115,7 +115,7 @@ export default function DateSelector({
             </>
           )}
 
-          {dayCount > 0 && (
+          {isRange && dayCount > 1 && (
             <span className="text-xs text-muted-foreground">
               {dayCount} day{dayCount !== 1 ? "s" : ""}
             </span>

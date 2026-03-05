@@ -50,11 +50,13 @@ Deno.serve(async (req) => {
 
     if (!ARKETA_API_KEY || !ARKETA_PARTNER_ID) {
       const errMsg = 'Arketa API credentials not configured';
-      await logApiCall(supabase, {
-        apiName: 'arketa_classes', endpoint: '/classes',
-        syncSuccess: false, durationMs: Date.now() - startTime,
-        recordsProcessed: 0, errorMessage: errMsg,
-      });
+      if (!body.skipLogging) {
+        await logApiCall(supabase, {
+          apiName: 'arketa_classes', endpoint: '/classes',
+          syncSuccess: false, durationMs: Date.now() - startTime,
+          recordsProcessed: 0, errorMessage: errMsg,
+        });
+      }
       return new Response(
         JSON.stringify({ error: errMsg }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -309,11 +311,13 @@ Deno.serve(async (req) => {
         const { error } = await supabase.from('arketa_classes_staging').insert(chunk);
         if (error) {
           const durationMs = Date.now() - startTime;
-          await logApiCall(supabase, {
-            apiName: 'arketa_classes', endpoint: '/classes',
-            syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
-            errorMessage: `Staging insert failed: ${error.message}`, triggeredBy,
-          });
+          if (!skipLogging) {
+            await logApiCall(supabase, {
+              apiName: 'arketa_classes', endpoint: '/classes',
+              syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
+              errorMessage: `Staging insert failed: ${error.message}`, triggeredBy,
+            });
+          }
           return new Response(
             JSON.stringify({ success: false, error: error.message, details: 'staging insert failed' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -328,11 +332,13 @@ Deno.serve(async (req) => {
 
     if (rpcError) {
       const durationMs = Date.now() - startTime;
-      await logApiCall(supabase, {
-        apiName: 'arketa_classes', endpoint: '/classes',
-        syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
-        errorMessage: `Upsert RPC failed: ${rpcError.message}`, triggeredBy,
-      });
+      if (!skipLogging) {
+        await logApiCall(supabase, {
+          apiName: 'arketa_classes', endpoint: '/classes',
+          syncSuccess: false, durationMs, recordsProcessed: stagingRows.length,
+          errorMessage: `Upsert RPC failed: ${rpcError.message}`, triggeredBy,
+        });
+      }
       return new Response(
         JSON.stringify({ success: false, error: rpcError.message, details: 'upsert from staging failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -342,17 +348,18 @@ Deno.serve(async (req) => {
     const syncedCount = typeof upsertedCount === 'number' ? upsertedCount : stagingRows.length;
     const durationMs = Date.now() - startTime;
 
-    // FIX #2: Log to api_logs for UI visibility
-    await logApiCall(supabase, {
-      apiName: 'arketa_classes',
-      endpoint: '/classes',
-      syncSuccess: true,
-      durationMs,
-      recordsProcessed: filteredClasses.length,
-      recordsInserted: syncedCount,
-      responseStatus: 200,
-      triggeredBy,
-    });
+    if (!skipLogging) {
+      await logApiCall(supabase, {
+        apiName: 'arketa_classes',
+        endpoint: '/classes',
+        syncSuccess: true,
+        durationMs,
+        recordsProcessed: filteredClasses.length,
+        recordsInserted: syncedCount,
+        responseStatus: 200,
+        triggeredBy,
+      });
+    }
 
     const result = {
       success: true,

@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
-    const payload: Record<string, unknown> = { startDate, endDate, triggeredBy };
+    const payload: Record<string, unknown> = { startDate, endDate, triggeredBy, skipLogging: true };
     if (body.start_after_id) payload.start_after_id = body.start_after_id;
     const authHeaders = {
       'Content-Type': 'application/json',

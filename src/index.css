@@ -98,7 +98,8 @@
   }
 
   /* Global minimum font size - clamp all text to at least 'small' (13.33px) */
-  p, span, a, li, td, th, label, input, textarea, select, button, div {
+  /* Exception: table cells and elements with explicit text-[Xpx] classes are excluded */
+  p, span, a, li, label, input, textarea, select, button, div {
     font-size: max(inherit, small);
   }
 

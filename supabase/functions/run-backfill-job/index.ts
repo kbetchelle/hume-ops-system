@@ -87,8 +87,11 @@ function getSyncConfig(jobType: JobType) {
 
 /**
  * Cursor-based backfill for arketa_classes (and classes+reservations).
- * Paginates using the API's nextStartAfterId (stored in batch_cursor); first page
- * has no cursor. 20s break between batches.
+ * 
+ * Large date ranges cause Arketa API 500 errors, so we split into 8-day chunks
+ * with 1-day overlap. Each batch processes one chunk, paginating with
+ * nextStartAfterId within that chunk. When a chunk is exhausted, we advance
+ * to the next chunk on the following batch invocation.
  */
 async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
   const startDate = job.start_date;
@@ -104,24 +107,65 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  // Cursor for pagination: use only the API's opaque cursor from a previous batch.
-  // Do not derive from DB (class external_id); Partner API requires the full nextStartAfterId value.
-  const startAfterId: string | undefined = job.batch_cursor ?? undefined;
-  if (!startAfterId) {
-    console.log(`[backfill] No batch_cursor; first page of date range`);
+  // --- Build 8-day chunks with 1-day overlap ---
+  const CHUNK_DAYS = 8;
+  const allChunks: { chunkStart: string; chunkEnd: string }[] = [];
+  {
+    const s = new Date(startDate + "T00:00:00Z");
+    const e = new Date(endDate + "T00:00:00Z");
+    let cur = new Date(s);
+    while (cur <= e) {
+      const chunkEnd = new Date(cur);
+      chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CHUNK_DAYS - 1);
+      if (chunkEnd > e) chunkEnd.setTime(e.getTime());
+      allChunks.push({ chunkStart: formatDate(cur), chunkEnd: formatDate(chunkEnd) });
+      // Next chunk starts 1 day before chunkEnd (1-day overlap) for boundary safety
+      cur = new Date(chunkEnd);
+      // But if chunkEnd == e, we're done
+      if (formatDate(chunkEnd) >= formatDate(e)) break;
+      // Advance by CHUNK_DAYS - 1 (overlap)
+      cur.setUTCDate(cur.getUTCDate());
+    }
   }
+
+  // Determine current chunk index from job metadata
+  const currentChunkIndex = job.completed_dates || 0; // Repurpose completed_dates as chunk index
+  const currentChunk = allChunks[currentChunkIndex];
+
+  if (!currentChunk) {
+    // All chunks done
+    await supabase.from("backfill_jobs").update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      processing_date: null,
+      batch_cursor: null,
+    }).eq("id", jobId);
+    return new Response(JSON.stringify({ success: true, completed: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { chunkStart, chunkEnd } = currentChunk;
+
+  // Cursor for pagination within this chunk
+  const startAfterId: string | undefined = job.batch_cursor ?? undefined;
+  console.log(`[backfill] Chunk ${currentChunkIndex + 1}/${allChunks.length} (${chunkStart} → ${chunkEnd}), cursor=${startAfterId ?? 'none'}`);
 
   // Count existing records before sync
   const { count: existingBefore } = await supabase
     .from(historyTable)
     .select("*", { count: "exact", head: true })
-    .gte(config.dateColumn, startDate)
-    .lte(config.dateColumn, endDate);
+    .gte(config.dateColumn, chunkStart)
+    .lte(config.dateColumn, chunkEnd);
   const existingCount = existingBefore || 0;
 
-  await supabase.from("backfill_jobs").update({ processing_date: startDate }).eq("id", jobId);
+  await supabase.from("backfill_jobs").update({
+    processing_date: `${chunkStart} → ${chunkEnd}`,
+    sync_phase: "fetching",
+    total_dates: allChunks.length,
+  }).eq("id", jobId);
 
-  // Call the sync function with start_after_id for cursor-based pagination
+  // Call the sync function with the chunk's date range
   const syncFunctionName = config.syncFunction;
   let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; nextStartAfterId?: string; hasMore?: boolean; error?: string } = {
     success: false, error: 'Not executed',
@@ -129,10 +173,9 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
 
   try {
     const syncBody = jobType === "arketa_classes_and_reservations"
-      ? { start_date: startDate, end_date: endDate, triggeredBy: "backfill-job", start_after_id: startAfterId }
-      : { startDate, endDate, start_after_id: startAfterId };
+      ? { start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
+      : { startDate: chunkStart, endDate: chunkEnd, start_after_id: startAfterId, skipLogging: true };
 
-    console.log(`[backfill] Calling ${syncFunctionName} with start_after_id=${startAfterId ?? 'none'}`);
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
@@ -161,8 +204,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   const { count: afterCount } = await supabase
     .from(historyTable)
     .select("*", { count: "exact", head: true })
-    .gte(config.dateColumn, startDate)
-    .lte(config.dateColumn, endDate);
+    .gte(config.dateColumn, chunkStart)
+    .lte(config.dateColumn, chunkEnd);
   const newRecords = Math.max(0, (afterCount || 0) - existingCount);
 
   const totalRecords = (job.total_records || 0) + (syncResult.syncedCount ?? 0);
@@ -171,9 +214,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
 
   // Build result entry
   const results: SyncResult[] = [...(job.results || [])];
-  const batchKey = `batch_${batchesCompleted}`;
   results.push({
-    date: batchKey,
+    date: `${chunkStart}→${chunkEnd}`,
     existingBefore: existingCount,
     newRecords,
     recordCount: syncResult.syncedCount ?? 0,
@@ -181,47 +223,64 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     error: syncResult.error,
   });
 
-  // Determine if backfill is complete
-  const isComplete = !syncResult.hasMore || !syncResult.nextStartAfterId || syncResult.totalFetched === 0;
+  // Determine if this chunk is exhausted (no more pages within it)
+  const chunkDone = !syncResult.hasMore || !syncResult.nextStartAfterId || syncResult.totalFetched === 0;
 
-  if (isComplete) {
+  if (chunkDone) {
+    // Move to next chunk
+    const nextChunkIndex = currentChunkIndex + 1;
+    const allDone = nextChunkIndex >= allChunks.length;
+
     await supabase.from("backfill_jobs").update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-      processing_date: null,
+      status: allDone ? "completed" : "running",
+      completed_at: allDone ? new Date().toISOString() : null,
+      processing_date: allDone ? null : undefined,
       total_records: totalRecords,
       total_new_records: totalNewRecords,
       total_batches_completed: batchesCompleted,
-      batch_cursor: null,
+      batch_cursor: null, // Reset cursor for next chunk
+      completed_dates: nextChunkIndex, // Track chunk progress
       results,
+      sync_phase: allDone ? "idle" : "cooldown",
     }).eq("id", jobId);
 
+    if (allDone) {
+      return new Response(JSON.stringify({
+        success: true, completed: true, totalRecords, totalNewRecords, batchesCompleted,
+        chunksProcessed: allChunks.length,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Schedule next chunk after break
+    console.log(`[backfill] Chunk ${currentChunkIndex + 1} done (${syncResult.syncedCount} synced, ${newRecords} new). Moving to chunk ${nextChunkIndex + 1}/${allChunks.length}. Waiting ${BATCH_BREAK_MS / 1000}s...`);
+    await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+
+    fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ jobId }),
+    }).catch(err => console.error("Failed to trigger next chunk:", err));
+
     return new Response(JSON.stringify({
-      success: true,
-      completed: true,
-      totalRecords,
-      totalNewRecords,
-      batchesCompleted,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      success: true, completed: false, batchesCompleted,
+      currentChunk: nextChunkIndex, totalChunks: allChunks.length,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // Not complete — save cursor and schedule next batch with 20s break
+  // Chunk not exhausted — save cursor and continue paginating within same chunk
   await supabase.from("backfill_jobs").update({
     total_records: totalRecords,
     total_new_records: totalNewRecords,
     total_batches_completed: batchesCompleted,
     batch_cursor: syncResult.nextStartAfterId,
+    completed_dates: currentChunkIndex, // Stay on same chunk
     results,
+    sync_phase: "cooldown",
   }).eq("id", jobId);
 
-  console.log(`[backfill] Batch ${batchesCompleted} done: ${syncResult.syncedCount} synced, ${newRecords} new. Next cursor: ${syncResult.nextStartAfterId}. Waiting ${BATCH_BREAK_MS / 1000}s...`);
-
-  // 20-second break between batches to avoid timeouts
+  console.log(`[backfill] Chunk ${currentChunkIndex + 1} batch ${batchesCompleted}: ${syncResult.syncedCount} synced, ${newRecords} new. More pages remain. Waiting ${BATCH_BREAK_MS / 1000}s...`);
   await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
 
-  // Trigger next batch
   fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
@@ -229,14 +288,10 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   }).catch(err => console.error("Failed to trigger next batch:", err));
 
   return new Response(JSON.stringify({
-    success: true,
-    completed: false,
-    batchesCompleted,
-    nextCursor: syncResult.nextStartAfterId,
-    hasMore: syncResult.hasMore,
-  }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+    success: true, completed: false, batchesCompleted,
+    currentChunk: currentChunkIndex, totalChunks: allChunks.length,
+    nextCursor: syncResult.nextStartAfterId, hasMore: syncResult.hasMore,
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
 

@@ -1,13 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useBackfillJob } from "./useBackfillJob";
+import DateSelector from "./DateSelector";
 import PaymentsSyncLog from "./PaymentsSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 import SyncProgressCard from "./SyncProgressCard";
-import { Loader2, Play, XCircle, RefreshCw } from "lucide-react";
 
 export default function PaymentsBackfillTab() {
   const {

@@ -390,7 +390,7 @@ function SyncOverviewTable() {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto text-[8px]">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30">

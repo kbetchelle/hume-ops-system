@@ -64,45 +64,34 @@ export default function PaymentsSyncLog({ results, isRunning, totalRecords, tota
         )}
       </CardHeader>
       <CardContent>
-        <div className="max-h-64 overflow-y-auto space-y-1.5">
+        <div className="max-h-40 overflow-y-auto space-y-0.5 text-xs">
           {results.length === 0 && isRunning && (
-            <p className="text-sm text-muted-foreground">Waiting for results...</p>
+            <p className="text-muted-foreground">Waiting for results...</p>
           )}
           {results.map((r, i) => {
             const hasRaw = r.totalRawFetched != null;
             return (
               <div
                 key={r.date + i}
-                className={`text-sm px-2.5 py-2 rounded ${
+                className={`px-2 py-1 rounded flex items-center justify-between gap-2 ${
                   r.success ? 'bg-muted/50' : 'bg-destructive/10 border border-destructive/20'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {r.success ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                    )}
-                    <span className="font-mono">{r.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {hasRaw && (
-                      <>
-                        <span className="opacity-60">{r.totalRawFetched?.toLocaleString()} from API</span>
-                        <ArrowRight className="h-3 w-3 opacity-40" />
-                      </>
-                    )}
-                    <span>{(r.filteredCount ?? r.recordCount).toLocaleString()} matched</span>
-                    <span className="text-green-600 font-medium">+{r.newRecords} new</span>
-                    {r.existingBefore > 0 && (
-                      <span>{r.existingBefore} existing</span>
-                    )}
-                  </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {r.success ? (
+                    <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="h-3 w-3 text-destructive shrink-0" />
+                  )}
+                  <span className="font-mono truncate">{r.date}</span>
                 </div>
-                {r.error && (
-                  <p className="text-destructive text-xs mt-1 break-words">{r.error}</p>
-                )}
+                <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                  {hasRaw && (
+                    <span className="opacity-60">{r.totalRawFetched?.toLocaleString()} raw</span>
+                  )}
+                  <span>{(r.filteredCount ?? r.recordCount).toLocaleString()} matched</span>
+                  <span className="text-green-600 font-medium">+{r.newRecords}</span>
+                </div>
               </div>
             );
           })}

@@ -464,7 +464,7 @@ function SyncOverviewTable() {
                   </TableCell>
                   <TableCell>
                     {sync.last_run_at ? (
-                      <span className="text-sm">
+                      <span className="text-[9px]">
                         {formatDistanceToNow(new Date(sync.last_run_at), { addSuffix: true })}
                       </span>
                     ) : (

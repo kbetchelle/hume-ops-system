@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch from /payments with cursor pagination
-    const baseUrl = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0/${ARKETA_PARTNER_ID}/payments`;
+    const baseUrl = `https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0/${ARKETA_PARTNER_ID}/purchases`;
     const allRecords: PaymentDTO[] = [];
     let cursor: string | null = savedCursor;
     let pageCount = 0;

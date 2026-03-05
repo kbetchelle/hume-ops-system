@@ -38,7 +38,7 @@ export function UserSwitchScreen({
     }
     setLoading(true);
     try {
-      const { error: err, userId: newUserId } = await onSignIn(email.trim(), password);
+      const { error: err, userId: newUserId } = await onSignIn(email.trim().toLowerCase(), password);
       if (err) {
         setError(err instanceof Error ? err.message : "Invalid email or password");
         return;

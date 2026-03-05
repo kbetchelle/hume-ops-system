@@ -68,7 +68,7 @@ export default function Login() {
         }
       }
 
-      const identifier = (data.emailOrUsername ?? "").trim();
+      const identifier = (data.emailOrUsername ?? "").trim().toLowerCase();
       let email: string;
       if (identifier.includes("@")) {
         email = identifier;

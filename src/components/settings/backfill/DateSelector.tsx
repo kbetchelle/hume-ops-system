@@ -3,6 +3,8 @@ import { CalendarIcon, Loader2, Play, XCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -28,8 +30,10 @@ interface DateSelectorProps {
 export default function DateSelector({
   startDate,
   endDate,
+  isRange,
   onStartDateChange,
   onEndDateChange,
+  onIsRangeChange,
   isRunning,
   elapsedText,
   onSync,
@@ -48,6 +52,16 @@ export default function DateSelector({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="range-toggle"
+            checked={isRange}
+            onCheckedChange={onIsRangeChange}
+          />
+          <Label htmlFor="range-toggle" className="text-sm text-muted-foreground">
+            Date Range
+          </Label>
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Popover>
             <PopoverTrigger asChild>
@@ -72,30 +86,34 @@ export default function DateSelector({
             </PopoverContent>
           </Popover>
 
-          <span className="text-sm text-muted-foreground">→</span>
+          {isRange && (
+            <>
+              <span className="text-sm text-muted-foreground">→</span>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[160px] justify-center text-center font-normal",
-                  !endDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDateObj ? format(endDateObj, "MMM d, yyyy") : "End date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={endDateObj}
-                onSelect={(d) => d && onEndDateChange(format(d, "yyyy-MM-dd"))}
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[160px] justify-center text-center font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDateObj ? format(endDateObj, "MMM d, yyyy") : "End date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDateObj}
+                    onSelect={(d) => d && onEndDateChange(format(d, "yyyy-MM-dd"))}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
 
           {dayCount > 0 && (
             <span className="text-xs text-muted-foreground">

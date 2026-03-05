@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
     let nextStartAfterId: string | undefined;
     let apiHasMore = false;
     let timedOut = false;
+    let apiErrorMessage: string | undefined;
 
     // Build first page URL
     const initialCursor = body.start_after_id; // May be provided for backfill resumption

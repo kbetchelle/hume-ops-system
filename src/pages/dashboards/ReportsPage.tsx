@@ -35,7 +35,7 @@ export default function ReportsPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"single" | "weekly">("single");
-  const [previewDate, setPreviewDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [previewDate, setPreviewDate] = useState(getPSTToday());
 
   // Report History tab state
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

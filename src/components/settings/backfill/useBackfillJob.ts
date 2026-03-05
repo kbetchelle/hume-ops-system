@@ -27,7 +27,7 @@ function getDataType(jobType: BackfillJobType): string {
 export function useBackfillJob(jobType: BackfillJobType) {
   const queryClient = useQueryClient();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = getPSTToday();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [isRange, setIsRange] = useState(false);

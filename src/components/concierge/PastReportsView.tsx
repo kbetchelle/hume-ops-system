@@ -54,8 +54,13 @@ function getSearchableText(r: ReportRow): string {
   return parts.join(" ").toLowerCase();
 }
 
-const DEFAULT_DATE_FROM = format(subDays(new Date(), 30), "yyyy-MM-dd");
-const DEFAULT_DATE_TO = format(new Date(), "yyyy-MM-dd");
+const DEFAULT_DATE_FROM = (() => {
+  const t = getPSTToday();
+  const d = new Date(`${t}T12:00:00`);
+  d.setDate(d.getDate() - 30);
+  return format(d, "yyyy-MM-dd");
+})();
+const DEFAULT_DATE_TO = getPSTToday();
 
 export function PastReportsView() {
   const isMobile = useIsMobile();

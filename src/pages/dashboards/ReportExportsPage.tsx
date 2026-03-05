@@ -21,7 +21,7 @@ export default function ReportExportsPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"single" | "weekly">("single");
-  const [previewDate, setPreviewDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [previewDate, setPreviewDate] = useState(getPSTToday());
 
   const singleDateStr = format(singleDate, "yyyy-MM-dd");
   const startStr = format(weekStart, "yyyy-MM-dd");

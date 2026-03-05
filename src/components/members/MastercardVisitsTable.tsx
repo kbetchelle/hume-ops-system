@@ -63,9 +63,9 @@ function VisitRow({ visit }: { visit: MastercardVisit }) {
         )}
       </TableCell>
       <TableCell className="text-muted-foreground">
-        {format(parseISO(visit.visit_date), "MMM d, yyyy")}
+        {formatInTimeZone(parseISO(visit.visit_date), "UTC", "MMM d, yyyy")}
         {" · "}
-        {format(parseISO(visit.start_time), "h:mm a")}
+        {formatInTimeZone(parseISO(visit.start_time), "UTC", "h:mm a")}
       </TableCell>
       <TableCell>{visit.number_of_guests ?? 0}</TableCell>
       <TableCell className="text-muted-foreground">

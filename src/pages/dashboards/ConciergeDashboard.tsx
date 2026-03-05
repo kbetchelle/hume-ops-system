@@ -91,7 +91,7 @@ export default function ConciergeDashboard() {
 
   const { count: unreadMessageCount } = useUnreadMessageCount();
   const queryClient = useQueryClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = getPSTToday();
   const { data: packageStats } = usePackageStats();
   const { data: guestsCheckedInCount } = useQuery({
     queryKey: ["guests-checked-in-today", today],

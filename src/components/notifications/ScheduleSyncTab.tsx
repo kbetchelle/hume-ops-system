@@ -64,7 +64,7 @@ interface DailyScheduleRow {
 type SyncLogEntry = { type: 'created' | 'updated' | 'info'; message: string };
 
 function todayLocal(): string {
-  return format(new Date(), 'yyyy-MM-dd');
+  return getPSTToday();
 }
 
 export function ScheduleSyncTab() {

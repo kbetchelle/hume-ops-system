@@ -1,12 +1,14 @@
 import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { selectFrom } from "@/lib/dataApi";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
+import { getPSTToday } from "@/lib/dateUtils";
 
 interface DailyScheduleClass {
   id: string;
@@ -38,8 +40,8 @@ const PM_BOUNDARY_HOUR = 13.5; // 1:30 PM as decimal hours
 
 export function ShiftEventsMiniCalendar() {
   const { currentShift } = useCurrentShift();
-  const today = format(new Date(), "yyyy-MM-dd");
-  const formattedDate = format(new Date(), "EEE, MMM d");
+  const today = getPSTToday();
+  const formattedDate = formatInTimeZone(new Date(), "America/Los_Angeles", "EEE, MMM d");
 
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["daily-schedule", today],
@@ -74,8 +76,10 @@ export function ShiftEventsMiniCalendar() {
 
   const filterByShift = useCallback((startTime: string): boolean => {
     try {
-      const eventDate = parseISO(startTime);
-      const eventHour = eventDate.getHours() + eventDate.getMinutes() / 60;
+      // Timestamps are fake-UTC (PST stored with +00), so format in UTC to get raw PST hours
+      const hh = parseInt(formatInTimeZone(parseISO(startTime), "UTC", "H"), 10);
+      const mm = parseInt(formatInTimeZone(parseISO(startTime), "UTC", "m"), 10);
+      const eventHour = hh + mm / 60;
       if (currentShift === "AM") return eventHour < PM_BOUNDARY_HOUR;
       return eventHour >= PM_BOUNDARY_HOUR;
     } catch {
@@ -90,7 +94,7 @@ export function ShiftEventsMiniCalendar() {
         id: c.id,
         type: "class" as const,
         title: c.canceled ? `${c.class_name || "Unnamed Class"} (Canceled)` : (c.class_name || "Unnamed Class"),
-        time: format(parseISO(c.start_time), "h:mm a"),
+        time: formatInTimeZone(parseISO(c.start_time), "UTC", "h:mm a"),
         details:
           c.total_booked !== null && c.max_capacity !== null
             ? `${c.total_booked}/${c.max_capacity} signed up`
@@ -104,7 +108,7 @@ export function ShiftEventsMiniCalendar() {
         id: t.id,
         type: "tour" as const,
         title: `Tour: ${t.guest_name || "Guest"}`,
-        time: format(parseISO(t.start_time), "h:mm a"),
+        time: formatInTimeZone(parseISO(t.start_time), "UTC", "h:mm a"),
         details: t.guest_email || undefined,
         sortTime: parseISO(t.start_time),
       }));

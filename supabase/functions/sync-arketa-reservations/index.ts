@@ -498,11 +498,10 @@ Deno.serve(async (req) => {
       })
       .filter((r) => r.reservation_id);
 
-    // Identify rows with no matching class_id (empty or not in arketa_classes) and log to api_sync_skipped_records
+    // Identify rows with no matching class_id and auto-upsert stubs for unknown classes
     const classIdsInBatch = [...new Set(stagingRows.map((r) => r.class_id).filter((id): id is string => Boolean(id && id.trim())))];
     let knownClassIds = new Set<string>();
     if (classIdsInBatch.length > 0) {
-      // Chunk the lookup to avoid the default 1000-row PostgREST limit
       const CHUNK = 500;
       for (let i = 0; i < classIdsInBatch.length; i += CHUNK) {
         const slice = classIdsInBatch.slice(i, i + CHUNK);
@@ -516,15 +515,50 @@ Deno.serve(async (req) => {
         }
       }
     }
-    const skippedRows = stagingRows.filter(
-      (r) => !r.class_id?.trim() || !knownClassIds.has(r.class_id)
+
+    // Find reservations with unknown class_ids and auto-create stub class records
+    const unknownClassRows = stagingRows.filter(
+      (r) => Boolean(r.class_id?.trim()) && !knownClassIds.has(r.class_id)
     );
+    if (unknownClassRows.length > 0) {
+      // Build stub class records from reservation metadata (dedupe by external_id+class_date)
+      const stubMap = new Map<string, { external_id: string; name: string; start_time: string; class_date: string; status: string; synced_at: string }>();
+      for (const r of unknownClassRows) {
+        const key = `${r.class_id}::${r.class_date ?? 'unknown'}`;
+        if (!stubMap.has(key) && r.class_date) {
+          stubMap.set(key, {
+            external_id: r.class_id,
+            name: r.class_name || 'Unknown Class',
+            start_time: `${r.class_date}T00:00:00+00`,
+            class_date: r.class_date,
+            status: 'stub_from_res_sync',
+            synced_at: new Date().toISOString(),
+          });
+        }
+      }
+      const stubRows = [...stubMap.values()];
+      if (stubRows.length > 0) {
+        const { error: stubErr } = await supabase
+          .from('arketa_classes')
+          .upsert(stubRows as any, { onConflict: 'external_id,class_date' });
+        if (stubErr) {
+          logger?.warn(`Failed to insert ${stubRows.length} stub classes: ${stubErr.message}`);
+        } else {
+          logger?.info(`Auto-created ${stubRows.length} stub classes for unknown class_ids`);
+          // Add newly created stubs to known set so their reservations get inserted
+          for (const s of stubRows) knownClassIds.add(s.external_id);
+        }
+      }
+    }
+
+    // Log rows with empty class_id (truly invalid)
+    const skippedRows = stagingRows.filter((r) => !r.class_id?.trim());
     if (skippedRows.length > 0) {
       const skippedRecords = skippedRows.map((r) => ({
         api_name: 'arketa_reservations',
         record_id: r.reservation_id,
         secondary_id: r.class_id || null,
-        reason: 'no_matching_class_id',
+        reason: 'empty_class_id',
         details: {
           class_name: r.class_name,
           class_date: r.class_date,
@@ -532,10 +566,10 @@ Deno.serve(async (req) => {
         } as Record<string, unknown>,
       }));
       await supabase.from('api_sync_skipped_records').insert(skippedRecords);
-      logger?.info(`Logged ${skippedRows.length} reservations with no matching class_id to api_sync_skipped_records`);
+      logger?.info(`Logged ${skippedRows.length} reservations with empty class_id to api_sync_skipped_records`);
     }
 
-    // Only insert rows with a valid matching class_id into staging; skipped rows are logged but not persisted
+    // Insert all rows with a valid class_id (stubs were auto-created above)
     let rowsToInsert = stagingRows.filter(
       (r) => Boolean(r.class_id?.trim()) && knownClassIds.has(r.class_id)
     );

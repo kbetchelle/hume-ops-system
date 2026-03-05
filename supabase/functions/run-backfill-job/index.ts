@@ -405,9 +405,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Payments sync takes ~51s per date (API returns all records, filtered client-side)
-    // so we can only fit 1 date per edge function invocation
-    const BATCH_SIZE = jobType === "arketa_payments" ? 1 : 5;
+    // With updated_at_min/max server-side filtering, payments sync is now fast enough for normal batch sizes
+    const BATCH_SIZE = 5;
     const datesToProcess = remainingDates.slice(0, BATCH_SIZE);
     const results: SyncResult[] = [...existingResults];
     let totalRecords = job.total_records || 0;

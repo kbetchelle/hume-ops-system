@@ -502,12 +502,12 @@ function SyncOverviewTable() {
                       {isThisRunning ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-xs">Syncing...</span>
+                          <span className="text-[8px]">Syncing...</span>
                         </>
                       ) : (
                         <>
-                          <Play className="h-4 w-4" />
-                          <span className="text-xs">Sync Now</span>
+                          <Play className="h-2 w-2" />
+                          <span className="text-[8px]">Sync Now</span>
                         </>
                       )}
                     </Button>

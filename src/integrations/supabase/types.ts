@@ -6404,6 +6404,7 @@ export type Database = {
         | "male_spa_attendant"
         | "floater"
         | "cafe"
+        | "developer"
       dev_task_status:
         | "not_started"
         | "in_progress"
@@ -6557,6 +6558,7 @@ export const Constants = {
         "male_spa_attendant",
         "floater",
         "cafe",
+        "developer",
       ],
       dev_task_status: [
         "not_started",

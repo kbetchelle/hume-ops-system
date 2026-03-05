@@ -3,7 +3,7 @@ import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { Users, AlertCircle, Package } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";

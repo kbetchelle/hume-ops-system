@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { format, subDays } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { Search, FileText, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";

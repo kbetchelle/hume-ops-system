@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { SyncProgress, SyncResult, BackfillJobType } from "./types";
 

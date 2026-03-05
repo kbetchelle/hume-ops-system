@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import type { MastercardVisit } from "@/hooks/useMastercardVisits";
 
 const STATUS_ORDER: MastercardVisitStatus[] = ["scheduled", "completed", "cancelled", "no_show"];

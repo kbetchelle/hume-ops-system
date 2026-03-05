@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Database } from "@/integrations/supabase/types";
 import { format, addDays, subDays } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

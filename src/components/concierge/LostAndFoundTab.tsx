@@ -35,6 +35,7 @@ import {
 import { Search, Plus, MapPin, Calendar, User, ImagePlus, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getPSTToday } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
 import { supabase } from "@/integrations/supabase/client";

@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Parse body FIRST so it's available for skipLogging checks below
+    const body = (await req.json().catch(() => ({}))) as SyncClassesRequest;
+
     const ARKETA_API_KEY = Deno.env.get('ARKETA_API_KEY');
     const ARKETA_PARTNER_ID = Deno.env.get('ARKETA_PARTNER_ID');
 
@@ -62,8 +65,6 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const body = (await req.json().catch(() => ({}))) as SyncClassesRequest;
     const headers = getArketaApiKeyHeaders(ARKETA_API_KEY);
     const triggeredBy = body.triggeredBy ?? 'manual';
     const skipLogging = body.skipLogging === true;
@@ -153,6 +154,7 @@ Deno.serve(async (req) => {
     let nextStartAfterId: string | undefined;
     let apiHasMore = false;
     let timedOut = false;
+    let apiErrorMessage: string | undefined;
 
     // Build first page URL
     const initialCursor = body.start_after_id; // May be provided for backfill resumption
@@ -188,7 +190,13 @@ Deno.serve(async (req) => {
         const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
 
         if (!response.ok) {
-          console.warn(`[classes-sync] Page ${pageNum} returned HTTP ${response.status}, stopping pagination`);
+          const errorBody = await response.text().catch(() => '');
+          console.warn(`[classes-sync] Page ${pageNum} returned HTTP ${response.status}, stopping pagination. Body: ${errorBody.slice(0, 200)}`);
+          
+          // Surface HTTP errors in the final response
+          if (!apiErrorMessage) {
+            apiErrorMessage = `Arketa API returned HTTP ${response.status} on page ${pageNum}`;
+          }
           break;
         }
 
@@ -349,20 +357,23 @@ Deno.serve(async (req) => {
     const durationMs = Date.now() - startTime;
 
     if (!skipLogging) {
+      const syncWasSuccessful = !apiErrorMessage || syncedCount > 0;
       await logApiCall(supabase, {
         apiName: 'arketa_classes',
         endpoint: '/classes',
-        syncSuccess: true,
+        syncSuccess: syncWasSuccessful,
         durationMs,
         recordsProcessed: filteredClasses.length,
         recordsInserted: syncedCount,
-        responseStatus: 200,
+        responseStatus: apiErrorMessage ? 500 : 200,
+        errorMessage: apiErrorMessage ?? undefined,
         triggeredBy,
       });
     }
 
+    const hadApiError = !!apiErrorMessage && syncedCount === 0;
     const result = {
-      success: true,
+      success: !hadApiError,
       syncedCount,
       totalFetched: allClasses.length,
       filteredCount: filteredClasses.length,
@@ -375,6 +386,7 @@ Deno.serve(async (req) => {
       timedOut,
       nextStartAfterId: nextStartAfterId ?? null,
       hasMore: apiHasMore,
+      ...(apiErrorMessage ? { apiError: apiErrorMessage } : {}),
     };
 
     console.log(`[classes-sync] Complete: ${syncedCount} upserted, ${filteredClasses.length} filtered, ${totalPages} pages, ${durationMs}ms`);

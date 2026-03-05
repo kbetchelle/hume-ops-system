@@ -249,8 +249,9 @@ Deno.serve(async (req) => {
 
         const url = new URL(prodBase);
         url.searchParams.set('limit', String(BACKFILL_PAGE_LIMIT));
-        url.searchParams.set('start_date', startDate!);
-        url.searchParams.set('end_date', endDate!);
+        // Use spec-compliant updated_at_min/max for server-side filtering
+        url.searchParams.set('updated_at_min', `${startDate!}T00:00:00.000Z`);
+        url.searchParams.set('updated_at_max', `${endDate!}T23:59:59.999Z`);
         if (nextCursor) {
           // Decode first to prevent double-encoding (cursor may contain %2F)
           url.searchParams.set('start_after', decodeURIComponent(nextCursor));

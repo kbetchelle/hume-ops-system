@@ -357,20 +357,23 @@ Deno.serve(async (req) => {
     const durationMs = Date.now() - startTime;
 
     if (!skipLogging) {
+      const syncWasSuccessful = !apiErrorMessage || syncedCount > 0;
       await logApiCall(supabase, {
         apiName: 'arketa_classes',
         endpoint: '/classes',
-        syncSuccess: true,
+        syncSuccess: syncWasSuccessful,
         durationMs,
         recordsProcessed: filteredClasses.length,
         recordsInserted: syncedCount,
-        responseStatus: 200,
+        responseStatus: apiErrorMessage ? 500 : 200,
+        errorMessage: apiErrorMessage ?? undefined,
         triggeredBy,
       });
     }
 
+    const hadApiError = !!apiErrorMessage && syncedCount === 0;
     const result = {
-      success: true,
+      success: !hadApiError,
       syncedCount,
       totalFetched: allClasses.length,
       filteredCount: filteredClasses.length,
@@ -383,6 +386,7 @@ Deno.serve(async (req) => {
       timedOut,
       nextStartAfterId: nextStartAfterId ?? null,
       hasMore: apiHasMore,
+      ...(apiErrorMessage ? { apiError: apiErrorMessage } : {}),
     };
 
     console.log(`[classes-sync] Complete: ${syncedCount} upserted, ${filteredClasses.length} filtered, ${totalPages} pages, ${durationMs}ms`);

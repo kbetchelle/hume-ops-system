@@ -76,11 +76,11 @@ function getSyncConfig(jobType: JobType) {
     case "arketa_reservations":
     default:
       return {
-        syncFunction: "sync-arketa-reservations",
+        syncFunction: "sync-arketa-classes-and-reservations",
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
-        transferApi: "arketa_reservations" as const,
-        needsTransfer: true,
+        transferApi: null,
+        needsTransfer: false,
       };
   }
 }
@@ -468,7 +468,8 @@ function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknow
   if (jobType === "arketa_classes_and_reservations") {
     return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
   }
-  return { startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", manual: true, noLimit: true };
+  // arketa_reservations now routes through the combined sync function
+  return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
 }
 
 /** Extract record count from sync response based on job type */

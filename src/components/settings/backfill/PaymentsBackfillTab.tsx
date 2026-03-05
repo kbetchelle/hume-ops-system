@@ -3,16 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useBackfillJob } from "./useBackfillJob";
-import DateSelector from "./DateSelector";
 import PaymentsSyncLog from "./PaymentsSyncLog";
 import BackfillCalendarHeatmap from "./BackfillCalendarHeatmap";
 import SyncProgressCard from "./SyncProgressCard";
+import PaymentsDateSelector from "./PaymentsDateSelector";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function PaymentsBackfillTab() {
   const {
     startDate, setStartDate, endDate, setEndDate, isRange, setIsRange,
     dayCount, syncProgress, handleSync, handleCancelJob, elapsedText, totalNewRecords,
   } = useBackfillJob("arketa_payments");
+
+  // Force range mode for payments
+  const effectiveIsRange = true;
 
   const { data: totalCount } = useQuery({
     queryKey: ["total-payments-count"],
@@ -26,17 +31,36 @@ export default function PaymentsBackfillTab() {
 
   return (
     <div className="space-y-6">
-      <DateSelector
-        startDate={startDate} endDate={endDate} isRange={isRange}
-        onStartDateChange={setStartDate} onEndDateChange={setEndDate} onIsRangeChange={setIsRange}
-        isRunning={syncProgress.isRunning} elapsedText={elapsedText}
-        onSync={handleSync} onCancel={handleCancelJob} dayCount={dayCount}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Updated_at Range Sync</AlertTitle>
+        <AlertDescription className="space-y-2">
+          <p>
+            Payments sync uses the Arketa <code className="text-xs bg-muted px-1 py-0.5 rounded">updated_at_min</code> / <code className="text-xs bg-muted px-1 py-0.5 rounded">updated_at_max</code> API parameters for server-side filtering.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <strong>Timezone handling:</strong> The API receives UTC boundaries (<code>startT00:00:00.000Z</code> → <code>endT23:59:59.999Z</code>).
+            Arketa stores timestamps as <strong>PST values with a UTC (+00) offset</strong> ("fake UTC").
+            The <code>created_at_api</code> column stores the raw API timestamp as <code>timestamptz</code>.
+            Display uses <code>formatInTimeZone(ts, "UTC", ...)</code> to show the original PST time without browser re-conversion.
+          </p>
+        </AlertDescription>
+      </Alert>
+      <PaymentsDateSelector
+        startDate={startDate}
+        endDate={endDate}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        isRunning={syncProgress.isRunning}
+        elapsedText={elapsedText}
+        onSync={handleSync}
+        onCancel={handleCancelJob}
       />
       <SyncProgressCard
         syncProgress={syncProgress}
         startDate={startDate}
         endDate={endDate}
-        isRange={isRange}
+        isRange={effectiveIsRange}
       />
       <Card>
         <CardHeader>

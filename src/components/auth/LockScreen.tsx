@@ -42,7 +42,7 @@ export function LockScreen({ onUnlock, onSignOut }: LockScreenProps) {
     }
     setLoading(true);
     try {
-      const { error: err } = await onUnlock(email.trim(), password);
+      const { error: err } = await onUnlock(email.trim().toLowerCase(), password);
       if (err) {
         setError(err instanceof Error ? err.message : "Invalid email or password");
         return;

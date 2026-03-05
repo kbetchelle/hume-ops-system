@@ -175,13 +175,13 @@ const API_CONFIG: Record<string, {
 function StatusBadge({ status, isHealthy }: { status: string | boolean | null; isHealthy?: boolean }) {
   if (isHealthy !== undefined) {
     return isHealthy ? (
-      <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white">
-        <CheckCircle2 className="h-3 w-3" />
+      <Badge className="gap-1 bg-green-600 hover:bg-green-700 text-white text-[8px]">
+        <CheckCircle2 className="h-2 w-2" />
         HEALTHY
       </Badge>
     ) : (
-      <Badge variant="destructive" className="gap-1">
-        <XCircle className="h-3 w-3" />
+      <Badge variant="destructive" className="gap-1 text-[8px]">
+        <XCircle className="h-2 w-2" />
         ERROR
       </Badge>
     );

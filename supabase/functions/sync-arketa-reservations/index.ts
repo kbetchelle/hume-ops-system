@@ -165,7 +165,27 @@ async function fetchAllReservations(
     const filterToRange = (list: ReturnType<typeof mapClassRecord>[]) =>
       list.filter(c => c.class_date && c.external_id && c.class_date >= startDate && c.class_date <= endDate);
 
-    let discovered: ReturnType<typeof mapClassRecord>[] = [];
+    // Accumulate results across ALL strategies, then deduplicate
+    const discoveredMap = new Map<string, ReturnType<typeof mapClassRecord>>();
+    const addDiscovered = (items: ReturnType<typeof mapClassRecord>[], label: string) => {
+      let added = 0;
+      for (const item of items) {
+        const key = `${item.external_id}::${item.class_date}`;
+        if (!discoveredMap.has(key)) {
+          discoveredMap.set(key, item);
+          added++;
+        }
+      }
+      logger?.info(`${label}: ${added} new unique classes added (${items.length} total matched, ${discoveredMap.size} cumulative)`);
+    };
+
+    /**
+     * Decode cursor to avoid double-encoding by URL.searchParams.set().
+     * API returns e.g. "classes%2FP8k22..." which must be decoded first.
+     */
+    const decodeCursor = (cursor: string): string => {
+      try { return decodeURIComponent(cursor); } catch { return cursor; }
+    };
 
     // Strategy A: Try reverse sort params to get newest classes first
     const sortParams = [
@@ -176,7 +196,6 @@ async function fetchAllReservations(
     ];
 
     for (const params of sortParams) {
-      if (discovered.length > 0) break;
       try {
         const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
         url.searchParams.set('limit', '500');
@@ -191,7 +210,6 @@ async function fetchAllReservations(
           const all = parseClassList(data).map(mapClassRecord);
           const matched = filterToRange(all);
 
-          // Check if results are actually sorted differently from default (oldest-first)
           const firstDate = all[0]?.class_date;
           const lastDate = all[all.length - 1]?.class_date;
           const isReversed = firstDate && lastDate && firstDate > lastDate;
@@ -199,8 +217,7 @@ async function fetchAllReservations(
           logger?.info(`Tier 3A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window`);
 
           if (matched.length > 0) {
-            discovered = matched;
-            break;
+            addDiscovered(matched, `Tier 3A (${JSON.stringify(params)})`);
           }
           // If not reversed, this sort param had no effect — try next
           if (!isReversed) continue;
@@ -212,9 +229,8 @@ async function fetchAllReservations(
       }
     }
 
-    // Strategy B: Cursor skip-ahead using a known recent class ID from the DB
-    if (discovered.length === 0) {
-      // Find a class ID just before our target date range from the local DB
+    // Strategy B: Cursor skip-ahead with PAGINATION using full nextStartAfterId
+    {
       const { data: cursorRow } = await supabase
         .from('arketa_classes')
         .select('external_id, class_date')
@@ -225,38 +241,80 @@ async function fetchAllReservations(
       const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
 
       if (skipCursor) {
-        logger?.info(`Tier 3B: Using cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date}) to jump near ${startDate}...`);
-        try {
-          const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-          url.searchParams.set('limit', '500');
-          url.searchParams.set('start_after', skipCursor.external_id);
+        logger?.info(`Tier 3B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
 
-          const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-          totalAttempts += attempts;
+        // Use the full cursor format: classes/{external_id}
+        let currentCursor = `classes/${skipCursor.external_id}`;
+        let pageCount = 0;
+        const MAX_DISCOVERY_PAGES = 30;
+        let pastTargetRange = false;
 
-          if (response.ok) {
+        while (pageCount < MAX_DISCOVERY_PAGES && !pastTargetRange) {
+          try {
+            const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
+            url.searchParams.set('limit', '100');
+            url.searchParams.set('start_after', decodeCursor(currentCursor));
+
+            const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+            totalAttempts += attempts;
+            pageCount++;
+
+            if (!response.ok) {
+              logger?.warn(`Tier 3B: Page ${pageCount} returned ${response.status}, stopping`);
+              break;
+            }
+
             const data = await response.json();
-            const all = parseClassList(data).map(mapClassRecord);
-            const matched = filterToRange(all);
-            const firstDate = all[0]?.class_date;
-            const lastDate = all[all.length - 1]?.class_date;
+            const pageClasses = parseClassList(data).map(mapClassRecord);
 
-            logger?.info(`Tier 3B: Cursor skip returned ${all.length} classes, range ${firstDate}–${lastDate}, ${matched.length} in target window`);
-            if (matched.length > 0) discovered = matched;
-          } else {
-            logger?.warn(`Tier 3B: Cursor skip returned ${response.status}`);
+            if (pageClasses.length === 0) {
+              logger?.info(`Tier 3B: Page ${pageCount} returned 0 classes, done`);
+              break;
+            }
+
+            const matched = filterToRange(pageClasses);
+            if (matched.length > 0) {
+              addDiscovered(matched, `Tier 3B page ${pageCount}`);
+            }
+
+            // Check if we've gone past the target range
+            const lastClassDate = pageClasses[pageClasses.length - 1]?.class_date;
+            if (lastClassDate && lastClassDate > endDate) {
+              logger?.info(`Tier 3B: Last class date ${lastClassDate} > endDate ${endDate}, stopping`);
+              pastTargetRange = true;
+              break;
+            }
+
+            // Get next cursor from pagination response
+            const obj = data as Record<string, unknown>;
+            const pagination = obj.pagination as Record<string, unknown> | undefined;
+            const nextCursor = (pagination?.nextStartAfterId ?? pagination?.nextCursor) as string | undefined;
+            const hasMore = pagination?.hasMore as boolean | undefined;
+
+            if (!nextCursor || hasMore === false) {
+              logger?.info(`Tier 3B: No more pages after page ${pageCount}`);
+              break;
+            }
+
+            currentCursor = nextCursor;
+
+            // Stop if fewer than limit returned (last page)
+            if (pageClasses.length < 100) break;
+          } catch (err) {
+            logger?.warn(`Tier 3B: Page ${pageCount} failed`, err as object);
+            break;
           }
-        } catch (err) {
-          logger?.warn('Tier 3B: Cursor skip failed', err as object);
         }
+
+        logger?.info(`Tier 3B: Completed ${pageCount} pages`);
       } else {
         logger?.info('Tier 3B: No earlier class found in DB for cursor skip-ahead');
       }
     }
 
-    // Strategy C: Fallback to plain first page (original behavior)
-    if (discovered.length === 0) {
-      logger?.info('Tier 3C: Falling back to plain first page fetch...');
+    // Strategy C: Plain first page fetch (always runs to catch anything missed)
+    {
+      logger?.info('Tier 3C: Fetching plain first page...');
       try {
         const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
         url.searchParams.set('limit', '500');
@@ -266,13 +324,19 @@ async function fetchAllReservations(
         if (response.ok) {
           const data = await response.json();
           const all = parseClassList(data).map(mapClassRecord);
-          discovered = filterToRange(all);
-          logger?.info(`Tier 3C: Plain fetch returned ${all.length} classes, ${discovered.length} in target window`);
+          const matched = filterToRange(all);
+          if (matched.length > 0) {
+            addDiscovered(matched, 'Tier 3C');
+          }
+          logger?.info(`Tier 3C: Plain fetch returned ${all.length} classes, ${matched.length} in target window`);
         }
       } catch {
         logger?.warn('Tier 3C: Plain fetch failed');
       }
     }
+
+    let discovered = [...discoveredMap.values()];
+    logger?.info(`Tier 3 total: ${discovered.length} unique classes discovered across all strategies`);
 
     // Persist discovered classes as stubs
     if (discovered.length > 0) {

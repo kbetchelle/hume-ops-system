@@ -233,7 +233,7 @@ function formatNextSync(nextRunAt: string | null, intervalMinutes: number): stri
 
 // Expandable detail panel for a sync row — shows parameters and recent logs
 function SyncDetailPanel({ syncType, isRunning }: { syncType: string; isRunning: boolean }) {
-  const config = API_CONFIG[syncType] || { parameters: [] };
+  const config = API_CONFIG[syncType] || { stagingTable: null, targetTable: "—", parameters: [] };
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

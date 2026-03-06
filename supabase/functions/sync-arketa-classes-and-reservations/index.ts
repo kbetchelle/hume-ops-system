@@ -87,7 +87,6 @@ Deno.serve(async (req) => {
     defaultEnd.setDate(defaultEnd.getDate() + 7);
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
-    const strictThreePhase = body.strict_three_phase === true || triggeredBy === 'backfill-job';
 
     const payload: Record<string, unknown> = { startDate, endDate, triggeredBy, skipLogging: true };
     if (body.start_after_id) payload.start_after_id = body.start_after_id;
@@ -117,8 +116,6 @@ Deno.serve(async (req) => {
 
     const classesError = (classesData.error as string | undefined) ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     if (!classesOk) {
-      // Classes failure is non-blocking: the reservations phase has its own Tier 3 discovery.
-      // In strict mode we still log the warning but proceed to reservations.
       console.warn('[sync-arketa-classes-and-reservations] Classes sync failed, continuing to reservations:', classesError);
     }
 
@@ -127,6 +124,7 @@ Deno.serve(async (req) => {
     let reservationsOk = false;
     try {
       const reservationsUrl = `${supabaseUrl}/functions/v1/sync-arketa-reservations`;
+      console.log(`[sync-arketa-classes-and-reservations] Calling reservation sync for ${startDate}–${endDate}...`);
       const reservationsRes = await fetch(reservationsUrl, {
         method: 'POST',
         headers: authHeaders,
@@ -137,8 +135,11 @@ Deno.serve(async (req) => {
         ? (parseJson(reservationsText) ?? {})
         : { success: false, error: parseErrorBody(reservationsText) };
       reservationsOk = reservationsRes.ok && reservationsData.success !== false && !reservationsData.error;
+      console.log(`[sync-arketa-classes-and-reservations] Reservation sync result: ok=${reservationsRes.ok}, success=${reservationsData.success}, error=${reservationsData.error ?? 'none'}`);
     } catch (resErr) {
-      reservationsData = { success: false, error: resErr instanceof Error ? resErr.message : String(resErr) };
+      const resErrMsg = resErr instanceof Error ? resErr.message : String(resErr);
+      console.error(`[sync-arketa-classes-and-reservations] Reservation sync fetch error: ${resErrMsg}`);
+      reservationsData = { success: false, error: resErrMsg };
     }
 
     if (!reservationsOk) {
@@ -183,23 +184,28 @@ Deno.serve(async (req) => {
       console.warn('[sync-arketa-classes-and-reservations] Failed to refresh daily schedule:', refreshErr);
     }
 
-    // Classes failure is non-blocking; success depends only on reservations + staging.
-    const success = reservationsOk && stagingOk;
-    const durationMs = Date.now() - startTime;
-
-    const classesSyncedCount = (classesData.syncedCount as number) ?? 0;
+    // ── 5) Determine overall success ─────────────────────────────────
+    // Classes failure is non-blocking.
+    // Staging is considered OK if reservations returned 0 records (nothing to stage).
     const reservationsSyncedCount =
       (reservationsData.syncedCount as number) ??
       ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
+    const reservationsHadNoData = reservationsOk && reservationsSyncedCount === 0;
+    // If reservations succeeded but had no data, staging having nothing to do is fine
+    const effectiveStagingOk = stagingOk || reservationsHadNoData;
+    const success = reservationsOk && effectiveStagingOk;
+
+    const durationMs = Date.now() - startTime;
+    const classesSyncedCount = (classesData.syncedCount as number) ?? 0;
     const totalSyncedCount = classesSyncedCount + reservationsSyncedCount;
 
     const normalizedClassesError = classesError ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     const errors: string[] = [];
     if (!classesOk && normalizedClassesError) errors.push(`classes: ${normalizedClassesError}`);
     if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
-    if (!stagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
+    if (!effectiveStagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
 
-    // ── 5) Log to api_logs / api_sync_status ──────────────────────────
+    // ── 6) Log to api_logs / api_sync_status ──────────────────────────
     await logApiCall(supabase, {
       apiName: 'arketa_classes',
       endpoint: '/classes+reservations',
@@ -217,6 +223,8 @@ Deno.serve(async (req) => {
     const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
     const responseBody = {
       success,
+      // Top-level error field for run-backfill-job to extract
+      error: errors.length > 0 ? errors.join('; ') : undefined,
       syncedCount: totalSyncedCount,
       totalFetched: classesTotalFetched + reservationsTotalFetched,
       dateRange: { startDate, endDate },

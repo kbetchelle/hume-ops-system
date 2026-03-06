@@ -299,22 +299,17 @@ export function ConciergeChecklistItem({
           <Button
             size="sm"
             variant={completion?.note_text === 'Yes' ? 'default' : 'outline'}
-            onClick={() => handleToggle('Yes')}
+            onClick={() => handleToggle(completion?.note_text === 'Yes' ? undefined : 'Yes')}
           >
             Yes
           </Button>
           <Button
             size="sm"
             variant={completion?.note_text === 'No' ? 'default' : 'outline'}
-            onClick={() => handleToggle('No')}
+            onClick={() => handleToggle(completion?.note_text === 'No' ? undefined : 'No')}
           >
             No
           </Button>
-          {completion?.note_text && (
-            <Button size="sm" variant="ghost" onClick={() => handleToggle()}>
-              Clear
-            </Button>
-          )}
         </div>
       </div>
     );
@@ -338,7 +333,7 @@ export function ConciergeChecklistItem({
               key={choice}
               size="sm"
               variant={completion?.note_text === choice ? 'default' : 'outline'}
-              onClick={() => handleToggle(choice)}
+              onClick={() => handleToggle(completion?.note_text === choice ? undefined : choice)}
             >
               {choice}
             </Button>

@@ -94,11 +94,12 @@ function getSyncConfig(jobType: JobType) {
     case "arketa_reservations":
     default:
       return {
-        syncFunction: "sync-arketa-reservations",
+        // Enforce 3-phase reservations flow: classes -> reservations -> staging transfer
+        syncFunction: "sync-arketa-classes-and-reservations",
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
-        transferApi: "arketa_reservations",
-        needsTransfer: true,
+        transferApi: null,
+        needsTransfer: false,
       };
   }
 }
@@ -359,7 +360,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     const syncBody = jobType === "arketa_classes_and_reservations"
       ? { start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
       : jobType === "arketa_reservations"
-      ? { startDate: chunkStart, endDate: chunkEnd, triggeredBy: "backfill-job", skipLogging: true }
+      ? { startDate: chunkStart, endDate: chunkEnd, start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
       : { startDate: chunkStart, endDate: chunkEnd, start_after_id: startAfterId, skipLogging: true };
 
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
@@ -377,10 +378,11 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       syncResult = { success: false, error: parsedError || `Sync returned ${syncResponse.status}` };
     } else {
       const data = (syncData ?? {}) as Record<string, unknown>;
+      const reservationsData = (data.reservations ?? null) as Record<string, unknown> | null;
       syncResult = {
         success: data.success !== false,
-        syncedCount: (data.syncedCount as number) ?? 0,
-        totalFetched: (data.totalFetched as number) ?? 0,
+        syncedCount: (jobType === "arketa_reservations" ? (reservationsData?.syncedCount as number) : undefined) ?? (data.syncedCount as number) ?? 0,
+        totalFetched: (jobType === "arketa_reservations" ? (reservationsData?.totalFetched as number) : undefined) ?? (data.totalFetched as number) ?? 0,
         nextStartAfterId: (data.nextStartAfterId as string) ?? null,
         hasMore: (data.hasMore as boolean) ?? false,
         error: (data.error as string) ?? undefined,
@@ -390,8 +392,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 
-  // For standalone reservations, transfer staging → history and refresh schedule
-  if (jobType === "arketa_reservations" && syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
+  if (jobType === "arketa_reservations" && config.syncFunction === "sync-arketa-reservations" && syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
     try {
       await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
         method: "POST",
@@ -437,7 +438,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   });
 
   // Determine if this chunk is exhausted (no more pages within it)
-  const chunkDone = !syncResult.hasMore || !syncResult.nextStartAfterId || syncResult.totalFetched === 0;
+  const chunkDone = !syncResult.hasMore || !syncResult.nextStartAfterId;
 
   if (chunkDone) {
     // Move to next chunk
@@ -547,9 +548,10 @@ function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>)
     };
   }
   if (jobType === "arketa_reservations") {
+    const reservations = syncData?.reservations as Record<string, unknown> | undefined;
     return {
-      recordCount: (syncData?.syncedCount as number) ?? (syncData?.records_synced as number) ?? 0,
-      totalFetched: (syncData?.totalFetched as number) ?? (syncData?.records_processed as number) ?? 0,
+      recordCount: (reservations?.syncedCount as number) ?? (syncData?.syncedCount as number) ?? (syncData?.records_synced as number) ?? 0,
+      totalFetched: (reservations?.totalFetched as number) ?? (syncData?.totalFetched as number) ?? (syncData?.records_processed as number) ?? 0,
     };
   }
   const data = syncData?.data as Record<string, unknown> | undefined;

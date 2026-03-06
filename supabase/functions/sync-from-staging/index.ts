@@ -28,6 +28,7 @@ interface TransferResult {
   records_processed: number;
   records_inserted: number;
   records_updated: number;
+  records_skipped?: number;
   error?: string;
 }
 
@@ -41,6 +42,21 @@ function toIsoTimestamp(val: unknown): string | null {
     date = new Date(val as string);
   }
   return isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/** Log a batch of failed records to api_sync_skipped_records for visibility in the Dev Tools UI. */
+async function logSkippedBatch(
+  supabase: any,
+  apiName: string,
+  records: Array<{ record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }>
+) {
+  if (!records.length) return;
+  const CHUNK = 500;
+  for (let i = 0; i < records.length; i += CHUNK) {
+    const chunk = records.slice(i, i + CHUNK).map((r) => ({ api_name: apiName, ...r }));
+    const { error } = await supabase.from("api_sync_skipped_records").insert(chunk);
+    if (error) console.warn(`[sync-from-staging] Failed to log skipped records: ${error.message}`);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -80,6 +96,8 @@ Deno.serve(async (req) => {
     const totalInserted = results.reduce((s, r) => s + r.records_inserted, 0);
     const totalUpdated = results.reduce((s, r) => s + r.records_updated, 0);
     const hasError = results.some((r) => r.error);
+    const errorMessages = results.filter((r) => r.error).map((r) => `${r.api}: ${r.error}`).join("; ");
+    const totalSkipped = results.reduce((s, r) => s + (r.records_skipped ?? 0), 0);
 
     await supabase.from("api_logs").insert({
       api_name: "sync-from-staging",
@@ -89,6 +107,8 @@ Deno.serve(async (req) => {
       records_processed: totalProcessed,
       records_inserted: totalInserted,
       records_updated: totalUpdated,
+      records_skipped: totalSkipped,
+      error_message: hasError ? errorMessages : null,
       triggered_by: body.triggeredBy ?? (body.sync_batch_id ? "backfill-job" : "manual"),
       parent_log_id: body.parentLogId ?? null,
     });
@@ -200,11 +220,19 @@ async function transferReservations(
         .delete()
         .in("reservation_id", reservationIds);
       if (deleteError) {
+        // Log failed batch as skipped records
+        await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
+          record_id: r.reservation_id,
+          secondary_id: r.class_id,
+          reason: "promotion_delete_failed",
+          details: { error: deleteError.message, class_name: r.class_name, class_date: r.class_date },
+        })));
         return {
           api: "arketa_reservations",
           records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
+          records_skipped: batch.length,
           error: deleteError.message,
         };
       }
@@ -213,11 +241,19 @@ async function transferReservations(
         .from("arketa_reservations_history")
         .upsert(batch, { onConflict: "reservation_id,class_id" });
       if (upsertError) {
+        // Log failed batch as skipped records
+        await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
+          record_id: r.reservation_id,
+          secondary_id: r.class_id,
+          reason: "promotion_upsert_failed",
+          details: { error: upsertError.message, class_name: r.class_name, class_date: r.class_date },
+        })));
         return {
           api: "arketa_reservations",
           records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
+          records_skipped: batch.length,
           error: upsertError.message,
         };
       }

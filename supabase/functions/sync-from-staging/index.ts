@@ -80,6 +80,8 @@ Deno.serve(async (req) => {
     const totalInserted = results.reduce((s, r) => s + r.records_inserted, 0);
     const totalUpdated = results.reduce((s, r) => s + r.records_updated, 0);
     const hasError = results.some((r) => r.error);
+    const errorMessages = results.filter((r) => r.error).map((r) => `${r.api}: ${r.error}`).join("; ");
+    const totalSkipped = results.reduce((s, r) => s + (r.records_skipped ?? 0), 0);
 
     await supabase.from("api_logs").insert({
       api_name: "sync-from-staging",
@@ -89,6 +91,8 @@ Deno.serve(async (req) => {
       records_processed: totalProcessed,
       records_inserted: totalInserted,
       records_updated: totalUpdated,
+      records_skipped: totalSkipped,
+      error_message: hasError ? errorMessages : null,
       triggered_by: body.triggeredBy ?? (body.sync_batch_id ? "backfill-job" : "manual"),
       parent_log_id: body.parentLogId ?? null,
     });

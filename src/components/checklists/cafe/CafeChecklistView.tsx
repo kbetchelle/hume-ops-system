@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getStorageBool, setStorageBool } from '@/lib/storage';
@@ -12,6 +12,11 @@ import { Calendar, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { getPSTToday } from '@/lib/dateUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobilePageWrapper } from '@/components/mobile/MobilePageWrapper';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface CafeChecklistWithItems {
   id: string;

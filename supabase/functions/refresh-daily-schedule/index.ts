@@ -4,6 +4,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { logApiCall } from '../_shared/apiLogger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -12,6 +13,8 @@ interface RequestBody {
   schedule_date?: string;
   start_date?: string;
   end_date?: string;
+  triggeredBy?: string;
+  parentLogId?: string;
 }
 
 /** Today's date in America/Los_Angeles as YYYY-MM-DD */
@@ -33,6 +36,8 @@ Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
   const corsHeaders = getCorsHeaders(req);
+
+  const startTime = Date.now();
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -67,6 +72,20 @@ Deno.serve(async (req) => {
         p_schedule_date: d,
       });
       if (error) {
+        const durationMs = Date.now() - startTime;
+        await logApiCall(supabase, {
+          apiName: 'daily_schedule',
+          endpoint: '/refresh-daily-schedule',
+          syncSuccess: false,
+          durationMs,
+          recordsProcessed: dates.length,
+          recordsInserted: totalInserted,
+          responseStatus: 500,
+          errorMessage: error.message,
+          triggeredBy: body.triggeredBy || 'manual',
+          parentLogId: body.parentLogId,
+        });
+
         return new Response(
           JSON.stringify({ success: false, error: error.message, date: d }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,6 +93,19 @@ Deno.serve(async (req) => {
       }
       totalInserted += Number(count ?? 0);
     }
+
+    const durationMs = Date.now() - startTime;
+    await logApiCall(supabase, {
+      apiName: 'daily_schedule',
+      endpoint: '/refresh-daily-schedule',
+      syncSuccess: true,
+      durationMs,
+      recordsProcessed: dates.length,
+      recordsInserted: totalInserted,
+      responseStatus: 200,
+      triggeredBy: body.triggeredBy || 'manual',
+      parentLogId: body.parentLogId,
+    });
 
     return new Response(
       JSON.stringify({
@@ -87,6 +119,25 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const durationMs = Date.now() - startTime;
+
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await logApiCall(supabase, {
+        apiName: 'daily_schedule',
+        endpoint: '/refresh-daily-schedule',
+        syncSuccess: false,
+        durationMs,
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        responseStatus: 500,
+        errorMessage: message,
+        triggeredBy: 'manual',
+      });
+    } catch (_logErr) {
+      console.error('[refresh-daily-schedule] Failed to log error:', _logErr);
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

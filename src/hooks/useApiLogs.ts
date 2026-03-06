@@ -9,6 +9,7 @@ export interface ApiLog {
   duration_ms: number | null;
   records_processed: number | null;
   records_inserted: number | null;
+  records_updated: number | null;
   response_status: number | null;
   error_message: string | null;
   triggered_by: string | null;

@@ -617,36 +617,40 @@ function SyncLogHistoryTable({
         <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead className="font-medium">API</TableHead>
-                <TableHead className="font-medium">Synced At</TableHead>
-                <TableHead className="font-medium">Endpoint</TableHead>
-                <TableHead className="font-medium text-center">Records</TableHead>
-                <TableHead className="font-medium text-center">New</TableHead>
-                <TableHead className="font-medium">Duration</TableHead>
-                <TableHead className="font-medium">Triggered By</TableHead>
-                <TableHead className="font-medium">Status</TableHead>
-                <TableHead className="font-medium min-w-[200px]">Error</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>API</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>Synced At</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>Endpoint</TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Processed</TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Upserted</TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Skipped</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>Duration</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>Triggered By</TableHead>
+                <TableHead className="font-medium" style={{ fontSize: '9px' }}>Status</TableHead>
+                <TableHead className="font-medium min-w-[200px]" style={{ fontSize: '9px' }}>Error</TableHead>
               </TableRow>
             </TableHeader>
           <TableBody>
             {data?.logs?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground" style={{ fontSize: '9px' }}>
                   No sync logs found
                 </TableCell>
               </TableRow>
             ) : (
-              data?.logs?.map((log) => (
+              data?.logs?.map((log) => {
+                const upserted = (log.records_inserted ?? 0) + (log.records_updated ?? 0);
+                const skipped = Math.max(0, (log.records_processed ?? 0) - upserted);
+                return (
                 <TableRow 
                   key={log.id} 
                   className={!log.sync_success ? "bg-destructive/5" : ""}
                 >
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
+                  <TableCell style={{ fontSize: '9px' }}>
+                    <Badge variant="outline" className="font-mono" style={{ fontSize: '9px' }}>
                       {log.api_name.toUpperCase().replace(/_/g, "_")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell style={{ fontSize: '9px' }}>
                     {log.created_at ? (
                       <div>
                         <div>{format(new Date(log.created_at), "MMM d,")}</div>
@@ -658,30 +662,37 @@ function SyncLogHistoryTable({
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-sm" title={log.endpoint}>
+                  <TableCell className="max-w-[150px] truncate" style={{ fontSize: '9px' }} title={log.endpoint}>
                     {log.endpoint}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
                     {log.records_processed ?? 0}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {log.records_inserted && log.records_inserted > 0 ? (
-                      <span className="text-primary font-medium">{log.records_inserted}</span>
+                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+                    {upserted > 0 ? (
+                      <span className="text-primary font-medium">{upserted}</span>
                     ) : (
                       "0"
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+                    {skipped > 0 ? (
+                      <span className="text-destructive font-medium">{skipped}</span>
+                    ) : (
+                      "0"
+                    )}
+                  </TableCell>
+                  <TableCell style={{ fontSize: '9px' }}>
                     {formatDuration(log.duration_ms)}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-muted-foreground" style={{ fontSize: '9px' }}>
                     {log.triggered_by || "manual"}
                   </TableCell>
                   <TableCell>
                     <div className="space-y-0.5">
                       <StatusBadge status={log.sync_success ? "success" : "failed"} />
                       {!log.sync_success && (log.records_processed ?? 0) > 0 && (
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[8px] text-muted-foreground">
                           Partial: data fetched; a later step failed. See Error.
                         </p>
                       )}
@@ -690,17 +701,19 @@ function SyncLogHistoryTable({
                   <TableCell className="max-w-[280px]">
                     {log.error_message ? (
                       <p
-                        className="text-xs text-destructive break-words whitespace-pre-wrap"
+                        className="text-destructive break-words whitespace-pre-wrap"
+                        style={{ fontSize: '9px' }}
                         title={log.error_message}
                       >
                         {log.error_message}
                       </p>
                     ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
+                      <span className="text-muted-foreground" style={{ fontSize: '9px' }}>—</span>
                     )}
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

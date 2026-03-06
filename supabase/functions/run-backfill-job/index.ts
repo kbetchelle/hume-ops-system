@@ -348,6 +348,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   try {
     const syncBody = jobType === "arketa_classes_and_reservations"
       ? { start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
+      : jobType === "arketa_reservations"
+      ? { startDate: chunkStart, endDate: chunkEnd, triggeredBy: "backfill-job", skipLogging: true }
       : { startDate: chunkStart, endDate: chunkEnd, start_after_id: startAfterId, skipLogging: true };
 
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {

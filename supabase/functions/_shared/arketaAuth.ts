@@ -83,8 +83,6 @@ export const ARKETA_URLS = {
 export function buildArketaUrl(
   partnerId: string,
   endpoint: string,
-  useDev = false
 ): string {
-  const baseUrl = useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
-  return `${baseUrl}/${partnerId}/${endpoint}`;
+  return `${ARKETA_URLS.prod}/${partnerId}/${endpoint}`;
 }

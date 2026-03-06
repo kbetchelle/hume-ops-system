@@ -205,11 +205,19 @@ async function transferReservations(
         .delete()
         .in("reservation_id", reservationIds);
       if (deleteError) {
+        // Log failed batch as skipped records
+        await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
+          record_id: r.reservation_id,
+          secondary_id: r.class_id,
+          reason: "promotion_delete_failed",
+          details: { error: deleteError.message, class_name: r.class_name, class_date: r.class_date },
+        })));
         return {
           api: "arketa_reservations",
           records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
+          records_skipped: batch.length,
           error: deleteError.message,
         };
       }
@@ -218,11 +226,19 @@ async function transferReservations(
         .from("arketa_reservations_history")
         .upsert(batch, { onConflict: "reservation_id,class_id" });
       if (upsertError) {
+        // Log failed batch as skipped records
+        await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
+          record_id: r.reservation_id,
+          secondary_id: r.class_id,
+          reason: "promotion_upsert_failed",
+          details: { error: upsertError.message, class_name: r.class_name, class_date: r.class_date },
+        })));
         return {
           api: "arketa_reservations",
           records_processed: toUpsert.length,
           records_inserted: recordsInserted,
           records_updated: recordsUpdated,
+          records_skipped: batch.length,
           error: upsertError.message,
         };
       }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type { ApiLog } from "@/hooks/useApiLogs";
 import { format, formatDistanceToNow } from "date-fns";
 import {

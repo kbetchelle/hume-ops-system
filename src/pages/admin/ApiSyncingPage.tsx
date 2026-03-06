@@ -559,6 +559,186 @@ function SyncLogHistoryTable({
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
+  // Group logs: parent logs contain children via parent_log_id
+  const groupedLogs = (() => {
+    if (!data?.logs) return [];
+    
+    type LogGroup = {
+      parent: typeof data.logs[0];
+      children: typeof data.logs;
+      status: 'success' | 'failed' | 'partial';
+    };
+    
+    const parentMap = new Map<string, LogGroup>();
+    const standaloneGroups: LogGroup[] = [];
+    const childrenByParent = new Map<string, typeof data.logs>();
+    
+    // First pass: identify children
+    for (const log of data.logs) {
+      if (log.parent_log_id) {
+        const existing = childrenByParent.get(log.parent_log_id) || [];
+        existing.push(log);
+        childrenByParent.set(log.parent_log_id, existing);
+      }
+    }
+    
+    // Second pass: build groups
+    for (const log of data.logs) {
+      if (log.parent_log_id) continue; // skip children, they're attached to parents
+      
+      const children = childrenByParent.get(log.id) || [];
+      const allLogs = [log, ...children];
+      const anyFailed = allLogs.some(l => !l.sync_success);
+      const anySuccess = allLogs.some(l => l.sync_success);
+      const hasChildren = children.length > 0;
+      
+      let status: 'success' | 'failed' | 'partial';
+      if (!anyFailed) status = 'success';
+      else if (anySuccess && anyFailed && hasChildren) status = 'partial';
+      else status = 'failed';
+      
+      const group: LogGroup = { parent: log, children, status };
+      parentMap.set(log.id, group);
+      standaloneGroups.push(group);
+    }
+    
+    return standaloneGroups;
+  })();
+
+  const getGroupBg = (status: 'success' | 'failed' | 'partial') => {
+    switch (status) {
+      case 'success': return 'bg-green-50/40 dark:bg-green-950/20';
+      case 'failed': return 'bg-red-50/60 dark:bg-red-950/30';
+      case 'partial': return 'bg-amber-50/40 dark:bg-amber-950/20';
+    }
+  };
+
+  const getGroupBorder = (status: 'success' | 'failed' | 'partial') => {
+    switch (status) {
+      case 'success': return 'border-l-green-500';
+      case 'failed': return 'border-l-red-500';
+      case 'partial': return 'border-l-amber-500';
+    }
+  };
+
+  const getSkipSummary = (log: typeof data!.logs[0]): string | null => {
+    const skipped = log.records_skipped ?? Math.max(0, (log.records_processed ?? 0) - (log.records_inserted ?? 0) - (log.records_updated ?? 0));
+    if (skipped <= 0) return null;
+    const reasons = log.skip_reasons as Record<string, number> | null;
+    if (reasons) {
+      const topReason = Object.entries(reasons).sort((a, b) => b[1] - a[1])[0];
+      if (topReason) return `${skipped}: ${topReason[0].replace(/_/g, ' ')}`;
+    }
+    return String(skipped);
+  };
+
+  const getSkipTooltip = (log: typeof data!.logs[0]): string => {
+    const reasons = log.skip_reasons as Record<string, number> | null;
+    if (!reasons) return '';
+    return Object.entries(reasons).map(([k, v]) => `${k}: ${v}`).join('\n');
+  };
+
+  const renderLogRow = (log: typeof data!.logs[0], isChild: boolean, groupStatus: 'success' | 'failed' | 'partial') => {
+    const skipped = log.records_skipped ?? Math.max(0, (log.records_processed ?? 0) - (log.records_inserted ?? 0) - (log.records_updated ?? 0));
+    const skipSummary = getSkipSummary(log);
+    
+    return (
+      <TableRow 
+        key={log.id}
+        className={`${getGroupBg(isChild ? groupStatus : (log.sync_success ? 'success' : 'failed'))} ${isChild ? `border-l-2 ${getGroupBorder(groupStatus)}` : ''}`}
+      >
+        <TableCell style={{ fontSize: '9px' }} className={isChild ? 'pl-8' : ''}>
+          <div className="flex items-center gap-1">
+            {isChild && (
+              <span className="text-muted-foreground text-[8px]">↳</span>
+            )}
+            <Badge variant="outline" className={`font-mono ${!isChild ? 'font-semibold' : ''}`} style={{ fontSize: '9px' }}>
+              {log.api_name.toUpperCase().replace(/_/g, "_")}
+            </Badge>
+            {isChild && log.parent_log_id && (
+              <span className="text-[7px] text-muted-foreground bg-muted/60 px-1 rounded">
+                via wrapper
+              </span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell style={{ fontSize: '9px' }}>
+          {log.created_at ? (
+            <div>
+              <div>{format(new Date(log.created_at), "MMM d,")}</div>
+              <div className="text-muted-foreground">
+                {format(new Date(log.created_at), "h:mm:ss a")}
+              </div>
+            </div>
+          ) : (
+            "—"
+          )}
+        </TableCell>
+        <TableCell className="max-w-[150px] truncate" style={{ fontSize: '9px' }} title={log.endpoint}>
+          {log.endpoint}
+        </TableCell>
+        <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+          {log.records_processed ?? 0}
+        </TableCell>
+        <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+          {(log.records_inserted ?? 0) > 0 ? (
+            <span className="text-green-600 dark:text-green-400 font-medium">{log.records_inserted}</span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+        </TableCell>
+        <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+          {(log.records_updated ?? 0) > 0 ? (
+            <span className="text-blue-600 dark:text-blue-400 font-medium">{log.records_updated}</span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+        </TableCell>
+        <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
+          {skipped > 0 ? (
+            <span
+              className="text-destructive font-medium cursor-help"
+              title={getSkipTooltip(log)}
+            >
+              {skipSummary}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+        </TableCell>
+        <TableCell style={{ fontSize: '9px' }}>
+          {formatDuration(log.duration_ms)}
+        </TableCell>
+        <TableCell className="text-muted-foreground" style={{ fontSize: '9px' }}>
+          {log.triggered_by || "manual"}
+        </TableCell>
+        <TableCell>
+          <div className="space-y-0.5">
+            <StatusBadge status={log.sync_success ? "success" : "failed"} />
+            {!log.sync_success && (log.records_processed ?? 0) > 0 && (
+              <p className="text-[8px] text-muted-foreground">
+                Partial: data fetched; a later step failed.
+              </p>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="max-w-[280px]">
+          {log.error_message ? (
+            <p
+              className="text-destructive break-words whitespace-pre-wrap"
+              style={{ fontSize: '9px' }}
+              title={log.error_message}
+            >
+              {log.error_message}
+            </p>
+          ) : (
+            <span className="text-muted-foreground" style={{ fontSize: '9px' }}>—</span>
+          )}
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   if (isLoading && !data) {
     return (
       <div className="p-6 space-y-4">
@@ -621,8 +801,15 @@ function SyncLogHistoryTable({
                 <TableHead className="font-medium" style={{ fontSize: '9px' }}>Synced At</TableHead>
                 <TableHead className="font-medium" style={{ fontSize: '9px' }}>Endpoint</TableHead>
                 <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Processed</TableHead>
-                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Upserted</TableHead>
-                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>Skipped</TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>
+                  <span className="text-green-600 dark:text-green-400">Inserted</span>
+                </TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>
+                  <span className="text-blue-600 dark:text-blue-400">Updated</span>
+                </TableHead>
+                <TableHead className="font-medium text-center" style={{ fontSize: '9px' }}>
+                  <span className="text-destructive">Skipped</span>
+                </TableHead>
                 <TableHead className="font-medium" style={{ fontSize: '9px' }}>Duration</TableHead>
                 <TableHead className="font-medium" style={{ fontSize: '9px' }}>Triggered By</TableHead>
                 <TableHead className="font-medium" style={{ fontSize: '9px' }}>Status</TableHead>
@@ -630,90 +817,19 @@ function SyncLogHistoryTable({
               </TableRow>
             </TableHeader>
           <TableBody>
-            {data?.logs?.length === 0 ? (
+            {groupedLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground" style={{ fontSize: '9px' }}>
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground" style={{ fontSize: '9px' }}>
                   No sync logs found
                 </TableCell>
               </TableRow>
             ) : (
-              data?.logs?.map((log) => {
-                const upserted = (log.records_inserted ?? 0) + (log.records_updated ?? 0);
-                const skipped = Math.max(0, (log.records_processed ?? 0) - upserted);
-                return (
-                <TableRow 
-                  key={log.id} 
-                  className={!log.sync_success ? "bg-destructive/5" : ""}
-                >
-                  <TableCell style={{ fontSize: '9px' }}>
-                    <Badge variant="outline" className="font-mono" style={{ fontSize: '9px' }}>
-                      {log.api_name.toUpperCase().replace(/_/g, "_")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell style={{ fontSize: '9px' }}>
-                    {log.created_at ? (
-                      <div>
-                        <div>{format(new Date(log.created_at), "MMM d,")}</div>
-                        <div className="text-muted-foreground">
-                          {format(new Date(log.created_at), "h:mm:ss a")}
-                        </div>
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-[150px] truncate" style={{ fontSize: '9px' }} title={log.endpoint}>
-                    {log.endpoint}
-                  </TableCell>
-                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
-                    {log.records_processed ?? 0}
-                  </TableCell>
-                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
-                    {upserted > 0 ? (
-                      <span className="text-primary font-medium">{upserted}</span>
-                    ) : (
-                      "0"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center tabular-nums" style={{ fontSize: '9px' }}>
-                    {skipped > 0 ? (
-                      <span className="text-destructive font-medium">{skipped}</span>
-                    ) : (
-                      "0"
-                    )}
-                  </TableCell>
-                  <TableCell style={{ fontSize: '9px' }}>
-                    {formatDuration(log.duration_ms)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground" style={{ fontSize: '9px' }}>
-                    {log.triggered_by || "manual"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      <StatusBadge status={log.sync_success ? "success" : "failed"} />
-                      {!log.sync_success && (log.records_processed ?? 0) > 0 && (
-                        <p className="text-[8px] text-muted-foreground">
-                          Partial: data fetched; a later step failed. See Error.
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[280px]">
-                    {log.error_message ? (
-                      <p
-                        className="text-destructive break-words whitespace-pre-wrap"
-                        style={{ fontSize: '9px' }}
-                        title={log.error_message}
-                      >
-                        {log.error_message}
-                      </p>
-                    ) : (
-                      <span className="text-muted-foreground" style={{ fontSize: '9px' }}>—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-                );
-              })
+              groupedLogs.map((group) => (
+                <>
+                  {renderLogRow(group.parent, false, group.status)}
+                  {group.children.map((child) => renderLogRow(child, true, group.status))}
+                </>
+              ))
             )}
           </TableBody>
         </Table>

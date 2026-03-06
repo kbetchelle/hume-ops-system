@@ -1,3 +1,20 @@
+/**
+ * sync-arketa-reservations: Fetch reservations from Arketa Partner API and stage them.
+ *
+ * PRIMARY: Uses flat GET /{partnerId}/reservations endpoint (ReservationsReportRow)
+ *   - Filters by created_min / created_max (ISO 8601)
+ *   - Pagination via nextStartAfterId + hasMore
+ *   - Returns rich data: payment info, purchase info, class metadata
+ *
+ * FALLBACK (single-class mode): GET /{partnerId}/classes/{classId}/reservations
+ *   - Used when class_id param is specified
+ *   - Returns ClassReservationDTO (lighter data)
+ *
+ * API Reference: https://gist.github.com/joshuarcher/a235b4023dbc10e6b251eca38ad3c916
+ * Base URL: https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0
+ * Auth: Authorization: Bearer {partner_api_key} OR X-API-Key: {partner_api_key}
+ */
+
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { fetchWithRetry } from '../_shared/retry.ts';
@@ -5,27 +22,8 @@ import { ARKETA_URLS } from '../_shared/arketaAuth.ts';
 import { createSyncLogger, logSyncMetrics } from '../_shared/logger.ts';
 import { logApiCall } from '../_shared/apiLogger.ts';
 
-// No MAX_PAGES limit - fetch all pages
-
-interface ArketaReservation {
-  id: string;
-  class_id?: string;
-  client_id?: string;
-  client?: { id?: string; firstName?: string; lastName?: string; email?: string; first_name?: string; last_name?: string; phone?: string };
-  reservation_type?: string;
-  late_cancel?: boolean;
-  gross_amount_paid?: number;
-  net_amount_paid?: number;
-  created_at?: string;
-  updated_at?: string;
-  checked_in?: boolean;
-  status?: string;
-  checkedInAt?: string;
-  checked_in_at?: string;
-  start_time?: string;
-  spot_id?: string;
-  spot_name?: string;
-}
+const PAGE_LIMIT = 100; // API max
+const WALL_CLOCK_TIMEOUT_MS = 50_000; // 50s safety margin
 
 interface SyncRequest {
   start_date?: string;
@@ -39,383 +37,281 @@ interface SyncRequest {
   parentLogId?: string;
 }
 
-type ReservationWithMeta = ArketaReservation & { class_name?: string; class_date?: string };
+/**
+ * ReservationsReportRow from flat GET /{partnerId}/reservations
+ * This is the rich, report-style DTO per the API docs.
+ */
+interface ReservationsReportRow {
+  reservation_id: string;
+  booking_id: string | null;
+  client_id: string;
+  client_email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email_marketing_opt_in: boolean | null;
+  date_purchased: string | null;
+  purchase_id: string | null;
+  reservation_type: string | null;
+  class_id: string | null;
+  class_name: string | null;
+  class_time: string | null;
+  instructor_name: string | null;
+  location_name: string | null;
+  location_address: string | null;
+  status: string | null;
+  checked_in: boolean;
+  checked_in_at: string | null;
+  purchase_type: string | null;
+  gross_amount_paid: number | null;
+  net_amount_paid: number | null;
+  estimated_gross_revenue: number | null;
+  estimated_net_revenue: number | null;
+  coupon_code: string | null;
+  package_name: string | null;
+  package_period_start: string | null;
+  package_period_end: string | null;
+  offering_id: string | null;
+  payment_method: string | null;
+  payment_id: string | null;
+  service_id: string | null;
+  tags: string[] | null;
+  experience_type: string | null;
+  late_cancel: boolean;
+  canceled_at: string | null;
+  canceled_by: string | null;
+  milestone: number | null;
+}
 
-// See docs/ARKETA_ARCHITECTURE.md: reservations are nested under classes; 3-tier fetch (direct /reservations → DB-driven → classes-based).
-async function fetchAllReservations(
+/**
+ * ClassReservationDTO from GET /{partnerId}/classes/{classId}/reservations
+ * Lighter data, used for single-class mode.
+ */
+interface ClassReservationDTO {
+  id: string;
+  client_id: string;
+  class_id: string;
+  client: { first_name: string; last_name: string; email: string | null; phone: string | null } | null;
+  status: string;
+  checked_in: boolean;
+  checked_in_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  spot_id: string | null;
+  spot_name: string | null;
+}
+
+/** Extract class_date from class_time (ISO) in PST timezone */
+function extractClassDate(classTime: string | null): string | null {
+  if (!classTime) return null;
+  try {
+    const dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    return dtf.format(new Date(classTime));
+  } catch {
+    return null;
+  }
+}
+
+/** Decode cursor to avoid double-encoding by URL.searchParams.set() */
+function decodeCursor(cursor: string): string {
+  try { return decodeURIComponent(cursor); } catch { return cursor; }
+}
+
+/**
+ * Fetch reservations via flat GET /{partnerId}/reservations endpoint.
+ * Uses created_min/created_max for date filtering.
+ * For daily sync, we set created_min broadly to catch reservations for upcoming classes.
+ */
+async function fetchReservationsFlat(
   partnerId: string,
   headers: Record<string, string>,
-  startDate: string,
-  endDate: string,
-  limit: number,
-  supabase: ReturnType<typeof createClient>,
-  classId?: string,
-  logger?: ReturnType<typeof createSyncLogger>
-): Promise<{ reservations: ReservationWithMeta[]; totalAttempts: number; pagesProcessed: number }> {
-  let totalAttempts = 0;
-  let pagesProcessed = 0;
+  createdMin: string | null,
+  createdMax: string | null,
+  startTime: number,
+  logger: ReturnType<typeof createSyncLogger>,
+): Promise<{ rows: ReservationsReportRow[]; pages: number; attempts: number }> {
+  const allRows: ReservationsReportRow[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  let attempts = 0;
 
-  // If a specific classId is provided, fetch reservations for that class only
-  if (classId) {
-    const allRes: ReservationWithMeta[] = [];
-    let resCursor: string | undefined;
-    do {
-      const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${classId}/reservations`);
-      url.searchParams.set('limit', String(limit));
-      if (resCursor) url.searchParams.set('start_after', resCursor);
-      logger?.info(`Fetching reservations for class ${classId}...`);
+  logger.info(`Flat endpoint: fetching reservations (created_min=${createdMin}, created_max=${createdMax})`);
 
-      const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-      totalAttempts += attempts;
-      pagesProcessed++;
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Arketa API error: ${response.status} - ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      const page: ArketaReservation[] = Array.isArray(responseData)
-        ? responseData
-        : (responseData.items || responseData.data || responseData.reservations || responseData.bookings || []);
-      allRes.push(...(page as ReservationWithMeta[]));
-      resCursor = responseData.pagination?.nextCursor ?? (page.length === limit ? page[page.length - 1]?.id : undefined);
-    } while (resCursor);
-
-    return { reservations: allRes, totalAttempts, pagesProcessed };
-  }
-
-  // Tier 1: Try direct /reservations (and fallback variants) with pagination
-  // TODO: If Arketa adds a flat date-range reservations endpoint (e.g. /reservations?start_date&end_date),
-  // add it here as the primary Tier 1 candidate to decouple reservation fetching from class discovery.
-  const tier1Endpoints = [
-    `${ARKETA_URLS.prod}/${partnerId}/reservations`,
-    `${ARKETA_URLS.prod}/${partnerId}/bookings`,
-    `${ARKETA_URLS.prod}/${partnerId}/schedule/reservations`,
-  ];
-  for (const tier1Base of tier1Endpoints) {
-    try {
-      const allTier1: ReservationWithMeta[] = [];
-      let tier1Cursor: string | undefined;
-      let tier1Failed = false;
-      do {
-        const url = new URL(tier1Base);
-        url.searchParams.set('start_date', startDate);
-        url.searchParams.set('end_date', endDate);
-        url.searchParams.set('limit', String(limit));
-        if (tier1Cursor) url.searchParams.set('start_after', tier1Cursor);
-
-        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-        totalAttempts += attempts;
-        pagesProcessed++;
-        if (!response.ok) { tier1Failed = true; break; }
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : (data.items || data.data || data.reservations || data.bookings || []);
-        if (list.length === 0) break;
-        const withMeta: ReservationWithMeta[] = list.map((r: ArketaReservation) => ({
-          ...r,
-          class_id: r.class_id ?? (r as { classId?: string }).classId,
-          class_name: (r as ReservationWithMeta).class_name ?? null,
-          class_date: (r as ReservationWithMeta).class_date ?? (r.start_time ? new Date(r.start_time).toISOString().split('T')[0] : null),
-        }));
-        allTier1.push(...withMeta);
-        tier1Cursor = data.pagination?.nextCursor ?? (list.length === limit ? list[list.length - 1]?.id : undefined);
-      } while (tier1Cursor);
-
-      if (!tier1Failed && allTier1.length > 0) {
-        logger?.info(`Tier 1 returned ${allTier1.length} reservations`);
-        return { reservations: allTier1, totalAttempts, pagesProcessed };
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  // Tier 2: Per-class reservations (DB-driven from local arketa_classes for the date range)
-  logger?.info(`Tier 2: Fetching per-class reservations for ${startDate} to ${endDate}...`);
-
-  // Get class IDs from local DB for the date range
-  const { data: classRows } = await supabase
-    .from('arketa_classes')
-    .select('external_id, name, start_time, class_date')
-    .gte('class_date', startDate)
-    .lte('class_date', endDate);
-
-  let classes = (classRows ?? []) as { external_id: string; name?: string; start_time?: string; class_date?: string }[];
-  logger?.info(`Found ${classes.length} classes in DB for date range`);
-
-  // Tier 3: If DB has 0 classes, discover class IDs from the API using smart strategies
-  if (classes.length === 0) {
-    logger?.info(`Tier 3: No classes in DB for ${startDate}–${endDate}, trying API discovery...`);
-
-    const parseClassList = (data: unknown): Record<string, unknown>[] => {
-      if (Array.isArray(data)) return data;
-      const obj = data as Record<string, unknown>;
-      return (obj.items || obj.data || obj.classes || []) as Record<string, unknown>[];
-    };
-
-    const mapClassRecord = (c: Record<string, unknown>) => {
-      const classDate = (c.start_date || c.startDate || c.date || c.class_date ||
-        (c.start_time ? new Date(c.start_time as string).toISOString().split('T')[0] : null)) as string | null;
-      return {
-        external_id: String(c.id || c.external_id || ''),
-        name: (c.name || c.title || 'Unknown Class') as string,
-        start_time: (c.start_time || c.startTime || '') as string,
-        class_date: classDate,
-      };
-    };
-
-    const filterToRange = (list: ReturnType<typeof mapClassRecord>[]) =>
-      list.filter(c => c.class_date && c.external_id && c.class_date >= startDate && c.class_date <= endDate);
-
-    // Accumulate results across ALL strategies, then deduplicate
-    const discoveredMap = new Map<string, ReturnType<typeof mapClassRecord>>();
-    const addDiscovered = (items: ReturnType<typeof mapClassRecord>[], label: string) => {
-      let added = 0;
-      for (const item of items) {
-        const key = `${item.external_id}::${item.class_date}`;
-        if (!discoveredMap.has(key)) {
-          discoveredMap.set(key, item);
-          added++;
-        }
-      }
-      logger?.info(`${label}: ${added} new unique classes added (${items.length} total matched, ${discoveredMap.size} cumulative)`);
-    };
-
-    /**
-     * Decode cursor to avoid double-encoding by URL.searchParams.set().
-     * API returns e.g. "classes%2FP8k22..." which must be decoded first.
-     */
-    const decodeCursor = (cursor: string): string => {
-      try { return decodeURIComponent(cursor); } catch { return cursor; }
-    };
-
-    // Strategy A: Try reverse sort params to get newest classes first
-    const sortParams = [
-      { sort: 'created_at', order: 'desc' },
-      { sort: 'start_time', order: 'desc' },
-      { sort_by: 'date', sort_order: 'desc' },
-      { order_by: 'start_date', direction: 'desc' },
-    ];
-
-    for (const params of sortParams) {
-      try {
-        const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-        url.searchParams.set('limit', '500');
-        for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-
-        logger?.info(`Tier 3A: Trying reverse sort with ${JSON.stringify(params)}...`);
-        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-        totalAttempts += attempts;
-
-        if (response.ok) {
-          const data = await response.json();
-          const all = parseClassList(data).map(mapClassRecord);
-          const matched = filterToRange(all);
-
-          const firstDate = all[0]?.class_date;
-          const lastDate = all[all.length - 1]?.class_date;
-          const isReversed = firstDate && lastDate && firstDate > lastDate;
-
-          logger?.info(`Tier 3A: sort=${JSON.stringify(params)} → ${all.length} classes, range ${firstDate}–${lastDate}, reversed=${isReversed}, ${matched.length} in target window`);
-
-          if (matched.length > 0) {
-            addDiscovered(matched, `Tier 3A (${JSON.stringify(params)})`);
-          }
-          // If not reversed, this sort param had no effect — try next
-          if (!isReversed) continue;
-        } else {
-          logger?.info(`Tier 3A: sort ${JSON.stringify(params)} returned ${response.status}, trying next...`);
-        }
-      } catch {
-        continue;
-      }
+  do {
+    // Wall-clock timeout
+    if ((Date.now() - startTime) >= WALL_CLOCK_TIMEOUT_MS) {
+      logger.warn(`Approaching timeout after ${pages} pages, stopping`);
+      break;
     }
 
-    // Strategy B: Cursor skip-ahead with PAGINATION using full nextStartAfterId
-    {
-      const { data: cursorRow } = await supabase
-        .from('arketa_classes')
-        .select('external_id, class_date')
-        .lt('class_date', startDate)
-        .order('class_date', { ascending: false })
-        .limit(1);
+    const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/reservations`);
+    url.searchParams.set('limit', String(PAGE_LIMIT));
+    if (createdMin) url.searchParams.set('created_min', createdMin);
+    if (createdMax) url.searchParams.set('created_max', createdMax);
+    if (cursor) url.searchParams.set('start_after', decodeCursor(cursor));
 
-      const skipCursor = (cursorRow as { external_id: string; class_date: string }[] | null)?.[0];
+    const { response, attempts: fetchAttempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+    attempts += fetchAttempts;
+    pages++;
 
-      if (skipCursor) {
-        logger?.info(`Tier 3B: Cursor skip-ahead from class ${skipCursor.external_id} (date ${skipCursor.class_date})...`);
-
-        // Use the full cursor format: classes/{external_id}
-        let currentCursor = `classes/${skipCursor.external_id}`;
-        let pageCount = 0;
-        const MAX_DISCOVERY_PAGES = 30;
-        let pastTargetRange = false;
-
-        while (pageCount < MAX_DISCOVERY_PAGES && !pastTargetRange) {
-          try {
-            const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-            url.searchParams.set('limit', '100');
-            url.searchParams.set('start_after', decodeCursor(currentCursor));
-
-            const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-            totalAttempts += attempts;
-            pageCount++;
-
-            if (!response.ok) {
-              logger?.warn(`Tier 3B: Page ${pageCount} returned ${response.status}, stopping`);
-              break;
-            }
-
-            const data = await response.json();
-            const pageClasses = parseClassList(data).map(mapClassRecord);
-
-            if (pageClasses.length === 0) {
-              logger?.info(`Tier 3B: Page ${pageCount} returned 0 classes, done`);
-              break;
-            }
-
-            const matched = filterToRange(pageClasses);
-            if (matched.length > 0) {
-              addDiscovered(matched, `Tier 3B page ${pageCount}`);
-            }
-
-            // Check if we've gone past the target range
-            const lastClassDate = pageClasses[pageClasses.length - 1]?.class_date;
-            if (lastClassDate && lastClassDate > endDate) {
-              logger?.info(`Tier 3B: Last class date ${lastClassDate} > endDate ${endDate}, stopping`);
-              pastTargetRange = true;
-              break;
-            }
-
-            // Get next cursor from pagination response
-            const obj = data as Record<string, unknown>;
-            const pagination = obj.pagination as Record<string, unknown> | undefined;
-            const nextCursor = (pagination?.nextStartAfterId ?? pagination?.nextCursor) as string | undefined;
-            const hasMore = pagination?.hasMore as boolean | undefined;
-
-            if (!nextCursor || hasMore === false) {
-              logger?.info(`Tier 3B: No more pages after page ${pageCount}`);
-              break;
-            }
-
-            currentCursor = nextCursor;
-
-            // Stop if fewer than limit returned (last page)
-            if (pageClasses.length < 100) break;
-          } catch (err) {
-            logger?.warn(`Tier 3B: Page ${pageCount} failed`, err as object);
-            break;
-          }
-        }
-
-        logger?.info(`Tier 3B: Completed ${pageCount} pages`);
-      } else {
-        logger?.info('Tier 3B: No earlier class found in DB for cursor skip-ahead');
-      }
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Flat endpoint HTTP ${response.status}: ${errorText.slice(0, 200)}`);
     }
 
-    // Strategy C: Plain first page fetch (always runs to catch anything missed)
-    {
-      logger?.info('Tier 3C: Fetching plain first page...');
-      try {
-        const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes`);
-        url.searchParams.set('limit', '500');
-        const { response, attempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
-        totalAttempts += attempts;
+    const data = await response.json();
+    const items: ReservationsReportRow[] = data.items ?? [];
+    allRows.push(...items);
 
-        if (response.ok) {
-          const data = await response.json();
-          const all = parseClassList(data).map(mapClassRecord);
-          const matched = filterToRange(all);
-          if (matched.length > 0) {
-            addDiscovered(matched, 'Tier 3C');
-          }
-          logger?.info(`Tier 3C: Plain fetch returned ${all.length} classes, ${matched.length} in target window`);
-        }
-      } catch {
-        logger?.warn('Tier 3C: Plain fetch failed');
-      }
-    }
+    const pagination = data.pagination as { nextStartAfterId?: string; hasMore?: boolean } | undefined;
+    const hasMore = pagination?.hasMore ?? false;
+    cursor = pagination?.nextStartAfterId ?? undefined;
 
-    let discovered = [...discoveredMap.values()];
-    logger?.info(`Tier 3 total: ${discovered.length} unique classes discovered across all strategies`);
+    logger.info(`Page ${pages}: ${items.length} items, hasMore=${hasMore}`);
 
-    // Persist discovered classes as stubs
-    if (discovered.length > 0) {
-      classes = discovered as any;
-      const stubRows = discovered.map(c => ({
-        external_id: c.external_id,
-        name: c.name,
-        start_time: c.start_time || new Date().toISOString(),
-        class_date: c.class_date ?? undefined,
-        status: 'discovered_via_reservation_sync',
-        synced_at: new Date().toISOString(),
-      }));
-      const { error: stubErr } = await supabase
-        .from('arketa_classes')
-        .upsert(stubRows as any, { onConflict: 'external_id,class_date' });
-      if (stubErr) {
-        logger?.warn('Failed to insert stub classes', stubErr);
-      } else {
-        logger?.info(`Inserted ${stubRows.length} stub classes into arketa_classes`);
-      }
-    } else {
-      logger?.warn(`Tier 3: All strategies exhausted — no classes found for ${startDate}–${endDate}`);
-    }
-  }
+    if (!hasMore || !cursor || items.length < PAGE_LIMIT) break;
+  } while (true);
 
-  logger?.info(`Fetching reservations for ${classes.length} classes...`);
-
-  const allReservations: ReservationWithMeta[] = [];
-  for (const cls of classes) {
-    const cid = cls.external_id;
-    const className = cls.name || 'Unknown Class';
-    const classDate = cls.class_date ?? (cls.start_time ? new Date(cls.start_time).toISOString().split('T')[0] : undefined);
-
-    let resCursor: string | undefined;
-    do {
-      const resUrl = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${cid}/reservations`);
-      resUrl.searchParams.set('limit', String(limit));
-      if (resCursor) resUrl.searchParams.set('start_after', resCursor);
-
-      try {
-        const { response, attempts } = await fetchWithRetry(resUrl.toString(), { method: 'GET', headers });
-        totalAttempts += attempts;
-        pagesProcessed++;
-
-        if (!response.ok) {
-          if (response.status === 404) break;
-          logger?.warn(`Error fetching reservations for class ${cid}: ${response.status}`);
-          break;
-        }
-
-        const resData = await response.json();
-        const reservations: ArketaReservation[] = Array.isArray(resData)
-          ? resData
-          : (resData.items || resData.data || resData.reservations || resData.bookings || []);
-
-        for (const res of reservations) {
-          if (!res.class_id) res.class_id = cid;
-          allReservations.push({ ...res, class_name: className, class_date: classDate });
-        }
-        resCursor = resData.pagination?.nextCursor ?? (reservations.length === limit ? reservations[reservations.length - 1]?.id : undefined);
-      } catch (err) {
-        logger?.warn(`Failed to fetch reservations for class ${cid}`);
-        break;
-      }
-    } while (resCursor);
-  }
-
-  logger?.info(`Total fetched: ${allReservations.length} reservations from ${classes.length} classes`);
-
-  return { reservations: allReservations, totalAttempts, pagesProcessed };
+  logger.info(`Flat endpoint: ${allRows.length} total reservations in ${pages} pages`);
+  return { rows: allRows, pages, attempts };
 }
+
+/**
+ * Fetch reservations for a single class via GET /{partnerId}/classes/{classId}/reservations.
+ * Used when class_id is explicitly specified.
+ */
+async function fetchReservationsPerClass(
+  partnerId: string,
+  classId: string,
+  headers: Record<string, string>,
+  startTime: number,
+  logger: ReturnType<typeof createSyncLogger>,
+): Promise<{ rows: ClassReservationDTO[]; pages: number; attempts: number }> {
+  const allRows: ClassReservationDTO[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  let attempts = 0;
+
+  do {
+    if ((Date.now() - startTime) >= WALL_CLOCK_TIMEOUT_MS) {
+      logger.warn(`Approaching timeout after ${pages} pages (per-class), stopping`);
+      break;
+    }
+
+    const url = new URL(`${ARKETA_URLS.prod}/${partnerId}/classes/${classId}/reservations`);
+    url.searchParams.set('limit', String(PAGE_LIMIT));
+    if (cursor) url.searchParams.set('start_after', decodeCursor(cursor));
+
+    const { response, attempts: fetchAttempts } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+    attempts += fetchAttempts;
+    pages++;
+
+    if (!response.ok) {
+      if (response.status === 404) break; // Class not found
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Per-class endpoint HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const items: ClassReservationDTO[] = data.items ?? [];
+    allRows.push(...items);
+
+    const pagination = data.pagination as { nextStartAfterId?: string; hasMore?: boolean } | undefined;
+    const hasMore = pagination?.hasMore ?? false;
+    cursor = pagination?.nextStartAfterId ?? undefined;
+
+    if (!hasMore || !cursor || items.length < PAGE_LIMIT) break;
+  } while (true);
+
+  return { rows: allRows, pages, attempts };
+}
+
+/**
+ * Map flat ReservationsReportRow to staging format.
+ */
+function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
+  const classDate = extractClassDate(row.class_time);
+  const isCheckedIn = row.checked_in === true ||
+    ['ATTENDED', 'attended', 'checked_in', 'completed', 'COMPLETED'].includes(row.status || '');
+
+  return {
+    reservation_id: row.reservation_id,
+    client_id: row.client_id ?? null,
+    class_id: row.class_id ?? null,
+    class_name: row.class_name ?? null,
+    class_date: classDate,
+    reservation_type: row.reservation_type ?? 'class',
+    status: row.status?.toLowerCase() ?? 'booked',
+    checked_in: isCheckedIn,
+    checked_in_at: row.checked_in_at ?? null,
+    late_cancel: row.late_cancel ?? false,
+    gross_amount_paid: row.gross_amount_paid ?? 0,
+    net_amount_paid: row.net_amount_paid ?? 0,
+    created_at_api: row.class_time ?? null,
+    updated_at_api: null, // Not in flat endpoint
+    spot_id: null, // Not in flat endpoint
+    spot_name: null, // Not in flat endpoint
+    client_email: row.client_email ?? null,
+    client_first_name: row.first_name ?? null,
+    client_last_name: row.last_name ?? null,
+    client_phone: null, // Not in flat endpoint
+    experience_type: row.experience_type ?? null,
+    purchase_id: row.purchase_id ?? null,
+    raw_data: row,
+    sync_batch_id: syncBatchId,
+  };
+}
+
+/**
+ * Map per-class ClassReservationDTO to staging format.
+ */
+function mapPerClassRowToStaging(
+  row: ClassReservationDTO,
+  classId: string,
+  className: string | null,
+  classDate: string | null,
+  syncBatchId: string,
+) {
+  const isCheckedIn = row.checked_in === true ||
+    ['ATTENDED', 'attended', 'checked_in', 'completed', 'COMPLETED'].includes(row.status || '');
+
+  return {
+    reservation_id: row.id,
+    client_id: row.client_id ?? null,
+    class_id: classId,
+    class_name: className,
+    class_date: classDate,
+    reservation_type: 'class',
+    status: row.status?.toLowerCase() ?? 'booked',
+    checked_in: isCheckedIn,
+    checked_in_at: row.checked_in_at ?? null,
+    late_cancel: false,
+    gross_amount_paid: 0,
+    net_amount_paid: 0,
+    created_at_api: row.created_at ?? null,
+    updated_at_api: row.updated_at ?? null,
+    spot_id: row.spot_id ?? null,
+    spot_name: row.spot_name ?? null,
+    client_email: row.client?.email ?? null,
+    client_first_name: row.client?.first_name ?? null,
+    client_last_name: row.client?.last_name ?? null,
+    client_phone: row.client?.phone ?? null,
+    experience_type: null,
+    purchase_id: null,
+    raw_data: row,
+    sync_batch_id: syncBatchId,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Main handler
+// ═══════════════════════════════════════════════════════════════════════
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
-
   const corsHeaders = getCorsHeaders(req);
 
   try {
@@ -444,66 +340,134 @@ Deno.serve(async (req) => {
     defaultEnd.setDate(defaultEnd.getDate() + 7);
     const startDate = body.startDate || body.start_date || defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate || body.end_date || defaultEnd.toISOString().split('T')[0];
-    const limit = body.limit || 500;
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);
 
-    // Reservations endpoint uses API key as Bearer token
+    // Auth: API key works as both Bearer and X-API-Key per docs
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${ARKETA_API_KEY}`,
       'Content-Type': 'application/json',
     };
 
-    // Fetch all reservations with pagination
-    const { reservations, totalAttempts, pagesProcessed } = await fetchAllReservations(
-      ARKETA_PARTNER_ID,
-      headers,
-      startDate,
-      endDate,
-      limit,
-      supabase as any,
-      body.class_id,
-      logger
-    );
-
-    logger.info(`Total fetched: ${reservations.length} reservations in ${pagesProcessed} page(s), ${totalAttempts} API attempt(s)`);
-
-    // Map to CSV fields only - write to staging
     const syncBatchId = crypto.randomUUID();
-    const checkedIn = (r: ArketaReservation) => r.checked_in === true || ['checked_in', 'ATTENDED', 'attended', 'completed', 'COMPLETED'].includes(r.status || '');
-    const stagingRows = reservations
-      .map((res) => {
-        const resWithClass = res as ArketaReservation & { class_name?: string; class_date?: string };
-        return {
-          client_id: ((v: unknown) => v != null ? String(v) : null)(res.client_id ?? res.client?.id),
-          reservation_id: String(res.id),
-          reservation_type: res.reservation_type ?? (res as { type?: string }).type ?? 'class',
-          class_id: String(res.class_id || ''),
-          class_name: resWithClass.class_name ?? (res as { class_name?: string }).class_name ?? null,
-          status: res.status || 'booked',
-          checked_in: checkedIn(res),
-          checked_in_at: res.checkedInAt || res.checked_in_at || null,
-          late_cancel: res.late_cancel ?? (res as { lateCancel?: boolean }).lateCancel ?? false,
-          gross_amount_paid: res.gross_amount_paid ?? (res as { grossAmountPaid?: number }).grossAmountPaid ?? (res as { amount?: number }).amount ?? 0,
-          net_amount_paid: res.net_amount_paid ?? (res as { netAmountPaid?: number }).netAmountPaid ?? (res as { amount?: number }).amount ?? 0,
-          class_date: resWithClass.class_date ?? (res as { class_date?: string }).class_date ?? null,
-          created_at_api: res.created_at ?? null,
-          updated_at_api: res.updated_at ?? (res as { updatedAt?: string }).updatedAt ?? null,
-          spot_id: res.spot_id ?? (res as { spotId?: string }).spotId ?? null,
-          spot_name: res.spot_name ?? (res as { spotName?: string }).spotName ?? null,
-          client_email: res.client?.email ?? null,
-          client_first_name: res.client?.first_name ?? res.client?.firstName ?? null,
-          client_last_name: res.client?.last_name ?? res.client?.lastName ?? null,
-          client_phone: res.client?.phone ?? null,
-          sync_batch_id: syncBatchId,
-          raw_data: res,
-        };
-      })
-      .filter((r) => r.reservation_id);
+    let stagingRows: ReturnType<typeof mapFlatRowToStaging>[] = [];
+    let totalFetched = 0;
+    let pagesProcessed = 0;
+    let totalAttempts = 0;
+    let fetchMode: 'flat' | 'per-class' = 'flat';
 
-    // Identify rows with no matching class_id and auto-upsert stubs for unknown classes
-    const classIdsInBatch = [...new Set(stagingRows.map((r) => r.class_id).filter((id): id is string => Boolean(id && id.trim())))];
-    let knownClassIds = new Set<string>();
+    // ── Single class mode ─────────────────────────────────────────────
+    if (body.class_id) {
+      fetchMode = 'per-class';
+      logger.info(`Single-class mode: fetching reservations for class ${body.class_id}`);
+
+      // Look up class metadata from DB
+      const { data: classRow } = await supabase
+        .from('arketa_classes')
+        .select('name, class_date')
+        .eq('external_id', body.class_id)
+        .limit(1)
+        .maybeSingle();
+
+      const { rows, pages, attempts } = await fetchReservationsPerClass(
+        ARKETA_PARTNER_ID, body.class_id, headers, startTime, logger,
+      );
+      totalFetched = rows.length;
+      pagesProcessed = pages;
+      totalAttempts = attempts;
+
+      stagingRows = rows.map(r => mapPerClassRowToStaging(
+        r, body.class_id!, classRow?.name ?? null, classRow?.class_date ?? null, syncBatchId,
+      ));
+    }
+    // ── Flat endpoint (primary) ───────────────────────────────────────
+    else {
+      fetchMode = 'flat';
+
+      // For daily sync (default -7 to +7), we use a broad created_min window
+      // to catch reservations created for classes in the target range.
+      // For backfill, the caller sets explicit start_date/end_date.
+      const createdMin = `${startDate}T00:00:00.000Z`;
+      const createdMax = `${endDate}T23:59:59.999Z`;
+
+      const { rows, pages, attempts } = await fetchReservationsFlat(
+        ARKETA_PARTNER_ID, headers, createdMin, createdMax, startTime, logger,
+      );
+      totalFetched = rows.length;
+      pagesProcessed = pages;
+      totalAttempts = attempts;
+
+      // Map ReservationsReportRow → staging format
+      stagingRows = rows
+        .filter(r => r.reservation_id) // Must have reservation_id
+        .map(r => mapFlatRowToStaging(r, syncBatchId));
+
+      logger.info(`Flat endpoint mapped ${stagingRows.length} rows to staging`);
+
+      // If flat returned 0 results, fall back to per-class using DB classes
+      if (stagingRows.length === 0) {
+        logger.info(`Flat endpoint returned 0, falling back to per-class for ${startDate}–${endDate}`);
+        fetchMode = 'per-class';
+
+        const { data: classRows } = await supabase
+          .from('arketa_classes')
+          .select('external_id, name, class_date')
+          .gte('class_date', startDate)
+          .lte('class_date', endDate);
+
+        const classes = (classRows ?? []) as { external_id: string; name: string; class_date: string }[];
+        logger.info(`Found ${classes.length} classes in DB for fallback`);
+
+        for (const cls of classes) {
+          if ((Date.now() - startTime) >= WALL_CLOCK_TIMEOUT_MS) {
+            logger.warn('Approaching timeout during per-class fallback, stopping');
+            break;
+          }
+
+          try {
+            const { rows: classRes, pages: p, attempts: a } = await fetchReservationsPerClass(
+              ARKETA_PARTNER_ID, cls.external_id, headers, startTime, logger,
+            );
+            pagesProcessed += p;
+            totalAttempts += a;
+            totalFetched += classRes.length;
+
+            for (const r of classRes) {
+              stagingRows.push(mapPerClassRowToStaging(r, cls.external_id, cls.name, cls.class_date, syncBatchId));
+            }
+          } catch (err) {
+            logger.warn(`Failed to fetch reservations for class ${cls.external_id}: ${err}`);
+          }
+        }
+
+        logger.info(`Per-class fallback: ${stagingRows.length} total reservations from ${classes.length} classes`);
+      }
+    }
+
+    // ── Deduplicate by reservation_id within batch ────────────────────
+    const seenReservations = new Map<string, typeof stagingRows[0]>();
+    const duplicateRecords: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }> = [];
+
+    for (const row of stagingRows) {
+      const key = `${row.reservation_id}:${row.sync_batch_id}`;
+      if (seenReservations.has(key)) {
+        duplicateRecords.push({
+          api_name: 'arketa_reservations',
+          record_id: row.reservation_id!,
+          secondary_id: row.class_id,
+          reason: 'duplicate_reservation_id',
+          details: { class_name: row.class_name, class_date: row.class_date },
+        });
+        continue;
+      }
+      seenReservations.set(key, row);
+    }
+    const dedupedRows = [...seenReservations.values()];
+    const deduplicatedCount = duplicateRecords.length;
+
+    // ── Auto-create stub classes for unknown class_ids ────────────────
+    const classIdsInBatch = [...new Set(dedupedRows.map(r => r.class_id).filter((id): id is string => Boolean(id?.trim())))];
+    const knownClassIds = new Set<string>();
     if (classIdsInBatch.length > 0) {
       const CHUNK = 500;
       for (let i = 0; i < classIdsInBatch.length; i += CHUNK) {
@@ -519,19 +483,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Find reservations with unknown class_ids and auto-create stub class records
-    const unknownClassRows = stagingRows.filter(
-      (r) => Boolean(r.class_id?.trim()) && !knownClassIds.has(r.class_id)
-    );
-    const noMatchingClassIdCount = unknownClassRows.length;
+    const unknownClassRows = dedupedRows.filter(r => Boolean(r.class_id?.trim()) && !knownClassIds.has(r.class_id!));
     if (unknownClassRows.length > 0) {
-      // Build stub class records from reservation metadata (dedupe by external_id+class_date)
       const stubMap = new Map<string, { external_id: string; name: string; start_time: string; class_date: string; status: string; synced_at: string }>();
       for (const r of unknownClassRows) {
         const key = `${r.class_id}::${r.class_date ?? 'unknown'}`;
         if (!stubMap.has(key) && r.class_date) {
           stubMap.set(key, {
-            external_id: r.class_id,
+            external_id: r.class_id!,
             name: r.class_name || 'Unknown Class',
             start_time: `${r.class_date}T00:00:00+00`,
             class_date: r.class_date,
@@ -546,124 +505,73 @@ Deno.serve(async (req) => {
           .from('arketa_classes')
           .upsert(stubRows as any, { onConflict: 'external_id,class_date' });
         if (stubErr) {
-          logger?.warn(`Failed to insert ${stubRows.length} stub classes: ${stubErr.message}`);
+          logger.warn(`Failed to insert ${stubRows.length} stub classes: ${stubErr.message}`);
         } else {
-          logger?.info(`Auto-created ${stubRows.length} stub classes for unknown class_ids`);
-          // Add newly created stubs to known set so their reservations get inserted
+          logger.info(`Auto-created ${stubRows.length} stub classes for unknown class_ids`);
           for (const s of stubRows) knownClassIds.add(s.external_id);
         }
       }
     }
 
+    // ── Log skipped records ──────────────────────────────────────────
     const insertSkippedRecords = async (records: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }>) => {
       if (records.length === 0) return;
       const CHUNK = 500;
       for (let i = 0; i < records.length; i += CHUNK) {
         const chunk = records.slice(i, i + CHUNK);
         const { error } = await supabase.from('api_sync_skipped_records').insert(chunk);
-        if (error) {
-          logger?.warn(`Failed to insert skipped-record chunk: ${error.message}`);
-        }
+        if (error) logger.warn(`Failed to insert skipped-record chunk: ${error.message}`);
       }
     };
 
-    // Log rows whose class_id was unknown in arketa_classes at sync time.
     if (unknownClassRows.length > 0) {
-      const unknownClassSkippedRecords = unknownClassRows.map((r) => ({
+      await insertSkippedRecords(unknownClassRows.map(r => ({
         api_name: 'arketa_reservations',
-        record_id: r.reservation_id,
-        secondary_id: r.class_id || null,
+        record_id: r.reservation_id!,
+        secondary_id: r.class_id,
         reason: 'no_matching_class_id',
-        details: {
-          class_name: r.class_name,
-          class_date: r.class_date,
-          client_id: r.client_id,
-          auto_stub_created: true,
-        } as Record<string, unknown>,
-      }));
-      await insertSkippedRecords(unknownClassSkippedRecords);
-      logger?.info(`Logged ${unknownClassRows.length} reservations with no matching class_id`);
+        details: { class_name: r.class_name, class_date: r.class_date, auto_stub_created: true } as Record<string, unknown>,
+      })));
     }
 
-    // Log rows with empty class_id (truly invalid)
-    const skippedRows = stagingRows.filter((r) => !r.class_id?.trim());
-    if (skippedRows.length > 0) {
-      const skippedRecords = skippedRows.map((r) => ({
+    const emptyClassIdRows = dedupedRows.filter(r => !r.class_id?.trim());
+    if (emptyClassIdRows.length > 0) {
+      await insertSkippedRecords(emptyClassIdRows.map(r => ({
         api_name: 'arketa_reservations',
-        record_id: r.reservation_id,
-        secondary_id: r.class_id || null,
+        record_id: r.reservation_id!,
+        secondary_id: null,
         reason: 'empty_class_id',
-        details: {
-          class_name: r.class_name,
-          class_date: r.class_date,
-          client_id: r.client_id,
-        } as Record<string, unknown>,
-      }));
-      await insertSkippedRecords(skippedRecords);
-      logger?.info(`Logged ${skippedRows.length} reservations with empty class_id to api_sync_skipped_records`);
+        details: { class_name: r.class_name, class_date: r.class_date } as Record<string, unknown>,
+      })));
     }
-
-    // Insert all rows with a reservation_id — including those without a class_id.
-    // Empty-class_id rows are still logged above for observability but are no longer dropped.
-    let rowsToInsert = stagingRows.filter(
-      (r) => Boolean(r.reservation_id?.trim())
-    );
-
-    // Staging table has UNIQUE(reservation_id, sync_batch_id): one row per reservation per batch.
-    const seenByReservation = new Map<string, typeof rowsToInsert[0]>();
-    const duplicateSkippedRecords: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }> = [];
-    for (const r of rowsToInsert) {
-      const key = `${r.reservation_id}:${r.sync_batch_id}`;
-      if (seenByReservation.has(key)) {
-        duplicateSkippedRecords.push({
-          api_name: 'arketa_reservations',
-          record_id: r.reservation_id,
-          secondary_id: r.class_id || null,
-          reason: 'duplicate_reservation_id',
-          details: {
-            class_name: r.class_name,
-            class_date: r.class_date,
-            sync_batch_id: r.sync_batch_id,
-          },
-        });
-        continue;
-      }
-      seenByReservation.set(key, r);
-    }
-    const deduplicatedCount = duplicateSkippedRecords.length;
-    rowsToInsert = [...seenByReservation.values()];
 
     if (deduplicatedCount > 0) {
-      await insertSkippedRecords(duplicateSkippedRecords);
-      logger?.info(`Deduplicated ${deduplicatedCount} duplicate reservation_id entries`);
+      await insertSkippedRecords(duplicateRecords);
+      logger.info(`Deduplicated ${deduplicatedCount} duplicate reservation_id entries`);
     }
 
+    // ── Insert to staging ────────────────────────────────────────────
+    const rowsToInsert = dedupedRows.filter(r => Boolean(r.reservation_id?.trim()));
     let failedCount = 0;
     let insertError: string | null = null;
-    const failedSkippedRecords: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }> = [];
+    const failedSkippedRecords: typeof duplicateRecords = [];
 
     if (rowsToInsert.length > 0) {
-      // Insert in chunks of 50 to avoid payload size limits
       const CHUNK_SIZE = 50;
       for (let i = 0; i < rowsToInsert.length; i += CHUNK_SIZE) {
         const chunk = rowsToInsert.slice(i, i + CHUNK_SIZE);
         const { error } = await supabase.from('arketa_reservations_staging').insert(chunk);
         if (error) {
           insertError = error.message || JSON.stringify(error);
-          logger.error(`Failed to insert chunk ${Math.floor(i / CHUNK_SIZE) + 1} to staging: ${insertError} (code: ${error.code}, details: ${error.details}, hint: ${error.hint})`);
+          logger.error(`Failed to insert chunk ${Math.floor(i / CHUNK_SIZE) + 1} to staging: ${insertError}`);
           failedCount += chunk.length;
-
           for (const failedRow of chunk) {
             failedSkippedRecords.push({
               api_name: 'arketa_reservations',
-              record_id: failedRow.reservation_id,
-              secondary_id: failedRow.class_id || null,
+              record_id: failedRow.reservation_id!,
+              secondary_id: failedRow.class_id,
               reason: 'staging_insert_failed',
-              details: {
-                class_name: failedRow.class_name,
-                class_date: failedRow.class_date,
-                error: insertError,
-              },
+              details: { class_name: failedRow.class_name, class_date: failedRow.class_date, error: insertError } as Record<string, unknown>,
             });
           }
         }
@@ -676,41 +584,42 @@ Deno.serve(async (req) => {
 
     const syncedCount = rowsToInsert.length - failedCount;
 
+    // ── Logging ──────────────────────────────────────────────────────
     const durationMs = Date.now() - startTime;
     await logSyncMetrics(supabase, {
       syncType: 'arketa_reservations',
       startedAt: new Date(startTime).toISOString(),
       completedAt: new Date().toISOString(),
       durationMs,
-      recordsFetched: reservations.length,
+      recordsFetched: totalFetched,
       recordsSynced: syncedCount,
       recordsFailed: failedCount,
       retryCount: totalAttempts - pagesProcessed,
     });
+
     await supabase
       .from('api_sync_status')
       .upsert({
         api_name: 'arketa_reservations',
         last_sync_at: new Date().toISOString(),
         last_sync_success: failedCount === 0,
-        last_records_processed: reservations.length,
+        last_records_processed: totalFetched,
         last_records_inserted: syncedCount,
       }, { onConflict: 'api_name' });
 
-    // Aggregate all skip reasons for api_logs
-    const totalSkipped = noMatchingClassIdCount + skippedRows.length + deduplicatedCount + failedCount;
+    const totalSkipped = unknownClassRows.length + emptyClassIdRows.length + deduplicatedCount + failedCount;
     const skipReasons: Record<string, number> = {};
-    if (noMatchingClassIdCount > 0) skipReasons.no_matching_class_id = noMatchingClassIdCount;
-    if (skippedRows.length > 0) skipReasons.empty_class_id = skippedRows.length;
+    if (unknownClassRows.length > 0) skipReasons.no_matching_class_id = unknownClassRows.length;
+    if (emptyClassIdRows.length > 0) skipReasons.empty_class_id = emptyClassIdRows.length;
     if (deduplicatedCount > 0) skipReasons.duplicate_reservation_id = deduplicatedCount;
     if (failedCount > 0) skipReasons.staging_insert_failed = failedCount;
 
     await logApiCall(supabase, {
       apiName: 'arketa_reservations',
-      endpoint: '/reservations',
+      endpoint: `/${fetchMode === 'flat' ? 'reservations' : 'classes/{id}/reservations'}`,
       syncSuccess: failedCount === 0,
       durationMs,
-      recordsProcessed: reservations.length,
+      recordsProcessed: totalFetched,
       recordsInserted: syncedCount,
       recordsSkipped: totalSkipped,
       skipReasons: totalSkipped > 0 ? skipReasons : undefined,
@@ -720,19 +629,16 @@ Deno.serve(async (req) => {
       parentLogId: body.parentLogId,
     });
 
-    // Refresh daily_schedule for the synced date range (after reservations are in staging; trigger will refresh again when sync-from-staging runs)
+    // Refresh daily schedule
     try {
       const refreshUrl = `${supabaseUrl}/functions/v1/refresh-daily-schedule`;
       await fetch(refreshUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
         body: JSON.stringify({ start_date: startDate, end_date: endDate }),
       });
     } catch (refreshErr) {
-      logger?.warn('Failed to call refresh-daily-schedule', refreshErr as object);
+      logger.warn('Failed to call refresh-daily-schedule', refreshErr as object);
     }
 
     return new Response(
@@ -741,12 +647,13 @@ Deno.serve(async (req) => {
         ...(insertError && { error: insertError }),
         data: {
           reservations_synced: syncedCount,
-          records_processed: reservations.length,
+          records_processed: totalFetched,
           records_inserted: syncedCount,
         },
-        totalFetched: reservations.length,
+        totalFetched,
         syncedCount,
         failedCount,
+        fetchMode,
         recordsSkipped: totalSkipped,
         skipReasons,
         dateRange: { startDate, endDate },
@@ -755,13 +662,11 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     const logger = createSyncLogger('arketa_reservations');
     logger.error('Sync failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
-    // Log failure to api_logs (need supabase client for this)
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -774,7 +679,7 @@ Deno.serve(async (req) => {
         recordsProcessed: 0,
         recordsInserted: 0,
         responseStatus: 500,
-        errorMessage: errorMessage,
+        errorMessage,
         triggeredBy: 'manual',
       });
     } catch (logError) {

@@ -71,8 +71,10 @@ export function getArketaApiKeyHeaders(apiKey: string): Record<string, string> {
  * Arketa API base URLs
  */
 export const ARKETA_URLS = {
-  prod: 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0',
-  dev: 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0',
+  /** Per API docs (Partner API Reference v0), production base URL */
+  prod: 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApiDev/v0',
+  /** Legacy URL — kept as fallback reference only */
+  legacy: 'https://us-central1-sutra-prod.cloudfunctions.net/partnerApi/v0',
 } as const;
 
 /**
@@ -81,8 +83,6 @@ export const ARKETA_URLS = {
 export function buildArketaUrl(
   partnerId: string,
   endpoint: string,
-  useDev = false
 ): string {
-  const baseUrl = useDev ? ARKETA_URLS.dev : ARKETA_URLS.prod;
-  return `${baseUrl}/${partnerId}/${endpoint}`;
+  return `${ARKETA_URLS.prod}/${partnerId}/${endpoint}`;
 }

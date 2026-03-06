@@ -1053,7 +1053,7 @@ export type Database = {
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
-          class_id: string
+          class_id: string | null
           class_name: string | null
           client_email: string | null
           client_first_name: string | null
@@ -1078,7 +1078,7 @@ export type Database = {
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
-          class_id: string
+          class_id?: string | null
           class_name?: string | null
           client_email?: string | null
           client_first_name?: string | null
@@ -1103,7 +1103,7 @@ export type Database = {
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
-          class_id?: string
+          class_id?: string | null
           class_name?: string | null
           client_email?: string | null
           client_first_name?: string | null

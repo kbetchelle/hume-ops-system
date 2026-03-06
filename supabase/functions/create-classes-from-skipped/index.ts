@@ -39,22 +39,34 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as { api_name?: string; record_ids?: string[] };
 
-    // Fetch skipped records with reason 'no_matching_class_id'
-    let query = (supabase as any)
-      .from('api_sync_skipped_records')
-      .select('*')
-      .eq('reason', 'no_matching_class_id')
-      .order('created_at', { ascending: false });
+    // Fetch ALL skipped records with reason 'no_matching_class_id' (paginate to avoid 1000-row default limit)
+    const PAGE_SIZE = 1000;
+    let allSkippedRows: any[] = [];
+    let page = 0;
+    while (true) {
+      let query = (supabase as any)
+        .from('api_sync_skipped_records')
+        .select('*')
+        .eq('reason', 'no_matching_class_id')
+        .order('created_at', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-    if (body.api_name && body.api_name !== 'all') {
-      query = query.eq('api_name', body.api_name);
-    }
-    if (body.record_ids?.length) {
-      query = query.in('id', body.record_ids);
-    }
+      if (body.api_name && body.api_name !== 'all') {
+        query = query.eq('api_name', body.api_name);
+      }
+      if (body.record_ids?.length) {
+        query = query.in('id', body.record_ids);
+      }
 
-    const { data: skippedRows, error: fetchErr } = await query;
-    if (fetchErr) throw new Error(`Failed to fetch skipped records: ${fetchErr.message}`);
+      const { data: batch, error: fetchErr } = await query;
+      if (fetchErr) throw new Error(`Failed to fetch skipped records: ${fetchErr.message}`);
+      if (!batch?.length) break;
+      allSkippedRows = allSkippedRows.concat(batch);
+      if (batch.length < PAGE_SIZE) break;
+      page++;
+    }
+    const skippedRows = allSkippedRows;
+    console.log(`[create-classes-from-skipped] Fetched ${skippedRows.length} total skipped records`);
     if (!skippedRows?.length) {
       return new Response(JSON.stringify({ success: true, message: 'No skipped records to process', created: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

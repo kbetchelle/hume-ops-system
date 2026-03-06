@@ -698,8 +698,9 @@ Deno.serve(async (req) => {
       }, { onConflict: 'api_name' });
 
     // Aggregate all skip reasons for api_logs
-    const totalSkipped = skippedRows.length + deduplicatedCount + failedCount;
+    const totalSkipped = noMatchingClassIdCount + skippedRows.length + deduplicatedCount + failedCount;
     const skipReasons: Record<string, number> = {};
+    if (noMatchingClassIdCount > 0) skipReasons.no_matching_class_id = noMatchingClassIdCount;
     if (skippedRows.length > 0) skipReasons.empty_class_id = skippedRows.length;
     if (deduplicatedCount > 0) skipReasons.duplicate_reservation_id = deduplicatedCount;
     if (failedCount > 0) skipReasons.staging_insert_failed = failedCount;
@@ -746,6 +747,8 @@ Deno.serve(async (req) => {
         totalFetched: reservations.length,
         syncedCount,
         failedCount,
+        recordsSkipped: totalSkipped,
+        skipReasons,
         dateRange: { startDate, endDate },
         pagesProcessed,
         apiAttempts: totalAttempts,

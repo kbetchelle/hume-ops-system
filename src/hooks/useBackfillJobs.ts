@@ -269,7 +269,7 @@ export function useBackfillJobs() {
       if (insertError) throw insertError;
 
       const target = getBackfillInvokeTarget(params);
-      const body = { jobId: newJob.id };
+      const body = { jobId: newJob.id, action: "start" };
 
       const { data, error } = await supabase.functions.invoke(target, { body });
 

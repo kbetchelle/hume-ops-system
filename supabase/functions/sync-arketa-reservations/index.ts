@@ -36,6 +36,7 @@ interface SyncRequest {
   limit?: number;
   triggeredBy?: string;
   isHistorical?: boolean;
+  parentLogId?: string;
 }
 
 type ReservationWithMeta = ArketaReservation & { class_name?: string; class_date?: string };
@@ -627,8 +628,11 @@ Deno.serve(async (req) => {
       durationMs,
       recordsProcessed: reservations.length,
       recordsInserted: syncedCount,
+      recordsSkipped: failedCount,
+      skipReasons: failedCount > 0 ? { staging_insert_failed: failedCount } : undefined,
       responseStatus: 200,
       triggeredBy: body.triggeredBy || 'manual',
+      parentLogId: body.parentLogId,
     });
 
     // Refresh daily_schedule for the synced date range (after reservations are in staging; trigger will refresh again when sync-from-staging runs)

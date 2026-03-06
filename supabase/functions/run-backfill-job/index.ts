@@ -291,10 +291,11 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  // --- Build 8-day chunks with 1-day overlap ---
+  // --- Build chunks with optional overlap ---
   const CHUNK_DAYS = getChunkDays(jobType);
   const CHUNK_OVERLAP_DAYS = jobType === "arketa_reservations" ? 0 : 1;
   const batchBreakMs = getBatchBreakMs(jobType);
+  const allChunks: { chunkStart: string; chunkEnd: string }[] = [];
   {
     const s = new Date(startDate + "T00:00:00Z");
     const e = new Date(endDate + "T00:00:00Z");

@@ -17,7 +17,7 @@ interface WrapperRequest {
   endDate?: string;
   triggeredBy?: string;
   /** Cursor for backfill pagination; forward to sync-arketa-classes */
-  start_after_id?: string;
+  strict_three_phase?: boolean;
 }
 
 function parseJson<T>(text: string): T | null {
@@ -178,10 +178,9 @@ Deno.serve(async (req) => {
       console.warn('[sync-arketa-classes-and-reservations] Failed to refresh daily schedule:', refreshErr);
     }
 
-    // ── Build response ────────────────────────────────────────────────
-    // Classes sync failure is non-fatal — reservations can succeed independently
-    // via Tier 2 (DB-driven) using previously-synced class data
-    const success = reservationsOk && stagingOk;
+    // In strict 3-phase mode (used by reservations backfill), all phases must succeed.
+    const strictThreePhase = body.strict_three_phase === true || triggeredBy === 'backfill-job';
+    const success = strictThreePhase ? (classesOk && reservationsOk && stagingOk) : (reservationsOk && stagingOk);
     const durationMs = Date.now() - startTime;
 
     const classesSyncedCount = (classesData.syncedCount as number) ?? 0;
@@ -190,8 +189,9 @@ Deno.serve(async (req) => {
       ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
     const totalSyncedCount = classesSyncedCount + reservationsSyncedCount;
 
+    const classesError = (classesData.error as string | undefined) ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     const errors: string[] = [];
-    if (!classesOk && classesData.error) errors.push(`classes: ${classesData.error}`);
+    if (!classesOk && classesError) errors.push(`classes: ${classesError}`);
     if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
     if (!stagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
 
@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
         success: classesOk,
         syncedCount: classesSyncedCount,
         totalFetched: classesTotalFetched,
-        error: classesData.error ?? null,
+        error: classesError ?? null,
       },
       reservations: {
         success: reservationsOk,

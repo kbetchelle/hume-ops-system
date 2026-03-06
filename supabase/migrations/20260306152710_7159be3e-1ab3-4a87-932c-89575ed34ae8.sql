@@ -1,0 +1,1 @@
+DELETE FROM public.api_sync_skipped_records WHERE reason = 'no_matching_class_id';

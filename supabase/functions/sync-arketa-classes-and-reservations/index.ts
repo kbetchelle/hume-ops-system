@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(responseBody),
       {
-        status: success ? 200 : 502,
+        status: success || partialSuccess ? 200 : 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

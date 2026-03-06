@@ -102,9 +102,13 @@ interface PurchaseLike {
   [key: string]: unknown;
 }
 
-async function fetchWithRetry(url: string, options: RequestInit): Promise<{ response: Response; attempts: number }> {
+async function fetchWithRetry(url: string, options: RequestInit, deadline?: number): Promise<{ response: Response; attempts: number }> {
   let attempts = 0;
   while (true) {
+    // If we've exceeded the overall deadline, throw immediately
+    if (deadline && Date.now() > deadline) {
+      throw new Error(`fetchWithRetry: deadline exceeded before attempt ${attempts + 1}`);
+    }
     attempts++;
     try {
       const response = await fetch(url, options);
@@ -115,8 +119,12 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<{ resp
     } catch (err) {
       if (attempts >= MAX_RETRIES) throw err;
     }
+    // Check deadline before sleeping
     const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempts - 1), MAX_DELAY_MS);
     const jitter = delay * (0.5 + Math.random() * 0.5);
+    if (deadline && Date.now() + jitter > deadline) {
+      throw new Error(`fetchWithRetry: deadline would be exceeded during retry backoff`);
+    }
     await new Promise(r => setTimeout(r, jitter));
   }
 }

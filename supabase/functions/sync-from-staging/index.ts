@@ -210,22 +210,36 @@ async function transferReservations(
 
     const toUpsert = [...dedupedByReservationId.values()];
 
-    for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
-      const batch = toUpsert.slice(i, i + BATCH_SIZE);
+    // Chunk delete .in() to avoid PostgREST URL length limits
+    // (500 IDs × ~56 chars = ~28K chars exceeds URL limit → 400 Bad Request)
+    const DELETE_CHUNK = 100;
+    const UPSERT_CHUNK = 500;
+
+    for (let i = 0; i < toUpsert.length; i += UPSERT_CHUNK) {
+      const batch = toUpsert.slice(i, i + UPSERT_CHUNK);
       const reservationIds = batch.map((r: { reservation_id: string }) => r.reservation_id);
 
       // Ensure history is merged on reservation_id by removing prior versions first
-      const { error: deleteError } = await (supabase as any)
-        .from("arketa_reservations_history")
-        .delete()
-        .in("reservation_id", reservationIds);
+      // Chunk the delete to avoid URL length limits on .in() filter
+      let deleteError: { message: string } | null = null;
+      for (let d = 0; d < reservationIds.length; d += DELETE_CHUNK) {
+        const deleteSlice = reservationIds.slice(d, d + DELETE_CHUNK);
+        const { error } = await (supabase as any)
+          .from("arketa_reservations_history")
+          .delete()
+          .in("reservation_id", deleteSlice);
+        if (error) {
+          deleteError = error;
+          break;
+        }
+      }
+
       if (deleteError) {
-        // Log failed batch as skipped records
         await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
           record_id: r.reservation_id,
           secondary_id: r.class_id,
           reason: "promotion_delete_failed",
-          details: { error: deleteError.message, class_name: r.class_name, class_date: r.class_date },
+          details: { error: deleteError!.message, class_name: r.class_name, class_date: r.class_date },
         })));
         return {
           api: "arketa_reservations",
@@ -241,7 +255,6 @@ async function transferReservations(
         .from("arketa_reservations_history")
         .upsert(batch, { onConflict: "reservation_id,class_id" });
       if (upsertError) {
-        // Log failed batch as skipped records
         await logSkippedBatch(supabase, "sync-from-staging", batch.map((r: any) => ({
           record_id: r.reservation_id,
           secondary_id: r.class_id,

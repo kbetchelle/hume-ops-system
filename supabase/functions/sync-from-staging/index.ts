@@ -210,10 +210,10 @@ async function transferReservations(
 
     const toUpsert = [...dedupedByReservationId.values()];
 
-    // Use smaller chunks for delete .in() to avoid PostgREST URL length limits
-    // (500 IDs × ~56 chars each = ~28K chars, exceeding URL limit → 400 Bad Request)
-    const DELETE_CHUNK = 50;
-    const UPSERT_CHUNK = 200;
+    // Chunk delete .in() to avoid PostgREST URL length limits
+    // (500 IDs × ~56 chars = ~28K chars exceeds URL limit → 400 Bad Request)
+    const DELETE_CHUNK = 100;
+    const UPSERT_CHUNK = 500;
 
     for (let i = 0; i < toUpsert.length; i += UPSERT_CHUNK) {
       const batch = toUpsert.slice(i, i + UPSERT_CHUNK);

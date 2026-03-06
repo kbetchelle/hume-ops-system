@@ -219,13 +219,16 @@ export type Database = {
           endpoint: string
           error_message: string | null
           id: string
+          parent_log_id: string | null
           raw_response: string | null
           records_inserted: number | null
           records_processed: number | null
+          records_skipped: number | null
           records_updated: number | null
           request_method: string | null
           response_body: Json | null
           response_status: number | null
+          skip_reasons: Json | null
           sync_success: boolean
           triggered_by: string | null
         }
@@ -236,13 +239,16 @@ export type Database = {
           endpoint: string
           error_message?: string | null
           id?: string
+          parent_log_id?: string | null
           raw_response?: string | null
           records_inserted?: number | null
           records_processed?: number | null
+          records_skipped?: number | null
           records_updated?: number | null
           request_method?: string | null
           response_body?: Json | null
           response_status?: number | null
+          skip_reasons?: Json | null
           sync_success: boolean
           triggered_by?: string | null
         }
@@ -253,17 +259,28 @@ export type Database = {
           endpoint?: string
           error_message?: string | null
           id?: string
+          parent_log_id?: string | null
           raw_response?: string | null
           records_inserted?: number | null
           records_processed?: number | null
+          records_skipped?: number | null
           records_updated?: number | null
           request_method?: string | null
           response_body?: Json | null
           response_status?: number | null
+          skip_reasons?: Json | null
           sync_success?: boolean
           triggered_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "api_logs_parent_log_id_fkey"
+            columns: ["parent_log_id"]
+            isOneToOne: false
+            referencedRelation: "api_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       api_sync_skipped_records: {
         Row: {

@@ -168,16 +168,44 @@ async function transferReservations(
       sync_batch_id: r.sync_batch_id ?? null,
     })).filter((r: any) => r.reservation_id && r.class_id);
 
-    // Deduplicate by (reservation_id, class_id) — keep last occurrence to prevent
-    // "ON CONFLICT DO UPDATE command cannot affect row a second time" errors
-    const deduped = new Map<string, typeof mapped[0]>();
-    for (const r of mapped) {
-      deduped.set(`${r.reservation_id}::${r.class_id}`, r);
+    // Deduplicate by reservation_id (merge key): keep the most recently updated row
+    const dedupedByReservationId = new Map<string, typeof mapped[0]>();
+    const getPriorityTimestamp = (row: typeof mapped[0]) =>
+      toIsoTimestamp(row.updated_at_api) ?? toIsoTimestamp(row.created_at_api) ?? "1970-01-01T00:00:00.000Z";
+
+    for (const row of mapped) {
+      const reservationId = String(row.reservation_id);
+      const existing = dedupedByReservationId.get(reservationId);
+      if (!existing) {
+        dedupedByReservationId.set(reservationId, row);
+        continue;
+      }
+      if (getPriorityTimestamp(row) >= getPriorityTimestamp(existing)) {
+        dedupedByReservationId.set(reservationId, row);
+      }
     }
-    const toUpsert = [...deduped.values()];
+
+    const toUpsert = [...dedupedByReservationId.values()];
 
     for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
       const batch = toUpsert.slice(i, i + BATCH_SIZE);
+      const reservationIds = batch.map((r: { reservation_id: string }) => r.reservation_id);
+
+      // Ensure history is merged on reservation_id by removing prior versions first
+      const { error: deleteError } = await (supabase as any)
+        .from("arketa_reservations_history")
+        .delete()
+        .in("reservation_id", reservationIds);
+      if (deleteError) {
+        return {
+          api: "arketa_reservations",
+          records_processed: toUpsert.length,
+          records_inserted: recordsInserted,
+          records_updated: recordsUpdated,
+          error: deleteError.message,
+        };
+      }
+
       const { error: upsertError } = await (supabase as any)
         .from("arketa_reservations_history")
         .upsert(batch, { onConflict: "reservation_id,class_id" });

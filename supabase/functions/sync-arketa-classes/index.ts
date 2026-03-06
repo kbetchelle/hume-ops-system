@@ -27,6 +27,8 @@ interface SyncClassesRequest {
   triggeredBy?: string;
   /** When true, skip logging to api_logs (caller will handle it) */
   skipLogging?: boolean;
+  /** Parent log ID from wrapper function */
+  parentLogId?: string;
 }
 
 const MAX_PAGES = 30;
@@ -385,9 +387,12 @@ Deno.serve(async (req) => {
         durationMs,
         recordsProcessed: filteredClasses.length,
         recordsInserted: syncedCount,
+        recordsSkipped: duplicatesSkipped,
+        skipReasons: duplicatesSkipped > 0 ? { duplicate_external_id: duplicatesSkipped } : undefined,
         responseStatus: apiErrorMessage ? 500 : 200,
         errorMessage: apiErrorMessage ?? undefined,
         triggeredBy,
+        parentLogId: body.parentLogId,
       });
     }
 

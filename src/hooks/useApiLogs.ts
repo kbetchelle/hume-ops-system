@@ -10,10 +10,13 @@ export interface ApiLog {
   records_processed: number | null;
   records_inserted: number | null;
   records_updated: number | null;
+  records_skipped: number | null;
+  skip_reasons: Record<string, number> | null;
   response_status: number | null;
   error_message: string | null;
   triggered_by: string | null;
   created_at: string | null;
+  parent_log_id: string | null;
 }
 
 interface UseApiLogsOptions {
@@ -57,7 +60,7 @@ export function useApiLogs(options: UseApiLogsOptions = {}) {
         currentPage: page,
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 }
 
@@ -73,7 +76,6 @@ export function useApiNames() {
 
       if (error) throw error;
       
-      // Get unique names
       const uniqueNames = [...new Set(data?.map(d => d.api_name) || [])];
       return uniqueNames;
     },

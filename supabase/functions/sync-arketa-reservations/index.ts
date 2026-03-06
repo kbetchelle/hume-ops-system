@@ -583,11 +583,16 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     let insertError: string | null = null;
     if (rowsToInsert.length > 0) {
-      const { error } = await supabase.from('arketa_reservations_staging').insert(rowsToInsert);
-      if (error) {
-        insertError = error.message;
-        logger.error('Failed to insert to staging', error);
-        failedCount = rowsToInsert.length;
+      // Insert in chunks of 50 to avoid payload size limits
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < rowsToInsert.length; i += CHUNK_SIZE) {
+        const chunk = rowsToInsert.slice(i, i + CHUNK_SIZE);
+        const { error } = await supabase.from('arketa_reservations_staging').insert(chunk);
+        if (error) {
+          insertError = error.message || JSON.stringify(error);
+          logger.error(`Failed to insert chunk ${Math.floor(i / CHUNK_SIZE) + 1} to staging: ${insertError} (code: ${error.code}, details: ${error.details}, hint: ${error.hint})`);
+          failedCount += chunk.length;
+        }
       }
     }
     const syncedCount = rowsToInsert.length - failedCount;

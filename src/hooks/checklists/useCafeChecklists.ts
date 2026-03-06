@@ -142,8 +142,9 @@ export function useToggleCafeCompletion() {
       photoUrl?: string;
       signatureData?: string;
     }) => {
-      if (isCompleted) {
-        // Delete completion (toggle off)
+      // If already completed and a new value is provided, update instead of delete
+      if (isCompleted && !value && !photoUrl && !signatureData) {
+        // Pure toggle off — delete completion
         const { error } = await supabase
           .from('cafe_completions')
           .delete()
@@ -152,7 +153,7 @@ export function useToggleCafeCompletion() {
           .eq('shift_time', shiftTime);
         if (error) throw error;
       } else {
-        // Create/update completion
+        // Create or update completion (upsert)
         const { error } = await supabase
           .from('cafe_completions')
           .upsert({

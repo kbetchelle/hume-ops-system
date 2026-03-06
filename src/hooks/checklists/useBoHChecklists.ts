@@ -145,8 +145,8 @@ export function useToggleBoHCompletion() {
       photoUrl?: string;
       signatureData?: string;
     }) => {
-      if (isCompleted) {
-        // Delete completion (toggle off)
+      if (isCompleted && !value && !photoUrl && !signatureData) {
+        // Pure toggle off — delete completion
         const { error } = await supabase
           .from('boh_completions')
           .delete()
@@ -155,7 +155,7 @@ export function useToggleBoHCompletion() {
           .eq('shift_time', shiftTime);
         if (error) throw error;
       } else {
-        // Create/update completion
+        // Create or update completion (upsert)
         const { error } = await supabase
           .from('boh_completions')
           .upsert({

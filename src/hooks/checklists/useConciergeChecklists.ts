@@ -142,8 +142,8 @@ export function useToggleConciergeCompletion() {
       photoUrl?: string;
       signatureData?: string;
     }) => {
-      if (isCompleted) {
-        // Delete completion (toggle off)
+      if (isCompleted && !value && !photoUrl && !signatureData) {
+        // Pure toggle off — delete completion
         const { error } = await supabase
           .from('concierge_completions')
           .delete()
@@ -152,7 +152,7 @@ export function useToggleConciergeCompletion() {
           .eq('shift_time', shiftTime);
         if (error) throw error;
       } else {
-        // Create/update completion
+        // Create or update completion (upsert)
         const { error } = await supabase
           .from('concierge_completions')
           .upsert({

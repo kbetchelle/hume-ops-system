@@ -28,6 +28,7 @@ interface TransferResult {
   records_processed: number;
   records_inserted: number;
   records_updated: number;
+  records_skipped?: number;
   error?: string;
 }
 

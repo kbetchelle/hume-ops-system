@@ -85,6 +85,8 @@ async function fetchAllReservations(
   }
 
   // Tier 1: Try direct /reservations (and fallback variants) with pagination
+  // TODO: If Arketa adds a flat date-range reservations endpoint (e.g. /reservations?start_date&end_date),
+  // add it here as the primary Tier 1 candidate to decouple reservation fetching from class discovery.
   const tier1Endpoints = [
     `${ARKETA_URLS.prod}/${partnerId}/reservations`,
     `${ARKETA_URLS.prod}/${partnerId}/bookings`,
@@ -569,9 +571,10 @@ Deno.serve(async (req) => {
       logger?.info(`Logged ${skippedRows.length} reservations with empty class_id to api_sync_skipped_records`);
     }
 
-    // Insert all rows with a valid class_id (stubs were auto-created above)
+    // Insert all rows with a reservation_id — including those without a class_id.
+    // Empty-class_id rows are still logged above for observability but are no longer dropped.
     let rowsToInsert = stagingRows.filter(
-      (r) => Boolean(r.class_id?.trim()) && knownClassIds.has(r.class_id)
+      (r) => Boolean(r.reservation_id?.trim())
     );
     // Staging table has UNIQUE(reservation_id, sync_batch_id): one row per reservation per batch. Dedupe to avoid constraint violation.
     const seenByReservation = new Map<string, typeof rowsToInsert[0]>();

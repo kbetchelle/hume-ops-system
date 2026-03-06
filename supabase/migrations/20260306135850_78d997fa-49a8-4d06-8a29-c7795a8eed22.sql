@@ -1,0 +1,1 @@
+ALTER TABLE public.arketa_reservations_history ALTER COLUMN class_id DROP NOT NULL;

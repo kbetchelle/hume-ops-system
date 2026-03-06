@@ -84,11 +84,11 @@ function getSyncConfig(jobType: JobType) {
     case "arketa_reservations":
     default:
       return {
-        syncFunction: "sync-arketa-classes-and-reservations",
+        syncFunction: "sync-arketa-reservations",
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
-        transferApi: null,
-        needsTransfer: false,
+        transferApi: "arketa_reservations",
+        needsTransfer: true,
       };
   }
 }

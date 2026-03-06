@@ -852,7 +852,7 @@ export function DashboardLayout({
   if (isMobile) {
     return (
       <SidebarProvider>
-        <div className="min-h-screen flex flex-col w-full bg-background">
+        <div className="h-dvh flex flex-col w-full bg-background overflow-hidden">
           <MobileHeader title={title} />
           <PWAInstallBanner />
           {pushNotifications.showPrompt && (
@@ -935,9 +935,9 @@ export function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="h-dvh flex w-full bg-background overflow-hidden">
         <SidebarNav />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <DashboardHeader title={title} />
           <GlobalOfflineBanner />
           <main className="flex-1 p-4 md:p-8 overflow-auto my-0 py-0 px-0">

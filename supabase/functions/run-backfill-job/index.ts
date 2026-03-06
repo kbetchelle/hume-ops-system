@@ -392,26 +392,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 
-  if (jobType === "arketa_reservations" && config.syncFunction === "sync-arketa-reservations" && syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
-    try {
-      await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-        body: JSON.stringify({ api: "arketa_reservations", clear_staging: true }),
-      });
-    } catch (err) {
-      console.error("[backfill] Failed to transfer reservations from staging:", err);
-    }
-    try {
-      await fetch(`${SUPABASE_URL}/functions/v1/refresh-daily-schedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-        body: JSON.stringify({ start_date: chunkStart, end_date: chunkEnd }),
-      });
-    } catch (err) {
-      console.error("[backfill] Failed to refresh daily schedule:", err);
-    }
-  }
+  // NOTE: Staging transfer and daily schedule refresh are handled internally by
+  // the combined sync-arketa-classes-and-reservations function. No separate call needed.
 
   // Count records after sync
   await new Promise(resolve => setTimeout(resolve, 500));

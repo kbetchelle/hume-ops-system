@@ -166,7 +166,7 @@ async function transferReservations(
       client_phone: r.client_phone ?? null,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
-    })).filter((r: any) => r.reservation_id && r.class_id);
+    })).filter((r: any) => r.reservation_id);
 
     // Deduplicate by reservation_id (merge key): keep the most recently updated row
     const dedupedByReservationId = new Map<string, typeof mapped[0]>();

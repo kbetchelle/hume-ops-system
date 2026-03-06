@@ -117,36 +117,8 @@ Deno.serve(async (req) => {
 
     const classesError = (classesData.error as string | undefined) ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     if (!classesOk) {
-      if (strictThreePhase) {
-        const durationMs = Date.now() - startTime;
-        await logApiCall(supabase, {
-          apiName: 'arketa_classes',
-          endpoint: '/classes+reservations',
-          syncSuccess: false,
-          durationMs,
-          recordsProcessed: (classesData.totalFetched as number) ?? 0,
-          recordsInserted: (classesData.syncedCount as number) ?? 0,
-          responseStatus: 502,
-          errorMessage: `classes: ${classesError ?? 'phase failed'}`,
-          triggeredBy,
-        });
-
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `classes: ${classesError ?? 'phase failed'}`,
-            dateRange: { startDate, endDate },
-            classes: {
-              success: false,
-              syncedCount: (classesData.syncedCount as number) ?? 0,
-              totalFetched: (classesData.totalFetched as number) ?? 0,
-              error: classesError ?? null,
-            },
-          }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
+      // Classes failure is non-blocking: the reservations phase has its own Tier 3 discovery.
+      // In strict mode we still log the warning but proceed to reservations.
       console.warn('[sync-arketa-classes-and-reservations] Classes sync failed, continuing to reservations:', classesError);
     }
 
@@ -211,8 +183,8 @@ Deno.serve(async (req) => {
       console.warn('[sync-arketa-classes-and-reservations] Failed to refresh daily schedule:', refreshErr);
     }
 
-    // In strict 3-phase mode (used by reservations backfill), all phases must succeed.
-    const success = strictThreePhase ? (classesOk && reservationsOk && stagingOk) : (reservationsOk && stagingOk);
+    // Classes failure is non-blocking; success depends only on reservations + staging.
+    const success = reservationsOk && stagingOk;
     const durationMs = Date.now() - startTime;
 
     const classesSyncedCount = (classesData.syncedCount as number) ?? 0;

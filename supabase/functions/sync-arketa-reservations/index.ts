@@ -523,6 +523,7 @@ Deno.serve(async (req) => {
     const unknownClassRows = stagingRows.filter(
       (r) => Boolean(r.class_id?.trim()) && !knownClassIds.has(r.class_id)
     );
+    const noMatchingClassIdCount = unknownClassRows.length;
     if (unknownClassRows.length > 0) {
       // Build stub class records from reservation metadata (dedupe by external_id+class_date)
       const stubMap = new Map<string, { external_id: string; name: string; start_time: string; class_date: string; status: string; synced_at: string }>();
@@ -565,6 +566,24 @@ Deno.serve(async (req) => {
         }
       }
     };
+
+    // Log rows whose class_id was unknown in arketa_classes at sync time.
+    if (unknownClassRows.length > 0) {
+      const unknownClassSkippedRecords = unknownClassRows.map((r) => ({
+        api_name: 'arketa_reservations',
+        record_id: r.reservation_id,
+        secondary_id: r.class_id || null,
+        reason: 'no_matching_class_id',
+        details: {
+          class_name: r.class_name,
+          class_date: r.class_date,
+          client_id: r.client_id,
+          auto_stub_created: true,
+        } as Record<string, unknown>,
+      }));
+      await insertSkippedRecords(unknownClassSkippedRecords);
+      logger?.info(`Logged ${unknownClassRows.length} reservations with no matching class_id`);
+    }
 
     // Log rows with empty class_id (truly invalid)
     const skippedRows = stagingRows.filter((r) => !r.class_id?.trim());
@@ -679,8 +698,9 @@ Deno.serve(async (req) => {
       }, { onConflict: 'api_name' });
 
     // Aggregate all skip reasons for api_logs
-    const totalSkipped = skippedRows.length + deduplicatedCount + failedCount;
+    const totalSkipped = noMatchingClassIdCount + skippedRows.length + deduplicatedCount + failedCount;
     const skipReasons: Record<string, number> = {};
+    if (noMatchingClassIdCount > 0) skipReasons.no_matching_class_id = noMatchingClassIdCount;
     if (skippedRows.length > 0) skipReasons.empty_class_id = skippedRows.length;
     if (deduplicatedCount > 0) skipReasons.duplicate_reservation_id = deduplicatedCount;
     if (failedCount > 0) skipReasons.staging_insert_failed = failedCount;
@@ -727,6 +747,8 @@ Deno.serve(async (req) => {
         totalFetched: reservations.length,
         syncedCount,
         failedCount,
+        recordsSkipped: totalSkipped,
+        skipReasons,
         dateRange: { startDate, endDate },
         pagesProcessed,
         apiAttempts: totalAttempts,

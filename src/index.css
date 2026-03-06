@@ -75,7 +75,16 @@
 
 @layer base {
   html {
-    font-size: 18px;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Slightly larger base on large desktop screens only */
+  @media (min-width: 1280px) {
+    html {
+      font-size: 18px;
+    }
   }
 
   * {

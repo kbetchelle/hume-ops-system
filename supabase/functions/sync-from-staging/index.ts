@@ -44,6 +44,21 @@ function toIsoTimestamp(val: unknown): string | null {
   return isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+/** Log a batch of failed records to api_sync_skipped_records for visibility in the Dev Tools UI. */
+async function logSkippedBatch(
+  supabase: any,
+  apiName: string,
+  records: Array<{ record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }>
+) {
+  if (!records.length) return;
+  const CHUNK = 500;
+  for (let i = 0; i < records.length; i += CHUNK) {
+    const chunk = records.slice(i, i + CHUNK).map((r) => ({ api_name: apiName, ...r }));
+    const { error } = await supabase.from("api_sync_skipped_records").insert(chunk);
+    if (error) console.warn(`[sync-from-staging] Failed to log skipped records: ${error.message}`);
+  }
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;

@@ -16,13 +16,13 @@ import { logApiCall } from '../_shared/apiLogger.ts';
  */
 
 const PAGE_LIMIT = 100; // Use max page size for efficiency
-const SYNC_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
+const SYNC_TIMEOUT_MS = 40_000; // 40s wall-clock guard for FETCH phase (leaves ~15s for upsert+logging)
 const UPSERT_BATCH = 100;
-const MAX_RETRIES = 8;
-const BASE_DELAY_MS = 3000;
-const MAX_DELAY_MS = 60000;
+const MAX_RETRIES = 3; // Reduced from 8 to prevent timeout spiral
+const BASE_DELAY_MS = 2000;
+const MAX_DELAY_MS = 10000; // Reduced from 60s to prevent single-page retry exhausting budget
 const BACKFILL_PAGE_LIMIT = 100; // Arketa max page size
-const BACKFILL_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
+const BACKFILL_TIMEOUT_MS = 40_000; // 40s wall-clock guard for FETCH phase
 
 interface PaymentDTO {
   id: string;
@@ -102,9 +102,13 @@ interface PurchaseLike {
   [key: string]: unknown;
 }
 
-async function fetchWithRetry(url: string, options: RequestInit): Promise<{ response: Response; attempts: number }> {
+async function fetchWithRetry(url: string, options: RequestInit, deadline?: number): Promise<{ response: Response; attempts: number }> {
   let attempts = 0;
   while (true) {
+    // If we've exceeded the overall deadline, throw immediately
+    if (deadline && Date.now() > deadline) {
+      throw new Error(`fetchWithRetry: deadline exceeded before attempt ${attempts + 1}`);
+    }
     attempts++;
     try {
       const response = await fetch(url, options);
@@ -115,8 +119,12 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<{ resp
     } catch (err) {
       if (attempts >= MAX_RETRIES) throw err;
     }
+    // Check deadline before sleeping
     const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempts - 1), MAX_DELAY_MS);
     const jitter = delay * (0.5 + Math.random() * 0.5);
+    if (deadline && Date.now() + jitter > deadline) {
+      throw new Error(`fetchWithRetry: deadline would be exceeded during retry backoff`);
+    }
     await new Promise(r => setTimeout(r, jitter));
   }
 }
@@ -257,7 +265,8 @@ Deno.serve(async (req) => {
           url.searchParams.set('start_after', decodeURIComponent(nextCursor));
         }
 
-        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+        const backfillDeadline = startTime + BACKFILL_TIMEOUT_MS;
+        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers }, backfillDeadline);
         if (!response.ok) {
           const errText = await response.text();
           logger.error(`Purchases fetch failed: HTTP ${response.status}`, { body: errText.substring(0, 300) });
@@ -384,7 +393,8 @@ Deno.serve(async (req) => {
       if (cursor) url += `&start_after=${cursor}`;
 
       try {
-        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers });
+        const fetchDeadline = startTime + SYNC_TIMEOUT_MS;
+        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers }, fetchDeadline);
         totalAttempts += attempts;
 
         if (!response.ok) {

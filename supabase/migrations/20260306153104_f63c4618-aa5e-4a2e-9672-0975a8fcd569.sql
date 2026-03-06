@@ -1,0 +1,1 @@
+UPDATE sync_schedule SET last_status = 'success', last_error = NULL, failure_count = 0 WHERE sync_type = 'arketa_payments';

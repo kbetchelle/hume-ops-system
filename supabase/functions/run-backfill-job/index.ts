@@ -4,7 +4,9 @@ import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const BATCH_BREAK_MS = 20_000; // 20-second break between batches
+const BATCH_BREAK_MS = 20_000; // 20-second break between batches (default)
+const RESERVATIONS_CHUNK_DAYS = 2; // Keep reservation batches small to avoid 150s gateway timeout
+const RESERVATIONS_BATCH_BREAK_MS = 1_000; // Minimal pause for reservation backfill chaining
 
 interface SyncResult {
   date: string;
@@ -17,6 +19,14 @@ interface SyncResult {
 }
 
 type JobType = "arketa_reservations" | "arketa_payments" | "arketa_classes" | "arketa_classes_and_reservations" | "toast_orders";
+
+function getChunkDays(jobType: JobType): number {
+  return jobType === "arketa_reservations" ? RESERVATIONS_CHUNK_DAYS : 8;
+}
+
+function getBatchBreakMs(jobType: JobType): number {
+  return jobType === "arketa_reservations" ? RESERVATIONS_BATCH_BREAK_MS : BATCH_BREAK_MS;
+}
 
 function eachDayOfInterval(start: Date, end: Date): Date[] {
   const dates: Date[] = [];
@@ -282,8 +292,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   }
 
   // --- Build 8-day chunks with 1-day overlap ---
-  const CHUNK_DAYS = 8;
-  const allChunks: { chunkStart: string; chunkEnd: string }[] = [];
+  const CHUNK_DAYS = getChunkDays(jobType);
+  const batchBreakMs = getBatchBreakMs(jobType);
   {
     const s = new Date(startDate + "T00:00:00Z");
     const e = new Date(endDate + "T00:00:00Z");
@@ -455,8 +465,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     }
 
     // Schedule next chunk after break
-    console.log(`[backfill] Chunk ${currentChunkIndex + 1} done (${syncResult.syncedCount} synced, ${newRecords} new). Moving to chunk ${nextChunkIndex + 1}/${allChunks.length}. Waiting ${BATCH_BREAK_MS / 1000}s...`);
-    await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+    console.log(`[backfill] Chunk ${currentChunkIndex + 1} done (${syncResult.syncedCount} synced, ${newRecords} new). Moving to chunk ${nextChunkIndex + 1}/${allChunks.length}. Waiting ${batchBreakMs / 1000}s...`);
+    await new Promise(resolve => setTimeout(resolve, batchBreakMs));
 
     fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
       method: "POST",
@@ -481,8 +491,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     sync_phase: "cooldown",
   }).eq("id", jobId);
 
-  console.log(`[backfill] Chunk ${currentChunkIndex + 1} batch ${batchesCompleted}: ${syncResult.syncedCount} synced, ${newRecords} new. More pages remain. Waiting ${BATCH_BREAK_MS / 1000}s...`);
-  await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+  console.log(`[backfill] Chunk ${currentChunkIndex + 1} batch ${batchesCompleted}: ${syncResult.syncedCount} synced, ${newRecords} new. More pages remain. Waiting ${batchBreakMs / 1000}s...`);
+  await new Promise(resolve => setTimeout(resolve, batchBreakMs));
 
   fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
     method: "POST",

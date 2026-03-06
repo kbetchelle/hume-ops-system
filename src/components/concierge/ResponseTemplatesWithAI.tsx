@@ -839,7 +839,19 @@ export function ResponseTemplatesWithAI() {
   };
 
   const handleCopy = async (template: ResponseTemplate) => {
-    await navigator.clipboard.writeText(template.content);
+    try {
+      const htmlBlob = new Blob([template.content], { type: "text/html" });
+      const plainText = new DOMParser().parseFromString(template.content, "text/html").body.textContent || "";
+      const plainBlob = new Blob([plainText], { type: "text/plain" });
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": htmlBlob,
+          "text/plain": plainBlob,
+        }),
+      ]);
+    } catch {
+      await navigator.clipboard.writeText(template.content);
+    }
     setCopiedId(template.id);
     toast.success("Copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);

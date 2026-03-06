@@ -117,6 +117,21 @@ export function useBackfillJob(jobType: BackfillJobType) {
     const effectiveEndDate = effectiveIsRange ? endDate : startDate;
     const dates = effectiveIsRange ? eachDayOfInterval({ start: parseISO(startDate), end: parseISO(effectiveEndDate) }) : [parseISO(startDate)];
     try {
+      const { data: existingJob, error: existingJobError } = await supabase
+        .from("backfill_jobs")
+        .select("id")
+        .eq("job_type", jobType)
+        .in("status", ["pending", "running"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existingJobError) throw existingJobError;
+      if (existingJob?.id) {
+        setActiveJobId(existingJob.id);
+        toast.info("A sync job is already running for this data type");
+        return;
+      }
+
       const { data: user } = await supabase.auth.getUser();
       const { data: job, error: createError } = await supabase
         .from("backfill_jobs")
@@ -136,9 +151,14 @@ export function useBackfillJob(jobType: BackfillJobType) {
         .single();
       if (createError) throw createError;
       setActiveJobId(job.id);
-      const { error: invokeError } = await supabase.functions.invoke("run-backfill-job", { body: { jobId: job.id } });
+      const { error: invokeError } = await supabase.functions.invoke("run-backfill-job", { body: { jobId: job.id, action: "start" } });
       if (invokeError) {
-        toast.error("Failed to start sync job");
+        const invokeMessage = invokeError.message || "";
+        if (/failed to fetch|network|connection/i.test(invokeMessage)) {
+          toast.info("Sync job queued - refreshing progress in the background");
+        } else {
+          toast.error("Failed to start sync job");
+        }
       } else {
         toast.success("Sync job started - you can leave this page and it will continue running");
       }

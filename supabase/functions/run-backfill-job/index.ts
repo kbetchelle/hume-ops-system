@@ -39,6 +39,14 @@ function nextDayUtc(dateStr: string): string {
   return d.toISOString().split("T")[0];
 }
 
+function safeParseJson(text: string): Record<string, unknown> | null {
+  try {
+    return text ? (JSON.parse(text) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 function getSyncConfig(jobType: JobType) {
   switch (jobType) {
     case "arketa_classes":
@@ -347,18 +355,23 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
       body: JSON.stringify(syncBody),
     });
-    const syncData = await syncResponse.json();
+    const syncText = await syncResponse.text();
+    const syncData = safeParseJson(syncText);
 
     if (!syncResponse.ok) {
-      syncResult = { success: false, error: syncData.error || `Sync returned ${syncResponse.status}` };
+      const parsedError = syncData && typeof syncData.error === "string"
+        ? syncData.error
+        : syncText;
+      syncResult = { success: false, error: parsedError || `Sync returned ${syncResponse.status}` };
     } else {
+      const data = (syncData ?? {}) as Record<string, unknown>;
       syncResult = {
-        success: syncData?.success !== false,
-        syncedCount: syncData?.syncedCount ?? 0,
-        totalFetched: syncData?.totalFetched ?? 0,
-        nextStartAfterId: syncData?.nextStartAfterId ?? null,
-        hasMore: syncData?.hasMore ?? false,
-        error: syncData?.error,
+        success: data.success !== false,
+        syncedCount: (data.syncedCount as number) ?? 0,
+        totalFetched: (data.totalFetched as number) ?? 0,
+        nextStartAfterId: (data.nextStartAfterId as string) ?? null,
+        hasMore: (data.hasMore as boolean) ?? false,
+        error: (data.error as string) ?? undefined,
       };
     }
   } catch (err) {
@@ -513,6 +526,31 @@ Deno.serve(async (req) => {
   try {
     const { jobId, action } = await req.json();
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    if (action === "start" && jobId) {
+      const { data: startJob, error: startJobError } = await supabase
+        .from("backfill_jobs")
+        .select("id, status")
+        .eq("id", jobId)
+        .single();
+
+      if (startJobError || !startJob) throw new Error(`Job not found: ${jobId}`);
+      if (startJob.status !== "pending" && startJob.status !== "running") {
+        return new Response(JSON.stringify({ success: false, error: `Job is ${startJob.status}, cannot start` }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ jobId }),
+      }).catch(err => console.error("Failed to queue backfill job:", err));
+
+      return new Response(JSON.stringify({ success: true, queued: true, jobId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "cancel" && jobId) {
       const { error } = await supabase

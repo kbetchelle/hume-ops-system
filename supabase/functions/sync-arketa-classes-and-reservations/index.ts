@@ -152,7 +152,11 @@ Deno.serve(async (req) => {
     let stagingOk = false;
     try {
       const syncFromStagingUrl = `${supabaseUrl}/functions/v1/sync-from-staging`;
-      const stagingPayload: Record<string, unknown> = { api: 'arketa_reservations', clear_staging: true };
+      const stagingPayload: Record<string, unknown> = {
+        api: 'arketa_reservations',
+        clear_staging: true,
+        triggeredBy,
+      };
       if (parentLogId) stagingPayload.parentLogId = parentLogId;
       const stagingRes = await fetch(syncFromStagingUrl, {
         method: 'POST',
@@ -187,17 +191,41 @@ Deno.serve(async (req) => {
       console.warn('[sync-arketa-classes-and-reservations] Failed to refresh daily schedule:', refreshErr);
     }
 
-    // ── 5) Determine overall success ─────────────────────────────────
+    // ── 5) Determine overall success + normalize metrics ──────────────
     const reservationsSyncedCount =
       (reservationsData.syncedCount as number) ??
       ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
     const reservationsHadNoData = reservationsOk && reservationsSyncedCount === 0;
     const effectiveStagingOk = stagingOk || reservationsHadNoData;
-    const success = reservationsOk && effectiveStagingOk;
+
+    const stagingReservationResult = Array.isArray((stagingData as any).results)
+      ? ((stagingData as any).results as Array<Record<string, unknown>>).find((r) => r.api === 'arketa_reservations')
+      : null;
+    const stagingProcessedCount = Number(
+      stagingReservationResult?.records_processed ??
+      (stagingData.records_processed as number | undefined) ??
+      reservationsSyncedCount ??
+      0,
+    );
+    const stagingInsertedCount = Number(
+      stagingReservationResult?.records_inserted ??
+      (stagingData.records_inserted as number | undefined) ??
+      0,
+    );
+    const stagingUpdatedCount = Number(
+      stagingReservationResult?.records_updated ??
+      (stagingData.records_updated as number | undefined) ??
+      0,
+    );
+
+    const coreSyncOk = reservationsOk && effectiveStagingOk;
+    const success = classesOk && coreSyncOk;
+    const partialSuccess = !classesOk && coreSyncOk;
 
     const durationMs = Date.now() - startTime;
     const classesSyncedCount = (classesData.syncedCount as number) ?? 0;
-    const totalSyncedCount = classesSyncedCount + reservationsSyncedCount;
+    const totalInsertedCount = classesSyncedCount + stagingInsertedCount;
+    const totalUpdatedCount = stagingUpdatedCount + ((classesData.recordsUpdated as number) ?? 0);
 
     const normalizedClassesError = classesError ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     const errors: string[] = [];
@@ -205,25 +233,37 @@ Deno.serve(async (req) => {
     if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
     if (!effectiveStagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
 
+    const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
+    const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
+    const classesSkippedCount = Number((classesData.recordsSkipped as number | undefined) ?? (classesData.duplicatesSkipped as number | undefined) ?? 0);
+    const reservationsSkippedCount = Number((reservationsData.recordsSkipped as number | undefined) ?? 0);
+    const stagingSkippedCount = Number(
+      stagingReservationResult?.records_skipped ??
+      (stagingData.records_skipped as number | undefined) ??
+      0,
+    );
+    const totalSkippedCount = classesSkippedCount + reservationsSkippedCount + stagingSkippedCount;
+
     // ── 6) Update parent log with final results ───────────────────────
     if (parentLogId) {
-      const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
-      const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
       await updateParentLog(supabase, parentLogId, {
         syncSuccess: success,
         durationMs,
-        recordsProcessed: classesTotalFetched + reservationsTotalFetched,
-        recordsInserted: totalSyncedCount,
+        recordsProcessed: classesTotalFetched + (stagingProcessedCount || reservationsTotalFetched),
+        recordsInserted: totalInsertedCount,
+        recordsUpdated: totalUpdatedCount,
+        recordsSkipped: totalSkippedCount,
         errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
       });
     }
 
-    const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
-    const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
     const responseBody = {
       success,
+      partialSuccess,
       error: errors.length > 0 ? errors.join('; ') : undefined,
-      syncedCount: totalSyncedCount,
+      syncedCount: classesSyncedCount + reservationsSyncedCount,
+      recordsInserted: totalInsertedCount,
+      recordsUpdated: totalUpdatedCount,
       totalFetched: classesTotalFetched + reservationsTotalFetched,
       dateRange: { startDate, endDate },
       durationMs,
@@ -242,7 +282,10 @@ Deno.serve(async (req) => {
         error: reservationsData.error ?? null,
       },
       syncFromStaging: {
-        success: stagingOk,
+        success: effectiveStagingOk,
+        recordsProcessed: stagingProcessedCount,
+        recordsInserted: stagingInsertedCount,
+        recordsUpdated: stagingUpdatedCount,
         error: stagingData.error ?? null,
       },
     };

@@ -554,6 +554,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    const insertSkippedRecords = async (records: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }>) => {
+      if (records.length === 0) return;
+      const CHUNK = 500;
+      for (let i = 0; i < records.length; i += CHUNK) {
+        const chunk = records.slice(i, i + CHUNK);
+        const { error } = await supabase.from('api_sync_skipped_records').insert(chunk);
+        if (error) {
+          logger?.warn(`Failed to insert skipped-record chunk: ${error.message}`);
+        }
+      }
+    };
+
     // Log rows with empty class_id (truly invalid)
     const skippedRows = stagingRows.filter((r) => !r.class_id?.trim());
     if (skippedRows.length > 0) {
@@ -568,7 +580,7 @@ Deno.serve(async (req) => {
           client_id: r.client_id,
         } as Record<string, unknown>,
       }));
-      await supabase.from('api_sync_skipped_records').insert(skippedRecords);
+      await insertSkippedRecords(skippedRecords);
       logger?.info(`Logged ${skippedRows.length} reservations with empty class_id to api_sync_skipped_records`);
     }
 
@@ -577,22 +589,40 @@ Deno.serve(async (req) => {
     let rowsToInsert = stagingRows.filter(
       (r) => Boolean(r.reservation_id?.trim())
     );
-    // Staging table has UNIQUE(reservation_id, sync_batch_id): one row per reservation per batch. Dedupe to avoid constraint violation.
+
+    // Staging table has UNIQUE(reservation_id, sync_batch_id): one row per reservation per batch.
     const seenByReservation = new Map<string, typeof rowsToInsert[0]>();
+    const duplicateSkippedRecords: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }> = [];
     for (const r of rowsToInsert) {
       const key = `${r.reservation_id}:${r.sync_batch_id}`;
-      if (!seenByReservation.has(key)) seenByReservation.set(key, r);
+      if (seenByReservation.has(key)) {
+        duplicateSkippedRecords.push({
+          api_name: 'arketa_reservations',
+          record_id: r.reservation_id,
+          secondary_id: r.class_id || null,
+          reason: 'duplicate_reservation_id',
+          details: {
+            class_name: r.class_name,
+            class_date: r.class_date,
+            sync_batch_id: r.sync_batch_id,
+          },
+        });
+        continue;
+      }
+      seenByReservation.set(key, r);
     }
-    const deduplicatedCount = rowsToInsert.length - seenByReservation.size;
+    const deduplicatedCount = duplicateSkippedRecords.length;
     rowsToInsert = [...seenByReservation.values()];
 
-    // Log deduplicated records to skipped records table
     if (deduplicatedCount > 0) {
+      await insertSkippedRecords(duplicateSkippedRecords);
       logger?.info(`Deduplicated ${deduplicatedCount} duplicate reservation_id entries`);
     }
 
     let failedCount = 0;
     let insertError: string | null = null;
+    const failedSkippedRecords: Array<{ api_name: string; record_id: string; secondary_id?: string | null; reason: string; details?: Record<string, unknown> }> = [];
+
     if (rowsToInsert.length > 0) {
       // Insert in chunks of 50 to avoid payload size limits
       const CHUNK_SIZE = 50;
@@ -603,9 +633,28 @@ Deno.serve(async (req) => {
           insertError = error.message || JSON.stringify(error);
           logger.error(`Failed to insert chunk ${Math.floor(i / CHUNK_SIZE) + 1} to staging: ${insertError} (code: ${error.code}, details: ${error.details}, hint: ${error.hint})`);
           failedCount += chunk.length;
+
+          for (const failedRow of chunk) {
+            failedSkippedRecords.push({
+              api_name: 'arketa_reservations',
+              record_id: failedRow.reservation_id,
+              secondary_id: failedRow.class_id || null,
+              reason: 'staging_insert_failed',
+              details: {
+                class_name: failedRow.class_name,
+                class_date: failedRow.class_date,
+                error: insertError,
+              },
+            });
+          }
         }
       }
     }
+
+    if (failedSkippedRecords.length > 0) {
+      await insertSkippedRecords(failedSkippedRecords);
+    }
+
     const syncedCount = rowsToInsert.length - failedCount;
 
     const durationMs = Date.now() - startTime;
@@ -628,6 +677,7 @@ Deno.serve(async (req) => {
         last_records_processed: reservations.length,
         last_records_inserted: syncedCount,
       }, { onConflict: 'api_name' });
+
     // Aggregate all skip reasons for api_logs
     const totalSkipped = skippedRows.length + deduplicatedCount + failedCount;
     const skipReasons: Record<string, number> = {};
@@ -644,7 +694,8 @@ Deno.serve(async (req) => {
       recordsInserted: syncedCount,
       recordsSkipped: totalSkipped,
       skipReasons: totalSkipped > 0 ? skipReasons : undefined,
-      responseStatus: 200,
+      responseStatus: failedCount === 0 ? 200 : 500,
+      errorMessage: insertError ?? undefined,
       triggeredBy: body.triggeredBy || 'manual',
       parentLogId: body.parentLogId,
     });

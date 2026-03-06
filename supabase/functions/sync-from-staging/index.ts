@@ -19,6 +19,8 @@ interface SyncFromStagingRequest {
   api?: TransferApi;
   clear_staging?: boolean;
   sync_batch_id?: string;
+  parentLogId?: string;
+  triggeredBy?: string;
 }
 
 interface TransferResult {
@@ -87,7 +89,8 @@ Deno.serve(async (req) => {
       records_processed: totalProcessed,
       records_inserted: totalInserted,
       records_updated: totalUpdated,
-      triggered_by: body.sync_batch_id ? "backfill-job" : "manual",
+      triggered_by: body.triggeredBy ?? (body.sync_batch_id ? "backfill-job" : "manual"),
+      parent_log_id: body.parentLogId ?? null,
     });
 
     return new Response(

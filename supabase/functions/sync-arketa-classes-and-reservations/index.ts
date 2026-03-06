@@ -17,8 +17,8 @@ interface WrapperRequest {
   endDate?: string;
   triggeredBy?: string;
   /** Cursor for backfill pagination; forward to sync-arketa-classes */
+  start_after_id?: string;
   strict_three_phase?: boolean;
-}
 
 function parseJson<T>(text: string): T | null {
   try {

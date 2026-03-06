@@ -265,7 +265,8 @@ Deno.serve(async (req) => {
           url.searchParams.set('start_after', decodeURIComponent(nextCursor));
         }
 
-        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers });
+        const backfillDeadline = startTime + BACKFILL_TIMEOUT_MS;
+        const { response } = await fetchWithRetry(url.toString(), { method: 'GET', headers }, backfillDeadline);
         if (!response.ok) {
           const errText = await response.text();
           logger.error(`Purchases fetch failed: HTTP ${response.status}`, { body: errText.substring(0, 300) });
@@ -392,7 +393,8 @@ Deno.serve(async (req) => {
       if (cursor) url += `&start_after=${cursor}`;
 
       try {
-        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers });
+        const fetchDeadline = startTime + SYNC_TIMEOUT_MS;
+        const { response, attempts } = await fetchWithRetry(url, { method: 'GET', headers }, fetchDeadline);
         totalAttempts += attempts;
 
         if (!response.ok) {

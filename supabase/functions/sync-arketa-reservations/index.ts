@@ -583,7 +583,14 @@ Deno.serve(async (req) => {
       const key = `${r.reservation_id}:${r.sync_batch_id}`;
       if (!seenByReservation.has(key)) seenByReservation.set(key, r);
     }
+    const deduplicatedCount = rowsToInsert.length - seenByReservation.size;
     rowsToInsert = [...seenByReservation.values()];
+
+    // Log deduplicated records to skipped records table
+    if (deduplicatedCount > 0) {
+      logger?.info(`Deduplicated ${deduplicatedCount} duplicate reservation_id entries`);
+    }
+
     let failedCount = 0;
     let insertError: string | null = null;
     if (rowsToInsert.length > 0) {
@@ -621,6 +628,13 @@ Deno.serve(async (req) => {
         last_records_processed: reservations.length,
         last_records_inserted: syncedCount,
       }, { onConflict: 'api_name' });
+    // Aggregate all skip reasons for api_logs
+    const totalSkipped = skippedRows.length + deduplicatedCount + failedCount;
+    const skipReasons: Record<string, number> = {};
+    if (skippedRows.length > 0) skipReasons.empty_class_id = skippedRows.length;
+    if (deduplicatedCount > 0) skipReasons.duplicate_reservation_id = deduplicatedCount;
+    if (failedCount > 0) skipReasons.staging_insert_failed = failedCount;
+
     await logApiCall(supabase, {
       apiName: 'arketa_reservations',
       endpoint: '/reservations',
@@ -628,8 +642,8 @@ Deno.serve(async (req) => {
       durationMs,
       recordsProcessed: reservations.length,
       recordsInserted: syncedCount,
-      recordsSkipped: failedCount,
-      skipReasons: failedCount > 0 ? { staging_insert_failed: failedCount } : undefined,
+      recordsSkipped: totalSkipped,
+      skipReasons: totalSkipped > 0 ? skipReasons : undefined,
       responseStatus: 200,
       triggeredBy: body.triggeredBy || 'manual',
       parentLogId: body.parentLogId,

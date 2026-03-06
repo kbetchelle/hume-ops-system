@@ -380,6 +380,11 @@ Deno.serve(async (req) => {
 
     if (!skipLogging) {
       const syncWasSuccessful = !apiErrorMessage || syncedCount > 0;
+      const totalSkipped = skippedRows.length + duplicatesSkipped;
+      const skipReasons: Record<string, number> = {};
+      if (skippedRows.length > 0) skipReasons.missing_start_time = skippedRows.length;
+      if (duplicatesSkipped > 0) skipReasons.duplicate_external_id = duplicatesSkipped;
+
       await logApiCall(supabase, {
         apiName: 'arketa_classes',
         endpoint: '/classes',
@@ -387,8 +392,8 @@ Deno.serve(async (req) => {
         durationMs,
         recordsProcessed: filteredClasses.length,
         recordsInserted: syncedCount,
-        recordsSkipped: duplicatesSkipped,
-        skipReasons: duplicatesSkipped > 0 ? { duplicate_external_id: duplicatesSkipped } : undefined,
+        recordsSkipped: totalSkipped,
+        skipReasons: totalSkipped > 0 ? skipReasons : undefined,
         responseStatus: apiErrorMessage ? 500 : 200,
         errorMessage: apiErrorMessage ?? undefined,
         triggeredBy,

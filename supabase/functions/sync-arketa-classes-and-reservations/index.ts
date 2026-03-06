@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
     defaultEnd.setDate(defaultEnd.getDate() + 7);
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
+    const strictThreePhase = body.strict_three_phase === true || triggeredBy === 'backfill-job';
 
     const payload: Record<string, unknown> = { startDate, endDate, triggeredBy, skipLogging: true };
     if (body.start_after_id) payload.start_after_id = body.start_after_id;
@@ -114,8 +115,39 @@ Deno.serve(async (req) => {
       classesData = { success: false, error: classesErr instanceof Error ? classesErr.message : String(classesErr) };
     }
 
+    const classesError = (classesData.error as string | undefined) ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     if (!classesOk) {
-      console.warn('[sync-arketa-classes-and-reservations] Classes sync failed, continuing to reservations:', classesData.error);
+      if (strictThreePhase) {
+        const durationMs = Date.now() - startTime;
+        await logApiCall(supabase, {
+          apiName: 'arketa_classes',
+          endpoint: '/classes+reservations',
+          syncSuccess: false,
+          durationMs,
+          recordsProcessed: (classesData.totalFetched as number) ?? 0,
+          recordsInserted: (classesData.syncedCount as number) ?? 0,
+          responseStatus: 502,
+          errorMessage: `classes: ${classesError ?? 'phase failed'}`,
+          triggeredBy,
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `classes: ${classesError ?? 'phase failed'}`,
+            dateRange: { startDate, endDate },
+            classes: {
+              success: false,
+              syncedCount: (classesData.syncedCount as number) ?? 0,
+              totalFetched: (classesData.totalFetched as number) ?? 0,
+              error: classesError ?? null,
+            },
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.warn('[sync-arketa-classes-and-reservations] Classes sync failed, continuing to reservations:', classesError);
     }
 
     // ── 2) Reservations with same range ───────────────────────────────
@@ -180,7 +212,6 @@ Deno.serve(async (req) => {
     }
 
     // In strict 3-phase mode (used by reservations backfill), all phases must succeed.
-    const strictThreePhase = body.strict_three_phase === true || triggeredBy === 'backfill-job';
     const success = strictThreePhase ? (classesOk && reservationsOk && stagingOk) : (reservationsOk && stagingOk);
     const durationMs = Date.now() - startTime;
 
@@ -190,9 +221,9 @@ Deno.serve(async (req) => {
       ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
     const totalSyncedCount = classesSyncedCount + reservationsSyncedCount;
 
-    const classesError = (classesData.error as string | undefined) ?? (!classesOk ? 'classes sync returned success=false' : undefined);
+    const normalizedClassesError = classesError ?? (!classesOk ? 'classes sync returned success=false' : undefined);
     const errors: string[] = [];
-    if (!classesOk && classesError) errors.push(`classes: ${classesError}`);
+    if (!classesOk && normalizedClassesError) errors.push(`classes: ${normalizedClassesError}`);
     if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
     if (!stagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
 
@@ -224,7 +255,7 @@ Deno.serve(async (req) => {
         success: classesOk,
         syncedCount: classesSyncedCount,
         totalFetched: classesTotalFetched,
-        error: classesError ?? null,
+        error: normalizedClassesError ?? null,
       },
       reservations: {
         success: reservationsOk,

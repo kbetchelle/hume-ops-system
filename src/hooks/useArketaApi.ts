@@ -354,6 +354,8 @@ export function useSyncArketaClassesAndReservations() {
       queryClient.invalidateQueries({ queryKey: ["arketaReservations"] });
       queryClient.invalidateQueries({ queryKey: ["arketaReservationsToday"] });
       queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
+      queryClient.invalidateQueries({ queryKey: ["apiLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["apiNames"] });
       const classes = data?.classes ?? {};
       const reservations = data?.reservations ?? {};
       const syncFromStaging = data?.syncFromStaging ?? {};

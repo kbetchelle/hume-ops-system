@@ -1,14 +1,14 @@
 /**
  * sync-arketa-classes-and-reservations: Run classes sync then reservations sync with the same date range.
  * After reservations sync, calls sync-from-staging to transfer reservations from staging to history,
- * then refreshes the daily schedule. Logs results to api_logs/api_sync_status.
+ * then refreshes the daily schedule. Creates a parent log and propagates its ID to child functions.
  *
  * Used by the scheduled-sync-runner (every 20 min) and for manual "one-click" Arketa sync.
  * Default date range: -7 to +7 days.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { logApiCall } from '../_shared/apiLogger.ts';
+import { createParentLog, updateParentLog } from '../_shared/apiLogger.ts';
 
 interface WrapperRequest {
   start_date?: string;
@@ -16,17 +16,12 @@ interface WrapperRequest {
   startDate?: string;
   endDate?: string;
   triggeredBy?: string;
-  /** Cursor for backfill pagination; forward to sync-arketa-classes */
   start_after_id?: string;
   strict_three_phase?: boolean;
 }
 
 function parseJson<T>(text: string): T | null {
-  try {
-    return text ? (JSON.parse(text) as T) : null;
-  } catch {
-    return null;
-  }
+  try { return text ? (JSON.parse(text) as T) : null; } catch { return null; }
 }
 
 function parseErrorBody(text: string): string {
@@ -88,7 +83,13 @@ Deno.serve(async (req) => {
     const startDate = body.startDate ?? body.start_date ?? defaultStart.toISOString().split('T')[0];
     const endDate = body.endDate ?? body.end_date ?? defaultEnd.toISOString().split('T')[0];
 
-    const payload: Record<string, unknown> = { startDate, endDate, triggeredBy, skipLogging: true };
+    // ── Create parent log ─────────────────────────────────────────────
+    const parentLogId = await createParentLog(supabase, 'arketa_classes', '/classes+reservations', triggeredBy);
+
+    const payload: Record<string, unknown> = {
+      startDate, endDate, triggeredBy, skipLogging: false,
+      ...(parentLogId ? { parentLogId } : {}),
+    };
     if (body.start_after_id) payload.start_after_id = body.start_after_id;
     const authHeaders = {
       'Content-Type': 'application/json',
@@ -151,10 +152,12 @@ Deno.serve(async (req) => {
     let stagingOk = false;
     try {
       const syncFromStagingUrl = `${supabaseUrl}/functions/v1/sync-from-staging`;
+      const stagingPayload: Record<string, unknown> = { api: 'arketa_reservations', clear_staging: true };
+      if (parentLogId) stagingPayload.parentLogId = parentLogId;
       const stagingRes = await fetch(syncFromStagingUrl, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ api: 'arketa_reservations', clear_staging: true }),
+        body: JSON.stringify(stagingPayload),
       });
       stagingData = stagingRes.ok
         ? (await stagingRes.json().catch(() => ({})))
@@ -185,13 +188,10 @@ Deno.serve(async (req) => {
     }
 
     // ── 5) Determine overall success ─────────────────────────────────
-    // Classes failure is non-blocking.
-    // Staging is considered OK if reservations returned 0 records (nothing to stage).
     const reservationsSyncedCount =
       (reservationsData.syncedCount as number) ??
       ((reservationsData.data as Record<string, unknown>)?.reservations_synced as number) ?? 0;
     const reservationsHadNoData = reservationsOk && reservationsSyncedCount === 0;
-    // If reservations succeeded but had no data, staging having nothing to do is fine
     const effectiveStagingOk = stagingOk || reservationsHadNoData;
     const success = reservationsOk && effectiveStagingOk;
 
@@ -205,25 +205,23 @@ Deno.serve(async (req) => {
     if (!reservationsOk && reservationsData.error) errors.push(`reservations: ${reservationsData.error}`);
     if (!effectiveStagingOk && stagingData.error) errors.push(`sync-from-staging: ${stagingData.error}`);
 
-    // ── 6) Log to api_logs / api_sync_status ──────────────────────────
-    await logApiCall(supabase, {
-      apiName: 'arketa_classes',
-      endpoint: '/classes+reservations',
-      syncSuccess: success,
-      durationMs,
-      recordsProcessed: ((classesData.totalFetched as number) ?? 0) +
-        ((reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0),
-      recordsInserted: totalSyncedCount,
-      responseStatus: success ? 200 : 502,
-      errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
-      triggeredBy,
-    });
+    // ── 6) Update parent log with final results ───────────────────────
+    if (parentLogId) {
+      const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
+      const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
+      await updateParentLog(supabase, parentLogId, {
+        syncSuccess: success,
+        durationMs,
+        recordsProcessed: classesTotalFetched + reservationsTotalFetched,
+        recordsInserted: totalSyncedCount,
+        errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
+      });
+    }
 
     const classesTotalFetched = (classesData.totalFetched as number) ?? 0;
     const reservationsTotalFetched = (reservationsData.totalFetched as number) ?? (reservationsData.records_processed as number) ?? 0;
     const responseBody = {
       success,
-      // Top-level error field for run-backfill-job to extract
       error: errors.length > 0 ? errors.join('; ') : undefined,
       syncedCount: totalSyncedCount,
       totalFetched: classesTotalFetched + reservationsTotalFetched,
@@ -261,17 +259,8 @@ Deno.serve(async (req) => {
     const durationMs = Date.now() - startTime;
 
     try {
-      await logApiCall(supabase, {
-        apiName: 'arketa_classes',
-        endpoint: '/classes+reservations',
-        syncSuccess: false,
-        durationMs,
-        recordsProcessed: 0,
-        recordsInserted: 0,
-        responseStatus: 500,
-        errorMessage: message,
-        triggeredBy,
-      });
+      // No parent log update needed in catch - it stays as-is with success=true/0 records
+      // which is clearly incomplete
     } catch (logErr) {
       console.error('[sync-arketa-classes-and-reservations] Failed to log error:', logErr);
     }

@@ -293,6 +293,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
 
   // --- Build 8-day chunks with 1-day overlap ---
   const CHUNK_DAYS = getChunkDays(jobType);
+  const CHUNK_OVERLAP_DAYS = jobType === "arketa_reservations" ? 0 : 1;
   const batchBreakMs = getBatchBreakMs(jobType);
   {
     const s = new Date(startDate + "T00:00:00Z");
@@ -303,12 +304,11 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CHUNK_DAYS - 1);
       if (chunkEnd > e) chunkEnd.setTime(e.getTime());
       allChunks.push({ chunkStart: formatDate(cur), chunkEnd: formatDate(chunkEnd) });
-      // Next chunk starts 1 day before chunkEnd (1-day overlap) for boundary safety
-      cur = new Date(chunkEnd);
-      // But if chunkEnd == e, we're done
+      // Next chunk start = previous chunk end + 1 day - overlap
       if (formatDate(chunkEnd) >= formatDate(e)) break;
-      // Advance by CHUNK_DAYS - 1 (overlap)
-      cur.setUTCDate(cur.getUTCDate());
+      const nextStart = new Date(chunkEnd);
+      nextStart.setUTCDate(nextStart.getUTCDate() + 1 - CHUNK_OVERLAP_DAYS);
+      cur = nextStart;
     }
   }
 

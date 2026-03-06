@@ -16,13 +16,13 @@ import { logApiCall } from '../_shared/apiLogger.ts';
  */
 
 const PAGE_LIMIT = 100; // Use max page size for efficiency
-const SYNC_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
+const SYNC_TIMEOUT_MS = 40_000; // 40s wall-clock guard for FETCH phase (leaves ~15s for upsert+logging)
 const UPSERT_BATCH = 100;
-const MAX_RETRIES = 8;
-const BASE_DELAY_MS = 3000;
-const MAX_DELAY_MS = 60000;
+const MAX_RETRIES = 3; // Reduced from 8 to prevent timeout spiral
+const BASE_DELAY_MS = 2000;
+const MAX_DELAY_MS = 10000; // Reduced from 60s to prevent single-page retry exhausting budget
 const BACKFILL_PAGE_LIMIT = 100; // Arketa max page size
-const BACKFILL_TIMEOUT_MS = 50_000; // 50s wall-clock guard (gateway = 60s)
+const BACKFILL_TIMEOUT_MS = 40_000; // 40s wall-clock guard for FETCH phase
 
 interface PaymentDTO {
   id: string;

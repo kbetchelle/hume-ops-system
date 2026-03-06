@@ -35,7 +35,7 @@ function MembersHeader({ title }: { title: string }) {
 export function MembersLayout({ children, title }: MembersLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="h-dvh flex w-full bg-background overflow-hidden">
         <MembersSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <MembersHeader title={title} />

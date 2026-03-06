@@ -84,11 +84,11 @@ function getSyncConfig(jobType: JobType) {
     case "arketa_reservations":
     default:
       return {
-        syncFunction: "sync-arketa-classes-and-reservations",
+        syncFunction: "sync-arketa-reservations",
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
-        transferApi: null,
-        needsTransfer: false,
+        transferApi: "arketa_reservations",
+        needsTransfer: true,
       };
   }
 }
@@ -348,6 +348,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   try {
     const syncBody = jobType === "arketa_classes_and_reservations"
       ? { start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
+      : jobType === "arketa_reservations"
+      ? { startDate: chunkStart, endDate: chunkEnd, triggeredBy: "backfill-job", skipLogging: true }
       : { startDate: chunkStart, endDate: chunkEnd, start_after_id: startAfterId, skipLogging: true };
 
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
@@ -376,6 +378,28 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     }
   } catch (err) {
     syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  // For standalone reservations, transfer staging → history and refresh schedule
+  if (jobType === "arketa_reservations" && syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ api: "arketa_reservations", clear_staging: true }),
+      });
+    } catch (err) {
+      console.error("[backfill] Failed to transfer reservations from staging:", err);
+    }
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/refresh-daily-schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ start_date: chunkStart, end_date: chunkEnd }),
+      });
+    } catch (err) {
+      console.error("[backfill] Failed to refresh daily schedule:", err);
+    }
   }
 
   // Count records after sync
@@ -478,10 +502,12 @@ function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknow
   if (jobType === "toast_orders") {
     return { start_date: dateStr, end_date: dateStr };
   }
-  if (jobType === "arketa_classes_and_reservations" || jobType === "arketa_reservations") {
+  if (jobType === "arketa_classes_and_reservations") {
     return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
   }
-  // arketa_reservations now routes through the combined sync function
+  if (jobType === "arketa_reservations") {
+    return { startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", skipLogging: true };
+  }
   return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
 }
 
@@ -499,7 +525,7 @@ function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>)
       totalFetched: (syncData?.totalFetched as number) ?? 0,
     };
   }
-  if (jobType === "arketa_classes_and_reservations" || jobType === "arketa_reservations") {
+  if (jobType === "arketa_classes_and_reservations") {
     const classes = syncData?.classes as Record<string, unknown> | undefined;
     const reservations = syncData?.reservations as Record<string, unknown> | undefined;
     const reservationsSynced = (reservations?.syncedCount as number) ?? 0;
@@ -508,6 +534,12 @@ function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>)
     return {
       recordCount: reservationsSynced,
       totalFetched: classesFetched + reservationsFetched,
+    };
+  }
+  if (jobType === "arketa_reservations") {
+    return {
+      recordCount: (syncData?.syncedCount as number) ?? (syncData?.records_synced as number) ?? 0,
+      totalFetched: (syncData?.totalFetched as number) ?? (syncData?.records_processed as number) ?? 0,
     };
   }
   const data = syncData?.data as Record<string, unknown> | undefined;
@@ -586,9 +618,13 @@ Deno.serve(async (req) => {
       return await handlePaymentsBackfill(supabase, job, jobId, corsHeaders);
     }
 
-    // ── Arketa Classes, Classes+Reservations, and standalone Reservations: cursor-based backfill ──
-    // Standalone reservations now route through the combined sync function (sync-arketa-classes-and-reservations)
-    if (jobType === "arketa_classes" || jobType === "arketa_classes_and_reservations" || jobType === "arketa_reservations") {
+    // ── Arketa Classes and Classes+Reservations: cursor-based backfill ──
+    if (jobType === "arketa_classes" || jobType === "arketa_classes_and_reservations") {
+      return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
+    }
+
+    // ── Arketa Reservations: standalone cursor-based backfill (calls sync-arketa-reservations directly) ──
+    if (jobType === "arketa_reservations") {
       return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
     }
 

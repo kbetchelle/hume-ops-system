@@ -98,11 +98,11 @@ export function CafeChecklistItem({
       <label
         htmlFor={checkboxId}
         className={cn(
-          'flex items-center gap-3 border hover:bg-accent/50 transition-colors cursor-pointer',
+          'flex items-center gap-3 border hover:bg-accent/50 transition-colors cursor-pointer relative',
           isCompleted && 'bg-accent/30 border-primary',
           isMobile ? 'min-h-[48px] p-3 gap-4 active:scale-[0.98]' : 'p-3'
         )}
-        style={colorStyle}
+        style={{ ...colorStyle, touchAction: 'manipulation' }}
       >
         <input
           type="checkbox"
@@ -140,7 +140,7 @@ export function CafeChecklistItem({
   // Photo type
   if (item.task_type === 'photo') {
     return (
-      <div className={cn('border space-y-3', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={colorStyle}>
+      <div className={cn('border space-y-3 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <PhotoUpload
           isOpen={isPhotoModalOpen}
           onSave={handlePhotoSave}
@@ -206,7 +206,7 @@ export function CafeChecklistItem({
     const isImageSignature = completion?.signature_data?.startsWith('data:image/');
     
     return (
-      <div className={cn('border space-y-3', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={colorStyle}>
+      <div className={cn('border space-y-3 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3 md:p-4')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <SignaturePad
           isOpen={isSignatureModalOpen}
           onSave={handleSignatureSave}
@@ -275,7 +275,7 @@ export function CafeChecklistItem({
   // Text entry types
   if (item.task_type === 'free_response' || item.task_type === 'short_entry') {
     return (
-      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
+      <div className={cn('border space-y-2 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
@@ -306,7 +306,7 @@ export function CafeChecklistItem({
   // Yes/No type
   if (item.task_type === 'yes_no') {
     return (
-      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
+      <div className={cn('border space-y-2 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
@@ -338,7 +338,7 @@ export function CafeChecklistItem({
   if (item.task_type === 'multiple_choice') {
     const choices = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'N/A'];
     return (
-      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
+      <div className={cn('border space-y-2 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           
@@ -365,7 +365,7 @@ export function CafeChecklistItem({
   // Employee type
   if (item.task_type === 'employee') {
     return (
-      <div className={cn('border space-y-2', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={colorStyle}>
+      <div className={cn('border space-y-2 relative', isMobile ? 'min-h-[48px] p-3' : 'p-3')} style={{ ...colorStyle, touchAction: 'manipulation' }}>
         <div className="flex items-center gap-2">
           <span className={cn('font-medium', isMobile ? 'text-[13.75px]' : 'text-[13px]')}>{taskLabel}</span>
           

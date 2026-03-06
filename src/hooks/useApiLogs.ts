@@ -60,7 +60,7 @@ export function useApiLogs(options: UseApiLogsOptions = {}) {
         currentPage: page,
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 }
 

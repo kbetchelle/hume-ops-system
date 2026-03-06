@@ -30,6 +30,8 @@ interface CafeChecklistWithItems {
 
 export function CafeChecklistView() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const [selectedDate, setSelectedDate] = useState(getPSTToday);
   const [hideCompleted, setHideCompleted] = useState(() => getStorageBool('checklist-hide-completed', false));
 

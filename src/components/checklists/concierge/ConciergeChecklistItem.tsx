@@ -89,14 +89,22 @@ export function ConciergeChecklistItem({
 
   // Checkbox type
   if (item.task_type === 'checkbox') {
+    const checkboxId = `concierge-checkbox-${item.id}`;
     return (
-      <div
+      <label
+        htmlFor={checkboxId}
         className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${
           isCompleted ? 'bg-accent/30 border-primary' : ''
         }`}
         style={colorStyle}
-        onClick={() => handleToggle()}
       >
+        <input
+          type="checkbox"
+          id={checkboxId}
+          checked={isCompleted}
+          onChange={() => handleToggle()}
+          className="sr-only"
+        />
         <div
           className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
             isCompleted ? 'bg-primary border-primary' : 'border-muted-foreground'
@@ -114,7 +122,7 @@ export function ConciergeChecklistItem({
             <p className="text-xs text-muted-foreground mt-1">{item.time_hint}</p>
           )}
         </div>
-      </div>
+      </label>
     );
   }
 

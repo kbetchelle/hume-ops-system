@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { ApiLog } from "@/hooks/useApiLogs";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   RefreshCw,
@@ -621,7 +622,7 @@ function SyncLogHistoryTable({
     }
   };
 
-  const getSkipSummary = (log: typeof data!.logs[0]): string | null => {
+  const getSkipSummary = (log: ApiLog): string | null => {
     const skipped = log.records_skipped ?? Math.max(0, (log.records_processed ?? 0) - (log.records_inserted ?? 0) - (log.records_updated ?? 0));
     if (skipped <= 0) return null;
     const reasons = log.skip_reasons as Record<string, number> | null;
@@ -632,13 +633,13 @@ function SyncLogHistoryTable({
     return String(skipped);
   };
 
-  const getSkipTooltip = (log: typeof data!.logs[0]): string => {
+  const getSkipTooltip = (log: ApiLog): string => {
     const reasons = log.skip_reasons as Record<string, number> | null;
     if (!reasons) return '';
     return Object.entries(reasons).map(([k, v]) => `${k}: ${v}`).join('\n');
   };
 
-  const renderLogRow = (log: typeof data!.logs[0], isChild: boolean, groupStatus: 'success' | 'failed' | 'partial') => {
+  const renderLogRow = (log: ApiLog, isChild: boolean, groupStatus: 'success' | 'failed' | 'partial') => {
     const skipped = log.records_skipped ?? Math.max(0, (log.records_processed ?? 0) - (log.records_inserted ?? 0) - (log.records_updated ?? 0));
     const skipSummary = getSkipSummary(log);
     

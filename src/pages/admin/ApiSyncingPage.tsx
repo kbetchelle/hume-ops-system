@@ -826,10 +826,10 @@ function SyncLogHistoryTable({
               </TableRow>
             ) : (
               groupedLogs.map((group) => (
-                <>
+                <React.Fragment key={group.parent.id}>
                   {renderLogRow(group.parent, false, group.status)}
                   {group.children.map((child) => renderLogRow(child, true, group.status))}
-                </>
+                </React.Fragment>
               ))
             )}
           </TableBody>

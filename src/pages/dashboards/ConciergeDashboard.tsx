@@ -156,10 +156,10 @@ export default function ConciergeDashboard() {
           <div className="flex flex-col gap-4" style={{ padding: '36px' }}>
             <MastercardArrivalBanner />
             <div className="flex flex-wrap gap-4">
-              <div className="flex-1 basis-[450px] min-w-[450px]">
+              <div className="flex-1 basis-[450px] min-w-0">
                 <EmbeddedChecklist />
               </div>
-              <div className="flex-1 basis-[450px] min-w-[450px]">
+              <div className="flex-1 basis-[450px] min-w-0">
                 <ChecklistAlertBanners />
                 <UpcomingTodayCard />
               </div>

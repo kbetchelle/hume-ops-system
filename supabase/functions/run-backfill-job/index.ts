@@ -270,12 +270,11 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
 }
 
 /**
- * Cursor-based backfill for arketa_classes (and classes+reservations).
+ * Cursor-based backfill for arketa_classes / arketa_classes_and_reservations / arketa_reservations.
  * 
- * Large date ranges cause Arketa API 500 errors, so we split into 8-day chunks
- * with 1-day overlap. Each batch processes one chunk, paginating with
- * nextStartAfterId within that chunk. When a chunk is exhausted, we advance
- * to the next chunk on the following batch invocation.
+ * Uses adaptive chunking: standard jobs use larger chunks with overlap, while
+ * reservations use smaller chunks (no overlap) to stay below gateway timeout.
+ * Each batch processes one chunk and self-queues the next batch invocation.
  */
 async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
   const startDate = job.start_date;

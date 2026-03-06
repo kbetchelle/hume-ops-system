@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
         const amount = Number(p.amount ?? 0);
         const fees = Number(p.transaction_fees ?? 0);
         const refunded = Number(p.amount_refunded ?? 0);
-        const dollars = amount + fees - refunded;
+        const dollars = amount - refunded;
         if (isSubscriptionPayment(p.normalized_category as string[] | null)) {
           grossSalesMembership += dollars;
         } else {

@@ -56,12 +56,24 @@ export function RichTextEditor({
       lastExternalValueRef.current = value;
       return;
     }
+    // Skip innerHTML reset when user is actively typing (prevents cursor jump + scroll)
+    if (editorRef.current && document.activeElement === editorRef.current) {
+      lastExternalValueRef.current = value;
+      return;
+    }
     if (editorRef.current && (!isInitializedRef.current || value !== lastExternalValueRef.current)) {
       editorRef.current.innerHTML = sanitizeHtml(value);
       isInitializedRef.current = true;
       lastExternalValueRef.current = value;
     }
   }, [value]);
+
+  // Prevent spacebar from triggering browser scroll-to-bottom
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      e.stopPropagation();
+    }
+  }, []);
 
   // Execute formatting command
   const execCommand = useCallback((command: string, value?: string) => {
@@ -193,9 +205,9 @@ export function RichTextEditor({
       </div>
 
       {/* Editor */}
-      <div ref={editorRef} contentEditable className="px-[10px] py-[6px] focus:outline-none prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline text-base [&_*]:!text-[length:inherit] [&_span]:!text-[length:inherit] [&_div]:!text-[length:inherit] [&_p]:!text-[length:inherit]" style={{
+      <div ref={editorRef} contentEditable className="px-[10px] py-[6px] focus:outline-none prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline text-base [&_*]:!text-[length:inherit] [&_span]:!text-[length:inherit] [&_div]:!text-[length:inherit] [&_p]:!text-[length:inherit] overflow-y-auto" style={{
       minHeight
-    }} onInput={handleInput} onPaste={handlePaste} data-placeholder={placeholder} suppressContentEditableWarning />
+    }} onInput={handleInput} onPaste={handlePaste} onKeyDown={handleKeyDown} data-placeholder={placeholder} suppressContentEditableWarning />
 
       <style>{`
         [contenteditable]:empty:before {

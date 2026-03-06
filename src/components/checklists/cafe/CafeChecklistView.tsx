@@ -163,11 +163,11 @@ export function CafeChecklistView() {
             const sectionCompleted = sectionItems.filter((i: any) => completionMap.get(i.id)?.completed_at).length;
             return (
               <div key={`${checklistId}-${section}`}>
-                <div className="sticky top-0 z-10 px-4 py-2 bg-muted/95 backdrop-blur border-b font-semibold text-sm flex items-center justify-between">
+                <div className="sticky top-0 z-20 px-4 py-2 bg-muted/95 backdrop-blur border-b font-semibold text-sm flex items-center justify-between">
                   <span>{section}</span>
                   <span className="text-muted-foreground font-normal">{sectionCompleted}/{sectionItems.length}</span>
                 </div>
-                <div>
+                <div className="relative z-0">
                   {filteredItems.map((item: any) => (
                     <div key={item.id} className="min-h-[48px] p-0 bg-card">
                       <CafeChecklistItemComponent
@@ -283,7 +283,7 @@ export function CafeChecklistView() {
                           <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>svg>&]:rotate-180" />
                         </div>
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pl-1">
+                      <CollapsibleContent className="pl-1 relative z-0">
                         {filteredCategoryItems.map((item: any) => (
                           <CafeChecklistItemComponent
                             key={item.id}

@@ -103,16 +103,24 @@ export function BoHChecklistItem({
 
   // Checkbox type
   if (item.task_type === 'checkbox') {
+    const checkboxId = `boh-checkbox-${item.id}`;
     return (
-      <div
+      <label
+        htmlFor={checkboxId}
         className={cn(
           'flex items-center gap-3 border rounded-none hover:bg-accent/50 transition-all duration-200 cursor-pointer active:scale-[0.98]',
           isCompleted && 'bg-accent/30 border-primary opacity-90',
           isMobile ? 'min-h-[48px] p-3 gap-4' : 'p-3'
         )}
         style={colorStyle}
-        onClick={() => handleToggle()}
       >
+        <input
+          type="checkbox"
+          id={checkboxId}
+          checked={isCompleted}
+          onChange={() => handleToggle()}
+          className="sr-only"
+        />
         <div
           className={cn(
             'flex items-center justify-center rounded-none border-2 shrink-0',
@@ -135,7 +143,7 @@ export function BoHChecklistItem({
             <p className={cn('text-muted-foreground mt-1', isMobile ? 'text-[12.5px]' : 'text-xs')}>{item.time_hint}</p>
           )}
         </div>
-      </div>
+      </label>
     );
   }
 

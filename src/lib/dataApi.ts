@@ -45,9 +45,9 @@ export interface DataApiOptions {
   timeout?: number;
 }
 
-const DEFAULT_MAX_RETRIES = 3;
-const BASE_RETRY_DELAY = 1000;
-const DEFAULT_TIMEOUT = 30000;
+const DEFAULT_MAX_RETRIES = 1;
+const BASE_RETRY_DELAY = 2000;
+const DEFAULT_TIMEOUT = 20000;
 
 /**
  * Check if an error is retryable

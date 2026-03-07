@@ -1,6 +1,7 @@
 /**
- * refresh-daily-schedule: Populate daily_schedule from arketa_classes + arketa_reservations_history.
- * Invoked at 12am daily and after sync-arketa-reservations. Uses RPC refresh_daily_schedule(date).
+ * refresh-daily-schedule: Fetch fresh reservations from Arketa's flat endpoint,
+ * then rebuild daily_schedule from arketa_classes + arketa_reservations_history.
+ * Invoked on schedule and after syncs. Uses sync-arketa-reservations then RPC refresh_daily_schedule(date).
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -15,6 +16,7 @@ interface RequestBody {
   end_date?: string;
   triggeredBy?: string;
   parentLogId?: string;
+  skipReservationSync?: boolean;
 }
 
 /** Today's date in America/Los_Angeles as YYYY-MM-DD */
@@ -32,6 +34,13 @@ function todayPacific(): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Add days to a YYYY-MM-DD string */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -44,7 +53,7 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as RequestBody;
 
     const scheduleDate = body.schedule_date ?? body.start_date ?? todayPacific();
-    const endDate = body.end_date ?? scheduleDate;
+    const endDate = body.end_date ?? addDays(todayPacific(), 7);
 
     // Validate date format YYYY-MM-DD
     const dateRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -55,6 +64,42 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Step 1: Fetch fresh reservations from the new Arketa Reservations API
+    let reservationSyncResult: Record<string, unknown> | null = null;
+    if (!body.skipReservationSync) {
+      console.log(`[refresh-daily-schedule] Fetching fresh reservations ${scheduleDate} → ${endDate}`);
+      try {
+        const resSyncUrl = `${SUPABASE_URL}/functions/v1/sync-arketa-reservations`;
+        const resSyncResponse = await fetch(resSyncUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({
+            start_date: scheduleDate,
+            end_date: endDate,
+            triggeredBy: 'daily-schedule-refresh',
+            skipLogging: true,
+          }),
+        });
+        const resSyncBody = await resSyncResponse.text();
+        try {
+          reservationSyncResult = JSON.parse(resSyncBody);
+        } catch {
+          reservationSyncResult = { raw: resSyncBody.slice(0, 300) };
+        }
+        if (!resSyncResponse.ok) {
+          console.warn(`[refresh-daily-schedule] Reservation sync returned ${resSyncResponse.status}, continuing with existing data`);
+        } else {
+          console.log(`[refresh-daily-schedule] Reservation sync complete: ${JSON.stringify(reservationSyncResult).slice(0, 200)}`);
+        }
+      } catch (syncErr) {
+        console.warn('[refresh-daily-schedule] Reservation sync failed, continuing with existing data:', syncErr);
+      }
+    }
+
+    // Step 2: Rebuild daily_schedule via RPC
     const dates: string[] = [];
     if (scheduleDate === endDate) {
       dates.push(scheduleDate);
@@ -114,6 +159,7 @@ Deno.serve(async (req) => {
         end_date: endDate,
         dates_refreshed: dates.length,
         rows_inserted: totalInserted,
+        reservationSync: reservationSyncResult,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

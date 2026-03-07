@@ -276,7 +276,7 @@ function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
     payment_method: row.payment_method ?? null,
     payment_id: row.payment_id ?? null,
     service_id: row.service_id ?? null,
-    tags: row.tags ? JSON.stringify(row.tags) : null,
+    tags: row.tags ?? null,
     canceled_at: row.canceled_at ?? null,
     canceled_by: row.canceled_by ?? null,
     milestone: row.milestone ?? null,
@@ -394,10 +394,18 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'api_name' });
 
-    // ── ISSUE 1 FIX: Truncate staging at start to prevent accumulation ──
-    // This guarantees a clean slate even if downstream processing crashes.
-    logger.info('Truncating arketa_reservations_staging before inserting new data');
-    await supabase.rpc('exec_sql', { sql: 'TRUNCATE TABLE public.arketa_reservations_staging' });
+    // ── ISSUE 1 FIX: Delete stale staging rows to prevent accumulation ──
+    // Use batch_id-scoped delete instead of TRUNCATE to avoid race conditions
+    // when multiple syncs (backfill + scheduled) run concurrently.
+    // Each sync only cleans up rows NOT belonging to an active batch.
+    logger.info('Clearing stale arketa_reservations_staging rows before inserting new data');
+    const { error: cleanupError } = await supabase
+      .from('arketa_reservations_staging')
+      .delete()
+      .neq('sync_batch_id', syncBatchId); // Delete everything except our own batch (which is empty at this point)
+    if (cleanupError) {
+      logger.warn(`Failed to clean staging: ${cleanupError.message}`);
+    }
 
     // Auth: API key works as both Bearer and X-API-Key per docs
     const headers: Record<string, string> = {

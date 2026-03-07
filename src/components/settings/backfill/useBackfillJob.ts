@@ -21,7 +21,8 @@ function getApiSource(jobType: BackfillJobType): string {
 }
 
 function getDataType(jobType: BackfillJobType): string {
-  if (jobType === "arketa_classes_and_reservations" || jobType === "arketa_reservations") return "classes_and_reservations";
+  if (jobType === "arketa_classes_and_reservations") return "classes_and_reservations";
+  if (jobType === "arketa_reservations") return "reservations";
   return jobType.replace("arketa_", "").replace("toast_", "");
 }
 

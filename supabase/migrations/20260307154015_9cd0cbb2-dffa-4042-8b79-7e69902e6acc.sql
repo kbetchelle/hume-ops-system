@@ -1,0 +1,1 @@
+TRUNCATE TABLE public.arketa_reservations_staging;

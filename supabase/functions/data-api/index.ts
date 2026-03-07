@@ -170,8 +170,12 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { db: { schema: 'public' } }
     );
+
+    // Set a 15-second statement timeout to prevent long-running queries from blocking
+    await supabase.rpc('set_config', { setting: 'statement_timeout', value: '15000' }).catch(() => {});
 
     let result;
 

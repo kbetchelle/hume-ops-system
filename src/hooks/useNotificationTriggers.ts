@@ -54,8 +54,6 @@ export function useNotificationTriggers() {
         .order('event_type', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as NotificationTrigger[];
-      if (error) throw error;
-      return data ?? [];
     },
   });
 }

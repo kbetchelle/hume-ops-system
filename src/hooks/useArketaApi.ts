@@ -256,31 +256,41 @@ export function useInstructors() {
   });
 }
 
-// Sync classes mutation
+// Sync classes mutation (classes-only, calls sync-arketa-classes directly)
 export function useSyncArketaClasses() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (params?: { start_date?: string; end_date?: string }) => {
+    mutationFn: async (params?: { startDate?: string; endDate?: string }) => {
       const { data, error } = await supabase.functions.invoke("sync-arketa-classes", {
         body: params || {},
       });
-      if (error) throw error;
+      if (error && !data) throw error;
+      if (data?.success === false && !data?.syncedCount) {
+        throw new Error(data?.error ?? data?.apiError ?? "Classes sync failed");
+      }
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["arketaClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
+      queryClient.invalidateQueries({ queryKey: ["apiLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["apiNames"] });
+      const synced = data?.syncedCount ?? 0;
       toast({
-        title: "Classes Synced",
-        description: `Synced ${data.syncedCount} classes from Arketa.`,
+        title: data?.success ? "Arketa Classes Sync Complete" : "Classes Sync Completed With Errors",
+        description: data?.success
+          ? `${synced} classes synced`
+          : `${synced} classes synced. ${data?.apiError ?? "Check Sync Log History for details."}`,
+        variant: data?.success ? "default" : "destructive",
       });
     },
     onError: (error) => {
-      console.error("Failed to sync classes:", error);
+      console.error("Failed to sync Arketa classes:", error);
       toast({
-        title: "Sync Failed",
-        description: "Failed to sync classes from Arketa.",
+        title: "Classes Sync Failed",
+        description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
     },
@@ -319,73 +329,8 @@ export function useSyncArketaReservations() {
   });
 }
 
-// Sync classes then reservations with the same date range (default -7 to +7 days)
-export function useSyncArketaClassesAndReservations() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (params?: { start_date?: string; end_date?: string }) => {
-      const { data, error } = await supabase.functions.invoke("sync-arketa-classes-and-reservations", {
-        body: params || {},
-      });
-      // Backend returns 502 for partial failure but still sends a full JSON body. Treat that as
-      // a result so onSuccess can show "Completed With Errors" instead of going to onError.
-      const hasResultBody =
-        data &&
-        typeof data === "object" &&
-        ("success" in data || "classes" in data || "reservations" in data);
-      if (hasResultBody) {
-        return data;
-      }
-      // No usable body (e.g. 500, network error): throw with backend message if present
-      const fromBody =
-        typeof data?.error === "string"
-          ? data.error
-          : [data?.classes?.error, data?.reservations?.error]
-              .filter(Boolean)
-              .map((e) => (typeof e === "string" ? e : JSON.stringify(e)))
-              .join("; ");
-      const message = fromBody || ((error as Error)?.message ?? String(error));
-      throw new Error(message);
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["arketaClasses"] });
-      queryClient.invalidateQueries({ queryKey: ["arketaReservations"] });
-      queryClient.invalidateQueries({ queryKey: ["arketaReservationsToday"] });
-      queryClient.invalidateQueries({ queryKey: ["syncSchedules"] });
-      queryClient.invalidateQueries({ queryKey: ["apiLogs"] });
-      queryClient.invalidateQueries({ queryKey: ["apiNames"] });
-      const classes = data?.classes ?? {};
-      const reservations = data?.reservations ?? {};
-      const syncFromStaging = data?.syncFromStaging ?? {};
-      const c = classes.syncedCount ?? 0;
-      const r = reservations.syncedCount ?? 0;
-      const errorParts = [
-        classes.error && `Classes: ${classes.error}`,
-        reservations.error && `Reservations: ${reservations.error}`,
-        syncFromStaging.error && `Staging: ${syncFromStaging.error}`,
-      ].filter(Boolean);
-      const errorDetail = errorParts.length > 0 ? errorParts.join(" · ") : null;
-      toast({
-        title: data?.success ? "Arketa Sync Complete" : "Arketa Sync Completed With Errors",
-        description: data?.success
-          ? `Classes: ${c}, Reservations: ${r}`
-          : errorDetail ?? `Classes: ${c}, Reservations: ${r}. Check Sync Log History for details.`,
-        variant: data?.success ? "default" : "destructive",
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to sync Arketa classes + reservations:", error);
-      const message = error instanceof Error ? error.message : String(error);
-      toast({
-        title: "Sync Failed",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
-}
+// Legacy alias for backward compatibility
+export const useSyncArketaClassesAndReservations = useSyncArketaClasses;
 
 // Sync payments mutation
 export function useSyncArketaPayments() {

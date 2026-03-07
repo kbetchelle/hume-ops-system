@@ -43,7 +43,7 @@ export function ClassScheduleView({ filterClassesOnly = false }: {filterClassesO
 
   const handleSync = async () => {
     const date = isMobile ? selectedDate : today;
-    await syncClasses.mutateAsync({ start_date: date, end_date: date });
+    await syncClasses.mutateAsync({ startDate: date, endDate: date });
     refetch();
   };
 

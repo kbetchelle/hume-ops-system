@@ -177,8 +177,6 @@ Deno.serve(async (req) => {
       url.searchParams.set('limit', String(PAGE_LIMIT));
       url.searchParams.set('start_date', startDate);
       url.searchParams.set('end_date', endDate);
-      // FIX #1: Include cancelled classes so they're synced and tracked
-      url.searchParams.set('include_canceled', 'true');
 
       if (currentCursor) {
         // Decode cursor to avoid double-encoding by searchParams.set()
@@ -296,15 +294,17 @@ Deno.serve(async (req) => {
       const locationId = cls.location_id ?? null;
       const roomName = locationId ? (roomNameMap.get(String(locationId)) ?? null) : null;
 
+      // Map ClassDTO fields per Partner API Reference v0:
+      // duration (minutes), max_capacity, total_booked, canceled, deleted, room_id
       stagingRows.push({
         external_id: externalId,
         class_date: classDate,
         start_time: startTimeVal,
-        duration_minutes: cls.duration_minutes ?? cls.duration ?? null,
+        duration_minutes: cls.duration ?? cls.duration_minutes ?? null,
         name,
-        capacity: cls.capacity ?? cls.max_capacity ?? null,
-        instructor_name: instructorName,
-        is_cancelled: cls.is_cancelled ?? cls.cancelled ?? cls.canceled ?? false,
+        capacity: cls.max_capacity ?? cls.capacity ?? null,
+        instructor_name: instructorName ?? cls.instructor_name ?? null,
+        is_cancelled: cls.canceled ?? cls.is_cancelled ?? cls.cancelled ?? false,
         is_deleted: cls.deleted ?? false,
         description: cls.description ?? null,
         booked_count: cls.total_booked ?? cls.booked_count ?? 0,
@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
         room_name: roomName,
         location_id: locationId,
         location_name: 'HUME',
-        updated_at_api: cls.updated_at ?? cls.updatedAt ?? null,
+        updated_at_api: cls.updated_at ?? null,
         raw_data: cls,
         synced_at: syncedAt,
         sync_batch_id: syncBatchId,

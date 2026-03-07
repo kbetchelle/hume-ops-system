@@ -75,13 +75,11 @@ Deno.serve(async (req) => {
     }
 
     const { data: dueSyncsRaw, error: queryError } = await query;
-    // Enforce sync order: arketa_classes (wrapper: classes then reservations) before arketa_reservations (standalone).
-    // When both are due, running classes first ensures reservations have class_ids in arketa_classes.
+    // Sort syncs: arketa_classes before arketa_reservations to ensure class catalog is current.
     const dueSyncsSorted = (dueSyncsRaw ?? []).slice().sort((a: SyncSchedule, b: SyncSchedule) => {
       const orderOf = (t: string) => (t === 'arketa_classes' ? 0 : t === 'arketa_reservations' ? 1 : 2);
       const cmp = orderOf(a.sync_type) - orderOf(b.sync_type);
       if (cmp !== 0) return cmp;
-      // Secondary sort by next_run_at: earliest first. Treat null as lowest priority (sort last).
       const aNull = !a.next_run_at;
       const bNull = !b.next_run_at;
       if (aNull && bNull) return 0;
@@ -90,12 +88,7 @@ Deno.serve(async (req) => {
       return new Date(a.next_run_at!).getTime() - new Date(b.next_run_at!).getTime();
     });
 
-    // When arketa_classes (wrapper) is in this run, skip standalone arketa_reservations so only the
-    // wrapper runs (classes first, then reservations inside it). Prevents reservations running before classes.
-    const hasArketaClasses = dueSyncsSorted.some((s: SyncSchedule) => s.sync_type === 'arketa_classes');
-    const dueSyncs = hasArketaClasses
-      ? dueSyncsSorted.filter((s: SyncSchedule) => s.sync_type !== 'arketa_reservations')
-      : dueSyncsSorted;
+    const dueSyncs = dueSyncsSorted;
 
     if (queryError) {
       throw new Error(`Failed to query sync schedule: ${queryError.message}`);
@@ -318,15 +311,15 @@ async function runSync(
     // Sync 7 days past to 90 days future
     requestBody = { limit: 400 };
   } else if (syncType === 'arketa_classes') {
-    // Combined classes + reservations sync: -7 to +7 days
+    // Classes-only sync: -7 to +7 days
     const today = new Date();
     const start = new Date(today);
     start.setDate(start.getDate() - 7);
     const end = new Date(today);
     end.setDate(end.getDate() + 7);
     requestBody = {
-      start_date: start.toISOString().split('T')[0],
-      end_date: end.toISOString().split('T')[0],
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0],
       triggeredBy: 'scheduled',
     };
   } else if (syncType === 'arketa_reservations') {

@@ -25,17 +25,15 @@ export function DashboardEventsWidget() {
   const { data: classes, isLoading } = useQuery({
     queryKey: ["dashboard-events-today", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailyScheduleClass>(
-        "daily_schedule",
-        {
-          filters: [{ type: "eq", column: "schedule_date", value: today }],
-          order: { column: "start_time", ascending: true },
-        }
-      );
+      const { data, error } = await supabase
+        .from("daily_schedule")
+        .select("id, class_name, instructor, start_time, end_time, total_booked, max_capacity, canceled")
+        .eq("schedule_date", today)
+        .order("start_time", { ascending: true });
       if (error) throw error;
-      return data || [];
+      return (data || []) as DailyScheduleClass[];
     },
-    refetchInterval: 120000, // 2 minutes
+    refetchInterval: 120000,
   });
 
   const activeClasses = (classes ?? []).filter((c) => !c.canceled && c.class_name && c.class_name !== "Unknown");

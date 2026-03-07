@@ -245,9 +245,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 w-full">
             <Calendar className="h-5 w-5" />
             Upcoming Today
+            <span className="ml-auto text-sm font-normal text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -265,9 +266,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 w-full">
             <Calendar className="h-5 w-5" />
             Upcoming Today
+            <span className="ml-auto text-sm font-normal text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -282,9 +284,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 w-full">
           <Calendar className="h-5 w-5" />
           Upcoming Today
+          <span className="ml-auto text-sm font-normal text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">

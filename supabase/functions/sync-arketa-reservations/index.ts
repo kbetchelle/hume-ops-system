@@ -494,17 +494,21 @@ Deno.serve(async (req) => {
 
     const unknownClassRows = dedupedRows.filter(r => Boolean(r.class_id?.trim()) && !knownClassIds.has(r.class_id!));
     if (unknownClassRows.length > 0) {
-      const stubMap = new Map<string, { external_id: string; name: string; start_time: string; class_date: string; status: string; synced_at: string }>();
+      const stubMap = new Map<string, { external_id: string; name: string; start_time: string; class_date: string; status: string; synced_at: string; duration_minutes?: number | null; reservation_type?: string | null }>();
       for (const r of unknownClassRows) {
         const key = `${r.class_id}::${r.class_date ?? 'unknown'}`;
         if (!stubMap.has(key) && r.class_date) {
+          // Use the actual class_time from the reservation (stored in created_at_api) 
+          // instead of defaulting to midnight
+          const classTime = r.created_at_api || `${r.class_date}T00:00:00+00`;
           stubMap.set(key, {
             external_id: r.class_id!,
             name: r.class_name || 'Unknown Class',
-            start_time: `${r.class_date}T00:00:00+00`,
+            start_time: classTime,
             class_date: r.class_date,
             status: 'stub_from_res_sync',
             synced_at: new Date().toISOString(),
+            reservation_type: r.reservation_type || null,
           });
         }
       }

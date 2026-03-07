@@ -30,11 +30,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  selectFrom,
-  updateTable,
-  eq,
-} from '@/lib/dataApi';
+import { updateTable, eq } from '@/lib/dataApi';
+import { supabase } from '@/integrations/supabase/client';
 import {
   useClassTypeMappings,
   matchClassCategory,

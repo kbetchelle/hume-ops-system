@@ -394,6 +394,8 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'api_name' });
 
+    const syncBatchId = crypto.randomUUID();
+
     // ── ISSUE 1 FIX: Delete stale staging rows to prevent accumulation ──
     // Use batch_id-scoped delete instead of TRUNCATE to avoid race conditions
     // when multiple syncs (backfill + scheduled) run concurrently.
@@ -412,8 +414,6 @@ Deno.serve(async (req) => {
       'Authorization': `Bearer ${ARKETA_API_KEY}`,
       'Content-Type': 'application/json',
     };
-
-    const syncBatchId = crypto.randomUUID();
     let stagingRows: ReturnType<typeof mapFlatRowToStaging>[] = [];
     let totalFetched = 0;
     let pagesProcessed = 0;

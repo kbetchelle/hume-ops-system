@@ -116,7 +116,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 60000,
+    refetchInterval: 120000,
+    retry: 1,
+    retryDelay: 5000,
+    staleTime: 60000,
   });
 
   // Fetch classes
@@ -130,7 +133,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 60000,
+    refetchInterval: 120000,
+    retry: 1,
+    retryDelay: 5000,
+    staleTime: 60000,
   });
 
   const { data: mastercardVisits, isLoading: mastercardLoading } = useQuery({
@@ -146,7 +152,10 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 60000,
+    refetchInterval: 120000,
+    retry: 1,
+    retryDelay: 5000,
+    staleTime: 60000,
   });
 
   const isLoading = toursLoading || classesLoading || mastercardLoading;

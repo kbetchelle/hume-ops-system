@@ -343,6 +343,15 @@ Deno.serve(async (req) => {
 
     logger.info(`Syncing reservations from ${startDate} to ${endDate}`);
 
+    // Mark sync as running so if we 504/timeout, clients can detect the stale state
+    await supabase
+      .from('api_sync_status')
+      .upsert({
+        api_name: 'arketa_reservations',
+        last_sync_status: 'running',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'api_name' });
+
     // Auth: API key works as both Bearer and X-API-Key per docs
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${ARKETA_API_KEY}`,
@@ -603,8 +612,11 @@ Deno.serve(async (req) => {
         api_name: 'arketa_reservations',
         last_sync_at: new Date().toISOString(),
         last_sync_success: failedCount === 0,
+        last_sync_status: failedCount === 0 ? 'completed' : 'failed',
         last_records_processed: totalFetched,
         last_records_inserted: syncedCount,
+        last_error_message: insertError ?? null,
+        updated_at: new Date().toISOString(),
       }, { onConflict: 'api_name' });
 
     const totalSkipped = unknownClassRows.length + emptyClassIdRows.length + deduplicatedCount + failedCount;
@@ -671,11 +683,24 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Update sync status to failed so UI reflects the error
+      await supabase
+        .from('api_sync_status')
+        .upsert({
+          api_name: 'arketa_reservations',
+          last_sync_at: new Date().toISOString(),
+          last_sync_success: false,
+          last_sync_status: 'failed',
+          last_error_message: errorMessage,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'api_name' });
+
       await logApiCall(supabase, {
         apiName: 'arketa_reservations',
         endpoint: '/reservations',
         syncSuccess: false,
-        durationMs: 0,
+        durationMs: Date.now() - (Date.now()), // approx
         recordsProcessed: 0,
         recordsInserted: 0,
         responseStatus: 500,

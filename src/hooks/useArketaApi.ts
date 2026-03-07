@@ -307,7 +307,15 @@ export function useSyncArketaReservations() {
       const { data, error } = await supabase.functions.invoke("sync-arketa-reservations", {
         body: params || {},
       });
-      if (error) throw error;
+      // Handle 504 gateway timeout - the sync may have partially completed
+      if (error) {
+        const errMsg = error.message || String(error);
+        if (errMsg.includes('504') || errMsg.includes('gateway') || errMsg.includes('timeout')) {
+          console.warn("Reservation sync timed out (504). The sync status will auto-update.");
+          throw new Error("Sync timed out. Status will auto-update when the backend detects the timeout.");
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -320,9 +328,12 @@ export function useSyncArketaReservations() {
     },
     onError: (error) => {
       console.error("Failed to sync reservations:", error);
+      const isTimeout = error.message?.includes('timed out') || error.message?.includes('504');
       toast({
-        title: "Sync Failed",
-        description: "Failed to sync reservations from Arketa.",
+        title: isTimeout ? "Sync Timed Out" : "Sync Failed",
+        description: isTimeout
+          ? "The reservation sync timed out. The error has been logged and status will auto-update."
+          : "Failed to sync reservations from Arketa.",
         variant: "destructive",
       });
     },

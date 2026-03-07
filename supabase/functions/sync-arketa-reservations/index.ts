@@ -121,8 +121,7 @@ function decodeCursor(cursor: string): string {
 
 /**
  * Fetch reservations via flat GET /{partnerId}/reservations endpoint.
- * Uses created_min/created_max for date filtering.
- * For daily sync, we set created_min broadly to catch reservations for upcoming classes.
+ * Uses created_min/created_max for date filtering per API reference.
  */
 async function fetchReservationsFlat(
   partnerId: string,
@@ -230,6 +229,7 @@ async function fetchReservationsPerClass(
 
 /**
  * Map flat ReservationsReportRow to staging format.
+ * Maps ALL fields from the API reference including the 21 new columns.
  */
 function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
   const classDate = extractClassDate(row.class_time);
@@ -238,6 +238,7 @@ function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
 
   return {
     reservation_id: row.reservation_id,
+    booking_id: row.booking_id ?? null,
     client_id: row.client_id ?? null,
     class_id: row.class_id ?? null,
     class_name: row.class_name ?? null,
@@ -249,6 +250,8 @@ function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
     late_cancel: row.late_cancel ?? false,
     gross_amount_paid: row.gross_amount_paid ?? 0,
     net_amount_paid: row.net_amount_paid ?? 0,
+    estimated_gross_revenue: row.estimated_gross_revenue ?? null,
+    estimated_net_revenue: row.estimated_net_revenue ?? null,
     created_at_api: row.class_time ?? null,
     updated_at_api: null, // Not in flat endpoint
     spot_id: null, // Not in flat endpoint
@@ -259,6 +262,24 @@ function mapFlatRowToStaging(row: ReservationsReportRow, syncBatchId: string) {
     client_phone: null, // Not in flat endpoint
     experience_type: row.experience_type ?? null,
     purchase_id: row.purchase_id ?? null,
+    email_marketing_opt_in: row.email_marketing_opt_in ?? null,
+    date_purchased: row.date_purchased ?? null,
+    instructor_name: row.instructor_name ?? null,
+    location_name: row.location_name ?? null,
+    location_address: row.location_address ?? null,
+    purchase_type: row.purchase_type ?? null,
+    coupon_code: row.coupon_code ?? null,
+    package_name: row.package_name ?? null,
+    package_period_start: row.package_period_start ?? null,
+    package_period_end: row.package_period_end ?? null,
+    offering_id: row.offering_id ?? null,
+    payment_method: row.payment_method ?? null,
+    payment_id: row.payment_id ?? null,
+    service_id: row.service_id ?? null,
+    tags: row.tags ? JSON.stringify(row.tags) : null,
+    canceled_at: row.canceled_at ?? null,
+    canceled_by: row.canceled_by ?? null,
+    milestone: row.milestone ?? null,
     raw_data: row,
     sync_batch_id: syncBatchId,
   };
@@ -279,6 +300,7 @@ function mapPerClassRowToStaging(
 
   return {
     reservation_id: row.id,
+    booking_id: null,
     client_id: row.client_id ?? null,
     class_id: classId,
     class_name: className,
@@ -290,6 +312,8 @@ function mapPerClassRowToStaging(
     late_cancel: false,
     gross_amount_paid: 0,
     net_amount_paid: 0,
+    estimated_gross_revenue: null,
+    estimated_net_revenue: null,
     created_at_api: row.created_at ?? null,
     updated_at_api: row.updated_at ?? null,
     spot_id: row.spot_id ?? null,
@@ -300,6 +324,24 @@ function mapPerClassRowToStaging(
     client_phone: row.client?.phone ?? null,
     experience_type: null,
     purchase_id: null,
+    email_marketing_opt_in: null,
+    date_purchased: null,
+    instructor_name: null,
+    location_name: null,
+    location_address: null,
+    purchase_type: null,
+    coupon_code: null,
+    package_name: null,
+    package_period_start: null,
+    package_period_end: null,
+    offering_id: null,
+    payment_method: null,
+    payment_id: null,
+    service_id: null,
+    tags: null,
+    canceled_at: null,
+    canceled_by: null,
+    milestone: null,
     raw_data: row,
     sync_batch_id: syncBatchId,
   };
@@ -352,6 +394,11 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'api_name' });
 
+    // ── ISSUE 1 FIX: Truncate staging at start to prevent accumulation ──
+    // This guarantees a clean slate even if downstream processing crashes.
+    logger.info('Truncating arketa_reservations_staging before inserting new data');
+    await supabase.rpc('exec_sql', { sql: 'TRUNCATE TABLE public.arketa_reservations_staging' });
+
     // Auth: API key works as both Bearer and X-API-Key per docs
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${ARKETA_API_KEY}`,
@@ -393,9 +440,7 @@ Deno.serve(async (req) => {
     else {
       fetchMode = 'flat';
 
-      // For daily sync (default -7 to +7), we use a broad created_min window
-      // to catch reservations created for classes in the target range.
-      // For backfill, the caller sets explicit start_date/end_date.
+      // Per API reference: created_min/created_max filter by reservation creation date (ISO 8601)
       const createdMin = `${startDate}T00:00:00.000Z`;
       const createdMax = `${endDate}T23:59:59.999Z`;
 
@@ -498,8 +543,6 @@ Deno.serve(async (req) => {
       for (const r of unknownClassRows) {
         const key = `${r.class_id}::${r.class_date ?? 'unknown'}`;
         if (!stubMap.has(key) && r.class_date) {
-          // Use the actual class_time from the reservation (stored in created_at_api) 
-          // instead of defaulting to midnight
           const classTime = r.created_at_api || `${r.class_date}T00:00:00+00`;
           stubMap.set(key, {
             external_id: r.class_id!,
@@ -645,17 +688,8 @@ Deno.serve(async (req) => {
       parentLogId: body.parentLogId,
     });
 
-    // Refresh daily schedule
-    try {
-      const refreshUrl = `${supabaseUrl}/functions/v1/refresh-daily-schedule`;
-      await fetch(refreshUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-      });
-    } catch (refreshErr) {
-      logger.warn('Failed to call refresh-daily-schedule', refreshErr as object);
-    }
+    // ISSUE 2 FIX: Removed refresh-daily-schedule call.
+    // The wrapper (sync-arketa-classes-and-reservations) handles schedule refresh as Phase 4.
 
     return new Response(
       JSON.stringify({

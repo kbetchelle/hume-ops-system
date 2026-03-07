@@ -256,70 +256,7 @@ export function useInstructors() {
   });
 }
 
-// Sync classes mutation
-export function useSyncArketaClasses() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (params?: { start_date?: string; end_date?: string }) => {
-      const { data, error } = await supabase.functions.invoke("sync-arketa-classes", {
-        body: params || {},
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["arketaClasses"] });
-      toast({
-        title: "Classes Synced",
-        description: `Synced ${data.syncedCount} classes from Arketa.`,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to sync classes:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync classes from Arketa.",
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-// Sync reservations mutation
-export function useSyncArketaReservations() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (params?: { start_date?: string; end_date?: string; class_id?: string }) => {
-      const { data, error } = await supabase.functions.invoke("sync-arketa-reservations", {
-        body: params || {},
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["arketaReservations"] });
-      queryClient.invalidateQueries({ queryKey: ["arketaReservationsToday"] });
-      toast({
-        title: "Reservations Synced",
-        description: `Synced ${data.syncedCount} reservations. Check-ins: ${data.summary?.checkedIn || 0}`,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to sync reservations:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync reservations from Arketa.",
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-// Sync classes only (default -7 to +7 days)
+// Sync classes mutation (classes-only, calls sync-arketa-classes directly)
 export function useSyncArketaClasses() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -360,7 +297,39 @@ export function useSyncArketaClasses() {
   });
 }
 
-// Legacy alias
+// Sync reservations mutation
+export function useSyncArketaReservations() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params?: { start_date?: string; end_date?: string; class_id?: string }) => {
+      const { data, error } = await supabase.functions.invoke("sync-arketa-reservations", {
+        body: params || {},
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["arketaReservations"] });
+      queryClient.invalidateQueries({ queryKey: ["arketaReservationsToday"] });
+      toast({
+        title: "Reservations Synced",
+        description: `Synced ${data.syncedCount} reservations. Check-ins: ${data.summary?.checkedIn || 0}`,
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to sync reservations:", error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync reservations from Arketa.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+// Legacy alias for backward compatibility
 export const useSyncArketaClassesAndReservations = useSyncArketaClasses;
 
 // Sync payments mutation

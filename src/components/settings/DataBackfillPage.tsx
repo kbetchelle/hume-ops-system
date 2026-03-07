@@ -1,9 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { History, CreditCard, BookOpen, BookMarked, Coffee, Activity, FileUp } from "lucide-react";
+import { History, CreditCard, BookOpen, Coffee, Activity, FileUp } from "lucide-react";
 import ReservationsBackfillTab from "./backfill/ReservationsBackfillTab";
 import PaymentsBackfillTab from "./backfill/PaymentsBackfillTab";
 import ArketaClassesBackfillTab from "./backfill/ArketaClassesBackfillTab";
-import ArketaClassesAndReservationsBackfillTab from "./backfill/ArketaClassesAndReservationsBackfillTab";
 import ToastBackfillTab from "./backfill/ToastBackfillTab";
 import SyncMonitorTab from "./backfill/SyncMonitorTab";
 import ArketaCSVImportTab from "./backfill/ArketaCSVImportTab";
@@ -31,10 +30,6 @@ export default function DataBackfillPage() {
             <BookOpen className="h-4 w-4" />
             Arketa Classes
           </TabsTrigger>
-          <TabsTrigger value="classes-and-reservations" className="gap-2">
-            <BookMarked className="h-4 w-4" />
-            Classes + Reservations
-          </TabsTrigger>
           <TabsTrigger value="toast" className="gap-2">
             <Coffee className="h-4 w-4" />
             Toast POS
@@ -56,9 +51,6 @@ export default function DataBackfillPage() {
         </TabsContent>
         <TabsContent value="classes" className="space-y-4">
           <ArketaClassesBackfillTab />
-        </TabsContent>
-        <TabsContent value="classes-and-reservations" className="space-y-4">
-          <ArketaClassesAndReservationsBackfillTab />
         </TabsContent>
         <TabsContent value="toast" className="space-y-4">
           <ToastBackfillTab />

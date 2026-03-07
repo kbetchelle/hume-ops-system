@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseISO, differenceInMinutes } from "date-fns";
-import { selectFrom } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 import { getPSTToday, getPSTHour, getPSTMinute } from "@/lib/dateUtils";
 
 interface MastercardArrival {
@@ -17,13 +17,12 @@ export function useUpcomingMastercardArrivals() {
   const { data: visits } = useQuery({
     queryKey: ["mastercard-arrivals", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<MastercardArrival>("mastercard_visits", {
-        filters: [
-          { type: "eq", column: "visit_date", value: today },
-          { type: "eq", column: "status", value: "scheduled" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("mastercard_visits")
+        .select("id, client_name, mastercard_tier, start_time, visit_purpose")
+        .eq("visit_date", today)
+        .eq("status", "scheduled")
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },

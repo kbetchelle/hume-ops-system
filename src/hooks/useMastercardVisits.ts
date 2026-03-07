@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
+import { insertInto, updateTable, eq } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface MastercardVisit {
@@ -47,13 +48,13 @@ export function useMastercardVisits(filters?: MastercardVisitsFilters) {
       const statusFilter =
         filters?.status && filters.status !== "all" ? filters.status : undefined;
       const filtersList = statusFilter ? [eq("status", statusFilter)] : [];
-      const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
-        filters: filtersList,
-        order: [
-          { column: "visit_date", ascending: false },
-          { column: "start_time", ascending: false },
-        ],
-      });
+      let query = supabase
+        .from("mastercard_visits")
+        .select("*")
+        .order("visit_date", { ascending: false })
+        .order("start_time", { ascending: false });
+      if (statusFilter) query = query.eq("status", statusFilter);
+      const { data, error } = await query;
       if (error) throw error;
       const list = data ?? [];
       return filterBySearch(list, filters?.search ?? "");

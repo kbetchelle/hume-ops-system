@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { selectFrom } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DailyScheduleClass {
   id: string;
@@ -123,14 +123,13 @@ export function MasterCalendar() {
   const { data: tours, isLoading: toursLoading } = useQuery({
     queryKey: ["scheduled-tours-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ScheduledTour>("scheduled_tours", {
-        filters: [
-          { type: "gte", column: "tour_date", value: startDateStr },
-          { type: "lte", column: "tour_date", value: endDateStr },
-          { type: "eq", column: "status", value: "active" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("scheduled_tours")
+        .select("id, tour_date, guest_name, guest_email, start_time, end_time, event_type, status")
+        .gte("tour_date", startDateStr)
+        .lte("tour_date", endDateStr)
+        .eq("status", "active")
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -141,13 +140,12 @@ export function MasterCalendar() {
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["daily-schedule-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailyScheduleClass>("daily_schedule", {
-        filters: [
-          { type: "gte", column: "schedule_date", value: startDateStr },
-          { type: "lte", column: "schedule_date", value: endDateStr },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("daily_schedule")
+        .select("id, schedule_date, class_name, instructor, start_time, end_time, total_booked, max_capacity, canceled")
+        .gte("schedule_date", startDateStr)
+        .lte("schedule_date", endDateStr)
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -158,13 +156,12 @@ export function MasterCalendar() {
   const { data: shifts, isLoading: shiftsLoading } = useQuery({
     queryKey: ["staff-shifts-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<StaffShift>("staff_shifts", {
-        filters: [
-          { type: "gte", column: "shift_date", value: startDateStr },
-          { type: "lte", column: "shift_date", value: endDateStr },
-        ],
-        order: { column: "shift_start", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("staff_shifts")
+        .select("id, shift_date, user_name, position, shift_start, shift_end")
+        .gte("shift_date", startDateStr)
+        .lte("shift_date", endDateStr)
+        .order("shift_start", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -174,14 +171,13 @@ export function MasterCalendar() {
   const { data: mastercardVisits, isLoading: mastercardLoading } = useQuery({
     queryKey: ["mastercard-visits-calendar", startDateStr, endDateStr],
     queryFn: async () => {
-      const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
-        filters: [
-          { type: "gte", column: "visit_date", value: startDateStr },
-          { type: "lte", column: "visit_date", value: endDateStr },
-          { type: "neq", column: "status", value: "cancelled" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("mastercard_visits")
+        .select("id, visit_date, client_name, client_email, mastercard_tier, start_time, end_time, number_of_guests, visit_purpose, status")
+        .gte("visit_date", startDateStr)
+        .lte("visit_date", endDateStr)
+        .neq("status", "cancelled")
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },

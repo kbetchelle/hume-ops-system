@@ -17,11 +17,12 @@ export default function ReservationsBackfillTab() {
   const { data: totalCount } = useQuery({
     queryKey: ["total-reservations-count"],
     queryFn: async () => {
-      const { count, error } = await supabase.from("arketa_reservations_history").select("*", { count: "exact", head: true });
+      const { data, error } = await supabase.rpc("approx_row_count" as any, { table_name: "arketa_reservations_history" });
       if (error) throw error;
-      return count || 0;
+      return (data as number) || 0;
     },
     refetchInterval: syncProgress.isRunning ? 5000 : 60000,
+    staleTime: 30000,
   });
 
   return (

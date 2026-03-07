@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  selectFrom,
-  insertInto,
-  updateTable,
-  deleteFrom,
-  eq,
-} from '@/lib/dataApi';
+import { insertInto, updateTable, deleteFrom, eq } from '@/lib/dataApi';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ClassCategory = 'heated_room' | 'high_roof' | 'standard';
 
@@ -27,12 +22,12 @@ export function useClassTypeMappings() {
   return useQuery({
     queryKey: ['class-type-mappings'],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ClassTypeMapping>(
-        'class_type_mappings',
-        { order: [{ column: 'class_name_pattern', ascending: true }] }
-      );
+      const { data, error } = await supabase
+        .from('class_type_mappings')
+        .select('*')
+        .order('class_name_pattern', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as ClassTypeMapping[];
     },
   });
 }

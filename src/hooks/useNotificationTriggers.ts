@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  selectFrom,
-  insertInto,
-  updateTable,
-  deleteFrom,
-  eq,
-} from '@/lib/dataApi';
+import { insertInto, updateTable, deleteFrom, eq } from '@/lib/dataApi';
+import { supabase } from '@/integrations/supabase/client';
 
 export type NotificationTriggerEventType =
   | 'class_end_heated_room'
@@ -53,12 +48,12 @@ export function useNotificationTriggers() {
   return useQuery({
     queryKey: ['notification-triggers'],
     queryFn: async () => {
-      const { data, error } = await selectFrom<NotificationTrigger>(
-        'notification_triggers',
-        { order: [{ column: 'event_type', ascending: true }] }
-      );
+      const { data, error } = await supabase
+        .from('notification_triggers')
+        .select('*')
+        .order('event_type', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as NotificationTrigger[];
     },
   });
 }

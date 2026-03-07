@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { selectFrom } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { add_color } from "@/lib/constants";
 
@@ -106,13 +106,12 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   const { data: tours, isLoading: toursLoading } = useQuery({
     queryKey: ["scheduled-tours-upcoming", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ScheduledTour>("scheduled_tours", {
-        filters: [
-          { type: "eq", column: "tour_date", value: today },
-          { type: "eq", column: "status", value: "active" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("scheduled_tours")
+        .select("id, guest_name, guest_email, start_time, end_time, event_type, status")
+        .eq("tour_date", today)
+        .eq("status", "active")
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -126,10 +125,11 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["daily-schedule-upcoming", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailyScheduleClass>("daily_schedule", {
-        filters: [{ type: "eq", column: "schedule_date", value: today }],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("daily_schedule")
+        .select("id, class_name, instructor, start_time, end_time, total_booked, max_capacity, canceled")
+        .eq("schedule_date", today)
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -142,13 +142,12 @@ export function UpcomingTodayCard({ maxItems }: UpcomingTodayCardProps = {}) {
   const { data: mastercardVisits, isLoading: mastercardLoading } = useQuery({
     queryKey: ["mastercard-visits-upcoming", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<MastercardVisit>("mastercard_visits", {
-        filters: [
-          { type: "eq", column: "visit_date", value: today },
-          { type: "eq", column: "status", value: "scheduled" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("mastercard_visits")
+        .select("id, client_name, client_email, mastercard_tier, start_time, end_time, number_of_guests, visit_purpose, status")
+        .eq("visit_date", today)
+        .eq("status", "scheduled")
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data || [];
     },

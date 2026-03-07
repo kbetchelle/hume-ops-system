@@ -321,9 +321,8 @@ export function useUnreadInboxCount() {
       return unread;
     },
     enabled: !!user?.id && isManagerOrAdmin,
-    // This query runs 5 parallel DB calls on each fetch; staleTime prevents
-    // unnecessary re-fetches on navigation. Cache is invalidated by mutations.
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 

@@ -21,7 +21,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { selectFrom, insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuickLink {
   id: string;
@@ -72,9 +73,10 @@ export function QuickLinksManager() {
 
   const fetchLinks = async () => {
     setLoading(true);
-    const { data, error } = await selectFrom<QuickLink>("quick_links", {
-      order: { column: "sort_order", ascending: true },
-    });
+    const { data, error } = await supabase
+      .from("quick_links")
+      .select("*")
+      .order("sort_order", { ascending: true });
 
     if (!error && data) {
       setLinks(data);

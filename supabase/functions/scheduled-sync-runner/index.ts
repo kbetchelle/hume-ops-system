@@ -329,6 +329,18 @@ async function runSync(
       end_date: end.toISOString().split('T')[0],
       triggeredBy: 'scheduled',
     };
+  } else if (syncType === 'arketa_reservations') {
+    // Standalone reservations sync: -7 to +7 days using flat endpoint
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
+    requestBody = {
+      start_date: start.toISOString().split('T')[0],
+      end_date: end.toISOString().split('T')[0],
+      triggeredBy: 'scheduled',
+    };
   }
 
   // Call the appropriate edge function

@@ -33,7 +33,8 @@ import {
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
-import { selectFrom, insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveRole } from "@/hooks/useActiveRole";
 
 interface QuickLink {
@@ -94,10 +95,11 @@ export function QuickLinks() {
 
   const fetchLinks = async () => {
     setLoading(true);
-    const { data, error } = await selectFrom<QuickLink>("quick_links", {
-      filters: [eq("is_active", true)],
-      order: { column: "sort_order", ascending: true },
-    });
+    const { data, error } = await supabase
+      .from("quick_links")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
 
     if (!error && data) {
       setLinks(data);

@@ -6,7 +6,7 @@ import { Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { selectFrom } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShift } from "@/hooks/useCurrentShift";
 import { getPSTToday } from "@/lib/dateUtils";
 
@@ -46,12 +46,13 @@ export function ShiftEventsMiniCalendar() {
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["daily-schedule", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailyScheduleClass>("daily_schedule", {
-        filters: [{ type: "eq", column: "schedule_date", value: today }],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("daily_schedule")
+        .select("id, class_name, start_time, total_booked, max_capacity, canceled")
+        .eq("schedule_date", today)
+        .order("start_time", { ascending: true });
       if (error) throw error;
-      return data || [];
+      return (data || []) as DailyScheduleClass[];
     },
     refetchInterval: 60000,
   });
@@ -59,15 +60,14 @@ export function ShiftEventsMiniCalendar() {
   const { data: tours, isLoading: toursLoading } = useQuery({
     queryKey: ["scheduled-tours", today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<ScheduledTour>("scheduled_tours", {
-        filters: [
-          { type: "eq", column: "tour_date", value: today },
-          { type: "eq", column: "status", value: "active" },
-        ],
-        order: { column: "start_time", ascending: true },
-      });
+      const { data, error } = await supabase
+        .from("scheduled_tours")
+        .select("id, guest_name, guest_email, start_time, status")
+        .eq("tour_date", today)
+        .eq("status", "active")
+        .order("start_time", { ascending: true });
       if (error) throw error;
-      return data || [];
+      return (data || []) as ScheduledTour[];
     },
     refetchInterval: 60000,
   });

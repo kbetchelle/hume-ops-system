@@ -27,6 +27,8 @@ export function useClassTypeMappings() {
         .select('*')
         .order('class_name_pattern', { ascending: true });
       if (error) throw error;
+      return (data ?? []) as unknown as ClassTypeMapping[];
+      if (error) throw error;
       return data ?? [];
     },
   });

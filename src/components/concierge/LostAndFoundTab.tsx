@@ -157,7 +157,7 @@ export function LostAndFoundTab() {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      setItems(data);
+      setItems(data as unknown as LostFoundItem[]);
     }
     setLoading(false);
   };

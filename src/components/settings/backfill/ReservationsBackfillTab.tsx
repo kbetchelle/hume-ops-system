@@ -17,7 +17,7 @@ export default function ReservationsBackfillTab() {
   const { data: totalCount } = useQuery({
     queryKey: ["total-reservations-count"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("approx_row_count", { table_name: "arketa_reservations_history" });
+      const { data, error } = await supabase.rpc("approx_row_count" as any, { table_name: "arketa_reservations_history" });
       if (error) throw error;
       return (data as number) || 0;
     },

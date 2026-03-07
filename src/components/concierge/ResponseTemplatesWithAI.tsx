@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { sanitizeHtml, stripHtml } from "@/lib/utils";
-import { selectFrom, insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
+import { insertInto, updateTable, deleteFrom, eq, inArray } from "@/lib/dataApi";
 import { useActiveRole } from "@/hooks/useActiveRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -623,19 +623,23 @@ export function ResponseTemplatesWithAI() {
   const fetchTemplates = async () => {
     setLoading(true);
     // Fetch active templates for users
-    const { data, error } = await selectFrom<ResponseTemplate>("response_templates", {
-      filters: [eq("is_active", true)],
-      order: [{ column: "category_order", ascending: true }, { column: "category", ascending: true }],
-    });
+    const { data, error } = await supabase
+      .from("response_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("category_order", { ascending: true })
+      .order("category", { ascending: true });
 
     if (!error && data) {
-      setTemplates(data);
+      setTemplates(data as ResponseTemplate[]);
     }
 
     // Fetch all templates for editing mode
-    const { data: allData } = await selectFrom<ResponseTemplate>("response_templates", {
-      order: [{ column: "category_order", ascending: true }, { column: "category", ascending: true }],
-    });
+    const { data: allData } = await supabase
+      .from("response_templates")
+      .select("*")
+      .order("category_order", { ascending: true })
+      .order("category", { ascending: true });
     if (allData) {
       setAllTemplates(allData);
       // Build category order from templates

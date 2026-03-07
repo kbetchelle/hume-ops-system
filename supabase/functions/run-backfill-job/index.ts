@@ -93,29 +93,25 @@ function getSyncConfig(jobType: JobType) {
       };
     case "arketa_reservations":
     default:
+      // ISSUE 4 FIX: Call sync-arketa-reservations DIRECTLY (not via wrapper)
+      // Backfill operates independently of classes endpoint
       return {
-        // Enforce 3-phase reservations flow: classes -> reservations -> staging transfer
-        syncFunction: "sync-arketa-classes-and-reservations",
+        syncFunction: "sync-arketa-reservations",
         historyTable: "arketa_reservations_history",
         dateColumn: "class_date",
-        transferApi: null,
-        needsTransfer: false,
+        transferApi: "arketa_reservations" as const,
+        needsTransfer: true, // Explicitly call sync-from-staging after each batch
       };
   }
 }
 
 /**
  * Range-based backfill for arketa_payments.
- *
- * Instead of iterating day-by-day, sends the full updated_at date range
- * to sync-arketa-payments and lets it paginate with cursor-based resumption.
- * This matches the API's updated_at_min/max server-side filtering.
  */
 async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>) {
   const startDate = job.start_date;
   const endDate = job.end_date;
 
-  // Check for cancellation
   const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
   if (currentJob?.status === "cancelled") {
     return new Response(JSON.stringify({ success: true, cancelled: true }), {
@@ -123,7 +119,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     });
   }
 
-  // Resume cursor from previous batch if any
   const backfillCursor: string | undefined = job.batch_cursor ?? undefined;
   const batchesCompleted = job.total_batches_completed || 0;
   console.log(`[payments-backfill] Range ${startDate} → ${endDate}, cursor=${backfillCursor ?? 'none'}, batch=${batchesCompleted + 1}`);
@@ -133,7 +128,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     sync_phase: "fetching",
   }).eq("id", jobId);
 
-  // Count existing records before sync (using created_at_api for the range)
   const { count: existingBefore } = await supabase
     .from("arketa_payments")
     .select("*", { count: "exact", head: true })
@@ -141,7 +135,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     .lt("created_at_api", `${nextDayUtc(endDate)}T00:00:00.000Z`);
   const existingCount = existingBefore || 0;
 
-  // Call sync-arketa-payments with the full date range
   let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; totalRawFetched?: number; hasMore?: boolean; backfill_cursor?: string; error?: string } = {
     success: false, error: 'Not executed',
   };
@@ -178,7 +171,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 
-  // Transfer staging → production
   if (syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
     await supabase.from("backfill_jobs").update({ sync_phase: "transferring" }).eq("id", jobId);
     try {
@@ -192,7 +184,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     }
   }
 
-  // Count records after sync
   await new Promise(resolve => setTimeout(resolve, 500));
   const { count: afterCount } = await supabase
     .from("arketa_payments")
@@ -207,7 +198,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
   const cumulativeInserted = (job.cumulative_inserted || 0) + newRecords;
   const cumulativeUpdated = (job.cumulative_updated || 0) + Math.max(0, (syncResult.syncedCount ?? 0) - newRecords);
 
-  // Build result entry
   const results: SyncResult[] = [...(job.results || [])];
   results.push({
     date: `${startDate} → ${endDate}`,
@@ -219,11 +209,9 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     ...(syncResult.totalRawFetched != null ? { totalRawFetched: syncResult.totalRawFetched, filteredCount: syncResult.totalFetched } : {}),
   });
 
-  // Check if more pages remain (cursor-based resumption)
   const hasMorePages = syncResult.hasMore && !!syncResult.backfill_cursor;
 
   if (hasMorePages) {
-    // Save cursor and schedule next batch
     await supabase.from("backfill_jobs").update({
       total_records: totalRecords,
       total_new_records: totalNewRecords,
@@ -250,7 +238,6 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // All done
   await supabase.from("backfill_jobs").update({
     status: "completed",
     completed_at: new Date().toISOString(),
@@ -271,11 +258,8 @@ async function handlePaymentsBackfill(supabase: any, job: any, jobId: string, co
 }
 
 /**
- * Cursor-based backfill for arketa_classes / arketa_classes_and_reservations / arketa_reservations.
- * 
- * Uses adaptive chunking: standard jobs use larger chunks with overlap, while
- * reservations use smaller chunks (no overlap) to stay below gateway timeout.
- * Each batch processes one chunk and self-queues the next batch invocation.
+ * Cursor-based backfill for arketa_classes / arketa_classes_and_reservations.
+ * Uses adaptive chunking with optional overlap.
  */
 async function handleClassesBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>, jobType: JobType = "arketa_classes") {
   const startDate = job.start_date;
@@ -283,7 +267,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   const config = getSyncConfig(jobType);
   const historyTable = jobType === "arketa_classes_and_reservations" ? "arketa_reservations_history" : "arketa_classes";
 
-  // Check for cancellation
   const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
   if (currentJob?.status === "cancelled") {
     return new Response(JSON.stringify({ success: true, cancelled: true }), {
@@ -291,9 +274,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     });
   }
 
-  // --- Build chunks with optional overlap ---
   const CHUNK_DAYS = getChunkDays(jobType);
-  const CHUNK_OVERLAP_DAYS = jobType === "arketa_reservations" ? 0 : 1;
+  const CHUNK_OVERLAP_DAYS = 1; // Classes use overlap
   const batchBreakMs = getBatchBreakMs(jobType);
   const allChunks: { chunkStart: string; chunkEnd: string }[] = [];
   {
@@ -305,7 +287,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CHUNK_DAYS - 1);
       if (chunkEnd > e) chunkEnd.setTime(e.getTime());
       allChunks.push({ chunkStart: formatDate(cur), chunkEnd: formatDate(chunkEnd) });
-      // Next chunk start = previous chunk end + 1 day - overlap
       if (formatDate(chunkEnd) >= formatDate(e)) break;
       const nextStart = new Date(chunkEnd);
       nextStart.setUTCDate(nextStart.getUTCDate() + 1 - CHUNK_OVERLAP_DAYS);
@@ -313,12 +294,10 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     }
   }
 
-  // Determine current chunk index from job metadata
-  const currentChunkIndex = job.completed_dates || 0; // Repurpose completed_dates as chunk index
+  const currentChunkIndex = job.completed_dates || 0;
   const currentChunk = allChunks[currentChunkIndex];
 
   if (!currentChunk) {
-    // All chunks done
     await supabase.from("backfill_jobs").update({
       status: "completed",
       completed_at: new Date().toISOString(),
@@ -331,12 +310,9 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   }
 
   const { chunkStart, chunkEnd } = currentChunk;
-
-  // Cursor for pagination within this chunk
   const startAfterId: string | undefined = job.batch_cursor ?? undefined;
   console.log(`[backfill] Chunk ${currentChunkIndex + 1}/${allChunks.length} (${chunkStart} → ${chunkEnd}), cursor=${startAfterId ?? 'none'}`);
 
-  // Count existing records before sync
   const { count: existingBefore } = await supabase
     .from(historyTable)
     .select("*", { count: "exact", head: true })
@@ -350,7 +326,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     total_dates: allChunks.length,
   }).eq("id", jobId);
 
-  // Call the sync function with the chunk's date range
   const syncFunctionName = config.syncFunction;
   let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; nextStartAfterId?: string; hasMore?: boolean; error?: string } = {
     success: false, error: 'Not executed',
@@ -359,8 +334,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   try {
     const syncBody = jobType === "arketa_classes_and_reservations"
       ? { start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true }
-      : jobType === "arketa_reservations"
-      ? { startDate: chunkStart, endDate: chunkEnd, start_date: chunkStart, end_date: chunkEnd, triggeredBy: "backfill-job", start_after_id: startAfterId, skipLogging: true, strict_three_phase: true }
       : { startDate: chunkStart, endDate: chunkEnd, start_after_id: startAfterId, skipLogging: true };
 
     const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/${syncFunctionName}`, {
@@ -381,8 +354,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       const reservationsData = (data.reservations ?? null) as Record<string, unknown> | null;
       syncResult = {
         success: data.success !== false,
-        syncedCount: (jobType === "arketa_reservations" ? (reservationsData?.syncedCount as number) : undefined) ?? (data.syncedCount as number) ?? 0,
-        totalFetched: (jobType === "arketa_reservations" ? (reservationsData?.totalFetched as number) : undefined) ?? (data.totalFetched as number) ?? 0,
+        syncedCount: (reservationsData?.syncedCount as number) ?? (data.syncedCount as number) ?? 0,
+        totalFetched: (reservationsData?.totalFetched as number) ?? (data.totalFetched as number) ?? 0,
         nextStartAfterId: (data.nextStartAfterId as string) ?? null,
         hasMore: (data.hasMore as boolean) ?? false,
         error: (data.error as string) ?? undefined,
@@ -392,10 +365,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 
-  // NOTE: Staging transfer and daily schedule refresh are handled internally by
-  // the combined sync-arketa-classes-and-reservations function. No separate call needed.
-
-  // Count records after sync
   await new Promise(resolve => setTimeout(resolve, 500));
   const { count: afterCount } = await supabase
     .from(historyTable)
@@ -408,7 +377,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   const totalNewRecords = (job.total_new_records || 0) + newRecords;
   const batchesCompleted = (job.total_batches_completed || 0) + 1;
 
-  // Build result entry
   const results: SyncResult[] = [...(job.results || [])];
   results.push({
     date: `${chunkStart}→${chunkEnd}`,
@@ -419,11 +387,9 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     error: syncResult.error,
   });
 
-  // Determine if this chunk is exhausted (no more pages within it)
   const chunkDone = !syncResult.hasMore || !syncResult.nextStartAfterId;
 
   if (chunkDone) {
-    // Move to next chunk
     const nextChunkIndex = currentChunkIndex + 1;
     const allDone = nextChunkIndex >= allChunks.length;
 
@@ -434,8 +400,8 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       total_records: totalRecords,
       total_new_records: totalNewRecords,
       total_batches_completed: batchesCompleted,
-      batch_cursor: null, // Reset cursor for next chunk
-      completed_dates: nextChunkIndex, // Track chunk progress
+      batch_cursor: null,
+      completed_dates: nextChunkIndex,
       results,
       sync_phase: allDone ? "idle" : "cooldown",
     }).eq("id", jobId);
@@ -447,7 +413,6 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Schedule next chunk after break
     console.log(`[backfill] Chunk ${currentChunkIndex + 1} done (${syncResult.syncedCount} synced, ${newRecords} new). Moving to chunk ${nextChunkIndex + 1}/${allChunks.length}. Waiting ${batchBreakMs / 1000}s...`);
     await new Promise(resolve => setTimeout(resolve, batchBreakMs));
 
@@ -469,7 +434,7 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
     total_new_records: totalNewRecords,
     total_batches_completed: batchesCompleted,
     batch_cursor: syncResult.nextStartAfterId,
-    completed_dates: currentChunkIndex, // Stay on same chunk
+    completed_dates: currentChunkIndex,
     results,
     sync_phase: "cooldown",
   }).eq("id", jobId);
@@ -490,6 +455,252 @@ async function handleClassesBackfill(supabase: any, job: any, jobId: string, cor
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
+/**
+ * ISSUE 5 FIX: Independent reservation backfill.
+ * Operates entirely independently of classes endpoint.
+ * Flow per chunk: Fetch → Stage → Promote (sync-from-staging) → Clear → Next
+ * On failure: retry same chunk on next invocation (no skip).
+ */
+async function handleReservationsBackfill(supabase: any, job: any, jobId: string, corsHeaders: Record<string, string>) {
+  const startDate = job.start_date;
+  const endDate = job.end_date;
+  const config = getSyncConfig("arketa_reservations");
+  const batchBreakMs = RESERVATIONS_BATCH_BREAK_MS;
+
+  // Check for cancellation
+  const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
+  if (currentJob?.status === "cancelled") {
+    return new Response(JSON.stringify({ success: true, cancelled: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Build 2-day chunks with no overlap
+  const CHUNK_DAYS = RESERVATIONS_CHUNK_DAYS;
+  const allChunks: { chunkStart: string; chunkEnd: string }[] = [];
+  {
+    const s = new Date(startDate + "T00:00:00Z");
+    const e = new Date(endDate + "T00:00:00Z");
+    let cur = new Date(s);
+    while (cur <= e) {
+      const chunkEnd = new Date(cur);
+      chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CHUNK_DAYS - 1);
+      if (chunkEnd > e) chunkEnd.setTime(e.getTime());
+      allChunks.push({ chunkStart: formatDate(cur), chunkEnd: formatDate(chunkEnd) });
+      if (formatDate(chunkEnd) >= formatDate(e)) break;
+      const nextStart = new Date(chunkEnd);
+      nextStart.setUTCDate(nextStart.getUTCDate() + 1);
+      cur = nextStart;
+    }
+  }
+
+  const currentChunkIndex = job.completed_dates || 0;
+  const currentChunk = allChunks[currentChunkIndex];
+
+  if (!currentChunk) {
+    await supabase.from("backfill_jobs").update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      processing_date: null,
+      batch_cursor: null,
+      sync_phase: "idle",
+    }).eq("id", jobId);
+    return new Response(JSON.stringify({ success: true, completed: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { chunkStart, chunkEnd } = currentChunk;
+  console.log(`[reservations-backfill] Chunk ${currentChunkIndex + 1}/${allChunks.length} (${chunkStart} → ${chunkEnd})`);
+
+  // Count existing records before sync
+  const { count: existingBefore } = await supabase
+    .from(config.historyTable)
+    .select("*", { count: "exact", head: true })
+    .gte(config.dateColumn, chunkStart)
+    .lte(config.dateColumn, chunkEnd);
+  const existingCount = existingBefore || 0;
+
+  await supabase.from("backfill_jobs").update({
+    processing_date: `${chunkStart} → ${chunkEnd}`,
+    sync_phase: "fetching",
+    total_dates: allChunks.length,
+  }).eq("id", jobId);
+
+  // PHASE 1: Fetch → Stage (call sync-arketa-reservations directly)
+  let syncResult: { success: boolean; syncedCount?: number; totalFetched?: number; error?: string } = {
+    success: false, error: 'Not executed',
+  };
+
+  try {
+    const syncBody = {
+      start_date: chunkStart,
+      end_date: chunkEnd,
+      startDate: chunkStart,
+      endDate: chunkEnd,
+      triggeredBy: "backfill-job",
+      skipLogging: true,
+    };
+
+    const syncResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-arketa-reservations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify(syncBody),
+    });
+    const syncText = await syncResponse.text();
+    const syncData = safeParseJson(syncText);
+
+    if (!syncResponse.ok) {
+      const parsedError = syncData && typeof syncData.error === "string"
+        ? syncData.error
+        : syncText;
+      syncResult = { success: false, error: parsedError || `Sync returned ${syncResponse.status}` };
+    } else {
+      const data = (syncData ?? {}) as Record<string, unknown>;
+      syncResult = {
+        success: data.success !== false,
+        syncedCount: (data.syncedCount as number) ?? 0,
+        totalFetched: (data.totalFetched as number) ?? 0,
+        error: (data.error as string) ?? undefined,
+      };
+    }
+  } catch (err) {
+    syncResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  // PHASE 2: Promote staging → history (call sync-from-staging)
+  if (syncResult.success && (syncResult.syncedCount ?? 0) > 0) {
+    await supabase.from("backfill_jobs").update({ sync_phase: "transferring" }).eq("id", jobId);
+    try {
+      const transferResponse = await fetch(`${SUPABASE_URL}/functions/v1/sync-from-staging`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ api: "arketa_reservations", clear_staging: true }),
+      });
+      const transferData = await transferResponse.json().catch(() => ({}));
+      if (!transferResponse.ok || transferData?.success === false) {
+        console.error(`[reservations-backfill] sync-from-staging failed: ${JSON.stringify(transferData).slice(0, 300)}`);
+        // Don't fail the whole chunk — data is in staging and will be promoted on next run
+      }
+    } catch (err) {
+      console.error("[reservations-backfill] Failed to trigger sync-from-staging:", err);
+    }
+  }
+
+  // PHASE 3: On failure, do NOT advance chunk — retry on next invocation
+  if (!syncResult.success) {
+    const retryCount = (job.records_in_current_batch || 0) + 1;
+    const maxRetries = 3;
+
+    const results: SyncResult[] = [...(job.results || [])];
+    results.push({
+      date: `${chunkStart}→${chunkEnd}`,
+      existingBefore: existingCount,
+      newRecords: 0,
+      recordCount: 0,
+      success: false,
+      error: syncResult.error,
+    });
+
+    if (retryCount >= maxRetries) {
+      // After max retries, skip this chunk and continue
+      console.error(`[reservations-backfill] Chunk ${chunkStart}→${chunkEnd} failed ${maxRetries} times, skipping`);
+      await supabase.from("backfill_jobs").update({
+        completed_dates: currentChunkIndex + 1,
+        records_in_current_batch: 0,
+        results,
+        sync_phase: "cooldown",
+      }).eq("id", jobId);
+    } else {
+      // Retry same chunk
+      console.warn(`[reservations-backfill] Chunk ${chunkStart}→${chunkEnd} failed (attempt ${retryCount}/${maxRetries}), will retry`);
+      await supabase.from("backfill_jobs").update({
+        records_in_current_batch: retryCount,
+        results,
+        sync_phase: "cooldown",
+      }).eq("id", jobId);
+    }
+
+    // Schedule retry after break
+    await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
+    fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ jobId }),
+    }).catch(err => console.error("Failed to trigger retry:", err));
+
+    return new Response(JSON.stringify({
+      success: true, completed: false, retrying: true,
+      currentChunk: currentChunkIndex, error: syncResult.error,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  // Count records after sync
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const { count: afterCount } = await supabase
+    .from(config.historyTable)
+    .select("*", { count: "exact", head: true })
+    .gte(config.dateColumn, chunkStart)
+    .lte(config.dateColumn, chunkEnd);
+  const newRecords = Math.max(0, (afterCount || 0) - existingCount);
+
+  const totalRecords = (job.total_records || 0) + (syncResult.syncedCount ?? 0);
+  const totalNewRecords = (job.total_new_records || 0) + newRecords;
+  const batchesCompleted = (job.total_batches_completed || 0) + 1;
+  const cumulativeInserted = (job.cumulative_inserted || 0) + newRecords;
+  const cumulativeUpdated = (job.cumulative_updated || 0) + Math.max(0, (syncResult.syncedCount ?? 0) - newRecords);
+
+  const results: SyncResult[] = [...(job.results || [])];
+  results.push({
+    date: `${chunkStart}→${chunkEnd}`,
+    existingBefore: existingCount,
+    newRecords,
+    recordCount: syncResult.syncedCount ?? 0,
+    success: true,
+  });
+
+  // Advance to next chunk
+  const nextChunkIndex = currentChunkIndex + 1;
+  const allDone = nextChunkIndex >= allChunks.length;
+
+  await supabase.from("backfill_jobs").update({
+    status: allDone ? "completed" : "running",
+    completed_at: allDone ? new Date().toISOString() : null,
+    processing_date: allDone ? null : undefined,
+    total_records: totalRecords,
+    total_new_records: totalNewRecords,
+    total_batches_completed: batchesCompleted,
+    cumulative_inserted: cumulativeInserted,
+    cumulative_updated: cumulativeUpdated,
+    batch_cursor: null,
+    completed_dates: nextChunkIndex,
+    records_in_current_batch: 0,
+    results,
+    sync_phase: allDone ? "idle" : "cooldown",
+  }).eq("id", jobId);
+
+  if (allDone) {
+    return new Response(JSON.stringify({
+      success: true, completed: true, totalRecords, totalNewRecords, batchesCompleted,
+      chunksProcessed: allChunks.length,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  console.log(`[reservations-backfill] Chunk ${currentChunkIndex + 1} done (${syncResult.syncedCount} synced, ${newRecords} new). Moving to chunk ${nextChunkIndex + 1}/${allChunks.length}. Waiting ${batchBreakMs / 1000}s...`);
+  await new Promise(resolve => setTimeout(resolve, batchBreakMs));
+
+  fetch(`${SUPABASE_URL}/functions/v1/run-backfill-job`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ jobId }),
+  }).catch(err => console.error("Failed to trigger next chunk:", err));
+
+  return new Response(JSON.stringify({
+    success: true, completed: false, batchesCompleted,
+    currentChunk: nextChunkIndex, totalChunks: allChunks.length,
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
 
 function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknown> {
   if (jobType === "toast_orders") {
@@ -499,7 +710,7 @@ function buildSyncBody(jobType: JobType, dateStr: string): Record<string, unknow
     return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
   }
   if (jobType === "arketa_reservations") {
-    return { startDate: dateStr, endDate: dateStr, triggeredBy: "backfill-job", skipLogging: true };
+    return { startDate: dateStr, endDate: dateStr, start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job", skipLogging: true };
   }
   return { start_date: dateStr, end_date: dateStr, triggeredBy: "backfill-job" };
 }
@@ -530,10 +741,9 @@ function extractRecordCount(jobType: JobType, syncData: Record<string, unknown>)
     };
   }
   if (jobType === "arketa_reservations") {
-    const reservations = syncData?.reservations as Record<string, unknown> | undefined;
     return {
-      recordCount: (reservations?.syncedCount as number) ?? (syncData?.syncedCount as number) ?? (syncData?.records_synced as number) ?? 0,
-      totalFetched: (reservations?.totalFetched as number) ?? (syncData?.totalFetched as number) ?? (syncData?.records_processed as number) ?? 0,
+      recordCount: (syncData?.syncedCount as number) ?? (syncData?.records_synced as number) ?? 0,
+      totalFetched: (syncData?.totalFetched as number) ?? (syncData?.records_processed as number) ?? 0,
     };
   }
   const data = syncData?.data as Record<string, unknown> | undefined;
@@ -603,7 +813,6 @@ Deno.serve(async (req) => {
     }
 
     const jobType = (job.job_type || job.api_source + "_" + job.data_type || "arketa_reservations") as JobType;
-    const config = getSyncConfig(jobType);
 
     await supabase.from("backfill_jobs").update({ status: "running", started_at: job.started_at || new Date().toISOString() }).eq("id", jobId);
 
@@ -617,17 +826,19 @@ Deno.serve(async (req) => {
       return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
     }
 
-    // ── Arketa Reservations: standalone cursor-based backfill (calls sync-arketa-reservations directly) ──
+    // ── ISSUE 5 FIX: Arketa Reservations: independent backfill ──
+    // Uses flat GET /{partnerId}/reservations directly, no classes dependency
     if (jobType === "arketa_reservations") {
-      return await handleClassesBackfill(supabase, job, jobId, corsHeaders, jobType);
+      return await handleReservationsBackfill(supabase, job, jobId, corsHeaders);
     }
 
+    // ── Generic day-by-day fallback ──
+    const config = getSyncConfig(jobType);
     const startDate = new Date(job.start_date);
     const endDate = new Date(job.end_date);
     const allDates = eachDayOfInterval(startDate, endDate);
     const existingResults: SyncResult[] = job.results || [];
     
-    // On restart, re-sync the last successfully synced date to ensure no records were missed
     const successResults = existingResults.filter((r: SyncResult) => r.success);
     const lastSuccessDate = successResults.length > 0 ? successResults[successResults.length - 1]?.date : null;
     const processedDates = new Set(existingResults.filter((r: SyncResult) => r.success).map((r: SyncResult) => r.date));
@@ -646,7 +857,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // With updated_at_min/max server-side filtering, payments sync is now fast enough for normal batch sizes
     const BATCH_SIZE = 5;
     const datesToProcess = remainingDates.slice(0, BATCH_SIZE);
     const results: SyncResult[] = [...existingResults];
@@ -658,14 +868,13 @@ Deno.serve(async (req) => {
 
     for (const date of datesToProcess) {
       const dateStr = formatDate(date);
-      const { data: currentJob } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
-      if (currentJob?.status === "cancelled") {
+      const { data: currentJob2 } = await supabase.from("backfill_jobs").select("status").eq("id", jobId).single();
+      if (currentJob2?.status === "cancelled") {
         return new Response(JSON.stringify({ success: true, cancelled: true, completedDates: results.length }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Update phase: fetching
       await supabase.from("backfill_jobs").update({
         processing_date: dateStr,
         sync_phase: "fetching",
@@ -673,7 +882,6 @@ Deno.serve(async (req) => {
         records_in_current_batch: 0,
       }).eq("id", jobId);
 
-      // arketa_payments uses created_at_api (timestamptz): count by date range; others use date eq
       const countQuery =
         jobType === "arketa_payments"
           ? supabase
@@ -682,11 +890,10 @@ Deno.serve(async (req) => {
               .gte(config.dateColumn, `${dateStr}T00:00:00.000Z`)
               .lt(config.dateColumn, `${nextDayUtc(dateStr)}T00:00:00.000Z`)
           : supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
-      const { count: existingBefore } = await countQuery;
-      const existingCount = existingBefore || 0;
+      const { count: existingBefore2 } = await countQuery;
+      const existingCount2 = existingBefore2 || 0;
 
       try {
-        // Update phase: staging
         await supabase.from("backfill_jobs").update({ sync_phase: "staging" }).eq("id", jobId);
 
         const syncBody = buildSyncBody(jobType, dateStr);
@@ -698,11 +905,10 @@ Deno.serve(async (req) => {
         const syncData = await syncResponse.json();
 
         if (!syncResponse.ok) {
-          results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
+          results.push({ date: dateStr, existingBefore: existingCount2, newRecords: 0, recordCount: 0, success: false, error: syncData.error || "Sync failed" });
         } else {
           const { recordCount, totalFetched, totalRawFetched } = extractRecordCount(jobType, (syncData ?? {}) as Record<string, unknown>);
 
-          // Update phase: transferring (for types that need staging→prod transfer)
           if (config.needsTransfer) {
             await supabase.from("backfill_jobs").update({
               sync_phase: "transferring",
@@ -720,7 +926,7 @@ Deno.serve(async (req) => {
                   .lt(config.dateColumn, `${nextDayUtc(dateStr)}T00:00:00.000Z`)
               : supabase.from(config.historyTable).select("*", { count: "exact", head: true }).eq(config.dateColumn, dateStr);
           const { count: afterCount } = await afterCountQuery;
-          const newRecords = Math.max(0, (afterCount || 0) - existingCount);
+          const newRecords = Math.max(0, (afterCount || 0) - existingCount2);
           totalRecords += recordCount;
           totalNewRecords += newRecords;
           cumulativeInserted += newRecords;
@@ -734,17 +940,16 @@ Deno.serve(async (req) => {
           
           results.push({
             date: dateStr,
-            existingBefore: existingCount,
+            existingBefore: existingCount2,
             newRecords,
             recordCount,
             success: syncData?.success !== false,
             hitPageLimit,
-            // For payments: include raw vs filtered counts for UI transparency
             ...(totalRawFetched != null ? { totalRawFetched, filteredCount: totalFetched } : {}),
           });
         }
       } catch (err) {
-        results.push({ date: dateStr, existingBefore: existingCount, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+        results.push({ date: dateStr, existingBefore: existingCount2, newRecords: 0, recordCount: 0, success: false, error: err instanceof Error ? err.message : "Unknown error" });
       }
 
       await supabase.from("backfill_jobs").update({
@@ -757,7 +962,6 @@ Deno.serve(async (req) => {
         sync_phase: "idle",
       }).eq("id", jobId);
 
-      // 20-second break between each date in the batch
       if (datesToProcess.indexOf(date) < datesToProcess.length - 1) {
         console.log(`[run-backfill-job] ${BATCH_BREAK_MS / 1000}s break between dates...`);
         await supabase.from("backfill_jobs").update({ sync_phase: "cooldown" }).eq("id", jobId);
@@ -788,7 +992,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Break before triggering next batch
     console.log(`[run-backfill-job] ${BATCH_BREAK_MS / 1000}s break before next batch...`);
     await new Promise(resolve => setTimeout(resolve, BATCH_BREAK_MS));
 

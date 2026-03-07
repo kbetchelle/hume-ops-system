@@ -1067,6 +1067,9 @@ export type Database = {
       }
       arketa_reservations_history: {
         Row: {
+          booking_id: string | null
+          canceled_at: string | null
+          canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
@@ -1077,21 +1080,44 @@ export type Database = {
           client_id: string | null
           client_last_name: string | null
           client_phone: string | null
+          coupon_code: string | null
           created_at_api: string | null
+          date_purchased: string | null
+          email_marketing_opt_in: boolean | null
+          estimated_gross_revenue: number | null
+          estimated_net_revenue: number | null
+          experience_type: string | null
           gross_amount_paid: number | null
           id: string
+          instructor_name: string | null
           late_cancel: boolean | null
+          location_address: string | null
+          location_name: string | null
+          milestone: number | null
           net_amount_paid: number | null
+          offering_id: string | null
+          package_name: string | null
+          package_period_end: string | null
+          package_period_start: string | null
+          payment_id: string | null
+          payment_method: string | null
+          purchase_id: string | null
+          purchase_type: string | null
           raw_data: Json | null
           reservation_id: string
           reservation_type: string | null
+          service_id: string | null
           spot_id: string | null
           spot_name: string | null
           status: string | null
           sync_batch_id: string | null
+          tags: Json | null
           updated_at_api: string | null
         }
         Insert: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
@@ -1102,21 +1128,44 @@ export type Database = {
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id: string
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          tags?: Json | null
           updated_at_api?: string | null
         }
         Update: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
@@ -1127,24 +1176,47 @@ export type Database = {
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
+          experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string | null
+          tags?: Json | null
           updated_at_api?: string | null
         }
         Relationships: []
       }
       arketa_reservations_staging: {
         Row: {
+          booking_id: string | null
+          canceled_at: string | null
+          canceled_by: string | null
           checked_in: boolean | null
           checked_in_at: string | null
           class_date: string | null
@@ -1155,23 +1227,44 @@ export type Database = {
           client_id: string | null
           client_last_name: string | null
           client_phone: string | null
+          coupon_code: string | null
           created_at_api: string | null
+          date_purchased: string | null
+          email_marketing_opt_in: boolean | null
+          estimated_gross_revenue: number | null
+          estimated_net_revenue: number | null
           experience_type: string | null
           gross_amount_paid: number | null
           id: string
+          instructor_name: string | null
           late_cancel: boolean | null
+          location_address: string | null
+          location_name: string | null
+          milestone: number | null
           net_amount_paid: number | null
+          offering_id: string | null
+          package_name: string | null
+          package_period_end: string | null
+          package_period_start: string | null
+          payment_id: string | null
+          payment_method: string | null
           purchase_id: string | null
+          purchase_type: string | null
           raw_data: Json | null
           reservation_id: string | null
           reservation_type: string | null
+          service_id: string | null
           spot_id: string | null
           spot_name: string | null
           status: string | null
           sync_batch_id: string
+          tags: Json | null
           updated_at_api: string | null
         }
         Insert: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
@@ -1182,23 +1275,44 @@ export type Database = {
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
           purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id: string
+          tags?: Json | null
           updated_at_api?: string | null
         }
         Update: {
+          booking_id?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           checked_in?: boolean | null
           checked_in_at?: string | null
           class_date?: string | null
@@ -1209,20 +1323,38 @@ export type Database = {
           client_id?: string | null
           client_last_name?: string | null
           client_phone?: string | null
+          coupon_code?: string | null
           created_at_api?: string | null
+          date_purchased?: string | null
+          email_marketing_opt_in?: boolean | null
+          estimated_gross_revenue?: number | null
+          estimated_net_revenue?: number | null
           experience_type?: string | null
           gross_amount_paid?: number | null
           id?: string
+          instructor_name?: string | null
           late_cancel?: boolean | null
+          location_address?: string | null
+          location_name?: string | null
+          milestone?: number | null
           net_amount_paid?: number | null
+          offering_id?: string | null
+          package_name?: string | null
+          package_period_end?: string | null
+          package_period_start?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
           purchase_id?: string | null
+          purchase_type?: string | null
           raw_data?: Json | null
           reservation_id?: string | null
           reservation_type?: string | null
+          service_id?: string | null
           spot_id?: string | null
           spot_name?: string | null
           status?: string | null
           sync_batch_id?: string
+          tags?: Json | null
           updated_at_api?: string | null
         }
         Relationships: []

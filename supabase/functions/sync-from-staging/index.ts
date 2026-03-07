@@ -133,6 +133,25 @@ Deno.serve(async (req) => {
   }
 });
 
+/**
+ * All columns selected from arketa_reservations_staging for transfer.
+ * Includes the 21 new columns added to match the full ReservationsReportRow DTO.
+ */
+const RESERVATIONS_STAGING_SELECT = [
+  "id", "reservation_id", "class_id", "client_id", "reservation_type",
+  "class_name", "class_date", "status", "checked_in", "checked_in_at",
+  "late_cancel", "gross_amount_paid", "net_amount_paid", "created_at_api",
+  "updated_at_api", "spot_id", "spot_name", "client_email", "client_first_name",
+  "client_last_name", "client_phone", "raw_data", "sync_batch_id",
+  "experience_type", "purchase_id",
+  // 21 new columns
+  "booking_id", "email_marketing_opt_in", "date_purchased", "instructor_name",
+  "location_name", "location_address", "purchase_type", "estimated_gross_revenue",
+  "estimated_net_revenue", "coupon_code", "package_name", "package_period_start",
+  "package_period_end", "offering_id", "payment_method", "payment_id",
+  "service_id", "tags", "canceled_at", "canceled_by", "milestone",
+].join(", ");
+
 async function transferReservations(
   supabase: any,
   clearStaging: boolean,
@@ -144,12 +163,11 @@ async function transferReservations(
 
   try {
     // Paginate staging reads to avoid Supabase's 1000-row default limit
-    const stagingSelect = "id, reservation_id, class_id, client_id, reservation_type, class_name, class_date, status, checked_in, checked_in_at, late_cancel, gross_amount_paid, net_amount_paid, created_at_api, updated_at_api, spot_id, spot_name, client_email, client_first_name, client_last_name, client_phone, raw_data, sync_batch_id";
     let allRows: Record<string, unknown>[] = [];
     const PAGE_SIZE = 1000;
     let offset = 0;
     while (true) {
-      let query = supabase.from("arketa_reservations_staging").select(stagingSelect).range(offset, offset + PAGE_SIZE - 1);
+      let query = supabase.from("arketa_reservations_staging").select(RESERVATIONS_STAGING_SELECT).range(offset, offset + PAGE_SIZE - 1);
       if (syncBatchId) query = query.eq("sync_batch_id", syncBatchId);
       const { data: rows, error: fetchError } = await query;
       if (fetchError) {
@@ -168,6 +186,7 @@ async function transferReservations(
     const countBefore = await getHistoryCount(supabase, "arketa_reservations_history");
     const mapped = rows.map((r: Record<string, unknown>) => ({
       reservation_id: r.reservation_id ?? r.arketa_reservation_id,
+      booking_id: r.booking_id ?? null,
       client_id: r.client_id ?? null,
       reservation_type: r.reservation_type ?? null,
       class_id: r.class_id ?? r.arketa_class_id ?? null,
@@ -179,6 +198,8 @@ async function transferReservations(
       late_cancel: r.late_cancel ?? false,
       gross_amount_paid: r.gross_amount_paid ?? null,
       net_amount_paid: r.net_amount_paid ?? null,
+      estimated_gross_revenue: r.estimated_gross_revenue ?? null,
+      estimated_net_revenue: r.estimated_net_revenue ?? null,
       created_at_api: r.created_at_api ?? null,
       updated_at_api: r.updated_at_api ?? null,
       spot_id: r.spot_id ?? null,
@@ -187,6 +208,26 @@ async function transferReservations(
       client_first_name: r.client_first_name ?? null,
       client_last_name: r.client_last_name ?? null,
       client_phone: r.client_phone ?? null,
+      experience_type: r.experience_type ?? null,
+      purchase_id: r.purchase_id ?? null,
+      email_marketing_opt_in: r.email_marketing_opt_in ?? null,
+      date_purchased: r.date_purchased ?? null,
+      instructor_name: r.instructor_name ?? null,
+      location_name: r.location_name ?? null,
+      location_address: r.location_address ?? null,
+      purchase_type: r.purchase_type ?? null,
+      coupon_code: r.coupon_code ?? null,
+      package_name: r.package_name ?? null,
+      package_period_start: r.package_period_start ?? null,
+      package_period_end: r.package_period_end ?? null,
+      offering_id: r.offering_id ?? null,
+      payment_method: r.payment_method ?? null,
+      payment_id: r.payment_id ?? null,
+      service_id: r.service_id ?? null,
+      tags: r.tags ?? null,
+      canceled_at: r.canceled_at ?? null,
+      canceled_by: r.canceled_by ?? null,
+      milestone: r.milestone ?? null,
       raw_data: r.raw_data ?? null,
       sync_batch_id: r.sync_batch_id ?? null,
     })).filter((r: any) => r.reservation_id);
@@ -211,7 +252,6 @@ async function transferReservations(
     const toUpsert = [...dedupedByReservationId.values()];
 
     // Chunk delete .in() to avoid PostgREST URL length limits
-    // (500 IDs × ~56 chars = ~28K chars exceeds URL limit → 400 Bad Request)
     const DELETE_CHUNK = 100;
     const UPSERT_CHUNK = 500;
 
@@ -220,7 +260,6 @@ async function transferReservations(
       const reservationIds = batch.map((r: { reservation_id: string }) => r.reservation_id);
 
       // Ensure history is merged on reservation_id by removing prior versions first
-      // Chunk the delete to avoid URL length limits on .in() filter
       let deleteError: { message: string } | null = null;
       for (let d = 0; d < reservationIds.length; d += DELETE_CHUNK) {
         const deleteSlice = reservationIds.slice(d, d + DELETE_CHUNK);

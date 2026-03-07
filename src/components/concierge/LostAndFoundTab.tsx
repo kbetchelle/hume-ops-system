@@ -37,7 +37,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { getPSTToday } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
-import { selectFrom, insertInto, updateTable, eq } from "@/lib/dataApi";
+import { insertInto, updateTable, eq } from "@/lib/dataApi";
 import { supabase } from "@/integrations/supabase/client";
 import { compressPhoto, generatePhotoFilename } from "@/lib/compressPhoto";
 import { Constants } from "@/integrations/supabase/types";
@@ -151,9 +151,10 @@ export function LostAndFoundTab() {
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data, error } = await selectFrom<LostFoundItem>("lost_and_found", {
-      order: { column: "created_at", ascending: false }
-    });
+    const { data, error } = await supabase
+      .from("lost_and_found")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (!error && data) {
       setItems(data);
@@ -163,9 +164,10 @@ export function LostAndFoundTab() {
 
   const fetchRequests = async () => {
     setRequestsLoading(true);
-    const { data, error } = await selectFrom<MemberRequest>("lost_and_found_member_requests", {
-      order: { column: "created_at", ascending: false }
-    });
+    const { data, error } = await supabase
+      .from("lost_and_found_member_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (!error && data) {
       setRequests(data);
     }

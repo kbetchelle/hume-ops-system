@@ -23,7 +23,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { selectFrom, insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { insertInto, updateTable, deleteFrom, eq } from "@/lib/dataApi";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ResponseTemplate {
   id: string;
@@ -63,9 +64,10 @@ export function ResponseTemplatesManager() {
 
   const fetchTemplates = async () => {
     setLoading(true);
-    const { data, error } = await selectFrom<ResponseTemplate>("response_templates", {
-      order: { column: "category", ascending: true },
-    });
+    const { data, error } = await supabase
+      .from("response_templates")
+      .select("*")
+      .order("category", { ascending: true });
 
     if (!error && data) {
       setTemplates(data);

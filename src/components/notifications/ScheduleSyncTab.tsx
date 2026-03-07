@@ -86,10 +86,11 @@ export function ScheduleSyncTab() {
   const { data: scheduleRows = [], isLoading: scheduleLoading } = useQuery({
     queryKey: ['daily-schedule-sync', today],
     queryFn: async () => {
-      const { data, error } = await selectFrom<DailyScheduleRow>('daily_schedule', {
-        filters: [{ type: 'eq' as const, column: 'schedule_date', value: today }],
-        order: { column: 'start_time', ascending: true },
-      });
+      const { data, error } = await supabase
+        .from('daily_schedule')
+        .select('id, schedule_date, class_name, instructor, start_time, end_time, total_booked, max_capacity, canceled')
+        .eq('schedule_date', today)
+        .order('start_time', { ascending: true });
       if (error) throw error;
       return data ?? [];
     },

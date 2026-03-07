@@ -589,7 +589,9 @@ async function handleReservationsBackfill(supabase: any, job: any, jobId: string
 
   // PHASE 3: On failure, do NOT advance chunk — retry on next invocation
   if (!syncResult.success) {
-    const retryCount = (job.records_in_current_batch || 0) + 1;
+    // Use a dedicated field path in errors JSON to track retries, not records_in_current_batch
+    const prevErrors = (job.errors as Record<string, unknown>) ?? {};
+    const retryCount = ((prevErrors.chunk_retry_count as number) || 0) + 1;
     const maxRetries = 3;
 
     const results: SyncResult[] = [...(job.results || [])];
@@ -607,7 +609,7 @@ async function handleReservationsBackfill(supabase: any, job: any, jobId: string
       console.error(`[reservations-backfill] Chunk ${chunkStart}→${chunkEnd} failed ${maxRetries} times, skipping`);
       await supabase.from("backfill_jobs").update({
         completed_dates: currentChunkIndex + 1,
-        records_in_current_batch: 0,
+        errors: { ...prevErrors, chunk_retry_count: 0 },
         results,
         sync_phase: "cooldown",
       }).eq("id", jobId);
@@ -615,7 +617,7 @@ async function handleReservationsBackfill(supabase: any, job: any, jobId: string
       // Retry same chunk
       console.warn(`[reservations-backfill] Chunk ${chunkStart}→${chunkEnd} failed (attempt ${retryCount}/${maxRetries}), will retry`);
       await supabase.from("backfill_jobs").update({
-        records_in_current_batch: retryCount,
+        errors: { ...prevErrors, chunk_retry_count: retryCount },
         results,
         sync_phase: "cooldown",
       }).eq("id", jobId);
